@@ -142,6 +142,30 @@ export const clients = pgTable(
   (t) => [index("clients_active_name_idx").on(t.isActive, t.name)],
 );
 
+/**
+ * Subjects — canonical list backing the "Subject" picker on the task forms.
+ * Mirrors the `clients` pattern exactly: an admin/seed-managed list that the
+ * New Task / Edit Task dropdowns read from, with an inline "+ Add new
+ * subject…" affordance open to any authenticated user. Stored on the
+ * free-text `tasks.subject` column; renames propagate to matching tasks.
+ */
+export const subjects = pgTable(
+  "subjects",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull().unique(),
+    isActive: boolean("is_active").notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(100),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("subjects_active_name_idx").on(t.isActive, t.name)],
+);
+
 // M5.1 — admin-managed display overrides for the 9 task statuses. PK is the
 // task_status enum value; updates only (RLS: insert/delete revoked at the
 // table level + only `update` policy). Seeded by migration 0016 so the
@@ -469,6 +493,8 @@ export type EmployeeDepartment = typeof employeeDepartments.$inferSelect;
 export type NewEmployeeDepartment = typeof employeeDepartments.$inferInsert;
 export type Client = typeof clients.$inferSelect;
 export type NewClient = typeof clients.$inferInsert;
+export type Subject = typeof subjects.$inferSelect;
+export type NewSubject = typeof subjects.$inferInsert;
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 export type NewPushSubscription = typeof pushSubscriptions.$inferInsert;
 export type EmployeeEvent = typeof employeeEvents.$inferSelect;

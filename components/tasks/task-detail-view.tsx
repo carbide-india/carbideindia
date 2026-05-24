@@ -13,7 +13,10 @@ import {
   ChevronDown,
   Check as CheckIcon,
   Loader2,
+  Copy,
 } from "lucide-react";
+import Link from "next/link";
+import type { Route } from "next";
 import { TaskDetail } from "./task-detail";
 import { TaskEditForm } from "./task-edit-form";
 import { AuditFeed } from "./audit-feed";
@@ -42,6 +45,8 @@ interface Props {
   employees: { id: string; name: string }[];
   /** Client roster for the Edit Task "Client Name" picker. */
   clients: string[];
+  /** Subject roster for the Edit Task "Subject" picker. */
+  subjects: string[];
   /** Current user — drives the comment composer avatar.  Optional so the
    *  page route can defer fetching it; falls back to "You". */
   me?: {
@@ -65,11 +70,18 @@ const STATUS_TONE: Record<
   TaskStatus,
   { label: string; rgb: string; ink: string; bg: string; live: boolean }
 > = {
+  dont_know: {
+    label: "Don't Know",
+    rgb: "156, 163, 175",
+    ink: "var(--color-stone-deep)",
+    bg: "var(--color-stone-bg)",
+    live: false,
+  },
   not_started: {
     label: "Not Started",
-    rgb: "245, 158, 11",
-    ink: "var(--color-amber-deep)",
-    bg: "var(--color-amber-bg)",
+    rgb: "59, 130, 246",
+    ink: "var(--color-blue-deep)",
+    bg: "var(--color-blue-bg)",
     live: false,
   },
   initiated: {
@@ -188,6 +200,7 @@ export function TaskDetailView({
   events,
   employees,
   clients,
+  subjects,
   me,
   statusLabels,
   statusTones,
@@ -278,16 +291,25 @@ export function TaskDetailView({
       <div className="grid grid-cols-[minmax(0,1fr)_360px] gap-10 max-lg:grid-cols-1 max-lg:gap-6">
         {/* LEFT COLUMN — editorial document */}
         <div className="min-w-0">
-          {/* Edit button hovering top-right of the left column */}
-          {canEdit && !editing && (
-            <div className="flex justify-end mb-4">
-              <button
-                type="button"
-                onClick={() => setEditing(true)}
+          {/* Edit + Duplicate buttons hovering top-right of the left column */}
+          {!editing && (
+            <div className="flex justify-end gap-2 mb-4">
+              <Link
+                href={`/tasks/new?from=${task.id}` as Route}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[14px] font-semibold text-ink-soft border border-hairline bg-white/70 hover:bg-white hover:border-hairline-strong transition-all"
               >
-                Edit Task →
-              </button>
+                <Copy size={15} strokeWidth={2.2} />
+                Duplicate
+              </Link>
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[14px] font-semibold text-ink-soft border border-hairline bg-white/70 hover:bg-white hover:border-hairline-strong transition-all"
+                >
+                  Edit Task →
+                </button>
+              )}
             </div>
           )}
 
@@ -325,6 +347,7 @@ export function TaskDetailView({
                 <TaskEditForm
                   taskId={task.id}
                   clients={clients}
+                  subjects={subjects}
                   initial={{
                     title: task.title,
                     description: task.description,

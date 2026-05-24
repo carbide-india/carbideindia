@@ -7,7 +7,6 @@ import { Plus, X } from "lucide-react";
 import {
   TASK_PRIORITIES,
   PRIORITY_LABELS,
-  TASK_SUBJECTS,
   APPROVAL_STATUSES,
   type TaskPriority,
   type ApprovalStatus,
@@ -21,11 +20,14 @@ import {
 import { fireToast } from "@/lib/toast";
 import { ScheduleSection, type ScheduleValue } from "./schedule-section";
 import { ClientSelect } from "./client-select";
+import { SubjectSelect } from "./subject-select";
 
 interface Props {
   taskId: string;
   /** Client roster for the "Client Name" picker, alphabetical. */
   clients: string[];
+  /** Subject roster for the "Subject" picker, alphabetical. */
+  subjects: string[];
   initial: {
     title: string;
     description: string | null;
@@ -80,7 +82,8 @@ function FieldShell({
     <div className="relative">
       <label
         htmlFor={htmlFor}
-        className="block text-[12.5px] uppercase tracking-[0.08em] font-bold text-ink-subtle mb-1.5"
+        className="block text-[14px] font-bold text-ink-strong mb-1.5"
+        style={{ letterSpacing: "-0.005em" }}
       >
         {label}
         {required && (
@@ -111,6 +114,7 @@ function FieldShell({
 export function TaskEditForm({
   taskId,
   clients,
+  subjects,
   initial,
   expectedUpdatedAt,
   isAdmin,
@@ -339,25 +343,15 @@ export function TaskEditForm({
         setFocused={setFSubj}
       >
         {(p) => (
-          <select
+          <SubjectSelect
             id="te-subject"
             value={subject}
-            onChange={(e) => setSubject(e.target.value)}
+            onChange={setSubject}
+            subjects={subjects}
             className={inputClass}
+            placeholder="Select a subject…"
             {...p}
-          >
-            <option value="">Select a category…</option>
-            {/* If the existing value isn't in TASK_SUBJECTS (legacy free-text),
-                surface it as the first option so we don't silently lose it. */}
-            {subject && !TASK_SUBJECTS.includes(subject as never) && (
-              <option value={subject}>{subject} (legacy)</option>
-            )}
-            {TASK_SUBJECTS.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
+          />
         )}
       </FieldShell>
 

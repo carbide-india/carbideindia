@@ -7,7 +7,6 @@ import { ImagePlus, Link2, Plus, X, FileImage, Check } from "lucide-react";
 import {
   TASK_PRIORITIES,
   PRIORITY_LABELS,
-  TASK_SUBJECTS,
   type TaskPriority,
   type TaskRecurrence,
 } from "@/db/enums";
@@ -15,6 +14,7 @@ import { createTask } from "@/app/(app)/tasks/actions";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { ScheduleSection, type ScheduleValue } from "./schedule-section";
 import { ClientSelect } from "./client-select";
+import { SubjectSelect } from "./subject-select";
 
 type EmployeeOption = { id: string; name: string };
 
@@ -22,13 +22,20 @@ interface Props {
   employees: EmployeeOption[];
   /** Client roster for the "Client Name" picker, alphabetical. */
   clients: string[];
+  /** Subject roster for the "Subject" picker, alphabetical. */
+  subjects: string[];
   /** Called after a successful create. Default: navigate to /tasks/[id]. */
   onSuccess?: (taskId: string) => void;
-  /** Optional defaults for the form (used by the canonical route). */
+  /** Optional defaults for the form (used by the canonical route + the
+   *  Duplicate action, which prefills from an existing task). */
   defaults?: {
     doerId?: string;
     initiatorId?: string;
     priority?: TaskPriority;
+    title?: string;
+    subject?: string;
+    description?: string;
+    notes?: string;
   };
 }
 
@@ -44,14 +51,14 @@ interface PreviewFile {
   url: string;
 }
 
-export function NewTaskForm({ employees, clients, onSuccess, defaults }: Props) {
+export function NewTaskForm({ employees, clients, subjects, onSuccess, defaults }: Props) {
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
 
-  const [title, setTitle] = React.useState("");
-  const [description, setDesc] = React.useState("");
-  const [subject, setSubject] = React.useState("");
-  const [notes, setNotes] = React.useState("");
+  const [title, setTitle] = React.useState(defaults?.title ?? "");
+  const [description, setDesc] = React.useState(defaults?.description ?? "");
+  const [subject, setSubject] = React.useState(defaults?.subject ?? "");
+  const [notes, setNotes] = React.useState(defaults?.notes ?? "");
   const [doerIds, setDoerIds] = React.useState<string[]>(
     defaults?.doerId ? [defaults.doerId] : [],
   );
@@ -128,6 +135,14 @@ export function NewTaskForm({ employees, clients, onSuccess, defaults }: Props) 
     setError(null);
     if (doerIds.length === 0 || !initiatorId) {
       setError("Pick at least one Doer and an Initiator.");
+      return;
+    }
+    if (!subject) {
+      setError("Subject is required.");
+      return;
+    }
+    if (!description.trim()) {
+      setError("Task Description is required.");
       return;
     }
     // The <input type="date"> gives YYYY-MM-DD; convert to ISO at noon UTC
@@ -278,29 +293,27 @@ export function NewTaskForm({ employees, clients, onSuccess, defaults }: Props) 
 
       {/* Subject · Task Description · Initiator Notes — each full-width
           single column, stacked top-to-bottom per spec. */}
-      <Field id="nt-subject" label="Subject">
-        <select
+      <Field id="nt-subject" label="Subject" required>
+        <SubjectSelect
           id="nt-subject"
+          required
           value={subject}
-          onChange={(e) => setSubject(e.target.value)}
+          onChange={setSubject}
+          subjects={subjects}
           className="nt-input"
-        >
-          <option value="">Select a category…</option>
-          {TASK_SUBJECTS.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+          placeholder="Select a subject…"
+        />
       </Field>
 
-      <Field id="nt-desc" label="Task Description">
+      <Field id="nt-desc" label="Task Description" required>
         <textarea
           id="nt-desc"
           rows={4}
+          required
           value={description}
           onChange={(e) => setDesc(e.target.value)}
           className="nt-input resize-y"
+          style={{ fontWeight: 400 }}
           placeholder="What needs to happen, in detail…"
         />
       </Field>
@@ -312,6 +325,7 @@ export function NewTaskForm({ employees, clients, onSuccess, defaults }: Props) 
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           className="nt-input resize-y"
+          style={{ fontWeight: 400 }}
           placeholder="Notes only the team sees…"
         />
       </Field>
@@ -410,7 +424,9 @@ function DoerMultiSelect({
   onToggle: (id: string) => void;
 }) {
   const [open, setOpen] = React.useState(false);
+  const [query, setQuery] = React.useState("");
   const ref = React.useRef<HTMLDivElement>(null);
+  const searchRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     function onDown(e: MouseEvent) {
@@ -421,11 +437,27 @@ function DoerMultiSelect({
     return () => document.removeEventListener("mousedown", onDown);
   }, [open]);
 
+  // Focus the search box the moment the menu opens so the initiator can
+  // start typing a name immediately — no mouse needed (Manan's ask).
+  React.useEffect(() => {
+    if (open) {
+      setQuery("");
+      const t = setTimeout(() => searchRef.current?.focus(), 0);
+      return () => clearTimeout(t);
+    }
+  }, [open]);
+
   const byId = React.useMemo(() => {
     const m = new Map<string, string>();
     for (const e of employees) m.set(e.id, e.name);
     return m;
   }, [employees]);
+
+  const filtered = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return employees;
+    return employees.filter((e) => e.name.toLowerCase().includes(q));
+  }, [employees, query]);
 
   return (
     <div ref={ref} className="relative">
@@ -487,15 +519,49 @@ function DoerMultiSelect({
       </button>
 
       {open && (
-        <ul
-          role="listbox"
-          aria-multiselectable
-          className="absolute left-0 right-0 mt-2 z-50 max-h-[280px] overflow-y-auto rounded-chip border bg-surface-card shadow-xl"
+        <div
+          className="absolute left-0 right-0 mt-2 z-50 rounded-chip border bg-surface-card shadow-xl overflow-hidden"
           style={{
             borderColor: "var(--color-hairline-strong)",
             boxShadow: "0 16px 40px rgba(15, 23, 42, 0.18)",
           }}
         >
+          {/* Type-to-filter — focus on open so the keyboard is enough. */}
+          <div
+            className="p-2"
+            style={{ borderBottom: "1px solid var(--color-hairline)" }}
+          >
+            <input
+              ref={searchRef}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (filtered.length === 1) {
+                    onToggle(filtered[0]!.id);
+                    setQuery("");
+                  }
+                } else if (e.key === "Escape") {
+                  setOpen(false);
+                }
+              }}
+              placeholder="Type a name to filter…"
+              className="w-full bg-transparent outline-none"
+              style={{
+                fontSize: 15,
+                fontWeight: 600,
+                color: "var(--color-ink-strong)",
+                padding: "6px 8px",
+              }}
+            />
+          </div>
+          <ul
+            role="listbox"
+            aria-multiselectable
+            className="max-h-[240px] overflow-y-auto"
+          >
           {employees.length === 0 ? (
             <li
               className="px-4 py-3 font-semibold"
@@ -503,8 +569,15 @@ function DoerMultiSelect({
             >
               No employees available.
             </li>
+          ) : filtered.length === 0 ? (
+            <li
+              className="px-4 py-3 font-semibold"
+              style={{ fontSize: 14, color: "var(--color-ink-muted)" }}
+            >
+              No match for “{query}”.
+            </li>
           ) : (
-            employees.map((emp) => {
+            filtered.map((emp) => {
               const isSel = selected.includes(emp.id);
               return (
                 <li
@@ -546,7 +619,8 @@ function DoerMultiSelect({
               );
             })
           )}
-        </ul>
+          </ul>
+        </div>
       )}
     </div>
   );
@@ -650,10 +724,11 @@ function Field({
     <div className="flex flex-col gap-2.5">
       <label
         htmlFor={id}
-        className="uppercase font-black tracking-[0.10em]"
+        className="font-bold"
         style={{
-          fontFamily: "var(--font-mono-display), ui-monospace, monospace",
-          fontSize: 14,
+          fontFamily: "var(--font-sans), system-ui, sans-serif",
+          fontSize: 15,
+          letterSpacing: "-0.005em",
           color: "var(--color-ink-strong)",
         }}
       >
