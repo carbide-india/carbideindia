@@ -14,6 +14,7 @@ import {
   Check as CheckIcon,
   Loader2,
   Copy,
+  Maximize2,
 } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
@@ -294,6 +295,13 @@ export function TaskDetailView({
           {/* Edit + Duplicate buttons hovering top-right of the left column */}
           {!editing && (
             <div className="flex justify-end gap-2 mb-4">
+              <Link
+                href={`/tasks/${task.id}/focus` as Route}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[14px] font-semibold text-ink-soft border border-hairline bg-white/70 hover:bg-white hover:border-hairline-strong transition-all"
+              >
+                <Maximize2 size={15} strokeWidth={2.2} />
+                Focus
+              </Link>
               <Link
                 href={`/tasks/new?from=${task.id}` as Route}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[14px] font-semibold text-ink-soft border border-hairline bg-white/70 hover:bg-white hover:border-hairline-strong transition-all"
