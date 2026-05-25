@@ -36,7 +36,7 @@ export async function DashboardHeader({
           borderBottom: "1px solid var(--color-hairline)",
         }}
       >
-        <div className="relative mx-auto max-w-[1600px] h-[96px] px-8 max-md:h-[72px] max-md:px-4 flex items-center gap-10 max-md:gap-3">
+        <div className="relative w-full h-[96px] px-6 max-md:h-[72px] max-md:px-4 flex items-center gap-6 max-md:gap-3">
           {/* LEFT-MOST: Back / Forward history pills (md+ only).
               On mobile, replaced by the hamburger menu (same slot). */}
           <NavHistoryButtons />
