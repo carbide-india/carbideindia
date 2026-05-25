@@ -193,6 +193,33 @@ export const projectNodes = pgTable(
   ],
 );
 
+/**
+ * Document library (Manan #27/#28). The catalogue for files stored in the
+ * private "documents" Storage bucket — title required, description optional,
+ * with provenance and an optional link to a task.
+ */
+export const documents = pgTable(
+  "documents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    title: text("title").notNull(),
+    description: text("description"),
+    storagePath: text("storage_path").notNull(),
+    mimeType: text("mime_type"),
+    sizeBytes: integer("size_bytes"),
+    taskId: uuid("task_id").references(() => tasks.id, { onDelete: "set null" }),
+    uploadedById: uuid("uploaded_by_id").references(() => employees.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("documents_created_idx").on(t.createdAt),
+    index("documents_task_idx").on(t.taskId),
+  ],
+);
+
 // M5.1 — admin-managed display overrides for the 9 task statuses. PK is the
 // task_status enum value; updates only (RLS: insert/delete revoked at the
 // table level + only `update` policy). Seeded by migration 0016 so the
@@ -531,6 +558,8 @@ export type Subject = typeof subjects.$inferSelect;
 export type NewSubject = typeof subjects.$inferInsert;
 export type ProjectNode = typeof projectNodes.$inferSelect;
 export type NewProjectNode = typeof projectNodes.$inferInsert;
+export type Document = typeof documents.$inferSelect;
+export type NewDocument = typeof documents.$inferInsert;
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 export type NewPushSubscription = typeof pushSubscriptions.$inferInsert;
 export type EmployeeEvent = typeof employeeEvents.$inferSelect;
