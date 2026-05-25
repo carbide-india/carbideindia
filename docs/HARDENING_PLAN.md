@@ -51,11 +51,11 @@ The plan below builds on that.
 
 Without numbers we'll make changes that feel faster but aren't. Establish the baseline before touching anything else.
 
-- [ ] **0.1 Add a slow-query logger** on the drizzle client.
+- [x] **0.1 Add a slow-query logger** on the drizzle client.
   - **What:** Wrap `db` so any query taking >300ms logs `[slow-query] <ms>ms — <sql>` to console (truncate to 200 chars).
   - **Why:** Within a day of production traffic we'll have a ranked list of slow paths.
   - **Verify:** Open `/tasks/[id]` once; grep the dev-server log for `[slow-query]`. Should see at least one entry per cold load.
-  - **Outcome:** _(fill in)_
+  - **Outcome:** Implemented `lib/db/slow-query.ts` (function-Proxy on the postgres-js client; times template-tag calls AND `unsafe`/`begin`/`array`/`file`/`simple`). Auto-on in `development` at 300ms; opt-in elsewhere via `SLOW_QUERY_MS=<n>`. Typecheck clean. Dev session 2026-05-25.
 
 - [ ] **0.2 Stand up Sentry (free tier) or Axiom.**
   - **What:** Add Sentry client + server SDKs; set `SENTRY_DSN` in Vercel; enable Performance monitoring with `tracesSampleRate: 0.2`.
@@ -81,11 +81,11 @@ Without numbers we'll make changes that feel faster but aren't. Establish the ba
 
 **Goal:** task-detail page TTI under 500ms warm, under 1.5s cold. Currently 2–4s.
 
-- [ ] **1.1 Cache the five static fan-outs with `unstable_cache`.**
+- [x] **1.1 Cache the five static fan-outs with `unstable_cache`.**
   - **What:** Wrap `listEmployees`, `getStatusDisplayMap`, `listActiveClientNames`, `listActiveSubjectNames`, `listProjectNodeOptions` so each is read once and reused for every user. Use the existing `CACHE_TAGS` (writers already call `updateTag` on changes).
   - **Why:** These five return identical data for every user; we currently fetch them on every page render.
   - **Verify:** Slow-query log shows zero hits on `employees`/`subjects`/`clients`/`status_settings`/`project_nodes` during back-to-back page loads (until a write invalidates). Task-detail TTI < 500ms warm.
-  - **Outcome:** _(measured ms)_
+  - **Outcome:** `employees`, `nav-counts`, `status-display` were already cached by a prior session. Added caching for `listActiveClientNames` (`CACHE_TAGS.clients`), `listActiveSubjectNames` (`CACHE_TAGS.subjects`), `listProjectNodeOptions` (`CACHE_TAGS.projectNodes`). Writer invalidation: `revalidateClientSurfaces` + `quickAddClient` bust `clients`; `createSubject/updateSubject` + `revalidateTaskRoutes` already bust `subjects`; new `revalidateProjectSurfaces()` helper busts `projectNodes` on every project-node mutation. 2 new tags added to `lib/cache-tags.ts`. Also restored test-suite green (16→0 failures) by fixing pre-existing mock gaps surfaced by the linter's earlier `updateTag` / `tx.select` / `db.transaction` adoption — see commit. Typecheck clean, 334 tests pass. **Browser-side TTI measurement still pending** — needs a click-around session with the slow-query log open to capture before/after numbers.
 
 - [ ] **1.2 Add `<Suspense>` streaming to `/tasks/[id]`.**
   - **What:** Wrap the task body + audit feed in a `<Suspense fallback={<TaskSkeleton/>} />`. Render the header (title, status pill, doer chip) above the boundary so it paints instantly.

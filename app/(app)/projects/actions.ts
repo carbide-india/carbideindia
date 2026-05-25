@@ -1,13 +1,24 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { projectNodes } from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 
 type Result<T = unknown> = ({ ok: true } & T) | { ok: false; error: string };
+
+/**
+ * Centralised tag/route invalidation for project-node writes. All three
+ * actions below call this so the cached `listProjectNodeOptions` picker
+ * payload drops on every change.
+ */
+function revalidateProjectSurfaces() {
+  revalidatePath("/projects");
+  updateTag(CACHE_TAGS.projectNodes);
+}
 
 const KIND = z.enum(["project", "milestone", "result", "action", "sub_action"]);
 const NameSchema = z.string().trim().min(1, "Name is required").max(160, "Name is too long");
@@ -65,7 +76,7 @@ export async function createProjectNode(
     return { ok: false, error: `DB: ${err instanceof Error ? err.message : String(err)}` };
   }
   if (!inserted) return { ok: false, error: "Insert returned no row" };
-  revalidatePath("/projects");
+  revalidateProjectSurfaces();
   return { ok: true, id: inserted.id };
 }
 
@@ -81,11 +92,18 @@ export async function renameProjectNode(
   if (!z.string().uuid().safeParse(id).success) {
     return { ok: false, error: "Invalid id" };
   }
-  await db
+  // .returning() so we can verify the UPDATE actually touched a row.
+  // Without this, a stale id silently no-ops and the UI thinks the
+  // rename worked.
+  const updated = await db
     .update(projectNodes)
     .set({ name: parsedName.data, updatedAt: new Date() })
-    .where(eq(projectNodes.id, id));
-  revalidatePath("/projects");
+    .where(eq(projectNodes.id, id))
+    .returning({ id: projectNodes.id });
+  if (updated.length === 0) {
+    return { ok: false, error: "Project node not found" };
+  }
+  revalidateProjectSurfaces();
   return { ok: true };
 }
 
@@ -97,10 +115,14 @@ export async function setProjectNodeArchived(
   if (!z.string().uuid().safeParse(id).success) {
     return { ok: false, error: "Invalid id" };
   }
-  await db
+  const updated = await db
     .update(projectNodes)
     .set({ isArchived, updatedAt: new Date() })
-    .where(eq(projectNodes.id, id));
-  revalidatePath("/projects");
+    .where(eq(projectNodes.id, id))
+    .returning({ id: projectNodes.id });
+  if (updated.length === 0) {
+    return { ok: false, error: "Project node not found" };
+  }
+  revalidateProjectSurfaces();
   return { ok: true };
 }
