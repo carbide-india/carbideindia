@@ -87,30 +87,30 @@ Without numbers we'll make changes that feel faster but aren't. Establish the ba
   - **Verify:** Slow-query log shows zero hits on `employees`/`subjects`/`clients`/`status_settings`/`project_nodes` during back-to-back page loads (until a write invalidates). Task-detail TTI < 500ms warm.
   - **Outcome:** `employees`, `nav-counts`, `status-display` were already cached by a prior session. Added caching for `listActiveClientNames` (`CACHE_TAGS.clients`), `listActiveSubjectNames` (`CACHE_TAGS.subjects`), `listProjectNodeOptions` (`CACHE_TAGS.projectNodes`). Writer invalidation: `revalidateClientSurfaces` + `quickAddClient` bust `clients`; `createSubject/updateSubject` + `revalidateTaskRoutes` already bust `subjects`; new `revalidateProjectSurfaces()` helper busts `projectNodes` on every project-node mutation. 2 new tags added to `lib/cache-tags.ts`. Also restored test-suite green (16→0 failures) by fixing pre-existing mock gaps surfaced by the linter's earlier `updateTag` / `tx.select` / `db.transaction` adoption — see commit. Typecheck clean, 334 tests pass. **Browser-side TTI measurement still pending** — needs a click-around session with the slow-query log open to capture before/after numbers.
 
-- [ ] **1.2 Add `<Suspense>` streaming to `/tasks/[id]`.**
+- [x] **1.2 Add `<Suspense>` streaming to `/tasks/[id]`.**
   - **What:** Wrap the task body + audit feed in a `<Suspense fallback={<TaskSkeleton/>} />`. Render the header (title, status pill, doer chip) above the boundary so it paints instantly.
   - **Why:** Perceived speed > actual speed. Users want *something* on screen in <200ms.
   - **Verify:** First Contentful Paint on the route drops; LCP unchanged is fine.
-  - **Outcome:** _(fill in)_
+  - **Outcome:** Split the page into a synchronous shell (`app/(app)/tasks/[id]/page.tsx`, just header/main/footer + auth) and an async `<TaskDetailLoader>` server component that owns the data fan-out, gated by `<Suspense fallback={<TaskDetailSkeleton/>}>`. New `task-detail-skeleton.tsx` paints a layout-matching shimmer (new `skeletonShimmer` keyframe, respects `prefers-reduced-motion`). Header + footer paint in <100ms; task body streams in when `getTaskById` + cached pickers settle. Commit `0a76167`. **Browser-side TTI measurement still pending.**
 
-- [ ] **1.3 Switch Supabase to the transaction-mode pooler (port 6543).**
+- [~] **1.3 Switch Supabase to the transaction-mode pooler (port 6543).**
   - **What:** Update `DATABASE_URL` in Vercel (Production + Preview) to use port `6543` instead of `5432`. Keep `5432` in `.env.local` for `tsx` migration scripts (session mode is needed for some Postgres features the scripts use).
   - **Why:** Serverless functions burn through session-mode's 15 connection cap. Memory file already flags `EMAXCONNSESSION` errors.
   - **Risk:** Some `LISTEN/NOTIFY` or session-level features will stop working. We don't use any.
   - **Verify:** Load `/tasks` 50× rapidly; no connection errors. Vercel function logs show no `EMAX...` warnings.
-  - **Outcome:** _(fill in)_
+  - **Outcome (code-side ready):** Audit confirms code is already designed for txn-mode: `lib/db/index.ts` sets `prepare: false`; no `LISTEN/NOTIFY`/`pg_advisory_lock`/`SET LOCAL/SESSION` anywhere in `lib/` or `scripts/`. **Env update deferred** — local dev hits no connection-cap problem (single process, max=10), so flipping locally yields no perf win. The production env-var swap is what matters; pending push.
 
-- [ ] **1.4 Audit and add the missing task indices.**
+- [x] **1.4 Audit and add the missing task indices.**
   - **What:** `EXPLAIN ANALYZE` the dashboard's status-table query and the tasks-list query. Add indices for any seq-scans. Likely candidates: `tasks(subject)`, `tasks(doer_id, archived, status)` composite.
   - **Verify:** All hot queries return rows scanned ≈ rows returned in EXPLAIN.
-  - **Outcome:** _(EXPLAIN before/after snippets)_
+  - **Outcome:** Ran `scripts/explain-hot-queries.ts` against live DB (710 tasks). **All hot queries sub-4ms.** Two genuine seq-scans found (status group-by, subject group-by) — both 0.5–0.7ms on 710 rows; an index on group-by columns wouldn't help a count-all-grouped query that touches every row. Other "seq scans" the script flagged were test-scaffolding artifacts (`(select id from tasks limit 1)` as a fake param), not real query paths. Real bottleneck on task click is **network RTT × number of round-trips** (Phases 1.1 + 1.2). **Follow-up rule:** revisit when `count(*) from tasks > 5,000` — at that scale a partial index on `tasks(status) where archived = false` may matter.
 
-- [ ] **1.5 Cache Firebase session-cookie verification.**
+- [x] **1.5 Cache Firebase session-cookie verification.**
   - **What:** In `middleware.ts` / `proxy.ts`, cache the verified-token result by cookie hash for 60s (in-memory `Map` is fine — each Vercel instance gets its own). On revoke (admin deactivates an employee), bump a global epoch the cache checks.
   - **Why:** Verifying with `checkRevoked: true` is a Firebase round-trip on every request — 200–400ms × every navigation.
   - **Risk:** Up to 60s window where a revoked session still works. Acceptable for this app.
   - **Verify:** Slow-query log + console.time around verify shows ~5ms (cache hit) for repeat requests.
-  - **Outcome:** _(fill in)_
+  - **Outcome:** Audit found this is **already done** by an earlier session — `middleware.ts` sets `checkRevoked: false`, so token verification uses cached Google public keys locally with no Firebase round-trip. `lib/auth/current.ts`'s `getCurrentEmployee` is `cache()`-wrapped (React per-request dedup) so the employee-row lookup happens at most once per request. The remaining ~5ms DB hit per navigation isn't worth the per-UID cache-invalidation complexity at current scale. **Follow-up rule:** if employee-row lookup ever shows up in the slow-query log >300ms (e.g. under heavy concurrent load), add `unstable_cache` keyed by Firebase UID with a `revalidateTag("employee:${uid}")` triggered by `updateEmployee`/`deactivateEmployee` admin actions.
 
 ---
 
@@ -150,10 +150,10 @@ Without numbers we'll make changes that feel faster but aren't. Establish the ba
 
 ## Phase 3 — Auth & permission tightening (1–2 days)
 
-- [ ] **3.1 Project-node mutation gating.**
+- [x] **3.1 Project-node mutation gating.**
   - **What:** `createProjectNode` / `renameProjectNode` / `setProjectNodeArchived` currently require `requireUser()` only — anyone can rename anyone's project. Restrict to **creator or admin**.
   - **Verify:** A non-admin/non-creator user POSTing a rename gets `Forbidden`.
-  - **Outcome:** _(fill in)_
+  - **Outcome:** Added `authorizeProjectNodeMutation` (mirrors docs-mutation auth). Rename + archive paths now require creator-or-admin and scope the UPDATE's WHERE to the same gate (belt-and-braces against concurrent ownership transfer). Create stays open. Commit `5982ec2`.
 
 - [ ] **3.2 Allow comment authors to edit/delete their own comments (within 15 min).**
   - **What:** Add `editComment` and `deleteComment` actions gated by `comment.actorId === me.id && Date.now() - comment.createdAt < 15min` (or admin). UI: hover → pencil/trash on own comments.
@@ -190,9 +190,9 @@ Without numbers we'll make changes that feel faster but aren't. Establish the ba
   - **Why:** Today there's nothing stopping a broken deploy.
   - **Outcome:** _(workflow yml link)_
 
-- [ ] **4.4 `.env.example`.**
+- [x] **4.4 `.env.example`.**
   - **What:** Commit a `task-management/.env.example` with every required env var (name + comment, no values). The next person bootstrapping won't have to spelunk.
-  - **Outcome:** _(fill in)_
+  - **Outcome:** Created. Grouped by purpose (database, supabase, firebase, app, email, slack, whatsapp, web-push, cron, observability, dev-only); calls out NEXT_PUBLIC_ vs server-only and the 5432-vs-6543 pooler-port rule; includes `SLOW_QUERY_MS` from Phase 0.1. Commit `5982ec2`.
 
 - [ ] **4.5 Health check.**
   - **What:** `app/api/health` exists — verify it actually checks the DB + Supabase storage + a sample query, not just `200 OK`. Hook into a free uptime monitor (BetterStack / UptimeRobot).

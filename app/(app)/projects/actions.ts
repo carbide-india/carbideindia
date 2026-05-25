@@ -1,10 +1,10 @@
 "use server";
 
 import { revalidatePath, updateTag } from "next/cache";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { projectNodes } from "@/db/schema";
+import { projectNodes, type Employee, type ProjectNode } from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 
@@ -18,6 +18,32 @@ type Result<T = unknown> = ({ ok: true } & T) | { ok: false; error: string };
 function revalidateProjectSurfaces() {
   revalidatePath("/projects");
   updateTag(CACHE_TAGS.projectNodes);
+}
+
+/**
+ * Phase 3.1 — load a project node + assert the caller is allowed to mutate
+ * it (creator or admin). Prevents any authenticated user from renaming or
+ * archiving another team-member's project just by guessing the UUID, which
+ * the previous `requireUser()`-only check permitted. The `create` path
+ * stays open: anyone can start a new project in a small-team setting.
+ *
+ * Returns a Result-shaped error so the caller can `return` it directly.
+ */
+async function authorizeProjectNodeMutation(
+  id: string,
+  me: Employee,
+): Promise<{ ok: true; node: ProjectNode } | { ok: false; error: string }> {
+  if (!z.string().uuid().safeParse(id).success) {
+    return { ok: false, error: "Invalid id" };
+  }
+  const node = await db.query.projectNodes.findFirst({
+    where: eq(projectNodes.id, id),
+  });
+  if (!node) return { ok: false, error: "Project node not found" };
+  if (!me.isAdmin && node.createdById !== me.id) {
+    return { ok: false, error: "Forbidden" };
+  }
+  return { ok: true, node };
 }
 
 const KIND = z.enum(["project", "milestone", "result", "action", "sub_action"]);
@@ -84,23 +110,27 @@ export async function renameProjectNode(
   id: string,
   name: string,
 ): Promise<Result> {
-  await requireUser();
+  const me = await requireUser();
   const parsedName = NameSchema.safeParse(name);
   if (!parsedName.success) {
     return { ok: false, error: parsedName.error.issues[0]?.message ?? "Invalid name" };
   }
-  if (!z.string().uuid().safeParse(id).success) {
-    return { ok: false, error: "Invalid id" };
-  }
-  // .returning() so we can verify the UPDATE actually touched a row.
-  // Without this, a stale id silently no-ops and the UI thinks the
-  // rename worked.
+  const auth = await authorizeProjectNodeMutation(id, me);
+  if (!auth.ok) return auth;
+  // Belt-and-braces: scope the WHERE to the creator-or-admin so a
+  // concurrent ownership transfer between the auth check and this UPDATE
+  // can't bypass the gate. `.returning()` then verifies the row was touched.
   const updated = await db
     .update(projectNodes)
     .set({ name: parsedName.data, updatedAt: new Date() })
-    .where(eq(projectNodes.id, id))
+    .where(
+      me.isAdmin
+        ? eq(projectNodes.id, id)
+        : and(eq(projectNodes.id, id), eq(projectNodes.createdById, me.id)),
+    )
     .returning({ id: projectNodes.id });
   if (updated.length === 0) {
+    // Should only happen if the row was deleted between auth check and now.
     return { ok: false, error: "Project node not found" };
   }
   revalidateProjectSurfaces();
@@ -111,14 +141,17 @@ export async function setProjectNodeArchived(
   id: string,
   isArchived: boolean,
 ): Promise<Result> {
-  await requireUser();
-  if (!z.string().uuid().safeParse(id).success) {
-    return { ok: false, error: "Invalid id" };
-  }
+  const me = await requireUser();
+  const auth = await authorizeProjectNodeMutation(id, me);
+  if (!auth.ok) return auth;
   const updated = await db
     .update(projectNodes)
     .set({ isArchived, updatedAt: new Date() })
-    .where(eq(projectNodes.id, id))
+    .where(
+      me.isAdmin
+        ? eq(projectNodes.id, id)
+        : and(eq(projectNodes.id, id), eq(projectNodes.createdById, me.id)),
+    )
     .returning({ id: projectNodes.id });
   if (updated.length === 0) {
     return { ok: false, error: "Project node not found" };
