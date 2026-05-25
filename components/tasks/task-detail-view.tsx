@@ -379,6 +379,7 @@ export function TaskDetailView({
                       task.recurrence === "yearly"
                         ? task.recurrence
                         : null,
+                    recurrenceRule: task.recurrenceRule,
                   }}
                   expectedUpdatedAt={expectedUpdatedAt}
                   isAdmin={me?.isAdmin ?? false}

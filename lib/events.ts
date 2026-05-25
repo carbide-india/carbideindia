@@ -47,6 +47,7 @@ export const EDITABLE_TASK_FIELDS = [
   "endsAt",
   "allDay",
   "recurrence",
+  "recurrenceRule",
 ] as const;
 
 export type EditableTaskField = (typeof EDITABLE_TASK_FIELDS)[number];

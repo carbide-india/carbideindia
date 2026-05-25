@@ -44,6 +44,7 @@ interface Props {
     endsAt: Date | null;
     allDay: boolean;
     recurrence: TaskRecurrence | null;
+    recurrenceRule: string | null;
   };
   /** Used for the optimistic-lock — must be the row's current updated_at. */
   expectedUpdatedAt: string;
@@ -138,6 +139,7 @@ export function TaskEditForm({
     endsAt: initial.endsAt,
     allDay: initial.allDay,
     recurrence: initial.recurrence,
+    recurrenceRule: initial.recurrenceRule,
   });
 
   // Admin-only state.
@@ -208,6 +210,7 @@ export function TaskEditForm({
           endsAt: schedule.endsAt ? schedule.endsAt.toISOString() : null,
           allDay: schedule.allDay,
           recurrence: schedule.recurrence,
+          recurrenceRule: schedule.recurrenceRule,
         },
         expectedUpdatedAt,
       );

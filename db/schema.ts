@@ -246,6 +246,10 @@ export const tasks = pgTable(
     endsAt: timestamp("ends_at", { withTimezone: true }),
     allDay: boolean("all_day").notNull().default(false),
     recurrence: text("recurrence"),
+    // Manan #20 — RRULE-lite structured recurrence (weekdays / monthly mode /
+    // end). Coexists with `recurrence` (coarse frequency). Capture-only; no
+    // engine materialises instances yet.
+    recurrenceRule: text("recurrence_rule"),
   },
   (t) => [
     index("tasks_doer_created_idx").on(t.doerId, t.createdAt),

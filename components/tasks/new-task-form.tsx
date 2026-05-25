@@ -73,6 +73,7 @@ export function NewTaskForm({ employees, clients, subjects, onSuccess, defaults 
     endsAt: null,
     allDay: false,
     recurrence: null,
+    recurrenceRule: null,
   });
   // Default due: 7 days out.
   const sevenDays = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
@@ -182,6 +183,7 @@ export function NewTaskForm({ employees, clients, subjects, onSuccess, defaults 
         endsAt: schedule.endsAt ? schedule.endsAt.toISOString() : null,
         allDay: schedule.allDay,
         recurrence: schedule.recurrence,
+        recurrenceRule: schedule.recurrenceRule,
       });
       if (!result.ok) {
         setError(result.error);

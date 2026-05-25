@@ -301,6 +301,7 @@ export type TaskDetail = {
   endsAt: Date | null;
   allDay: boolean;
   recurrence: string | null;
+  recurrenceRule: string | null;
 };
 
 export async function getTaskById(taskId: string): Promise<TaskDetail | null> {
@@ -335,6 +336,7 @@ export async function getTaskById(taskId: string): Promise<TaskDetail | null> {
       endsAt: tasks.endsAt,
       allDay: tasks.allDay,
       recurrence: tasks.recurrence,
+      recurrenceRule: tasks.recurrenceRule,
     })
     .from(tasks)
     .leftJoin(doerEmp,    eq(tasks.doerId,      doerEmp.id))

@@ -32,6 +32,7 @@ function task(p: Partial<Task>): Task {
     endsAt: null,
     allDay: false,
     recurrence: null,
+    recurrenceRule: null,
     ...p,
   };
 }
