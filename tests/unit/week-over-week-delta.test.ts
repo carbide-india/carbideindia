@@ -37,6 +37,7 @@ function task(partial: Partial<Task>): Task {
     allDay: false,
     recurrence: null,
     recurrenceRule: null,
+    projectNodeId: null,
     ...partial,
   };
 }

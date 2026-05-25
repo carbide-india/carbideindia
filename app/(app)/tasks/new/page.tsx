@@ -4,6 +4,7 @@ import { NewTaskForm } from "@/components/tasks/new-task-form";
 import { listEmployees } from "@/lib/queries/employees";
 import { listActiveClientNames } from "@/lib/queries/clients";
 import { listActiveSubjectNames } from "@/lib/queries/subjects";
+import { listProjectNodeOptions } from "@/lib/queries/projects";
 import { getTaskById } from "@/lib/queries/tasks";
 import { requireUser } from "@/lib/auth/current";
 import type { TaskPriority } from "@/db/enums";
@@ -17,10 +18,11 @@ interface PageProps {
 export default async function NewTaskPage({ searchParams }: PageProps) {
   const me = await requireUser();
   const { from } = await searchParams;
-  const [all, clients, subjects] = await Promise.all([
+  const [all, clients, subjects, projectNodes] = await Promise.all([
     listEmployees(),
     listActiveClientNames(),
     listActiveSubjectNames(),
+    listProjectNodeOptions(),
   ]);
   const options = all.map((e) => ({ id: e.id, name: e.name }));
 
@@ -33,6 +35,7 @@ export default async function NewTaskPage({ searchParams }: PageProps) {
     subject?: string;
     description?: string;
     notes?: string;
+    projectNodeId?: string;
   } = { initiatorId: me.id };
   if (from) {
     const src = await getTaskById(from);
@@ -45,6 +48,7 @@ export default async function NewTaskPage({ searchParams }: PageProps) {
         subject: src.subject ?? undefined,
         description: src.description ?? undefined,
         notes: src.notes ?? undefined,
+        projectNodeId: src.projectNodeId ?? undefined,
       };
     }
   }
@@ -68,6 +72,7 @@ export default async function NewTaskPage({ searchParams }: PageProps) {
             employees={options}
             clients={clients}
             subjects={subjects}
+            projectNodes={projectNodes}
             defaults={defaults}
           />
         </div>

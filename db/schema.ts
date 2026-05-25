@@ -166,6 +166,33 @@ export const subjects = pgTable(
   (t) => [index("subjects_active_name_idx").on(t.isActive, t.name)],
 );
 
+/**
+ * Project Management (Manan #23/#24). A self-referential tree:
+ * Project → Milestone → Result. Tasks link to any node via
+ * `tasks.project_node_id` (the "action" connected to a project/milestone/
+ * result). We never hard-delete — archive instead.
+ */
+export const projectNodes = pgTable(
+  "project_nodes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    kind: text("kind").$type<"project" | "milestone" | "result">().notNull(),
+    parentId: uuid("parent_id"),
+    sortOrder: integer("sort_order").notNull().default(100),
+    isArchived: boolean("is_archived").notNull().default(false),
+    createdById: uuid("created_by_id").references(() => employees.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("project_nodes_parent_idx").on(t.parentId),
+    index("project_nodes_kind_idx").on(t.kind, t.isArchived),
+  ],
+);
+
 // M5.1 — admin-managed display overrides for the 9 task statuses. PK is the
 // task_status enum value; updates only (RLS: insert/delete revoked at the
 // table level + only `update` policy). Seeded by migration 0016 so the
@@ -250,6 +277,9 @@ export const tasks = pgTable(
     // end). Coexists with `recurrence` (coarse frequency). Capture-only; no
     // engine materialises instances yet.
     recurrenceRule: text("recurrence_rule"),
+    // Manan #24 — optional link to a Project Management node (the "action"
+    // connected to a project / milestone / result).
+    projectNodeId: uuid("project_node_id"),
   },
   (t) => [
     index("tasks_doer_created_idx").on(t.doerId, t.createdAt),
@@ -499,6 +529,8 @@ export type Client = typeof clients.$inferSelect;
 export type NewClient = typeof clients.$inferInsert;
 export type Subject = typeof subjects.$inferSelect;
 export type NewSubject = typeof subjects.$inferInsert;
+export type ProjectNode = typeof projectNodes.$inferSelect;
+export type NewProjectNode = typeof projectNodes.$inferInsert;
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 export type NewPushSubscription = typeof pushSubscriptions.$inferInsert;
 export type EmployeeEvent = typeof employeeEvents.$inferSelect;

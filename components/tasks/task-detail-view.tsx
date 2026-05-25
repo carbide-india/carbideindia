@@ -48,6 +48,8 @@ interface Props {
   clients: string[];
   /** Subject roster for the Edit Task "Subject" picker. */
   subjects: string[];
+  /** Project tree nodes for the Edit Task "Project" link. */
+  projectNodes?: { id: string; label: string }[];
   /** Current user — drives the comment composer avatar.  Optional so the
    *  page route can defer fetching it; falls back to "You". */
   me?: {
@@ -202,6 +204,7 @@ export function TaskDetailView({
   employees,
   clients,
   subjects,
+  projectNodes,
   me,
   statusLabels,
   statusTones,
@@ -356,6 +359,7 @@ export function TaskDetailView({
                   taskId={task.id}
                   clients={clients}
                   subjects={subjects}
+                  projectNodes={projectNodes}
                   initial={{
                     title: task.title,
                     description: task.description,
@@ -380,6 +384,7 @@ export function TaskDetailView({
                         ? task.recurrence
                         : null,
                     recurrenceRule: task.recurrenceRule,
+                    projectNodeId: task.projectNodeId,
                   }}
                   expectedUpdatedAt={expectedUpdatedAt}
                   isAdmin={me?.isAdmin ?? false}

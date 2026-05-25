@@ -7,6 +7,7 @@ import { listTaskEvents } from "@/lib/queries/audit";
 import { listEmployees } from "@/lib/queries/employees";
 import { listActiveClientNames } from "@/lib/queries/clients";
 import { listActiveSubjectNames } from "@/lib/queries/subjects";
+import { listProjectNodeOptions } from "@/lib/queries/projects";
 import { getStatusDisplayMap } from "@/lib/queries/status-display";
 import { requireUser } from "@/lib/auth/current";
 import type { TaskStatus, StatusColorToken } from "@/db/enums";
@@ -31,12 +32,13 @@ export default async function TaskDetailPage({ params }: PageProps) {
   const task = await getTaskById(id);
   if (!task) notFound();
 
-  const [events, all, statusDisplay, clients, subjects] = await Promise.all([
+  const [events, all, statusDisplay, clients, subjects, projectNodes] = await Promise.all([
     listTaskEvents(id),
     listEmployees(),
     getStatusDisplayMap(),
     listActiveClientNames(),
     listActiveSubjectNames(),
+    listProjectNodeOptions(),
   ]);
   const employeeOptions = all.map((e) => ({ id: e.id, name: e.name }));
   const statusLabels = Object.fromEntries(
@@ -80,6 +82,7 @@ export default async function TaskDetailPage({ params }: PageProps) {
           employees={employeeOptions}
           clients={clients}
           subjects={subjects}
+          projectNodes={projectNodes}
           me={{
             id: me.id,
             name: me.name,

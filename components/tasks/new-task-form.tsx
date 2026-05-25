@@ -24,6 +24,8 @@ interface Props {
   clients: string[];
   /** Subject roster for the "Subject" picker, alphabetical. */
   subjects: string[];
+  /** Project tree nodes (path-labelled) for the optional Project link. */
+  projectNodes?: { id: string; label: string }[];
   /** Called after a successful create. Default: navigate to /tasks/[id]. */
   onSuccess?: (taskId: string) => void;
   /** Optional defaults for the form (used by the canonical route + the
@@ -36,6 +38,7 @@ interface Props {
     subject?: string;
     description?: string;
     notes?: string;
+    projectNodeId?: string;
   };
 }
 
@@ -51,7 +54,7 @@ interface PreviewFile {
   url: string;
 }
 
-export function NewTaskForm({ employees, clients, subjects, onSuccess, defaults }: Props) {
+export function NewTaskForm({ employees, clients, subjects, projectNodes = [], onSuccess, defaults }: Props) {
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
 
@@ -59,6 +62,7 @@ export function NewTaskForm({ employees, clients, subjects, onSuccess, defaults 
   const [description, setDesc] = React.useState(defaults?.description ?? "");
   const [subject, setSubject] = React.useState(defaults?.subject ?? "");
   const [notes, setNotes] = React.useState(defaults?.notes ?? "");
+  const [projectNodeId, setProjectNodeId] = React.useState(defaults?.projectNodeId ?? "");
   const [doerIds, setDoerIds] = React.useState<string[]>(
     defaults?.doerId ? [defaults.doerId] : [],
   );
@@ -184,6 +188,7 @@ export function NewTaskForm({ employees, clients, subjects, onSuccess, defaults 
         allDay: schedule.allDay,
         recurrence: schedule.recurrence,
         recurrenceRule: schedule.recurrenceRule,
+        projectNodeId: projectNodeId || null,
       });
       if (!result.ok) {
         setError(result.error);
@@ -344,6 +349,25 @@ export function NewTaskForm({ employees, clients, subjects, onSuccess, defaults 
           onRemove={removeTag}
         />
       </Field>
+
+      {/* Project link — optional connection to a Project / Milestone / Result. */}
+      {projectNodes.length > 0 && (
+        <Field id="nt-project" label="Project">
+          <select
+            id="nt-project"
+            value={projectNodeId}
+            onChange={(e) => setProjectNodeId(e.target.value)}
+            className="nt-input"
+          >
+            <option value="">Not linked to a project</option>
+            {projectNodes.map((n) => (
+              <option key={n.id} value={n.id}>
+                {n.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
 
       {/* Schedule — GCal-style start/end + recurrence. Internal metadata
           only; not synced to any actual calendar API. */}

@@ -374,6 +374,7 @@ export async function createTask(input: CreateTaskInput): Promise<
             allDay: parsed.allDay ?? false,
             recurrence: parsed.recurrence ?? null,
             recurrenceRule: parsed.recurrenceRule ?? null,
+            projectNodeId: parsed.projectNodeId ?? null,
             createdById: me.id,
             shortId,
             // status defaults to "not_started"; archived defaults to false;

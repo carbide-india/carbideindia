@@ -28,6 +28,8 @@ interface Props {
   clients: string[];
   /** Subject roster for the "Subject" picker, alphabetical. */
   subjects: string[];
+  /** Project tree nodes for the optional Project link. */
+  projectNodes?: { id: string; label: string }[];
   initial: {
     title: string;
     description: string | null;
@@ -45,6 +47,7 @@ interface Props {
     allDay: boolean;
     recurrence: TaskRecurrence | null;
     recurrenceRule: string | null;
+    projectNodeId: string | null;
   };
   /** Used for the optimistic-lock — must be the row's current updated_at. */
   expectedUpdatedAt: string;
@@ -116,6 +119,7 @@ export function TaskEditForm({
   taskId,
   clients,
   subjects,
+  projectNodes = [],
   initial,
   expectedUpdatedAt,
   isAdmin,
@@ -127,6 +131,7 @@ export function TaskEditForm({
   const [title, setTitle] = useState(initial.title);
   const [description, setDesc] = useState(initial.description ?? "");
   const [subject, setSubject] = useState(initial.subject ?? "");
+  const [projectNodeId, setProjectNodeId] = useState(initial.projectNodeId ?? "");
   const [notes, setNotes] = useState(initial.notes ?? "");
   const [priority, setPriority] = useState<TaskPriority>(initial.priority);
   const [dueAt, setDueAt] = useState(
@@ -211,6 +216,7 @@ export function TaskEditForm({
           allDay: schedule.allDay,
           recurrence: schedule.recurrence,
           recurrenceRule: schedule.recurrenceRule,
+          projectNodeId: projectNodeId || null,
         },
         expectedUpdatedAt,
       );
@@ -468,6 +474,28 @@ export function TaskEditForm({
           </div>
         )}
       </FieldShell>
+
+      {/* Project link — connect this task to a Project / Milestone / Result. */}
+      {projectNodes.length > 0 && (
+        <FieldShell label="Project" htmlFor="te-project" focused={false} setFocused={() => {}}>
+          {(p) => (
+            <select
+              id="te-project"
+              value={projectNodeId}
+              onChange={(e) => setProjectNodeId(e.target.value)}
+              className={inputClass}
+              {...p}
+            >
+              <option value="">Not linked to a project</option>
+              {projectNodes.map((n) => (
+                <option key={n.id} value={n.id}>
+                  {n.label}
+                </option>
+              ))}
+            </select>
+          )}
+        </FieldShell>
+      )}
 
       {/* Schedule — GCal-style start/end + recurrence. Internal only. */}
       <ScheduleSection value={schedule} onChange={setSchedule} />

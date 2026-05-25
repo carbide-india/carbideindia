@@ -1,6 +1,6 @@
 "use client";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ListTodo, Archive, Inbox, CalendarDays } from "lucide-react";
+import { LayoutDashboard, ListTodo, Archive, Inbox, CalendarDays, FolderKanban } from "lucide-react";
 import type { Route } from "next";
 import { MainNavPill } from "./main-nav-pill";
 
@@ -45,6 +45,12 @@ export function MainNav({
         Icon={ListTodo}
         active={isActive("/tasks") && !pathname.startsWith("/tasks/agenda")}
         count={activeTasks}
+      />
+      <MainNavPill
+        href={"/projects" as Route}
+        label="Projects"
+        Icon={FolderKanban}
+        active={isActive("/projects")}
       />
       <MainNavPill
         href={"/archived" as Route}
