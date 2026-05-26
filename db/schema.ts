@@ -303,9 +303,13 @@ export const tasks = pgTable(
     allDay: boolean("all_day").notNull().default(false),
     recurrence: text("recurrence"),
     // Manan #20 — RRULE-lite structured recurrence (weekdays / monthly mode /
-    // end). Coexists with `recurrence` (coarse frequency). Capture-only; no
-    // engine materialises instances yet.
+    // end). Coexists with `recurrence` (coarse frequency). Originals carry
+    // the rule; materialized child instances do not (parent_id points back).
     recurrenceRule: text("recurrence_rule"),
+    // Phase 5.2 — recurrence materialization markers. NULL on originals
+    // (rule-holders); set on every dated instance the cron creates.
+    recurrenceParentId: uuid("recurrence_parent_id"),
+    recurrenceOccurrenceDate: text("recurrence_occurrence_date"),
     // Manan #24 — optional link to a Project Management node (the "action"
     // connected to a project / milestone / result). The FK + onDelete SET
     // NULL + matching index were created by migration 0027; the
