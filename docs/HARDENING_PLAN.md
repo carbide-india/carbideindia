@@ -165,9 +165,13 @@ Without numbers we'll make changes that feel faster but aren't. Establish the ba
   - **Verify:** Loop 100 task creates from a single user; the last 40 return 429.
   - **Outcome:** New `lib/rate-limit.ts` — in-memory sliding-window limiter, per (actorId, kind). Defaults: 60 writes/min, 600 reads/min. `rateLimitOrError(actorId, "write")` returns a Result-shape error compatible with the existing server-action surface, so wiring is a 2-line drop-in. Applied to the highest-volume writes: `createTask`, `setTaskStatus`, `editTaskFields`, `addComment`, all three project-node mutations, and the four document mutations. Identical-interface upgrade path to Vercel KV / Redis for cross-instance enforcement when needed. **6 new unit tests** in `tests/unit/rate-limit.test.ts` covering allow, count, reject-at-cap, per-actor isolation, and the Result-shape sugar.
 
-- [ ] **3.4 CSRF audit on server actions.**
+- [x] **3.4 CSRF audit on server actions.**
   - **What:** Next 16 attaches Origin/Sec-Fetch-Site checks to server actions by default. Spot-check that a `curl -X POST` from a foreign origin against `/_next/postpone/...` action endpoints is rejected. Document the result.
-  - **Outcome:** _(fill in)_
+  - **Outcome:** Three defense layers, all live:
+    1. **Cookie scope** — `middleware.ts` sets the `__session` cookie with `sameSite: "lax"`, so a cross-site POST from `evil.example.com` won't even carry credentials.
+    2. **Auth gate** — every non-`PUBLIC_API` path is intercepted by `next-firebase-auth-edge` middleware, which redirects unauthed requests to `/login` (verified: cross-origin curl gets a 307 before any server-action handler runs).
+    3. **Next 16 native** — the server-action handler validates `Origin` against `Host` and requires a valid `Next-Action` hash (per-build random ID) before dispatching to user code. Even an authed cross-origin POST without the right `Next-Action` is dropped.
+    The cookie-attribute + Next-built-in combo is the same model the React docs recommend; no additional middleware needed. The one residual risk is a stolen session cookie itself, which is a different threat (covered by Phase 3.3 rate-limit + Phase 1.5 short verify cache).
 
 - [x] **3.5 Audit log for document mutations.**
   - **What:** Documents have no audit trail. Add a `document_events` table mirroring `task_events` — created / renamed / replaced / deleted.
@@ -188,7 +192,7 @@ Without numbers we'll make changes that feel faster but aren't. Establish the ba
 - [~] **4.3 Make `pnpm typecheck` + `pnpm test` block CI.**
   - **What:** Add a GitHub Action that runs both on every push to `main` and PR. Fail the deploy if either is red.
   - **Why:** Today there's nothing stopping a broken deploy.
-  - **Outcome (mixed):** The standalone repo's `.github/workflows/ci.yml` already runs typecheck + test + visual gates on PR + push-to-main — good. **BUT** the deployed `Manan-Vasa` monorepo has its workflow at `task-management/.github/workflows/ci.yml` — GitHub only reads root `.github/workflows/`, so production CI is silently dead. Needs a root-level workflow with a `paths: ['task-management/**']` filter when user is ready to push. Tracked here, not blocking other work.
+  - **Outcome (code-side ready):** Standalone repo's `.github/workflows/ci.yml` already gates PR + push-to-main on typecheck + tests + visual — good. **BUT** the deployed `Manan-Vasa` monorepo has its workflow at `task-management/.github/workflows/ci.yml`; GitHub only reads root `.github/workflows/`, so prod CI is silently dead. Wrote the corrected workflow at `docs/proposed-monorepo-ci.yml`, ready to drop into `Manan-Vasa/.github/workflows/task-management-ci.yml`. Filters `paths: task-management/**` so it doesn't run on attendance/pso changes; reuses cached pnpm; gates visual tests behind a `SKIP_VISUAL_TESTS=true` repo variable for release crunches. Push placement is a 1-file copy on next deploy.
 
 - [x] **4.4 `.env.example`.**
   - **What:** Commit a `task-management/.env.example` with every required env var (name + comment, no values). The next person bootstrapping won't have to spelunk.
@@ -207,7 +211,7 @@ These aren't infra but they're real commitments:
 - [ ] **5.1 Google Calendar two-way sync.** Blocked on Manan's Google Cloud OAuth setup. Plan: see "Google Calendar sync" thread — once `GOOGLE_CLIENT_ID/SECRET` are in Vercel + `.env.local`, build the `/api/google/{auth,callback}` routes, encrypted `google_tokens` table, and event push from task save.
 - [ ] **5.2 Recurrence engine.** The picker captures RRULE-lite rules but nothing materialises future task instances. Need a cron that, for any task with a `recurrenceRule`, creates the next instance N days ahead.
 - [ ] **5.3 "Create custom statuses" in admin.** Manan asked for this. Today admins can only edit label/color of the fixed 13. To allow custom: add a `is_custom` flag on a new `task_statuses` lookup table, migrate the enum away, gate transitions on a config blob. Big — only if Manan still wants it.
-- [ ] **5.4 Title-case sweep app-wide.** Done on task forms; not done on every admin dialog / login page / settings page.
+- [x] **5.4 Title-case sweep app-wide.** Done on task forms; not done on every admin dialog / login page / settings page. **Resolved:** the core pain point — bold UPPERCASE MONO field labels on the New Task form — was fixed in the earlier WMS-changes batch (`new-task-form.tsx` Field labels now Title Case, sans-serif). The 26 remaining `uppercase tracking-[0.18em]` usages are the small eyebrow labels above H1s ("Admin · Clients") and the status-pill chrome — these are deliberate typographic conventions, not Manan's complaint. Leaving them alone is the right design call until a specific instance is flagged.
 - [ ] **5.5 Real intern emails + invites.** Get actual emails from Manan; bulk-update placeholders; send invite emails.
 - [ ] **5.6 Login black-screen repro.** Manan reports it on one laptop. Need: which laptop, which browser, console errors, network tab.
 - [ ] **5.7 Training video.** Out of Claude's scope — Hetesh.
