@@ -6,6 +6,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { documents, documentEvents, type Document, type Employee } from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
+import { rateLimitOrError } from "@/lib/rate-limit";
 import { getSupabaseAdmin, DOCUMENTS_BUCKET } from "@/lib/supabase/admin";
 
 type Result<T = unknown> = ({ ok: true } & T) | { ok: false; error: string };
@@ -106,6 +107,8 @@ function validateUploadShape(file: File): { ok: true } | { ok: false; error: str
 
 export async function uploadDocument(form: FormData): Promise<Result<{ id: string }>> {
   const me = await requireUser();
+  const limited = rateLimitOrError(me.id, "write");
+  if (limited) return limited;
 
   const titleRes = TitleSchema.safeParse(form.get("title"));
   if (!titleRes.success) return { ok: false, error: titleRes.error.issues[0]!.message };
@@ -162,6 +165,8 @@ export async function updateDocument(
   fields: { title?: string; description?: string | null },
 ): Promise<Result> {
   const me = await requireUser();
+  const limited = rateLimitOrError(me.id, "write");
+  if (limited) return limited;
   const auth = await authorizeDocumentMutation(id, me);
   if (!auth.ok) return auth;
 
@@ -217,6 +222,8 @@ export async function updateDocument(
 
 export async function replaceDocumentFile(id: string, form: FormData): Promise<Result> {
   const me = await requireUser();
+  const limited = rateLimitOrError(me.id, "write");
+  if (limited) return limited;
   const auth = await authorizeDocumentMutation(id, me);
   if (!auth.ok) return auth;
 
@@ -258,6 +265,8 @@ export async function replaceDocumentFile(id: string, form: FormData): Promise<R
 
 export async function deleteDocument(id: string): Promise<Result> {
   const me = await requireUser();
+  const limited = rateLimitOrError(me.id, "write");
+  if (limited) return limited;
   const auth = await authorizeDocumentMutation(id, me);
   // Distinguish "not there" from "forbidden" so the UI can show the
   // right message — the prior code returned ok:true on missing rows,

@@ -63,11 +63,11 @@ Without numbers we'll make changes that feel faster but aren't. Establish the ba
   - **Verify:** Trigger a deliberate error from a server action; confirm it lands in Sentry within 30s.
   - **Outcome:** _(fill in)_
 
-- [ ] **0.3 Enable Vercel Speed Insights** on the `task-management` project.
+- [x] **0.3 Enable Vercel Speed Insights** on the `task-management` project.
   - **What:** Settings → Speed Insights → Enable. Add `<SpeedInsights />` to the root layout.
   - **Why:** Real-user LCP/INP per route, free.
   - **Verify:** After 24h, the Vercel dashboard shows percentile timings per route.
-  - **Outcome:** _(fill in)_
+  - **Outcome:** Installed `@vercel/speed-insights`, mounted `<SpeedInsights />` in `app/layout.tsx`. Auto-no-ops outside Vercel (no env vars needed). After deploy + UI toggle, real-user Core Web Vitals will land per route.
 
 - [ ] **0.4 Capture a baseline** of the current task-detail load.
   - **What:** Open `/tasks/[id]` 5× from a cold connection; note the avg of the dev server's `application-code` timings. Record `getTaskById` + each fan-out query in isolation via `console.time`.
@@ -159,11 +159,11 @@ Without numbers we'll make changes that feel faster but aren't. Establish the ba
   - **What:** Add `editComment` and `deleteComment` actions gated by `comment.actorId === me.id && Date.now() - comment.createdAt < 15min` (or admin). UI: hover → pencil/trash on own comments.
   - **Outcome:** New `editComment(eventId, {body})` + `deleteComment(eventId)` server actions in `tasks/actions.ts` with `canMutateComment` helper enforcing the 15-min window or admin override. Edit stores `editedAt` in the event's `to_value` JSON so the audit feed renders "(edited)". Delete hard-removes the event row (FK on notifications is set-null). UI: inline `<CommentBody>` client component in `audit-event.tsx` renders pencil/trash on hover, opens an autoexpanding textarea for edit (⌘/Ctrl+Enter to save, Esc to cancel), browser `confirm()` for delete. `me` threaded through `AuditFeed` → `AuditEvent` → `Body` → `CommentBody`.
 
-- [ ] **3.3 Rate-limit server actions.**
+- [x] **3.3 Rate-limit server actions.**
   - **What:** Add a per-user (employee id) sliding-window limiter — e.g. 60 writes/min, 600 reads/min — using Vercel KV or an in-memory `Map` per instance. Return 429 when exceeded.
   - **Why:** A compromised session can currently hammer the API; no defense.
   - **Verify:** Loop 100 task creates from a single user; the last 40 return 429.
-  - **Outcome:** _(fill in)_
+  - **Outcome:** New `lib/rate-limit.ts` — in-memory sliding-window limiter, per (actorId, kind). Defaults: 60 writes/min, 600 reads/min. `rateLimitOrError(actorId, "write")` returns a Result-shape error compatible with the existing server-action surface, so wiring is a 2-line drop-in. Applied to the highest-volume writes: `createTask`, `setTaskStatus`, `editTaskFields`, `addComment`, all three project-node mutations, and the four document mutations. Identical-interface upgrade path to Vercel KV / Redis for cross-instance enforcement when needed. **6 new unit tests** in `tests/unit/rate-limit.test.ts` covering allow, count, reject-at-cap, per-actor isolation, and the Result-shape sugar.
 
 - [ ] **3.4 CSRF audit on server actions.**
   - **What:** Next 16 attaches Origin/Sec-Fetch-Site checks to server actions by default. Spot-check that a `curl -X POST` from a foreign origin against `/_next/postpone/...` action endpoints is rejected. Document the result.

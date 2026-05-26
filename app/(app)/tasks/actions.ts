@@ -35,6 +35,7 @@ import { taskEvents, clients, subjects } from "@/db/schema";
 import { CreateClientSchema } from "@/lib/validators/client";
 import { CreateSubjectSchema } from "@/lib/validators/subject";
 import { requireUser } from "@/lib/auth/current";
+import { rateLimitOrError } from "@/lib/rate-limit";
 import {
   canEditTaskFields,
   canApprove,
@@ -178,6 +179,8 @@ export async function setTaskStatus(
     return { ok: false, error: "invalid", message: "Unknown status" };
 
   const me = await requireUser();
+  const limited = rateLimitOrError(me.id, "write");
+  if (limited) return { ok: false, error: "invalid", message: limited.error };
 
   const current = await db.query.tasks.findFirst({
     where: eq(tasks.id, taskId),
@@ -341,6 +344,8 @@ export async function createTask(input: CreateTaskInput): Promise<
   | { ok: false; error: string }
 > {
   const me = await requireUser();
+  const limited = rateLimitOrError(me.id, "write");
+  if (limited) return limited;
   let parsed;
   try {
     parsed = CreateTaskSchema.parse(input);
@@ -594,6 +599,8 @@ export async function editTaskFields(
   if (!isUuid(taskId)) return { ok: false, error: "invalid", message: "Bad task id" };
 
   const me = await requireUser();
+  const limited = rateLimitOrError(me.id, "write");
+  if (limited) return { ok: false, error: "invalid", message: limited.error };
 
   let parsed;
   try {
@@ -1150,6 +1157,8 @@ export async function addComment(
   if (!isUuid(taskId)) return { ok: false, error: "invalid", message: "Bad task id" };
 
   const me = await requireUser();
+  const limited = rateLimitOrError(me.id, "write");
+  if (limited) return { ok: false, error: "invalid", message: limited.error };
 
   let parsed;
   try {

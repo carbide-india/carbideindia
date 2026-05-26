@@ -6,6 +6,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { projectNodes, type Employee, type ProjectNode } from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
+import { rateLimitOrError } from "@/lib/rate-limit";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 
 type Result<T = unknown> = ({ ok: true } & T) | { ok: false; error: string };
@@ -68,6 +69,8 @@ export async function createProjectNode(
   input: z.input<typeof CreateSchema>,
 ): Promise<Result<{ id: string }>> {
   const me = await requireUser();
+  const limited = rateLimitOrError(me.id, "write");
+  if (limited) return limited;
   const parsed = CreateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
@@ -111,6 +114,8 @@ export async function renameProjectNode(
   name: string,
 ): Promise<Result> {
   const me = await requireUser();
+  const limited = rateLimitOrError(me.id, "write");
+  if (limited) return limited;
   const parsedName = NameSchema.safeParse(name);
   if (!parsedName.success) {
     return { ok: false, error: parsedName.error.issues[0]?.message ?? "Invalid name" };
@@ -142,6 +147,8 @@ export async function setProjectNodeArchived(
   isArchived: boolean,
 ): Promise<Result> {
   const me = await requireUser();
+  const limited = rateLimitOrError(me.id, "write");
+  if (limited) return limited;
   const auth = await authorizeProjectNodeMutation(id, me);
   if (!auth.ok) return auth;
   const updated = await db
