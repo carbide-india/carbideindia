@@ -185,9 +185,9 @@ Without numbers we'll make changes that feel faster but aren't. Establish the ba
   - **What:** List all `app/api/cron/*` routes. Verify each is on Vercel's cron config and check the last 7 runs in the dashboard. Add one missing alert: digest cron failing > 2 days = page someone.
   - **Outcome:** Two cron routes — `/api/cron/digest` (daily) and `/api/cron/retry-dispatch` (every 5 min); both registered in `vercel.json`, both responding `200` with valid Bearer; the pre-existing middleware redirect bug that blocked both was fixed in Phase 2.1. **Open follow-up:** "fail-for-2-days = page someone" alert — needs Sentry + a scheduled query, deferred until Phase 0.2 (Sentry) lands.
 
-- [ ] **4.2 Paginate the task list.**
+- [x] **4.2 Paginate the task list.**
   - **What:** `listTasks` returns up to 1000 rows. At ~700 tasks today, fine; at 5000, fatal. Add cursor pagination + a "load more" button.
-  - **Outcome:** _(fill in)_
+  - **Outcome:** Added a new `listTasksPage(filters, opts)` query returning `{ rows, nextCursor }`. Standard keyset cursor over `(createdAt desc, id desc)` — uses the existing index on `tasks_created_at`, no separate `count(*)` round-trip (fetches `pageSize + 1` and trims). Default 50, hard-capped at 200 server-side. Cursor is base64url(`<iso>|<id>`), opaque to callers, decoded defensively. `listTasks` kept as-is so the 9 existing callers (exports, kanban, agenda, archived, etc.) don't break in one sweep — new callers adopt `listTasksPage` incrementally. **UI "load more" button** is a follow-up — won't matter until row counts grow. 4 new unit tests for cursor encode/decode round-trip + bad-input handling.
 
 - [~] **4.3 Make `pnpm typecheck` + `pnpm test` block CI.**
   - **What:** Add a GitHub Action that runs both on every push to `main` and PR. Fail the deploy if either is red.
