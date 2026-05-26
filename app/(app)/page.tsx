@@ -8,9 +8,12 @@ import { StatusDistributionChart } from "@/components/dashboard/status-distribut
 import { TopPerformersSection } from "@/components/dashboard/top-performers";
 import { AgingHeatmap } from "@/components/dashboard/aging-heatmap";
 import { WelcomeHero } from "@/components/dashboard/welcome-hero";
+import { MyDayCard } from "@/components/dashboard/my-day-card";
 import { listEmployees } from "@/lib/queries/employees";
 import { loadDashboardData } from "@/lib/queries/dashboard";
 import { getStatusDisplayMap } from "@/lib/queries/status-display";
+import { getMyDayCounts } from "@/lib/queries/my-day";
+import { getCurrentEmployee } from "@/lib/auth/current";
 import { parseFilters } from "@/lib/filters";
 import type { TaskStatus, StatusColorToken } from "@/db/enums";
 
@@ -24,10 +27,12 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const filters = parseFilters(sp);
 
-  const [allEmployees, data, statusDisplay] = await Promise.all([
+  const me = await getCurrentEmployee();
+  const [allEmployees, data, statusDisplay, myDay] = await Promise.all([
     listEmployees(),
     loadDashboardData(filters),
     getStatusDisplayMap(),
+    me ? getMyDayCounts(me.id) : Promise.resolve(null),
   ]);
 
   const statusLabels = Object.fromEntries(
@@ -66,6 +71,12 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           <WelcomeHero />
         ) : (
           <>
+            {me && myDay && (
+              <MyDayCard
+                firstName={me.name.split(" ")[0] ?? me.name}
+                counts={myDay}
+              />
+            )}
             <KpiStrip kpis={data.kpis} />
             <VelocityHero data={data.velocity} />
             <div className="mx-auto max-w-[1600px] px-12 max-md:px-4 mt-12 grid grid-cols-2 max-lg:grid-cols-1 gap-6">
