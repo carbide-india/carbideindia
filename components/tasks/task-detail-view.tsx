@@ -15,6 +15,7 @@ import {
   Loader2,
   Copy,
   Maximize2,
+  Repeat,
 } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
@@ -295,6 +296,45 @@ export function TaskDetailView({
       <div className="grid grid-cols-[minmax(0,1fr)_360px] gap-10 max-lg:grid-cols-1 max-lg:gap-6">
         {/* LEFT COLUMN — editorial document */}
         <div className="min-w-0">
+          {/* Recurrence badge — small inline indicator for materialized
+              children (with click-through to the template) AND for
+              rule-holders themselves. Hidden for non-recurring tasks. */}
+          {!editing && (task.recurrenceParentId || task.recurrenceRule) && (
+            <div className="mb-3">
+              {task.recurrenceParentId ? (
+                <Link
+                  href={`/tasks/${task.recurrenceParentId}` as Route}
+                  className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold transition-colors"
+                  style={{
+                    background: "var(--color-purple-bg)",
+                    color: "var(--color-purple-deep)",
+                  }}
+                  title="Materialized from a recurring template"
+                >
+                  <Repeat size={12} strokeWidth={2.4} />
+                  Recurring · from template
+                  {task.recurrenceOccurrenceDate && (
+                    <span className="font-mono opacity-75">
+                      · {task.recurrenceOccurrenceDate}
+                    </span>
+                  )}
+                </Link>
+              ) : (
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold"
+                  style={{
+                    background: "var(--color-purple-bg)",
+                    color: "var(--color-purple-deep)",
+                  }}
+                  title="Daily cron materialises one child instance per occurrence"
+                >
+                  <Repeat size={12} strokeWidth={2.4} />
+                  Recurring template
+                </span>
+              )}
+            </div>
+          )}
+
           {/* Edit + Duplicate buttons hovering top-right of the left column */}
           {!editing && (
             <div className="flex justify-end gap-2 mb-4">

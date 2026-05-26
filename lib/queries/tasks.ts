@@ -455,6 +455,10 @@ export type TaskDetail = {
   allDay: boolean;
   recurrence: string | null;
   recurrenceRule: string | null;
+  // Phase 5.2 — set on materialized recurrence children; the UI shows
+  // a small "↻ recurring" badge with a click-through to the template.
+  recurrenceParentId: string | null;
+  recurrenceOccurrenceDate: string | null;
   projectNodeId: string | null;
 };
 
@@ -491,6 +495,8 @@ export async function getTaskById(taskId: string): Promise<TaskDetail | null> {
       allDay: tasks.allDay,
       recurrence: tasks.recurrence,
       recurrenceRule: tasks.recurrenceRule,
+      recurrenceParentId: tasks.recurrenceParentId,
+      recurrenceOccurrenceDate: tasks.recurrenceOccurrenceDate,
       projectNodeId: tasks.projectNodeId,
     })
     .from(tasks)
