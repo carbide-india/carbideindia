@@ -3,6 +3,7 @@ import { getOrgSettings } from "@/lib/queries/org-settings";
 import { getStatusDisplayMap } from "@/lib/queries/status-display";
 import { getIntegrationHealth } from "@/lib/queries/integration-health";
 import { listRecentDispatchFailures, getDispatchLogTotals } from "@/lib/queries/dispatch-log";
+import { listRecurringTemplates } from "@/lib/queries/recurring-templates";
 import { getNotificationMatrix } from "@/lib/queries/notification-matrix";
 import { SettingsTabs } from "@/components/admin/settings-tabs";
 import { SettingsTabGeneral } from "@/components/admin/settings-tab-general";
@@ -21,6 +22,7 @@ export default async function SettingsPage() {
     matrix,
     dispatchFailures,
     dispatchTotals,
+    recurringTemplates,
   ] = await Promise.all([
     getOrgSettings(),
     getStatusDisplayMap(),
@@ -28,6 +30,7 @@ export default async function SettingsPage() {
     getNotificationMatrix(),
     listRecentDispatchFailures({ limit: 50 }),
     getDispatchLogTotals(),
+    listRecurringTemplates(),
   ]);
 
   return (
@@ -63,6 +66,7 @@ export default async function SettingsPage() {
             rows={integrations}
             dispatchFailures={dispatchFailures}
             dispatchTotals={dispatchTotals}
+            recurringTemplates={recurringTemplates}
           />
         }
         notifications={<SettingsTabNotifications initial={matrix} />}
