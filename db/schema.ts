@@ -430,6 +430,41 @@ export const notifications = pgTable(
 );
 
 /**
+ * Phase 3.5 — Document mutation audit log. Append-only rows recording every
+ * document create / rename / description-change / file-replace / delete.
+ * The `documentId` FK is nullable so a delete-event survives after the
+ * referenced document row goes away; `documentTitle` is snapshotted at
+ * write-time so the log row stays self-readable.
+ */
+export const documentEvents = pgTable(
+  "document_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    documentId: uuid("document_id").references(() => documents.id, {
+      onDelete: "set null",
+    }),
+    documentTitle: text("document_title").notNull(),
+    actorId: uuid("actor_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "restrict" }),
+    eventType: text("event_type")
+      .$type<"created" | "renamed" | "description_changed" | "file_replaced" | "deleted">()
+      .notNull(),
+    fromValue: jsonb("from_value"),
+    toValue: jsonb("to_value"),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("document_events_doc_created_idx").on(t.documentId, t.createdAt),
+    index("document_events_actor_created_idx").on(t.actorId, t.createdAt),
+    index("document_events_created_idx").on(t.createdAt),
+  ],
+);
+
+/**
  * Phase 2.1 — Per-attempt audit + retry queue for notification dispatch.
  * One row per (notification, channel) attempt. The 4-arm fan-out in
  * `lib/notifications/dispatch.ts` writes one row per attempt; the

@@ -128,11 +128,11 @@ Without numbers we'll make changes that feel faster but aren't. Establish the ba
   - **Verify:** A signed URL still downloads. A direct `https://<project>.supabase.co/storage/v1/object/documents/<path>` request without auth returns 401.
   - **Outcome:** _(fill in)_
 
-- [ ] **2.3 Rebuild the drizzle migration journal.**
+- [x] **2.3 Rebuild the drizzle migration journal.**
   - **What:** Either (a) regenerate `_journal.json` from the actual migration files and check the live schema matches, or (b) formally adopt the `scripts/apply-migration.ts` pattern and delete `_journal.json` so future schema work flows through one path.
   - **Why:** Today, `pnpm db:migrate` would silently miss migrations 0019-tier3 / 0020 / 0021 / 0022 / 0023 / 0024 / 0025 / 0026 / 0027 / 0028. The next person who tries to spin up a fresh DB is in for a bad day.
   - **Verify:** `pnpm db:migrate` against an empty DB lands at the same schema as production.
-  - **Outcome:** _(decision made + commit)_
+  - **Outcome:** Chose option (b). New `scripts/apply-all-migrations.ts` walks `db/migrations/*.sql` in filename order, tracks applied files in a `__schema_applied` ledger (mirrors drizzle's `__drizzle_migrations` keyed by filename), splits out `ALTER TYPE ADD VALUE` statements so they run standalone (0024), and backfills the ledger on first run by probing for landmark tables/columns. Re-pointed `pnpm db:migrate` to this script; preserved the original via `pnpm db:migrate:legacy-drizzle-kit`. End-to-end tested on the live DB: 30 migrations correctly skipped as already-applied, 3 newer ones (0029 perf-indexes, 0029 notification-dispatch-log, 0030 document-events) re-applied idempotently with `IF NOT EXISTS` NOTICEs. Post-apply row counts intact.
 
 - [ ] **2.4 Backups + restore drill.**
   - **What:** Confirm Supabase's daily PITR backup window covers what we need (it does on Pro, doesn't on Free). Document the restore procedure in `docs/runbooks/restore-from-backup.md`. Do a restore drill into a scratch project.
@@ -155,9 +155,9 @@ Without numbers we'll make changes that feel faster but aren't. Establish the ba
   - **Verify:** A non-admin/non-creator user POSTing a rename gets `Forbidden`.
   - **Outcome:** Added `authorizeProjectNodeMutation` (mirrors docs-mutation auth). Rename + archive paths now require creator-or-admin and scope the UPDATE's WHERE to the same gate (belt-and-braces against concurrent ownership transfer). Create stays open. Commit `5982ec2`.
 
-- [ ] **3.2 Allow comment authors to edit/delete their own comments (within 15 min).**
+- [x] **3.2 Allow comment authors to edit/delete their own comments (within 15 min).**
   - **What:** Add `editComment` and `deleteComment` actions gated by `comment.actorId === me.id && Date.now() - comment.createdAt < 15min` (or admin). UI: hover → pencil/trash on own comments.
-  - **Outcome:** _(fill in)_
+  - **Outcome:** New `editComment(eventId, {body})` + `deleteComment(eventId)` server actions in `tasks/actions.ts` with `canMutateComment` helper enforcing the 15-min window or admin override. Edit stores `editedAt` in the event's `to_value` JSON so the audit feed renders "(edited)". Delete hard-removes the event row (FK on notifications is set-null). UI: inline `<CommentBody>` client component in `audit-event.tsx` renders pencil/trash on hover, opens an autoexpanding textarea for edit (⌘/Ctrl+Enter to save, Esc to cancel), browser `confirm()` for delete. `me` threaded through `AuditFeed` → `AuditEvent` → `Body` → `CommentBody`.
 
 - [ ] **3.3 Rate-limit server actions.**
   - **What:** Add a per-user (employee id) sliding-window limiter — e.g. 60 writes/min, 600 reads/min — using Vercel KV or an in-memory `Map` per instance. Return 429 when exceeded.
@@ -169,34 +169,34 @@ Without numbers we'll make changes that feel faster but aren't. Establish the ba
   - **What:** Next 16 attaches Origin/Sec-Fetch-Site checks to server actions by default. Spot-check that a `curl -X POST` from a foreign origin against `/_next/postpone/...` action endpoints is rejected. Document the result.
   - **Outcome:** _(fill in)_
 
-- [ ] **3.5 Audit log for document mutations.**
+- [x] **3.5 Audit log for document mutations.**
   - **What:** Documents have no audit trail. Add a `document_events` table mirroring `task_events` — created / renamed / replaced / deleted.
-  - **Outcome:** _(fill in)_
+  - **Outcome:** Migration `0030_document_events.sql` applied. Append-only table with `documentId` (FK set-null, so delete-events survive), snapshotted `documentTitle` for self-readability, `eventType` union (`created`/`renamed`/`description_changed`/`file_replaced`/`deleted`), `fromValue`/`toValue` JSONB, RLS admin-read, no public writes. New `logDocEvent()` helper in `documents/actions.ts`; wired into `uploadDocument`, `updateDocument` (emits separate `renamed` and `description_changed` rows for fields that actually changed), `replaceDocumentFile`, and `deleteDocument`. All log writes are swallow-and-warn so a logging failure can't crash a mutation that already succeeded.
 
 ---
 
 ## Phase 4 — Operational hygiene (1 day)
 
-- [ ] **4.1 Cron sanity.**
+- [x] **4.1 Cron sanity.**
   - **What:** List all `app/api/cron/*` routes. Verify each is on Vercel's cron config and check the last 7 runs in the dashboard. Add one missing alert: digest cron failing > 2 days = page someone.
-  - **Outcome:** _(list + status)_
+  - **Outcome:** Two cron routes — `/api/cron/digest` (daily) and `/api/cron/retry-dispatch` (every 5 min); both registered in `vercel.json`, both responding `200` with valid Bearer; the pre-existing middleware redirect bug that blocked both was fixed in Phase 2.1. **Open follow-up:** "fail-for-2-days = page someone" alert — needs Sentry + a scheduled query, deferred until Phase 0.2 (Sentry) lands.
 
 - [ ] **4.2 Paginate the task list.**
   - **What:** `listTasks` returns up to 1000 rows. At ~700 tasks today, fine; at 5000, fatal. Add cursor pagination + a "load more" button.
   - **Outcome:** _(fill in)_
 
-- [ ] **4.3 Make `pnpm typecheck` + `pnpm test` block CI.**
+- [~] **4.3 Make `pnpm typecheck` + `pnpm test` block CI.**
   - **What:** Add a GitHub Action that runs both on every push to `main` and PR. Fail the deploy if either is red.
   - **Why:** Today there's nothing stopping a broken deploy.
-  - **Outcome:** _(workflow yml link)_
+  - **Outcome (mixed):** The standalone repo's `.github/workflows/ci.yml` already runs typecheck + test + visual gates on PR + push-to-main — good. **BUT** the deployed `Manan-Vasa` monorepo has its workflow at `task-management/.github/workflows/ci.yml` — GitHub only reads root `.github/workflows/`, so production CI is silently dead. Needs a root-level workflow with a `paths: ['task-management/**']` filter when user is ready to push. Tracked here, not blocking other work.
 
 - [x] **4.4 `.env.example`.**
   - **What:** Commit a `task-management/.env.example` with every required env var (name + comment, no values). The next person bootstrapping won't have to spelunk.
   - **Outcome:** Created. Grouped by purpose (database, supabase, firebase, app, email, slack, whatsapp, web-push, cron, observability, dev-only); calls out NEXT_PUBLIC_ vs server-only and the 5432-vs-6543 pooler-port rule; includes `SLOW_QUERY_MS` from Phase 0.1. Commit `5982ec2`.
 
-- [ ] **4.5 Health check.**
+- [x] **4.5 Health check.**
   - **What:** `app/api/health` exists — verify it actually checks the DB + Supabase storage + a sample query, not just `200 OK`. Hook into a free uptime monitor (BetterStack / UptimeRobot).
-  - **Outcome:** _(fill in)_
+  - **Outcome:** Rewrote `app/api/health/route.ts` from `force-static` "always 200" to `force-dynamic` with real probes: `select 1` against Postgres (1500ms timeout), `storage.getBucket(documents)` against Supabase Storage (2500ms timeout). DB failure → `503` with per-check breakdown; storage failure → `200` (degraded but not hard-down — Storage gates only the docs feature). Verified locally: returns `200` with `checks: [db ok 283ms, storage ok 878ms]`. Uptime-monitor wire-up (BetterStack/UptimeRobot) is a UI-side task on user's side; the endpoint is ready.
 
 ---
 
