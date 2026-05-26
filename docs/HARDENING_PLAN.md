@@ -57,11 +57,11 @@ Without numbers we'll make changes that feel faster but aren't. Establish the ba
   - **Verify:** Open `/tasks/[id]` once; grep the dev-server log for `[slow-query]`. Should see at least one entry per cold load.
   - **Outcome:** Implemented `lib/db/slow-query.ts` (function-Proxy on the postgres-js client; times template-tag calls AND `unsafe`/`begin`/`array`/`file`/`simple`). Auto-on in `development` at 300ms; opt-in elsewhere via `SLOW_QUERY_MS=<n>`. Typecheck clean. Dev session 2026-05-25.
 
-- [ ] **0.2 Stand up Sentry (free tier) or Axiom.**
+- [~] **0.2 Stand up Sentry (free tier) or Axiom.**
   - **What:** Add Sentry client + server SDKs; set `SENTRY_DSN` in Vercel; enable Performance monitoring with `tracesSampleRate: 0.2`.
   - **Why:** Errors currently die in Vercel logs nobody reads. The "laptop black screen" bug is undebuggable without this.
   - **Verify:** Trigger a deliberate error from a server action; confirm it lands in Sentry within 30s.
-  - **Outcome:** _(fill in)_
+  - **Outcome (code-side ready):** Installed `@sentry/nextjs`. Created `sentry.server.config.ts`, `sentry.edge.config.ts`, `sentry.client.config.ts`, `instrumentation.ts`, `instrumentation-client.ts` — all DSN-gated, so they no-op cleanly when `NEXT_PUBLIC_SENTRY_DSN` is unset. Default `tracesSampleRate=0.2`, PII off, runs in `production` only by default. `onRequestError` uses a lazy import so the edge bundle (which doesn't ship `captureRequestError`) doesn't break the build. Documented in `.env.example`. Required restart-after-install because Turbopack cached a stale bundle. **Pending user action:** create the Sentry project, set `NEXT_PUBLIC_SENTRY_DSN` in Vercel, redeploy. The 5-min smoke after that is: trigger an error from a server action and confirm it lands.
 
 - [x] **0.3 Enable Vercel Speed Insights** on the `task-management` project.
   - **What:** Settings → Speed Insights → Enable. Add `<SpeedInsights />` to the root layout.
