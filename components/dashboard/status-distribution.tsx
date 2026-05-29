@@ -2,7 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import type { Route } from "next";
-import { PieChart, LayoutGrid, Clock, XCircle, Archive } from "lucide-react";
+import { PieChart, LayoutGrid } from "lucide-react";
 import { PENDING_STATUSES } from "@/db/enums";
 import type {
   StatusDistributionPayload,
@@ -146,89 +146,118 @@ export function StatusDistributionChart({
         ))}
       </ul>
 
-      {/* Headline counts — pending / not-approved / archived. These cut
-          across the status breakdown (archived tasks leave the boards
-          entirely) so they get their own row of click-through cards. */}
-      <div className="mt-4 grid grid-cols-3 gap-3 max-sm:grid-cols-1">
-        <SummaryCard
-          icon={<Clock size={15} strokeWidth={2.2} />}
+      {/* Headline counts — pending / not-approved / archived. They cut across
+          the status breakdown so they get their own row, but use the EXACT
+          same tile design as the 9 status cards above (dot + label + count +
+          share% + bar) for a seamless grid. */}
+      <ul className="mt-3 grid grid-cols-3 gap-3 max-lg:grid-cols-2 max-sm:grid-cols-1">
+        <SummaryTile
           label="Pending"
           value={summary.pending}
           tone="amber"
+          denom={denom}
+          index={rows.length}
           href={`/tasks?status=${PENDING_STATUSES.join(",")}` as Route}
-          hint="Open & awaiting a verdict"
         />
-        <SummaryCard
-          icon={<XCircle size={15} strokeWidth={2.2} />}
+        <SummaryTile
           label="Not approved"
           value={summary.notApproved}
           tone="rose"
+          denom={denom}
+          index={rows.length + 1}
           href={"/tasks?status=not_approved" as Route}
-          hint="Sent back / declined"
         />
-        <SummaryCard
-          icon={<Archive size={15} strokeWidth={2.2} />}
+        <SummaryTile
           label="Archived"
           value={summary.archived}
           tone="slate"
+          denom={denom}
+          index={rows.length + 2}
           href={"/archived" as Route}
-          hint="Removed from active boards"
         />
-      </div>
+      </ul>
     </section>
   );
 }
 
-function SummaryCard({
-  icon,
+/**
+ * Same visual language as StatTile (the 9 status cards) so the
+ * pending/not-approved/archived row blends in seamlessly: coloured dot +
+ * uppercase label, big count, share % of open work, and a bottom share bar.
+ */
+function SummaryTile({
   label,
   value,
   tone,
+  denom,
+  index,
   href,
-  hint,
 }: {
-  icon: React.ReactNode;
   label: string;
   value: number;
   tone: Tone;
+  denom: number;
+  index: number;
   href: Route;
-  hint: string;
 }) {
+  const animated = useCountUp(value, 900 + index * 70);
+  const pct = denom > 0 ? (value / denom) * 100 : 0;
   return (
-    <Link
-      href={href}
-      className="dist-tile group flex items-center gap-3.5 p-4 rounded-chip bg-surface-soft transition-all cursor-pointer hover:-translate-y-px"
-      style={{ border: "1px solid var(--color-hairline)" }}
-      title={hint}
-    >
-      <span
-        aria-hidden
-        className="inline-flex shrink-0 items-center justify-center size-10 rounded-xl"
-        style={{
-          background: `color-mix(in srgb, var(--color-${tone}) 14%, transparent)`,
-          color: `var(--color-${tone}-deep)`,
-        }}
+    <li>
+      <Link
+        href={href}
+        className="dist-tile group flex h-full cursor-pointer flex-col p-4 rounded-chip bg-surface-soft transition-all"
+        style={{ border: "1px solid var(--color-hairline)" }}
       >
-        {icon}
-      </span>
-      <span className="flex flex-col min-w-0">
-        <span
-          className="uppercase font-bold tracking-[0.06em] text-ink-soft"
-          style={{ fontSize: 11.5 }}
+        <div className="flex items-center gap-2">
+          <span
+            aria-hidden
+            className="size-2.5 shrink-0 rounded-full"
+            style={{ background: `var(--color-${tone})` }}
+          />
+          <span
+            className="uppercase font-bold tracking-[0.06em] truncate text-ink-soft"
+            style={{ fontSize: 12 }}
+          >
+            {label}
+          </span>
+        </div>
+
+        <div className="mt-3 flex items-baseline gap-2">
+          <span
+            className="tabular-nums font-black leading-none text-ink-strong"
+            style={{
+              fontFamily: "var(--font-display), system-ui, sans-serif",
+              fontSize: 34,
+            }}
+          >
+            {animated}
+          </span>
+          <span
+            className="ml-auto tabular-nums font-semibold text-ink-subtle"
+            style={{ fontSize: 14 }}
+          >
+            {denom > 0 ? `${pct.toFixed(1)}%` : "—"}
+          </span>
+        </div>
+
+        <div
+          aria-hidden
+          className="mt-3 h-1.5 w-full overflow-hidden rounded-full"
+          style={{ background: "var(--color-surface-track)" }}
         >
-          {label}
-        </span>
-        <span
-          className="tabular-nums font-black leading-none text-ink-strong mt-1"
-          style={{
-            fontFamily: "var(--font-display), system-ui, sans-serif",
-            fontSize: 26,
-          }}
-        >
-          {value}
-        </span>
-      </span>
-    </Link>
+          <span
+            className="block h-full rounded-full"
+            style={{
+              width: `${Math.max(Math.min(pct, 100), pct > 0 ? 3 : 0)}%`,
+              background: `linear-gradient(90deg, var(--color-${tone}), var(--color-${tone}-deep))`,
+              animation: `barGrow 900ms cubic-bezier(.2,.8,.2,1) ${400 + index * 70}ms backwards`,
+              transformOrigin: "left",
+            }}
+          />
+        </div>
+      </Link>
+    </li>
   );
 }
 
