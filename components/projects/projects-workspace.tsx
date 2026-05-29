@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
 import * as Popover from "@radix-ui/react-popover";
+import * as Dialog from "@radix-ui/react-dialog";
 import {
   Plus,
   Check,
@@ -1218,6 +1219,7 @@ function NodeMenu({
 }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [pending, start] = React.useTransition();
 
   function rename() {
@@ -1243,18 +1245,7 @@ function NodeMenu({
     });
   }
 
-  function del() {
-    setOpen(false);
-    const scope =
-      node.kind === "project"
-        ? " and everything inside it (milestones, results, actions)"
-        : node.kind === "sub_action"
-          ? ""
-          : " and its sub-items";
-    const ok = window.confirm(
-      `Permanently delete "${node.name}"${scope}?\n\nThis cannot be undone. Any linked tasks are kept — just unlinked from this project.`,
-    );
-    if (!ok) return;
+  function performDelete() {
     start(async () => {
       const res = await deleteProjectNode(node.id);
       if (!res.ok) {
@@ -1262,56 +1253,244 @@ function NodeMenu({
         return;
       }
       fireToast({ message: `${node.name} deleted.` });
+      setConfirmOpen(false);
       router.refresh();
     });
   }
 
   return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
-      <Popover.Trigger asChild>
-        <button
-          type="button"
-          aria-label={`More actions for ${node.name}`}
-          disabled={pending}
-          className={`shrink-0 inline-flex items-center justify-center rounded-md transition-all ${
-            compact
-              ? "size-6 opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-white"
-              : "size-8 opacity-60 hover:opacity-100 hover:bg-surface-soft"
-          }`}
-          style={{ color: "var(--color-ink-subtle)" }}
-        >
-          <MoreHorizontal size={compact ? 14 : 16} strokeWidth={2.2} />
-        </button>
-      </Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Content
-          align="end"
-          sideOffset={4}
-          className="z-50 min-w-[160px] rounded-chip border bg-surface-card py-1"
+    <>
+      <Popover.Root open={open} onOpenChange={setOpen}>
+        <Popover.Trigger asChild>
+          <button
+            type="button"
+            aria-label={`More actions for ${node.name}`}
+            disabled={pending}
+            className={`shrink-0 inline-flex items-center justify-center rounded-md transition-all ${
+              compact
+                ? "size-6 opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-white"
+                : "size-8 opacity-60 hover:opacity-100 hover:bg-surface-soft"
+            }`}
+            style={{ color: "var(--color-ink-subtle)" }}
+          >
+            <MoreHorizontal size={compact ? 14 : 16} strokeWidth={2.2} />
+          </button>
+        </Popover.Trigger>
+        <Popover.Portal>
+          <Popover.Content
+            align="end"
+            sideOffset={4}
+            className="z-50 min-w-[160px] rounded-chip border bg-surface-card py-1"
+            style={{
+              borderColor: "var(--color-hairline-strong)",
+              boxShadow: "0 16px 40px rgba(15, 23, 42, 0.18)",
+            }}
+          >
+            <MenuItem onClick={rename} icon={<Pencil size={13} strokeWidth={2.2} />}>
+              Rename
+            </MenuItem>
+            <MenuItem
+              onClick={archive}
+              icon={<Archive size={13} strokeWidth={2.2} />}
+            >
+              Archive
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                setOpen(false);
+                setConfirmOpen(true);
+              }}
+              icon={<Trash2 size={13} strokeWidth={2.2} />}
+              danger
+            >
+              Delete
+            </MenuItem>
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
+
+      <DeleteNodeDialog
+        node={node}
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        pending={pending}
+        onConfirm={performDelete}
+      />
+    </>
+  );
+}
+
+/**
+ * Two-step delete confirmation (#13.2). Step 1 spells out what's about to be
+ * removed; step 2 makes the user type the node's name before the destructive
+ * button enables — so a project (and its whole subtree) can't be deleted by a
+ * single stray click. Linked tasks are unlinked, never deleted.
+ */
+function DeleteNodeDialog({
+  node,
+  open,
+  onOpenChange,
+  pending,
+  onConfirm,
+}: {
+  node: ProjectTreeNode;
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  pending: boolean;
+  onConfirm: () => void;
+}) {
+  const [step, setStep] = React.useState<1 | 2>(1);
+  const [typed, setTyped] = React.useState("");
+
+  // Reset to a clean step-1 state whenever the dialog (re)opens/closes.
+  React.useEffect(() => {
+    if (!open) {
+      setStep(1);
+      setTyped("");
+    }
+  }, [open]);
+
+  const kindLabel = KIND_LABEL[node.kind].toLowerCase();
+  const scope =
+    node.kind === "project"
+      ? "every milestone, result and action inside it"
+      : node.kind === "sub_action"
+        ? null
+        : "its sub-items";
+  const descendants = node.children.length;
+  const confirmable = typed.trim() === node.name.trim();
+
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-[90] bg-black/40" />
+        <Dialog.Content
+          className="fixed left-1/2 top-1/2 z-[100] w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-surface-card p-6 max-h-[calc(100dvh-32px)] overflow-y-auto"
           style={{
-            borderColor: "var(--color-hairline-strong)",
-            boxShadow: "0 16px 40px rgba(15, 23, 42, 0.18)",
+            border: "1px solid var(--color-hairline-strong)",
+            boxShadow: "0 24px 60px -16px rgba(15,23,42,0.4)",
           }}
         >
-          <MenuItem onClick={rename} icon={<Pencil size={13} strokeWidth={2.2} />}>
-            Rename
-          </MenuItem>
-          <MenuItem
-            onClick={archive}
-            icon={<Archive size={13} strokeWidth={2.2} />}
-          >
-            Archive
-          </MenuItem>
-          <MenuItem
-            onClick={del}
-            icon={<Trash2 size={13} strokeWidth={2.2} />}
-            danger
-          >
-            Delete
-          </MenuItem>
-        </Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
+          <div className="flex items-start gap-3 mb-4">
+            <span
+              aria-hidden
+              className="inline-flex shrink-0 items-center justify-center size-10 rounded-xl"
+              style={{
+                background: "color-mix(in srgb, var(--color-altus-red) 12%, transparent)",
+                color: "var(--color-altus-red)",
+              }}
+            >
+              <Trash2 size={19} strokeWidth={2.2} />
+            </span>
+            <div className="min-w-0">
+              <Dialog.Title
+                className="text-ink-strong"
+                style={{
+                  fontFamily: "var(--font-serif)",
+                  fontStyle: "italic",
+                  fontSize: 22,
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                Delete {kindLabel}?
+              </Dialog.Title>
+              <Dialog.Description className="text-[14px] text-ink-subtle mt-1" style={{ lineHeight: 1.5 }}>
+                {step === 1
+                  ? "Step 1 of 2 — review what will be removed."
+                  : "Step 2 of 2 — confirm to finish."}
+              </Dialog.Description>
+            </div>
+          </div>
+
+          {step === 1 ? (
+            <>
+              <div
+                className="rounded-chip p-4 mb-4"
+                style={{
+                  background: "var(--color-surface-soft)",
+                  border: "1px solid var(--color-hairline)",
+                }}
+              >
+                <p className="text-[15px] text-ink-strong font-semibold break-words">
+                  “{node.name}”
+                </p>
+                <ul className="mt-2 space-y-1 text-[13.5px] text-ink-soft" style={{ lineHeight: 1.5 }}>
+                  {scope && (
+                    <li>
+                      • Deletes {scope}
+                      {descendants > 0 ? ` (${descendants} direct child${descendants === 1 ? "" : "ren"})` : ""}.
+                    </li>
+                  )}
+                  <li>• Linked tasks are <strong>kept</strong> — just unlinked from this project.</li>
+                  <li>• This <strong>cannot be undone</strong>. Prefer Archive if unsure.</li>
+                </ul>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => onOpenChange(false)}
+                  className="px-4 py-2.5 text-[14px] font-semibold text-ink-soft hover:text-ink-strong transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStep(2)}
+                  className="rounded-pill px-5 py-2.5 text-[14px] font-bold text-white transition-all hover:-translate-y-px"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, var(--color-altus-red), var(--color-altus-red-deep))",
+                  }}
+                >
+                  Continue
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-[14px] text-ink-soft mb-2" style={{ lineHeight: 1.55 }}>
+                Type the {kindLabel} name{" "}
+                <span className="font-bold text-ink-strong">{node.name}</span> to
+                confirm deletion.
+              </p>
+              <input
+                autoFocus
+                value={typed}
+                onChange={(e) => setTyped(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && confirmable && !pending) onConfirm();
+                }}
+                placeholder={node.name}
+                className="w-full rounded-md border px-3.5 py-2.5 text-[15px] outline-none focus:border-altus-red mb-4"
+                style={{ borderColor: "var(--color-hairline-strong)" }}
+              />
+              <div className="flex justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  disabled={pending}
+                  className="px-4 py-2.5 text-[14px] font-semibold text-ink-soft hover:text-ink-strong transition-colors disabled:opacity-50"
+                >
+                  ← Back
+                </button>
+                <button
+                  type="button"
+                  onClick={onConfirm}
+                  disabled={!confirmable || pending}
+                  className="rounded-pill px-5 py-2.5 text-[14px] font-bold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed enabled:hover:-translate-y-px"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, var(--color-altus-red), var(--color-altus-red-deep))",
+                  }}
+                >
+                  {pending ? "Deleting…" : `Permanently delete`}
+                </button>
+              </div>
+            </>
+          )}
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
 
