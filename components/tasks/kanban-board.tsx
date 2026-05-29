@@ -32,12 +32,20 @@ interface Props {
  *
  * Admins get every status as a column; everyone else gets USER_TASK_STATUSES.
  */
+// Cards rendered per column before "Show more"; each tap reveals 10 more.
+// Keeps the board light when a column holds dozens of tasks.
+const COL_STEP = 10;
+
 export function KanbanBoard({ tasks, labels, tones, isAdmin, dark = false }: Props) {
   const router = useRouter();
   const [items, setItems] = React.useState(tasks);
   const [dragId, setDragId] = React.useState<string | null>(null);
   const [overCol, setOverCol] = React.useState<TaskStatus | null>(null);
   const [savingId, setSavingId] = React.useState<string | null>(null);
+  // Per-column visible cap (status → count). Missing = COL_STEP.
+  const [visibleByCol, setVisibleByCol] = React.useState<
+    Record<string, number>
+  >({});
 
   React.useEffect(() => setItems(tasks), [tasks]);
 
@@ -77,6 +85,9 @@ export function KanbanBoard({ tasks, labels, tones, isAdmin, dark = false }: Pro
     <div className="flex gap-4 overflow-x-auto pb-4">
       {columns.map((col) => {
         const colTasks = items.filter((t) => t.status === col);
+        const limit = visibleByCol[col] ?? COL_STEP;
+        const shownTasks = colTasks.slice(0, limit);
+        const hiddenCount = colTasks.length - shownTasks.length;
         const tone = tones[col];
         const isOver = overCol === col;
         return (
@@ -148,7 +159,7 @@ export function KanbanBoard({ tasks, labels, tones, isAdmin, dark = false }: Pro
             </div>
 
             <div className="flex flex-col gap-2 min-h-[40px]">
-              {colTasks.map((t) => (
+              {shownTasks.map((t) => (
                 <div
                   key={t.id}
                   draggable
@@ -189,6 +200,25 @@ export function KanbanBoard({ tasks, labels, tones, isAdmin, dark = false }: Pro
                   </div>
                 </div>
               ))}
+
+              {hiddenCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setVisibleByCol((m) => ({ ...m, [col]: limit + COL_STEP }))
+                  }
+                  className="mt-1 w-full rounded-chip py-2 text-[12.5px] font-bold transition-colors"
+                  style={{
+                    border: dark
+                      ? "1px dashed rgba(255,255,255,0.22)"
+                      : "1px dashed var(--color-hairline-strong)",
+                    color: dark ? "rgba(255,255,255,0.82)" : "var(--color-ink-soft)",
+                    background: dark ? "rgba(255,255,255,0.04)" : "transparent",
+                  }}
+                >
+                  Show {Math.min(COL_STEP, hiddenCount)} more ({hiddenCount} hidden)
+                </button>
+              )}
             </div>
           </div>
         );

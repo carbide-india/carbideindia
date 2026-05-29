@@ -6,12 +6,17 @@ import {
   flexRender,
   getCoreRowModel,
   getSortedRowModel,
+  getPaginationRowModel,
   useReactTable,
   type ColumnDef,
   type VisibilityState,
   type Table as TableInstance,
 } from "@tanstack/react-table";
 import { format } from "date-fns";
+
+// Initial rows rendered; "Load more" reveals this many additional rows each
+// tap. Keeps the page light — a few hundred tasks no longer paint at once.
+const PAGE_STEP = 10;
 
 // date-fns `format()` throws RangeError on a null/invalid Date — which would
 // crash the ENTIRE table render. Guard every cell so one bad row degrades to
@@ -22,7 +27,7 @@ function safeFormat(value: unknown, pattern: string): string {
   return Number.isNaN(d.getTime()) ? "—" : format(d, pattern);
 }
 import * as Tooltip from "@radix-ui/react-tooltip";
-import { SlidersHorizontal, Check } from "lucide-react";
+import { SlidersHorizontal, Check, ChevronDown } from "lucide-react";
 import { CriticalBadge } from "@/components/ui/critical-badge";
 import { PRIORITY_LABELS } from "@/db/enums";
 import type { TaskStatus, StatusColorToken } from "@/db/enums";
@@ -226,7 +231,23 @@ export function TaskTable({
     onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    // Progressive reveal: render PAGE_STEP rows, "Load more" grows the page.
+    // Sorting/visibility still apply across the full set before the slice.
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: { pagination: { pageIndex: 0, pageSize: PAGE_STEP } },
+    autoResetPageIndex: false,
   });
+
+  // Reset back to the first 10 whenever the underlying rows change (new
+  // filter / refresh) so a deep "load more" doesn't persist onto a fresh,
+  // shorter result set.
+  React.useEffect(() => {
+    table.setPageSize(PAGE_STEP);
+  }, [rows, table]);
+
+  const shown = table.getRowModel().rows.length;
+  const totalFiltered = table.getPrePaginationRowModel().rows.length;
+  const remaining = totalFiltered - shown;
 
   function alignClass(c: TaskCol): string {
     const a = c.meta?.align;
@@ -300,6 +321,31 @@ export function TaskTable({
           ))}
         </tbody>
       </table>
+      </div>
+
+      {/* Progressive reveal footer — keeps the initial page light. Shows the
+          running count and a "Load more" that grows the visible set by 10. */}
+      <div className="mt-4 flex flex-col items-center gap-2.5">
+        <p className="text-[13px] font-semibold text-ink-subtle tabular-nums">
+          Showing {shown} of {totalFiltered}
+        </p>
+        {remaining > 0 && (
+          <button
+            type="button"
+            onClick={() =>
+              table.setPageSize(
+                table.getState().pagination.pageSize + PAGE_STEP,
+              )
+            }
+            className="inline-flex items-center gap-2 px-5 h-10 rounded-pill text-[14px] font-bold border border-hairline-strong bg-surface-card text-ink-strong hover:border-altus-red hover:text-altus-red transition-all"
+          >
+            <ChevronDown size={15} strokeWidth={2.4} />
+            Load {Math.min(PAGE_STEP, remaining)} more
+            <span className="text-ink-subtle font-semibold">
+              ({remaining} left)
+            </span>
+          </button>
+        )}
       </div>
     </div>
   );
