@@ -35,7 +35,7 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
   return (
     <>
       <DashboardHeader generatedAt={new Date()} />
-      <main className="mx-auto max-w-[1480px] px-12 max-md:px-4 pt-10 pb-20">
+      <main className="w-full px-12 max-md:px-4 pt-10 pb-20">
         <ProjectsWorkspace
           projects={tree}
           activeId={activeId}

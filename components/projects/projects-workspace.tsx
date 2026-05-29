@@ -166,7 +166,7 @@ export function ProjectsWorkspace({ projects, activeId, employees }: Props) {
         <EmptyState />
       ) : (
         <div
-          className="grid grid-cols-[260px_minmax(0,1fr)] gap-12 max-lg:grid-cols-1 max-lg:gap-6 mt-10"
+          className="grid grid-cols-[320px_minmax(0,1fr)] gap-12 max-lg:grid-cols-1 max-lg:gap-6 mt-10"
           style={{ opacity: 0, animation: "fadeUp 600ms ease-out 200ms forwards" }}
         >
           <ProjectRail projects={projects} activeId={active?.id ?? null} />
@@ -369,7 +369,7 @@ function ProjectRail({
       <div
         className="text-ink-subtle mb-4 px-2 flex items-center gap-2"
         style={{
-          fontSize: 11.5,
+          fontSize: 12.5,
           fontWeight: 700,
           letterSpacing: "0.18em",
           textTransform: "uppercase",
@@ -458,10 +458,10 @@ function RailItem({
               color: active
                 ? "var(--color-ink-strong)"
                 : "var(--color-ink)",
-              fontSize: 15.5,
+              fontSize: 17,
               fontWeight: active ? 700 : 600,
               letterSpacing: "-0.005em",
-              lineHeight: 1.25,
+              lineHeight: 1.3,
             }}
           >
             {project.name}
@@ -469,7 +469,7 @@ function RailItem({
           <span
             className="block tabular-nums mt-1"
             style={{
-              fontSize: 12,
+              fontSize: 13.5,
               color: "var(--color-ink-muted)",
               letterSpacing: "0.01em",
             }}
@@ -881,10 +881,10 @@ function TreeNode({
   const [showDetails, setShowDetails] = React.useState(false);
 
   const typeStyles: Array<{ size: number; weight: number; color: string }> = [
-    { size: 17, weight: 700, color: "var(--color-ink-strong)" }, // milestone
-    { size: 15, weight: 600, color: "var(--color-ink)" }, //         result
-    { size: 14, weight: 500, color: "var(--color-ink-soft)" }, //    action
-    { size: 13, weight: 500, color: "var(--color-ink-muted)" }, //   sub-action
+    { size: 20, weight: 700, color: "var(--color-ink-strong)" }, // milestone
+    { size: 18, weight: 600, color: "var(--color-ink)" }, //         result
+    { size: 16.5, weight: 500, color: "var(--color-ink-soft)" }, //  action
+    { size: 15, weight: 500, color: "var(--color-ink-muted)" }, //   sub-action
   ];
   const ts = typeStyles[Math.min(depth, typeStyles.length - 1)]!;
 
@@ -1007,8 +1007,8 @@ function NodeRow({
       <span
         className="shrink-0 tabular-nums text-right"
         style={{
-          width: 18,
-          fontSize: 12,
+          width: 22,
+          fontSize: 14,
           fontFamily: "var(--font-mono)",
           fontWeight: 700,
           color: "var(--color-ink-muted)",
@@ -1030,9 +1030,9 @@ function NodeRow({
       {/* Meta summary chips */}
       {node.ownerName && (
         <span
-          className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-pill max-md:hidden"
+          className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-pill max-md:hidden"
           style={{
-            fontSize: 11.5,
+            fontSize: 13,
             fontWeight: 600,
             color: "var(--color-ink-soft)",
             background: "var(--color-surface-soft)",
@@ -1040,15 +1040,15 @@ function NodeRow({
           }}
           title={`Owner: ${node.ownerName}`}
         >
-          <UserCircle2 size={11} strokeWidth={2.2} />
+          <UserCircle2 size={13} strokeWidth={2.2} />
           {node.ownerName.split(" ")[0]}
         </span>
       )}
       {node.targetDate && (
         <span
-          className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-pill tabular-nums max-md:hidden"
+          className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-pill tabular-nums max-md:hidden"
           style={{
-            fontSize: 11.5,
+            fontSize: 13,
             fontWeight: 600,
             color: "var(--color-amber-deep)",
             background: "color-mix(in srgb, var(--color-amber) 12%, transparent)",
@@ -1056,7 +1056,7 @@ function NodeRow({
           }}
           title="Target date"
         >
-          <CalendarDays size={11} strokeWidth={2.2} />
+          <CalendarDays size={13} strokeWidth={2.2} />
           {fmtDate(node.targetDate)}
         </span>
       )}
@@ -1064,9 +1064,9 @@ function NodeRow({
       {linked > 0 && (
         <Link
           href={`/projects/${node.id}` as Route}
-          className="shrink-0 tabular-nums px-2.5 py-1 rounded-pill transition-colors hover:brightness-110"
+          className="shrink-0 tabular-nums px-3 py-1 rounded-pill transition-colors hover:brightness-110"
           style={{
-            fontSize: 12,
+            fontSize: 13.5,
             fontFamily: "var(--font-mono)",
             fontWeight: 600,
             color: "var(--color-altus-red-deep)",
@@ -1509,7 +1509,7 @@ function MenuItem({
     <button
       type="button"
       onClick={onClick}
-      className="w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] transition-colors hover:bg-surface-soft"
+      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[14.5px] transition-colors hover:bg-surface-soft"
       style={{ color: danger ? "var(--color-altus-red-deep)" : "var(--color-ink-strong)" }}
     >
       <span
@@ -1570,9 +1570,9 @@ function FieldLabel({
     <span
       className="inline-flex items-center gap-1.5 shrink-0"
       style={{
-        fontSize: 11,
+        fontSize: 13,
         fontWeight: 700,
-        letterSpacing: "0.1em",
+        letterSpacing: "0.08em",
         textTransform: "uppercase",
         color: "var(--color-ink-subtle)",
       }}
@@ -1617,7 +1617,7 @@ function OwnerPicker({ node }: { node: ProjectTreeNode }) {
           <button
             type="button"
             disabled={pending}
-            className="inline-flex items-center gap-1.5 rounded-pill border px-2.5 py-1 text-[12.5px] font-semibold transition-colors hover:border-altus-red disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-pill border px-3 py-1.5 text-[14.5px] font-semibold transition-colors hover:border-altus-red disabled:opacity-50"
             style={{
               borderColor: "var(--color-hairline-strong)",
               background: "var(--color-surface-card)",
@@ -1645,7 +1645,7 @@ function OwnerPicker({ node }: { node: ProjectTreeNode }) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search people…"
-              className="w-full rounded-md border border-hairline px-2.5 py-1.5 text-[13px] outline-none focus:border-altus-red mb-1"
+              className="w-full rounded-md border border-hairline px-2.5 py-1.5 text-[14.5px] outline-none focus:border-altus-red mb-1"
             />
             <div className="max-h-[240px] overflow-y-auto">
               <PickerRow
@@ -1706,7 +1706,7 @@ function MembersPicker({ node }: { node: ProjectTreeNode }) {
         {node.members.map((m) => (
           <span
             key={m.id}
-            className="inline-flex items-center gap-1 rounded-pill px-2 py-0.5 text-[12px] font-semibold"
+            className="inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 text-[13.5px] font-semibold"
             style={{
               background: "color-mix(in srgb, var(--color-blue) 12%, transparent)",
               color: "var(--color-blue-deep)",
@@ -1721,7 +1721,7 @@ function MembersPicker({ node }: { node: ProjectTreeNode }) {
               aria-label={`Remove ${m.name ?? "member"}`}
               className="hover:text-altus-red disabled:opacity-50"
             >
-              <X size={11} strokeWidth={2.6} />
+              <X size={13} strokeWidth={2.6} />
             </button>
           </span>
         ))}
@@ -1730,10 +1730,10 @@ function MembersPicker({ node }: { node: ProjectTreeNode }) {
             <button
               type="button"
               disabled={pending}
-              className="inline-flex items-center gap-1 rounded-pill border border-dashed px-2 py-0.5 text-[12px] font-semibold text-ink-muted hover:text-altus-red hover:border-altus-red transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1 rounded-pill border border-dashed px-2.5 py-1 text-[13.5px] font-semibold text-ink-muted hover:text-altus-red hover:border-altus-red transition-colors disabled:opacity-50"
               style={{ borderColor: "var(--color-hairline-strong)" }}
             >
-              <Plus size={11} strokeWidth={2.6} />
+              <Plus size={13} strokeWidth={2.6} />
               Add
             </button>
           </Popover.Trigger>
@@ -1752,7 +1752,7 @@ function MembersPicker({ node }: { node: ProjectTreeNode }) {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search people…"
-                className="w-full rounded-md border border-hairline px-2.5 py-1.5 text-[13px] outline-none focus:border-altus-red mb-1"
+                className="w-full rounded-md border border-hairline px-2.5 py-1.5 text-[14.5px] outline-none focus:border-altus-red mb-1"
               />
               <div className="max-h-[240px] overflow-y-auto">
                 {matches.map((e) => (
@@ -1798,7 +1798,7 @@ function PickerRow({
         if (keepOpen) e.preventDefault();
         onClick();
       }}
-      className="w-full flex items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] text-left transition-colors hover:bg-surface-soft"
+      className="w-full flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[14.5px] text-left transition-colors hover:bg-surface-soft"
       style={{ color: muted ? "var(--color-ink-muted)" : "var(--color-ink-strong)" }}
     >
       <span
@@ -1841,7 +1841,7 @@ function TargetDateEditor({ node }: { node: ProjectTreeNode }) {
           defaultValue={toYmd(node.targetDate)}
           disabled={pending}
           onChange={(e) => save(e.target.value || null)}
-          className="rounded-md border px-2 py-1 text-[12.5px] outline-none focus:border-altus-red disabled:opacity-50 tabular-nums"
+          className="rounded-md border px-3 py-1.5 text-[14.5px] outline-none focus:border-altus-red disabled:opacity-50 tabular-nums"
           style={{
             borderColor: "var(--color-hairline-strong)",
             background: "var(--color-surface-card)",
@@ -1894,13 +1894,13 @@ function NotesEditor({ node, big }: { node: ProjectTreeNode; big: boolean }) {
             type="button"
             onClick={save}
             disabled={pending}
-            className="inline-flex items-center gap-1 rounded-pill px-2.5 py-0.5 text-[12px] font-bold text-white disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-pill px-3 py-1 text-[13.5px] font-bold text-white disabled:opacity-50"
             style={{
               background:
                 "linear-gradient(135deg, var(--color-altus-red), var(--color-altus-red-deep))",
             }}
           >
-            <Check size={11} strokeWidth={3} />
+            <Check size={13} strokeWidth={3} />
             Save notes
           </button>
         )}
@@ -1915,7 +1915,7 @@ function NotesEditor({ node, big }: { node: ProjectTreeNode; big: boolean }) {
         className="w-full resize-y rounded-md border bg-surface-card px-3 py-2.5 outline-none focus:border-altus-red"
         style={{
           borderColor: "var(--color-hairline-strong)",
-          fontSize: big ? 15.5 : 14,
+          fontSize: big ? 17 : 15.5,
           lineHeight: 1.6,
           color: "var(--color-ink-strong)",
         }}
@@ -1960,7 +1960,7 @@ function AddChildButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink-muted hover:text-altus-red transition-colors py-1"
+        className="inline-flex items-center gap-1.5 text-[15px] font-semibold text-ink-muted hover:text-altus-red transition-colors py-1"
       >
         <Plus size={12} strokeWidth={2.4} />
         {label}
@@ -1984,7 +1984,7 @@ function AddChildButton({
         placeholder={`${KIND_LABEL[kind]} name`}
         maxLength={160}
         disabled={pending}
-        className="rounded-md border border-hairline-strong px-2.5 py-1.5 text-[13px] outline-none focus:border-altus-red"
+        className="rounded-md border border-hairline-strong px-2.5 py-1.5 text-[14.5px] outline-none focus:border-altus-red"
         style={{ minWidth: 240 }}
       />
       <button
@@ -2064,7 +2064,7 @@ function NewProjectInlineLink() {
         <button
           type="button"
           onClick={openFn}
-          className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink-muted hover:text-altus-red transition-colors py-1"
+          className="inline-flex items-center gap-1.5 text-[15px] font-semibold text-ink-muted hover:text-altus-red transition-colors py-1"
         >
           <Plus size={12} strokeWidth={2.4} />
           New project
