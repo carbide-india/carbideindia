@@ -16,23 +16,42 @@ import {
   Diamond,
   Circle,
   ChevronRight,
+  ChevronDown,
   Minus,
   FolderKanban,
   Sparkles,
   Layers,
   Target,
   ListChecks,
+  GripVertical,
+  CalendarDays,
+  UserCircle2,
+  Users,
+  StickyNote,
 } from "lucide-react";
 import {
   createProjectNode,
   renameProjectNode,
   setProjectNodeArchived,
   deleteProjectNode,
+  setProjectNodeDetails,
+  setProjectNodeOwner,
+  addProjectMember,
+  removeProjectMember,
+  reorderProjectNodes,
 } from "@/app/(app)/projects/actions";
 import { fireToast } from "@/lib/toast";
 import type { ProjectTreeNode } from "@/lib/queries/projects";
+import type { EmployeeOption } from "@/lib/queries/employees";
 
 type NodeKind = "project" | "milestone" | "result" | "action" | "sub_action";
+
+/** Roster for owner / team-member pickers, shared via context so it doesn't
+ *  have to thread through the recursive tree. */
+const EmployeesContext = React.createContext<EmployeeOption[]>([]);
+function useEmployees() {
+  return React.useContext(EmployeesContext);
+}
 
 const CHILD_KIND: Record<NodeKind, NodeKind | null> = {
   project: "milestone",
@@ -72,9 +91,35 @@ function pluralize(n: number, one: string, many: string = `${one}s`) {
   return `${n} ${n === 1 ? one : many}`;
 }
 
+/** "12 Jun 2026" — compact, locale-stable, IST. */
+function fmtDate(d: Date | string | null): string {
+  if (!d) return "";
+  const date = typeof d === "string" ? new Date(d) : d;
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "Asia/Kolkata",
+  });
+}
+
+/** Date → "YYYY-MM-DD" in IST, for prefilling a <input type=date>. */
+function toYmd(d: Date | string | null): string {
+  if (!d) return "";
+  const date = typeof d === "string" ? new Date(d) : d;
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: "Asia/Kolkata",
+  }).format(date);
+  return parts; // en-CA yields YYYY-MM-DD
+}
+
 interface Props {
   projects: ProjectTreeNode[];
   activeId: string | null;
+  employees: EmployeeOption[];
 }
 
 /**
@@ -86,7 +131,7 @@ interface Props {
  * refresh and is deep-linkable. The page itself stays a server component;
  * everything here is client because of inline add/rename/archive state.
  */
-export function ProjectsWorkspace({ projects, activeId }: Props) {
+export function ProjectsWorkspace({ projects, activeId, employees }: Props) {
   const active = projects.find((p) => p.id === activeId) ?? null;
 
   // Org-wide rollups for the hero stat-strip. Cheap — these structures are
@@ -106,7 +151,7 @@ export function ProjectsWorkspace({ projects, activeId }: Props) {
   );
 
   return (
-    <>
+    <EmployeesContext.Provider value={employees}>
       <HeroHeader
         totals={{
           projects: totalProjects,
@@ -124,10 +169,10 @@ export function ProjectsWorkspace({ projects, activeId }: Props) {
           style={{ opacity: 0, animation: "fadeUp 600ms ease-out 200ms forwards" }}
         >
           <ProjectRail projects={projects} activeId={active?.id ?? null} />
-          {active && <ProjectDetail project={active} />}
+          {active && <ProjectDetail key={active.id} project={active} />}
         </div>
       )}
-    </>
+    </EmployeesContext.Provider>
   );
 }
 
@@ -498,6 +543,11 @@ function ProjectDetail({ project }: { project: ProjectTreeNode }) {
           <NodeMenu node={project} />
         </header>
 
+        {/* Project meta — owner, team, target date & notes, always visible. */}
+        <div className="mb-9">
+          <NodeDetailPanel node={project} variant="project" />
+        </div>
+
         {/* Stat strip — KPI-style mini tiles. Cohesive with the hero. */}
         <div className="grid grid-cols-4 max-md:grid-cols-2 gap-3 mb-9">
           <StatTile
@@ -578,20 +628,17 @@ function ProjectDetail({ project }: { project: ProjectTreeNode }) {
               </div>
             </div>
           ) : (
-            <>
-              <ul className="flex flex-col gap-1.5">
-                {project.children.map((m) => (
-                  <TreeNode key={m.id} node={m} depth={0} />
-                ))}
-              </ul>
-              <div className="mt-3 pl-0.5">
+            <NodeList
+              nodes={project.children}
+              depth={0}
+              addButton={
                 <AddChildButton
                   kind="milestone"
                   parentId={project.id}
                   label="Add milestone"
                 />
-              </div>
-            </>
+              }
+            />
           )}
         </div>
       </div>
@@ -720,16 +767,117 @@ function KindGlyph({ kind, depth }: { kind: NodeKind; depth: number }) {
   }
 }
 
+/** Drag handlers + visual state threaded from the parent NodeList into a row. */
+interface Dnd {
+  isDragging: boolean;
+  isOver: boolean;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  onDragOver: () => void;
+  onDrop: () => void;
+}
+
+/**
+ * An ordered, drag-to-reorder list of sibling nodes. Reordering a node moves
+ * its whole subtree with it (children stay attached), so dragging a milestone
+ * down carries its results/actions — the cascade the brief asked for. Order is
+ * optimistic; `reorderProjectNodes` persists the new ranks, then a refresh
+ * reconciles against the server's `sortOrder`.
+ */
+function NodeList({
+  nodes,
+  depth,
+  guideColor,
+  addButton,
+}: {
+  nodes: ProjectTreeNode[];
+  depth: number;
+  guideColor?: string;
+  addButton?: React.ReactNode;
+}) {
+  const router = useRouter();
+  const [order, setOrder] = React.useState<string[]>(() => nodes.map((n) => n.id));
+  const [dragId, setDragId] = React.useState<string | null>(null);
+  const [overId, setOverId] = React.useState<string | null>(null);
+  const [, start] = React.useTransition();
+
+  // Re-sync when the server tree changes (new ref after refresh / add / delete).
+  React.useEffect(() => {
+    setOrder(nodes.map((n) => n.id));
+  }, [nodes]);
+
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const ordered = order
+    .map((id) => byId.get(id))
+    .filter((n): n is ProjectTreeNode => Boolean(n));
+
+  function commit(targetId: string) {
+    const dragged = dragId;
+    setDragId(null);
+    setOverId(null);
+    if (!dragged || dragged === targetId) return;
+    const next = [...order];
+    const from = next.indexOf(dragged);
+    const to = next.indexOf(targetId);
+    if (from === -1 || to === -1) return;
+    next.splice(from, 1);
+    next.splice(to, 0, dragged);
+    setOrder(next);
+    start(async () => {
+      const res = await reorderProjectNodes(next);
+      if (!res.ok) {
+        fireToast({ message: res.error });
+        setOrder(nodes.map((n) => n.id));
+      }
+      router.refresh();
+    });
+  }
+
+  const ulStyle: React.CSSProperties = guideColor
+    ? { marginLeft: 11, paddingLeft: 17, borderLeft: `1px solid ${guideColor}` }
+    : {};
+
+  return (
+    <ul className="flex flex-col gap-1.5 mt-1.5" style={ulStyle}>
+      {ordered.map((node, i) => (
+        <TreeNode
+          key={node.id}
+          node={node}
+          depth={depth}
+          ordinal={i + 1}
+          dnd={{
+            isDragging: dragId === node.id,
+            isOver: overId === node.id && dragId !== null && dragId !== node.id,
+            onDragStart: () => setDragId(node.id),
+            onDragEnd: () => {
+              setDragId(null);
+              setOverId(null);
+            },
+            onDragOver: () => setOverId(node.id),
+            onDrop: () => commit(node.id),
+          }}
+        />
+      ))}
+      {addButton && <li className="pt-0.5">{addButton}</li>}
+    </ul>
+  );
+}
+
 function TreeNode({
   node,
   depth,
+  ordinal,
+  dnd,
 }: {
   node: ProjectTreeNode;
   depth: number;
+  ordinal: number;
+  dnd: Dnd;
 }) {
   const childKind = CHILD_KIND[node.kind];
   const hasChildren = node.children.length > 0;
   const linked = node.actionCount;
+  const [showDetails, setShowDetails] = React.useState(false);
 
   const typeStyles: Array<{ size: number; weight: number; color: string }> = [
     { size: 17, weight: 700, color: "var(--color-ink-strong)" }, // milestone
@@ -740,45 +888,77 @@ function TreeNode({
   const ts = typeStyles[Math.min(depth, typeStyles.length - 1)]!;
 
   // Guide line color: a faint red at the milestone level, hairline elsewhere.
-  // The accent at the top of the tree reinforces the brand without becoming
-  // noise at deeper levels.
   const guideColor =
     depth === 0
       ? "color-mix(in srgb, var(--color-altus-red) 25%, transparent)"
       : "var(--color-hairline-strong)";
 
   return (
-    <li>
+    <li
+      draggable
+      onDragStart={(e) => {
+        e.stopPropagation();
+        e.dataTransfer.effectAllowed = "move";
+        // A drag image of the whole subtree looks messy — drag the row only.
+        dnd.onDragStart();
+      }}
+      onDragEnd={(e) => {
+        e.stopPropagation();
+        dnd.onDragEnd();
+      }}
+      onDragOver={(e) => {
+        // Scope to the nearest list so a child drag doesn't paint a drop line
+        // on its ancestor rows too.
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = "move";
+        dnd.onDragOver();
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dnd.onDrop();
+      }}
+      style={{
+        opacity: dnd.isDragging ? 0.45 : 1,
+        borderTop: dnd.isOver
+          ? "2px solid var(--color-altus-red)"
+          : "2px solid transparent",
+        borderRadius: 6,
+      }}
+    >
       <NodeRow
         node={node}
         depth={depth}
+        ordinal={ordinal}
         glyph={<KindGlyph kind={node.kind} depth={depth} />}
         typeStyle={ts}
         linked={linked}
+        detailsOpen={showDetails}
+        onToggleDetails={() => setShowDetails((v) => !v)}
       />
 
+      {showDetails && (
+        <div style={{ marginLeft: 28, marginTop: 6, marginBottom: 4 }}>
+          <NodeDetailPanel node={node} />
+        </div>
+      )}
+
       {(hasChildren || childKind) && (
-        <ul
-          className="flex flex-col gap-1.5 mt-1.5"
-          style={{
-            marginLeft: 11,
-            paddingLeft: 17,
-            borderLeft: `1px solid ${guideColor}`,
-          }}
-        >
-          {node.children.map((c) => (
-            <TreeNode key={c.id} node={c} depth={depth + 1} />
-          ))}
-          {childKind && (
-            <li className="pt-0.5">
+        <NodeList
+          nodes={node.children}
+          depth={depth + 1}
+          guideColor={guideColor}
+          addButton={
+            childKind ? (
               <AddChildButton
                 kind={childKind}
                 parentId={node.id}
                 label={`Add ${KIND_LABEL[childKind].toLowerCase()}`}
               />
-            </li>
-          )}
-        </ul>
+            ) : undefined
+          }
+        />
       )}
     </li>
   );
@@ -787,20 +967,55 @@ function TreeNode({
 function NodeRow({
   node,
   depth,
+  ordinal,
   glyph,
   typeStyle,
   linked,
+  detailsOpen,
+  onToggleDetails,
 }: {
   node: ProjectTreeNode;
   depth: number;
+  ordinal: number;
   glyph: React.ReactNode;
   typeStyle: { size: number; weight: number; color: string };
   linked: number;
+  detailsOpen: boolean;
+  onToggleDetails: () => void;
 }) {
+  // Summary chips so set metadata is visible at a glance without expanding.
+  const hasMeta =
+    Boolean(node.ownerName) ||
+    node.members.length > 0 ||
+    Boolean(node.targetDate) ||
+    Boolean(node.notes);
+
   return (
-    <div
-      className="group flex items-center gap-3 py-2 px-2.5 -mx-2.5 rounded-md transition-colors hover:bg-surface-soft"
-    >
+    <div className="group flex items-center gap-2.5 py-2 px-2.5 -mx-2.5 rounded-md transition-colors hover:bg-surface-soft">
+      {/* Drag handle — appears on hover, cursor signals grab. */}
+      <span
+        aria-hidden
+        className="shrink-0 cursor-grab opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
+        title="Drag to reorder"
+        style={{ color: "var(--color-ink-muted)" }}
+      >
+        <GripVertical size={14} strokeWidth={2} />
+      </span>
+
+      {/* Ordinal — the hierarchy number the brief asked for. */}
+      <span
+        className="shrink-0 tabular-nums text-right"
+        style={{
+          width: 18,
+          fontSize: 12,
+          fontFamily: "var(--font-mono)",
+          fontWeight: 700,
+          color: "var(--color-ink-muted)",
+        }}
+      >
+        {ordinal}
+      </span>
+
       <span
         aria-hidden
         className="inline-flex items-center justify-center shrink-0"
@@ -810,6 +1025,40 @@ function NodeRow({
       </span>
 
       <EditableName node={node} typeStyle={typeStyle} depth={depth} />
+
+      {/* Meta summary chips */}
+      {node.ownerName && (
+        <span
+          className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-pill max-md:hidden"
+          style={{
+            fontSize: 11.5,
+            fontWeight: 600,
+            color: "var(--color-ink-soft)",
+            background: "var(--color-surface-soft)",
+            border: "1px solid var(--color-hairline)",
+          }}
+          title={`Owner: ${node.ownerName}`}
+        >
+          <UserCircle2 size={11} strokeWidth={2.2} />
+          {node.ownerName.split(" ")[0]}
+        </span>
+      )}
+      {node.targetDate && (
+        <span
+          className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-pill tabular-nums max-md:hidden"
+          style={{
+            fontSize: 11.5,
+            fontWeight: 600,
+            color: "var(--color-amber-deep)",
+            background: "color-mix(in srgb, var(--color-amber) 12%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--color-amber) 30%, transparent)",
+          }}
+          title="Target date"
+        >
+          <CalendarDays size={11} strokeWidth={2.2} />
+          {fmtDate(node.targetDate)}
+        </span>
+      )}
 
       {linked > 0 && (
         <Link
@@ -828,6 +1077,31 @@ function NodeRow({
           {linked} {linked === 1 ? "task" : "tasks"}
         </Link>
       )}
+
+      {/* Details toggle — owner / team / target / notes editor. */}
+      <button
+        type="button"
+        onClick={onToggleDetails}
+        aria-label={detailsOpen ? "Hide details" : "Edit details"}
+        aria-expanded={detailsOpen}
+        className={`shrink-0 inline-flex items-center justify-center size-6 rounded-md transition-all ${
+          detailsOpen || hasMeta
+            ? "opacity-100"
+            : "opacity-0 group-hover:opacity-100"
+        } hover:bg-white`}
+        style={{
+          color: detailsOpen
+            ? "var(--color-altus-red)"
+            : "var(--color-ink-subtle)",
+        }}
+        title="Owner, team, target date & notes"
+      >
+        {detailsOpen ? (
+          <ChevronDown size={14} strokeWidth={2.4} />
+        ) : (
+          <Pencil size={12.5} strokeWidth={2.2} />
+        )}
+      </button>
 
       <NodeMenu node={node} compact />
     </div>
@@ -1067,6 +1341,407 @@ function MenuItem({
       </span>
       <span>{children}</span>
     </button>
+  );
+}
+
+/* ─────────────────────────────────────────────────── Node detail panel ─ */
+
+/**
+ * Owner, team members, target date and notes for a node. Rendered always-on
+ * for the project header (`variant="project"`) and on-demand under any tree
+ * row. Each control saves independently and refreshes; owners/members trigger
+ * server-side notifications so assignees "get to know" they've been given work.
+ */
+function NodeDetailPanel({
+  node,
+  variant = "node",
+}: {
+  node: ProjectTreeNode;
+  variant?: "project" | "node";
+}) {
+  const isProject = variant === "project";
+  return (
+    <div
+      className="rounded-chip p-4 max-md:p-3"
+      style={{
+        background: isProject
+          ? "linear-gradient(180deg, var(--color-surface-soft) 0%, transparent 100%)"
+          : "var(--color-surface-soft)",
+        border: "1px solid var(--color-hairline)",
+      }}
+    >
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+        <OwnerPicker node={node} />
+        <MembersPicker node={node} />
+        <TargetDateEditor node={node} />
+      </div>
+      <NotesEditor node={node} big={isProject} />
+    </div>
+  );
+}
+
+function FieldLabel({
+  icon,
+  children,
+}: {
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 shrink-0"
+      style={{
+        fontSize: 11,
+        fontWeight: 700,
+        letterSpacing: "0.1em",
+        textTransform: "uppercase",
+        color: "var(--color-ink-subtle)",
+      }}
+    >
+      <span style={{ color: "var(--color-ink-muted)" }}>{icon}</span>
+      {children}
+    </span>
+  );
+}
+
+function OwnerPicker({ node }: { node: ProjectTreeNode }) {
+  const employees = useEmployees();
+  const router = useRouter();
+  const [open, setOpen] = React.useState(false);
+  const [query, setQuery] = React.useState("");
+  const [pending, start] = React.useTransition();
+
+  function choose(ownerId: string | null) {
+    setOpen(false);
+    setQuery("");
+    if (ownerId === node.ownerId) return;
+    start(async () => {
+      const res = await setProjectNodeOwner(node.id, ownerId);
+      if (!res.ok) fireToast({ message: res.error });
+      router.refresh();
+    });
+  }
+
+  const matches = query.trim()
+    ? employees.filter((e) =>
+        e.name.toLowerCase().includes(query.trim().toLowerCase()),
+      )
+    : employees;
+
+  return (
+    <div className="flex items-center gap-2">
+      <FieldLabel icon={<UserCircle2 size={12} strokeWidth={2.2} />}>
+        Owner
+      </FieldLabel>
+      <Popover.Root open={open} onOpenChange={setOpen}>
+        <Popover.Trigger asChild>
+          <button
+            type="button"
+            disabled={pending}
+            className="inline-flex items-center gap-1.5 rounded-pill border px-2.5 py-1 text-[12.5px] font-semibold transition-colors hover:border-altus-red disabled:opacity-50"
+            style={{
+              borderColor: "var(--color-hairline-strong)",
+              background: "var(--color-surface-card)",
+              color: node.ownerName
+                ? "var(--color-ink-strong)"
+                : "var(--color-ink-muted)",
+            }}
+          >
+            {node.ownerName ?? "Assign owner"}
+            <ChevronDown size={12} strokeWidth={2.4} className="text-ink-subtle" />
+          </button>
+        </Popover.Trigger>
+        <Popover.Portal>
+          <Popover.Content
+            align="start"
+            sideOffset={4}
+            className="z-50 w-[240px] rounded-chip border bg-surface-card p-1.5"
+            style={{
+              borderColor: "var(--color-hairline-strong)",
+              boxShadow: "0 16px 40px rgba(15, 23, 42, 0.18)",
+            }}
+          >
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search people…"
+              className="w-full rounded-md border border-hairline px-2.5 py-1.5 text-[13px] outline-none focus:border-altus-red mb-1"
+            />
+            <div className="max-h-[240px] overflow-y-auto">
+              <PickerRow
+                label="No owner"
+                muted
+                selected={!node.ownerId}
+                onClick={() => choose(null)}
+              />
+              {matches.map((e) => (
+                <PickerRow
+                  key={e.id}
+                  label={e.name}
+                  selected={e.id === node.ownerId}
+                  onClick={() => choose(e.id)}
+                />
+              ))}
+              {matches.length === 0 && (
+                <p className="px-2.5 py-2 text-[12.5px] text-ink-muted">
+                  No matches.
+                </p>
+              )}
+            </div>
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
+    </div>
+  );
+}
+
+function MembersPicker({ node }: { node: ProjectTreeNode }) {
+  const employees = useEmployees();
+  const router = useRouter();
+  const [open, setOpen] = React.useState(false);
+  const [query, setQuery] = React.useState("");
+  const [pending, start] = React.useTransition();
+  const memberIds = new Set(node.members.map((m) => m.id));
+
+  function toggle(employeeId: string) {
+    start(async () => {
+      const res = memberIds.has(employeeId)
+        ? await removeProjectMember(node.id, employeeId)
+        : await addProjectMember(node.id, employeeId);
+      if (!res.ok) fireToast({ message: res.error });
+      router.refresh();
+    });
+  }
+
+  const matches = query.trim()
+    ? employees.filter((e) =>
+        e.name.toLowerCase().includes(query.trim().toLowerCase()),
+      )
+    : employees;
+
+  return (
+    <div className="flex items-center gap-2 min-w-0">
+      <FieldLabel icon={<Users size={12} strokeWidth={2.2} />}>Team</FieldLabel>
+      <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+        {node.members.map((m) => (
+          <span
+            key={m.id}
+            className="inline-flex items-center gap-1 rounded-pill px-2 py-0.5 text-[12px] font-semibold"
+            style={{
+              background: "color-mix(in srgb, var(--color-blue) 12%, transparent)",
+              color: "var(--color-blue-deep)",
+              border: "1px solid color-mix(in srgb, var(--color-blue) 28%, transparent)",
+            }}
+          >
+            {m.name ?? "—"}
+            <button
+              type="button"
+              onClick={() => toggle(m.id)}
+              disabled={pending}
+              aria-label={`Remove ${m.name ?? "member"}`}
+              className="hover:text-altus-red disabled:opacity-50"
+            >
+              <X size={11} strokeWidth={2.6} />
+            </button>
+          </span>
+        ))}
+        <Popover.Root open={open} onOpenChange={setOpen}>
+          <Popover.Trigger asChild>
+            <button
+              type="button"
+              disabled={pending}
+              className="inline-flex items-center gap-1 rounded-pill border border-dashed px-2 py-0.5 text-[12px] font-semibold text-ink-muted hover:text-altus-red hover:border-altus-red transition-colors disabled:opacity-50"
+              style={{ borderColor: "var(--color-hairline-strong)" }}
+            >
+              <Plus size={11} strokeWidth={2.6} />
+              Add
+            </button>
+          </Popover.Trigger>
+          <Popover.Portal>
+            <Popover.Content
+              align="start"
+              sideOffset={4}
+              className="z-50 w-[240px] rounded-chip border bg-surface-card p-1.5"
+              style={{
+                borderColor: "var(--color-hairline-strong)",
+                boxShadow: "0 16px 40px rgba(15, 23, 42, 0.18)",
+              }}
+            >
+              <input
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search people…"
+                className="w-full rounded-md border border-hairline px-2.5 py-1.5 text-[13px] outline-none focus:border-altus-red mb-1"
+              />
+              <div className="max-h-[240px] overflow-y-auto">
+                {matches.map((e) => (
+                  <PickerRow
+                    key={e.id}
+                    label={e.name}
+                    selected={memberIds.has(e.id)}
+                    onClick={() => toggle(e.id)}
+                    keepOpen
+                  />
+                ))}
+                {matches.length === 0 && (
+                  <p className="px-2.5 py-2 text-[12.5px] text-ink-muted">
+                    No matches.
+                  </p>
+                )}
+              </div>
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
+      </div>
+    </div>
+  );
+}
+
+function PickerRow({
+  label,
+  selected,
+  onClick,
+  muted = false,
+  keepOpen = false,
+}: {
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+  muted?: boolean;
+  keepOpen?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        if (keepOpen) e.preventDefault();
+        onClick();
+      }}
+      className="w-full flex items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] text-left transition-colors hover:bg-surface-soft"
+      style={{ color: muted ? "var(--color-ink-muted)" : "var(--color-ink-strong)" }}
+    >
+      <span
+        className="inline-flex items-center justify-center shrink-0 size-4 rounded"
+        style={{
+          border: selected
+            ? "none"
+            : "1.5px solid var(--color-hairline-strong)",
+          background: selected ? "var(--color-altus-red)" : "transparent",
+          color: "#fff",
+        }}
+      >
+        {selected && <Check size={11} strokeWidth={3} />}
+      </span>
+      <span className="truncate">{label}</span>
+    </button>
+  );
+}
+
+function TargetDateEditor({ node }: { node: ProjectTreeNode }) {
+  const router = useRouter();
+  const [pending, start] = React.useTransition();
+
+  function save(ymd: string | null) {
+    start(async () => {
+      const res = await setProjectNodeDetails(node.id, { targetDate: ymd });
+      if (!res.ok) fireToast({ message: res.error });
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <FieldLabel icon={<CalendarDays size={12} strokeWidth={2.2} />}>
+        Target
+      </FieldLabel>
+      <div className="relative inline-flex items-center">
+        <input
+          type="date"
+          defaultValue={toYmd(node.targetDate)}
+          disabled={pending}
+          onChange={(e) => save(e.target.value || null)}
+          className="rounded-md border px-2 py-1 text-[12.5px] outline-none focus:border-altus-red disabled:opacity-50 tabular-nums"
+          style={{
+            borderColor: "var(--color-hairline-strong)",
+            background: "var(--color-surface-card)",
+            color: "var(--color-ink-strong)",
+          }}
+        />
+        {node.targetDate && (
+          <button
+            type="button"
+            onClick={() => save(null)}
+            disabled={pending}
+            aria-label="Clear target date"
+            className="ml-1 text-ink-muted hover:text-altus-red disabled:opacity-50"
+          >
+            <X size={13} strokeWidth={2.4} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function NotesEditor({ node, big }: { node: ProjectTreeNode; big: boolean }) {
+  const router = useRouter();
+  const [value, setValue] = React.useState(node.notes ?? "");
+  const [pending, start] = React.useTransition();
+  const dirty = value.trim() !== (node.notes ?? "").trim();
+
+  React.useEffect(() => setValue(node.notes ?? ""), [node.notes]);
+
+  function save() {
+    if (!dirty) return;
+    start(async () => {
+      const res = await setProjectNodeDetails(node.id, {
+        notes: value.trim() ? value.trim() : null,
+      });
+      if (!res.ok) fireToast({ message: res.error });
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="mt-3">
+      <div className="flex items-center justify-between mb-1.5">
+        <FieldLabel icon={<StickyNote size={12} strokeWidth={2.2} />}>
+          Notes
+        </FieldLabel>
+        {dirty && (
+          <button
+            type="button"
+            onClick={save}
+            disabled={pending}
+            className="inline-flex items-center gap-1 rounded-pill px-2.5 py-0.5 text-[12px] font-bold text-white disabled:opacity-50"
+            style={{
+              background:
+                "linear-gradient(135deg, var(--color-altus-red), var(--color-altus-red-deep))",
+            }}
+          >
+            <Check size={11} strokeWidth={3} />
+            Save notes
+          </button>
+        )}
+      </div>
+      <textarea
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={save}
+        placeholder="Context, intent, acceptance criteria… written here so whoever picks this up knows what's expected."
+        rows={big ? 4 : 3}
+        maxLength={8000}
+        className="w-full resize-y rounded-md border bg-surface-card px-3 py-2.5 outline-none focus:border-altus-red"
+        style={{
+          borderColor: "var(--color-hairline-strong)",
+          fontSize: big ? 15.5 : 14,
+          lineHeight: 1.6,
+          color: "var(--color-ink-strong)",
+        }}
+      />
+    </div>
   );
 }
 
