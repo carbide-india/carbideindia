@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath, updateTag } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { projectNodes, type Employee, type ProjectNode } from "@/db/schema";
@@ -137,6 +137,46 @@ export async function renameProjectNode(
   if (updated.length === 0) {
     // Should only happen if the row was deleted between auth check and now.
     return { ok: false, error: "Project node not found" };
+  }
+  revalidateProjectSurfaces();
+  return { ok: true };
+}
+
+/**
+ * #13 — permanently delete a project node AND its whole subtree
+ * (milestone → result → action → sub-action). `parent_id` has no FK
+ * cascade, so we collect the subtree here; linked tasks auto-unlink via
+ * tasks.project_node_id ON DELETE SET NULL (the task itself is kept).
+ * Creator-or-admin gated, same as archive.
+ */
+export async function deleteProjectNode(id: string): Promise<Result> {
+  const me = await requireUser();
+  const limited = rateLimitOrError(me.id, "write");
+  if (limited) return limited;
+  const auth = await authorizeProjectNodeMutation(id, me);
+  if (!auth.ok) return auth;
+
+  try {
+    const all = await db
+      .select({ id: projectNodes.id, parentId: projectNodes.parentId })
+      .from(projectNodes);
+    const childrenOf = new Map<string, string[]>();
+    for (const n of all) {
+      if (!n.parentId) continue;
+      const arr = childrenOf.get(n.parentId) ?? [];
+      arr.push(n.id);
+      childrenOf.set(n.parentId, arr);
+    }
+    const toDelete: string[] = [];
+    const stack = [id];
+    while (stack.length) {
+      const cur = stack.pop()!;
+      toDelete.push(cur);
+      for (const c of childrenOf.get(cur) ?? []) stack.push(c);
+    }
+    await db.delete(projectNodes).where(inArray(projectNodes.id, toDelete));
+  } catch (err) {
+    return { ok: false, error: `DB: ${err instanceof Error ? err.message : String(err)}` };
   }
   revalidateProjectSurfaces();
   return { ok: true };

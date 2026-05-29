@@ -9,6 +9,7 @@ import { TopPerformersSection } from "@/components/dashboard/top-performers";
 import { AgingHeatmap } from "@/components/dashboard/aging-heatmap";
 import { WelcomeHero } from "@/components/dashboard/welcome-hero";
 import { MyDayCard } from "@/components/dashboard/my-day-card";
+import { DashboardLoadError } from "@/components/dashboard/dashboard-load-error";
 import { listEmployees } from "@/lib/queries/employees";
 import { loadDashboardData } from "@/lib/queries/dashboard";
 import { getStatusDisplayMap } from "@/lib/queries/status-display";
@@ -27,13 +28,35 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const filters = parseFilters(sp);
 
-  const me = await getCurrentEmployee();
-  const [allEmployees, data, statusDisplay, myDay] = await Promise.all([
-    listEmployees(),
-    loadDashboardData(filters),
-    getStatusDisplayMap(),
-    me ? getMyDayCounts(me.id) : Promise.resolve(null),
-  ]);
+  const me = await getCurrentEmployee().catch(() => null);
+
+  // Resilience: the dashboard fires many queries against a remote DB. A
+  // single transient timeout must NOT crash the whole page. My Day
+  // degrades to hidden (.catch → null); a core-data failure renders a
+  // friendly Retry panel instead of the global "we hit a snag" boundary.
+  let allEmployees: Awaited<ReturnType<typeof listEmployees>>;
+  let data: Awaited<ReturnType<typeof loadDashboardData>>;
+  let statusDisplay: Awaited<ReturnType<typeof getStatusDisplayMap>>;
+  let myDay: Awaited<ReturnType<typeof getMyDayCounts>> | null;
+  try {
+    [allEmployees, data, statusDisplay, myDay] = await Promise.all([
+      listEmployees(),
+      loadDashboardData(filters),
+      getStatusDisplayMap(),
+      me ? getMyDayCounts(me.id).catch(() => null) : Promise.resolve(null),
+    ]);
+  } catch (err) {
+    console.error("[dashboard] data load failed:", err);
+    return (
+      <>
+        <DashboardHeader generatedAt={new Date()} />
+        <main>
+          <DashboardLoadError />
+        </main>
+        <DashboardFooter />
+      </>
+    );
+  }
 
   const statusLabels = Object.fromEntries(
     Object.entries(statusDisplay).map(([k, v]) => [k, v.label]),

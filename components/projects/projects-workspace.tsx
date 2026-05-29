@@ -11,6 +11,7 @@ import {
   X,
   Pencil,
   Archive,
+  Trash2,
   MoreHorizontal,
   Diamond,
   Circle,
@@ -26,6 +27,7 @@ import {
   createProjectNode,
   renameProjectNode,
   setProjectNodeArchived,
+  deleteProjectNode,
 } from "@/app/(app)/projects/actions";
 import { fireToast } from "@/lib/toast";
 import type { ProjectTreeNode } from "@/lib/queries/projects";
@@ -405,7 +407,7 @@ function RailItem({
 
         <span className="flex-1 min-w-0">
           <span
-            className="block truncate"
+            className="block line-clamp-2"
             style={{
               color: active
                 ? "var(--color-ink-strong)"
@@ -922,7 +924,7 @@ function EditableName({
       type="button"
       data-node-name={node.id}
       onDoubleClick={() => setEditing(true)}
-      className="flex-1 min-w-0 text-left truncate cursor-text"
+      className="flex-1 min-w-0 text-left cursor-text break-words"
       style={sharedStyle}
       title="Double-click to rename"
     >
@@ -967,6 +969,29 @@ function NodeMenu({
     });
   }
 
+  function del() {
+    setOpen(false);
+    const scope =
+      node.kind === "project"
+        ? " and everything inside it (milestones, results, actions)"
+        : node.kind === "sub_action"
+          ? ""
+          : " and its sub-items";
+    const ok = window.confirm(
+      `Permanently delete "${node.name}"${scope}?\n\nThis cannot be undone. Any linked tasks are kept — just unlinked from this project.`,
+    );
+    if (!ok) return;
+    start(async () => {
+      const res = await deleteProjectNode(node.id);
+      if (!res.ok) {
+        fireToast({ message: res.error });
+        return;
+      }
+      fireToast({ message: `${node.name} deleted.` });
+      router.refresh();
+    });
+  }
+
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
@@ -1000,9 +1025,15 @@ function NodeMenu({
           <MenuItem
             onClick={archive}
             icon={<Archive size={13} strokeWidth={2.2} />}
-            danger
           >
             Archive
+          </MenuItem>
+          <MenuItem
+            onClick={del}
+            icon={<Trash2 size={13} strokeWidth={2.2} />}
+            danger
+          >
+            Delete
           </MenuItem>
         </Popover.Content>
       </Popover.Portal>

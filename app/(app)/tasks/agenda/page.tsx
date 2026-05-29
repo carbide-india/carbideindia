@@ -51,6 +51,7 @@ export default async function AgendaPage() {
           firstName={me.name.split(" ")[0] ?? me.name}
           dueToday={dueToday}
           overdue={overdueTasks.length}
+          todayYmd={todayYmd}
           days={days}
           overdueTasks={overdueTasks}
           tasks={upcoming}

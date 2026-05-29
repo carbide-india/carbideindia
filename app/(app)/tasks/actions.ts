@@ -133,6 +133,40 @@ export async function archiveTask(taskId: string): Promise<void> {
   revalidateTaskRoutes();
 }
 
+/**
+ * Permanently delete a task. Destructive + irreversible — so it is
+ * ADMIN-ONLY (everyone else uses Archive or Cancel). FK constraints handle
+ * the cleanup: task_events + notifications cascade-delete with the row, and
+ * any linked documents are unlinked (task_id → null). For the soft path,
+ * use archiveTask / setTaskStatus("cancelled").
+ */
+export async function deleteTask(
+  taskId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!isUuid(taskId)) return { ok: false, error: "Invalid task id." };
+  const me = await requireUser();
+  if (!me.isAdmin) {
+    return { ok: false, error: "Only admins can permanently delete a task." };
+  }
+  const limited = rateLimitOrError(me.id, "write");
+  if (limited) return limited;
+
+  try {
+    const deleted = await db
+      .delete(tasks)
+      .where(eq(tasks.id, taskId))
+      .returning({ id: tasks.id });
+    if (deleted.length === 0) {
+      return { ok: false, error: "Task not found — it may already be deleted." };
+    }
+  } catch (err) {
+    return { ok: false, error: `Could not delete: ${(err as Error).message}` };
+  }
+
+  revalidateTaskRoutes();
+  return { ok: true };
+}
+
 export async function unarchiveTask(taskId: string): Promise<void> {
   if (!isUuid(taskId)) return;
   const me = await requireUser();
@@ -302,6 +336,40 @@ export async function setTaskPriority(
     });
   });
   revalidateTaskRoutes();
+}
+
+/**
+ * #7 — My Day kanban: drag a task onto a day column to reschedule it.
+ * Sets due_at to noon IST of the target calendar day. Returns a typed
+ * result so the board can toast on failure instead of crashing.
+ */
+export async function rescheduleTask(
+  taskId: string,
+  dueYmd: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!isUuid(taskId)) return { ok: false, error: "Invalid task id." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dueYmd))
+    return { ok: false, error: "Invalid date." };
+  const me = await requireUser();
+  const limited = rateLimitOrError(me.id, "write");
+  if (limited) return limited;
+
+  const dueAt = new Date(`${dueYmd}T12:00:00+05:30`);
+  if (isNaN(dueAt.getTime())) return { ok: false, error: "Invalid date." };
+
+  try {
+    const updated = await db
+      .update(tasks)
+      .set({ dueAt })
+      .where(eq(tasks.id, taskId))
+      .returning({ id: tasks.id });
+    if (updated.length === 0) return { ok: false, error: "Task not found." };
+  } catch (err) {
+    return { ok: false, error: `Could not reschedule: ${(err as Error).message}` };
+  }
+
+  revalidateTaskRoutes();
+  return { ok: true };
 }
 
 export async function reassignDoer(

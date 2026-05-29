@@ -3,7 +3,7 @@ import * as React from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import { MoreHorizontal, Archive, ArchiveRestore } from "lucide-react";
+import { MoreHorizontal, Archive, ArchiveRestore, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -21,6 +21,7 @@ import {
   setTaskStatus,
   setTaskPriority,
   reassignDoer,
+  deleteTask,
 } from "@/app/(app)/tasks/actions";
 import { fireToast } from "@/lib/toast";
 import {
@@ -83,6 +84,24 @@ export function TaskRowActions({ row, employees, me }: Props) {
         actionLabel: "Undo",
         action: () => archiveTask(row.id),
       });
+    });
+  }
+
+  function handleDelete() {
+    if (
+      !confirm(
+        `Permanently delete "${row.title}"?\n\nThis removes the task and its history and cannot be undone. Use Archive or Cancel instead if you just want to hide it.`,
+      )
+    )
+      return;
+    startTransition(async () => {
+      const res = await deleteTask(row.id);
+      if (!res.ok) {
+        fireToast({ message: res.error });
+        return;
+      }
+      router.refresh();
+      fireToast({ message: "Task deleted." });
     });
   }
 
@@ -201,6 +220,18 @@ export function TaskRowActions({ row, employees, me }: Props) {
             </>
           );
         })()}
+
+        {/* Permanent delete — destructive, so admin-only + confirmed. Lives
+            at the very bottom, highlighted red. */}
+        {me.isAdmin && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem danger onClick={handleDelete}>
+              <Trash2 size={14} />
+              Delete task…
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
