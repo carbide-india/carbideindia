@@ -55,9 +55,42 @@ export function TaskRowActions({ row, employees, me }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = React.useTransition();
 
-  function withTransition(label: string, fn: () => Promise<unknown>) {
+  // Result shape every mutating action now returns. `void` is tolerated for
+  // any legacy callsite. On failure we toast the reason and skip the success
+  // toast — the user keeps their place instead of hitting an error screen.
+  type ActionResult =
+    | { ok: true }
+    | { ok: false; error?: string; message?: string }
+    | void;
+
+  function friendlyError(res: { error?: string; message?: string }): string {
+    if (res.message) return res.message;
+    switch (res.error) {
+      case "forbidden":
+        return "You're not allowed to make that change.";
+      case "stale":
+        return "This task changed elsewhere — refreshing.";
+      case "not-found":
+        return "That task no longer exists.";
+      default:
+        return res.error ?? "Something went wrong — please try again.";
+    }
+  }
+
+  function withTransition(label: string, fn: () => Promise<ActionResult>) {
     startTransition(async () => {
-      await fn();
+      let res: ActionResult;
+      try {
+        res = await fn();
+      } catch {
+        fireToast({ message: "Something went wrong — please try again." });
+        return;
+      }
+      if (res && res.ok === false) {
+        fireToast({ message: friendlyError(res) });
+        if (res.error === "stale") router.refresh();
+        return;
+      }
       router.refresh();
       fireToast({ message: label });
     });
@@ -65,24 +98,36 @@ export function TaskRowActions({ row, employees, me }: Props) {
 
   function handleArchive() {
     startTransition(async () => {
-      await archiveTask(row.id);
+      const res = await archiveTask(row.id);
+      if (!res.ok) {
+        fireToast({ message: res.error });
+        return;
+      }
       router.refresh();
       fireToast({
         message: "Task archived.",
         actionLabel: "Undo",
-        action: () => unarchiveTask(row.id),
+        action: () => {
+          void unarchiveTask(row.id);
+        },
       });
     });
   }
 
   function handleUnarchive() {
     startTransition(async () => {
-      await unarchiveTask(row.id);
+      const res = await unarchiveTask(row.id);
+      if (!res.ok) {
+        fireToast({ message: res.error });
+        return;
+      }
       router.refresh();
       fireToast({
         message: "Task restored.",
         actionLabel: "Undo",
-        action: () => archiveTask(row.id),
+        action: () => {
+          void archiveTask(row.id);
+        },
       });
     });
   }

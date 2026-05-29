@@ -112,25 +112,36 @@ function revalidateTaskRoutes(): void {
   updateTag(CACHE_TAGS.subjects);
 }
 
-export async function archiveTask(taskId: string): Promise<void> {
-  if (!isUuid(taskId)) return;
+export async function archiveTask(
+  taskId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!isUuid(taskId)) return { ok: false, error: "Invalid task id." };
   const me = await requireUser();
-  await db.transaction(async (tx) => {
-    const updated = await tx
-      .update(tasks)
-      .set({ archived: true })
-      .where(eq(tasks.id, taskId))
-      .returning({ id: tasks.id });
-    if (updated.length === 0) return;
-    await tx.insert(taskEvents).values({
-      taskId,
-      actorId: me.id,
-      eventType: "archived",
-      fromValue: null,
-      toValue: null,
+  const limited = rateLimitOrError(me.id, "write");
+  if (limited) return limited;
+  try {
+    const found = await db.transaction(async (tx) => {
+      const updated = await tx
+        .update(tasks)
+        .set({ archived: true })
+        .where(eq(tasks.id, taskId))
+        .returning({ id: tasks.id });
+      if (updated.length === 0) return false;
+      await tx.insert(taskEvents).values({
+        taskId,
+        actorId: me.id,
+        eventType: "archived",
+        fromValue: null,
+        toValue: null,
+      });
+      return true;
     });
-  });
+    if (!found) return { ok: false, error: "Task not found — it may already be gone." };
+  } catch (err) {
+    return { ok: false, error: `Could not archive: ${(err as Error).message}` };
+  }
   revalidateTaskRoutes();
+  return { ok: true };
 }
 
 /**
@@ -167,25 +178,36 @@ export async function deleteTask(
   return { ok: true };
 }
 
-export async function unarchiveTask(taskId: string): Promise<void> {
-  if (!isUuid(taskId)) return;
+export async function unarchiveTask(
+  taskId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!isUuid(taskId)) return { ok: false, error: "Invalid task id." };
   const me = await requireUser();
-  await db.transaction(async (tx) => {
-    const updated = await tx
-      .update(tasks)
-      .set({ archived: false })
-      .where(eq(tasks.id, taskId))
-      .returning({ id: tasks.id });
-    if (updated.length === 0) return;
-    await tx.insert(taskEvents).values({
-      taskId,
-      actorId: me.id,
-      eventType: "restored",
-      fromValue: null,
-      toValue: null,
+  const limited = rateLimitOrError(me.id, "write");
+  if (limited) return limited;
+  try {
+    const found = await db.transaction(async (tx) => {
+      const updated = await tx
+        .update(tasks)
+        .set({ archived: false })
+        .where(eq(tasks.id, taskId))
+        .returning({ id: tasks.id });
+      if (updated.length === 0) return false;
+      await tx.insert(taskEvents).values({
+        taskId,
+        actorId: me.id,
+        eventType: "restored",
+        fromValue: null,
+        toValue: null,
+      });
+      return true;
     });
-  });
+    if (!found) return { ok: false, error: "Task not found — it may already be gone." };
+  } catch (err) {
+    return { ok: false, error: `Could not restore: ${(err as Error).message}` };
+  }
   revalidateTaskRoutes();
+  return { ok: true };
 }
 
 /**
@@ -303,39 +325,49 @@ export async function setTaskStatus(
 export async function setTaskPriority(
   taskId: string,
   priority: TaskPriority,
-): Promise<void> {
-  if (!isUuid(taskId)) return;
-  if (!TASK_PRIORITIES.includes(priority)) return;
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!isUuid(taskId)) return { ok: false, error: "Invalid task id." };
+  if (!TASK_PRIORITIES.includes(priority))
+    return { ok: false, error: "Unknown priority." };
   const me = await requireUser();
-  await db.transaction(async (tx) => {
-    // SELECT ... FOR UPDATE serialises concurrent edits on the same row:
-    // two simultaneous priority changes would otherwise both read the same
-    // `priority`, both pass the idempotency check, and both write — last
-    // writer silently wins. The row lock blocks the second txn until the
-    // first commits.
-    const locked = await tx
-      .select({ priority: tasks.priority })
-      .from(tasks)
-      .where(eq(tasks.id, taskId))
-      .for("update");
-    const current = locked[0];
-    if (!current) return;
-    if (current.priority === priority) return; // no-op idempotency
-    const updated = await tx
-      .update(tasks)
-      .set({ priority })
-      .where(eq(tasks.id, taskId))
-      .returning({ id: tasks.id });
-    if (updated.length === 0) return;
-    await tx.insert(taskEvents).values({
-      taskId,
-      actorId: me.id,
-      eventType: "priority_changed",
-      fromValue: { priority: current.priority },
-      toValue: { priority },
+  const limited = rateLimitOrError(me.id, "write");
+  if (limited) return limited;
+  try {
+    const outcome = await db.transaction(async (tx) => {
+      // SELECT ... FOR UPDATE serialises concurrent edits on the same row:
+      // two simultaneous priority changes would otherwise both read the same
+      // `priority`, both pass the idempotency check, and both write — last
+      // writer silently wins. The row lock blocks the second txn until the
+      // first commits.
+      const locked = await tx
+        .select({ priority: tasks.priority })
+        .from(tasks)
+        .where(eq(tasks.id, taskId))
+        .for("update");
+      const current = locked[0];
+      if (!current) return "not-found" as const;
+      if (current.priority === priority) return "noop" as const; // idempotent
+      const updated = await tx
+        .update(tasks)
+        .set({ priority })
+        .where(eq(tasks.id, taskId))
+        .returning({ id: tasks.id });
+      if (updated.length === 0) return "not-found" as const;
+      await tx.insert(taskEvents).values({
+        taskId,
+        actorId: me.id,
+        eventType: "priority_changed",
+        fromValue: { priority: current.priority },
+        toValue: { priority },
+      });
+      return "ok" as const;
     });
-  });
+    if (outcome === "not-found") return { ok: false, error: "Task not found." };
+  } catch (err) {
+    return { ok: false, error: `Could not change priority: ${(err as Error).message}` };
+  }
   revalidateTaskRoutes();
+  return { ok: true };
 }
 
 /**
@@ -375,36 +407,45 @@ export async function rescheduleTask(
 export async function reassignDoer(
   taskId: string,
   doerId: string,
-): Promise<void> {
-  if (!isUuid(taskId)) return;
-  if (!isUuid(doerId)) return;
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!isUuid(taskId)) return { ok: false, error: "Invalid task id." };
+  if (!isUuid(doerId)) return { ok: false, error: "Invalid employee id." };
   const me = await requireUser();
-  await db.transaction(async (tx) => {
-    // FOR UPDATE so two concurrent reassigns serialise — see
-    // setTaskPriority for the rationale.
-    const locked = await tx
-      .select({ doerId: tasks.doerId })
-      .from(tasks)
-      .where(eq(tasks.id, taskId))
-      .for("update");
-    const current = locked[0];
-    if (!current) return;
-    if (current.doerId === doerId) return; // no-op idempotency
-    const updated = await tx
-      .update(tasks)
-      .set({ doerId })
-      .where(eq(tasks.id, taskId))
-      .returning({ id: tasks.id });
-    if (updated.length === 0) return;
-    await tx.insert(taskEvents).values({
-      taskId,
-      actorId: me.id,
-      eventType: "reassigned",
-      fromValue: { doerId: current.doerId },
-      toValue: { doerId },
+  const limited = rateLimitOrError(me.id, "write");
+  if (limited) return limited;
+  try {
+    const outcome = await db.transaction(async (tx) => {
+      // FOR UPDATE so two concurrent reassigns serialise — see
+      // setTaskPriority for the rationale.
+      const locked = await tx
+        .select({ doerId: tasks.doerId })
+        .from(tasks)
+        .where(eq(tasks.id, taskId))
+        .for("update");
+      const current = locked[0];
+      if (!current) return "not-found" as const;
+      if (current.doerId === doerId) return "noop" as const; // idempotent
+      const updated = await tx
+        .update(tasks)
+        .set({ doerId })
+        .where(eq(tasks.id, taskId))
+        .returning({ id: tasks.id });
+      if (updated.length === 0) return "not-found" as const;
+      await tx.insert(taskEvents).values({
+        taskId,
+        actorId: me.id,
+        eventType: "reassigned",
+        fromValue: { doerId: current.doerId },
+        toValue: { doerId },
+      });
+      return "ok" as const;
     });
-  });
+    if (outcome === "not-found") return { ok: false, error: "Task not found." };
+  } catch (err) {
+    return { ok: false, error: `Could not reassign: ${(err as Error).message}` };
+  }
   revalidateTaskRoutes();
+  return { ok: true };
 }
 
 export async function createTask(input: CreateTaskInput): Promise<
