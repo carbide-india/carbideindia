@@ -2,7 +2,8 @@
 import * as React from "react";
 import Link from "next/link";
 import type { Route } from "next";
-import { PieChart, LayoutGrid } from "lucide-react";
+import { PieChart, LayoutGrid, Clock, XCircle, Archive } from "lucide-react";
+import { PENDING_STATUSES } from "@/db/enums";
 import type {
   StatusDistributionPayload,
   StatusDistribution,
@@ -140,7 +141,90 @@ export function StatusDistributionChart({
           />
         ))}
       </ul>
+
+      {/* Headline counts — pending / not-approved / archived. These cut
+          across the status breakdown (archived tasks leave the boards
+          entirely) so they get their own row of click-through cards. */}
+      <div className="mt-4 grid grid-cols-3 gap-3 max-sm:grid-cols-1">
+        <SummaryCard
+          icon={<Clock size={15} strokeWidth={2.2} />}
+          label="Pending"
+          value={data.summary.pending}
+          tone="amber"
+          href={`/tasks?status=${PENDING_STATUSES.join(",")}` as Route}
+          hint="Open & awaiting a verdict"
+        />
+        <SummaryCard
+          icon={<XCircle size={15} strokeWidth={2.2} />}
+          label="Not approved"
+          value={data.summary.notApproved}
+          tone="rose"
+          href={"/tasks?status=not_approved" as Route}
+          hint="Sent back / declined"
+        />
+        <SummaryCard
+          icon={<Archive size={15} strokeWidth={2.2} />}
+          label="Archived"
+          value={data.summary.archived}
+          tone="slate"
+          href={"/archived" as Route}
+          hint="Removed from active boards"
+        />
+      </div>
     </section>
+  );
+}
+
+function SummaryCard({
+  icon,
+  label,
+  value,
+  tone,
+  href,
+  hint,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  tone: Tone;
+  href: Route;
+  hint: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="dist-tile group flex items-center gap-3.5 p-4 rounded-chip bg-surface-soft transition-all cursor-pointer hover:-translate-y-px"
+      style={{ border: "1px solid var(--color-hairline)" }}
+      title={hint}
+    >
+      <span
+        aria-hidden
+        className="inline-flex shrink-0 items-center justify-center size-10 rounded-xl"
+        style={{
+          background: `color-mix(in srgb, var(--color-${tone}) 14%, transparent)`,
+          color: `var(--color-${tone}-deep)`,
+        }}
+      >
+        {icon}
+      </span>
+      <span className="flex flex-col min-w-0">
+        <span
+          className="uppercase font-bold tracking-[0.06em] text-ink-soft"
+          style={{ fontSize: 11.5 }}
+        >
+          {label}
+        </span>
+        <span
+          className="tabular-nums font-black leading-none text-ink-strong mt-1"
+          style={{
+            fontFamily: "var(--font-display), system-ui, sans-serif",
+            fontSize: 26,
+          }}
+        >
+          {value}
+        </span>
+      </span>
+    </Link>
   );
 }
 

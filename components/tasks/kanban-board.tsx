@@ -20,6 +20,8 @@ interface Props {
   labels: Record<TaskStatus, string>;
   tones: Record<TaskStatus, StatusColorToken>;
   isAdmin: boolean;
+  /** Frosted-glass columns for the dark canvas page. */
+  dark?: boolean;
 }
 
 /**
@@ -30,7 +32,7 @@ interface Props {
  *
  * Admins get every status as a column; everyone else gets USER_TASK_STATUSES.
  */
-export function KanbanBoard({ tasks, labels, tones, isAdmin }: Props) {
+export function KanbanBoard({ tasks, labels, tones, isAdmin, dark = false }: Props) {
   const router = useRouter();
   const [items, setItems] = React.useState(tasks);
   const [dragId, setDragId] = React.useState<string | null>(null);
@@ -93,23 +95,54 @@ export function KanbanBoard({ tasks, labels, tones, isAdmin }: Props) {
             }}
             className="flex-shrink-0 w-[280px] rounded-section p-3 transition-colors"
             style={{
-              background: isOver ? `var(--color-${tone}-bg)` : "var(--color-surface-soft)",
-              border: `1px solid ${isOver ? `var(--color-${tone})` : "var(--color-hairline)"}`,
+              background: isOver
+                ? dark
+                  ? `color-mix(in srgb, var(--color-${tone}) 28%, rgba(18,11,10,0.55))`
+                  : `var(--color-${tone}-bg)`
+                : dark
+                  ? "rgba(255,255,255,0.055)"
+                  : "var(--color-surface-soft)",
+              border: `1px solid ${
+                isOver
+                  ? `var(--color-${tone})`
+                  : dark
+                    ? "rgba(255,255,255,0.12)"
+                    : "var(--color-hairline)"
+              }`,
+              backdropFilter: dark ? "blur(12px)" : undefined,
+              WebkitBackdropFilter: dark ? "blur(12px)" : undefined,
+              boxShadow: dark
+                ? "inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 24px -12px rgba(0,0,0,0.5)"
+                : undefined,
             }}
           >
             {/* Column header */}
             <div className="flex items-center justify-between mb-3 px-1">
               <span
                 className="inline-flex items-center gap-2 text-[13px] font-bold"
-                style={{ color: `var(--color-${tone}-deep)` }}
+                style={{
+                  color: dark
+                    ? "rgba(255,255,255,0.92)"
+                    : `var(--color-${tone}-deep)`,
+                }}
               >
                 <span
                   className="h-2.5 w-2.5 rounded-full"
-                  style={{ background: `var(--color-${tone})` }}
+                  style={{
+                    background: `var(--color-${tone})`,
+                    boxShadow: dark
+                      ? `0 0 8px color-mix(in srgb, var(--color-${tone}) 70%, transparent)`
+                      : undefined,
+                  }}
                 />
                 {labels[col]}
               </span>
-              <span className="text-[12px] font-semibold text-ink-subtle tabular-nums">
+              <span
+                className="text-[12px] font-semibold tabular-nums"
+                style={{
+                  color: dark ? "rgba(255,255,255,0.6)" : "var(--color-ink-subtle)",
+                }}
+              >
                 {colTasks.length}
               </span>
             </div>

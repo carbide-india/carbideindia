@@ -45,6 +45,14 @@ export interface KpiSet {
 export interface StatusDistributionPayload {
   rows: StatusDistribution[];
   denominator: number; // total − approved
+  /** Headline counts surfaced as their own cards beneath the chart.
+   *  pending = open & awaiting a verdict; notApproved = declined;
+   *  archived = removed from active boards. */
+  summary: {
+    pending: number;
+    notApproved: number;
+    archived: number;
+  };
 }
 
 export interface StatusDistribution {

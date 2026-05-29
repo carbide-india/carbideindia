@@ -236,6 +236,24 @@ async function loadDashboardDataUncached(
     statusDistribution: {
       rows: computeStatusDistribution(periodTasks).filter((r) => r.status !== "approved"),
       denominator: statusDistributionDenominator,
+      summary: {
+        // Open work still awaiting a verdict (non-terminal, not archived,
+        // no approval decision recorded yet).
+        pending: periodTasks.filter(
+          (t) =>
+            !t.archived &&
+            PENDING_SET.has(t.status) &&
+            t.approvalStatus == null &&
+            t.status !== "done",
+        ).length,
+        // Declined — either the legacy status or the new approval column.
+        notApproved: periodTasks.filter(
+          (t) =>
+            !t.archived &&
+            (t.status === "not_approved" || t.approvalStatus === "not_approved"),
+        ).length,
+        archived: periodTasks.filter((t) => t.archived).length,
+      },
     },
     topPerformers,
     agingTable: computeEmployeeAgingTable(periodTasks, allEmployees, now),
