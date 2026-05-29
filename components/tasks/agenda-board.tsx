@@ -56,6 +56,52 @@ export function AgendaBoard({
   const [dayCount, setDayCount] = React.useState<number>(5);
   const [overCol, setOverCol] = React.useState<string | null>(null);
 
+  // Edge auto-scroll while dragging — native HTML5 drag won't scroll the
+  // horizontal board near its edges, so a card couldn't reach an off-screen
+  // day column. A rAF loop scrolls the board when the pointer nears an edge.
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const autoScroll = React.useRef({ dir: 0, speed: 0, raf: 0 });
+
+  function updateEdgeFromPointer(clientX: number) {
+    const el = scrollRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const zone = 110;
+    const max = 26;
+    if (clientX < rect.left + zone) {
+      autoScroll.current.dir = -1;
+      autoScroll.current.speed = Math.ceil(((rect.left + zone - clientX) / zone) * max);
+    } else if (clientX > rect.right - zone) {
+      autoScroll.current.dir = 1;
+      autoScroll.current.speed = Math.ceil(((clientX - (rect.right - zone)) / zone) * max);
+    } else {
+      autoScroll.current.dir = 0;
+    }
+  }
+
+  function beginAutoScroll() {
+    if (autoScroll.current.raf) return;
+    const tick = () => {
+      const el = scrollRef.current;
+      const { dir, speed } = autoScroll.current;
+      if (el && dir !== 0) el.scrollLeft += dir * speed;
+      autoScroll.current.raf = requestAnimationFrame(tick);
+    };
+    autoScroll.current.raf = requestAnimationFrame(tick);
+  }
+
+  function endAutoScroll() {
+    if (autoScroll.current.raf) cancelAnimationFrame(autoScroll.current.raf);
+    autoScroll.current = { dir: 0, speed: 0, raf: 0 };
+  }
+
+  React.useEffect(
+    () => () => {
+      if (autoScroll.current.raf) cancelAnimationFrame(autoScroll.current.raf);
+    },
+    [],
+  );
+
   // Single source of truth so optimistic drag-moves re-bucket instantly.
   const [items, setItems] = React.useState<AgendaTask[]>(() => [
     ...overdueTasks,
@@ -145,7 +191,17 @@ export function AgendaBoard({
         ))}
       </div>
 
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div
+        ref={scrollRef}
+        className="flex gap-4 overflow-x-auto pb-4"
+        onDragOver={(e) => {
+          // Bubbles up from the day columns; track pointer + run the loop.
+          updateEdgeFromPointer(e.clientX);
+          beginAutoScroll();
+        }}
+        onDrop={endAutoScroll}
+        onDragEnd={endAutoScroll}
+      >
         {overdueItems.length > 0 && (
           <Column
             label="Overdue"

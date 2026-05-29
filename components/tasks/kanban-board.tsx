@@ -47,6 +47,54 @@ export function KanbanBoard({ tasks, labels, tones, isAdmin, dark = false }: Pro
     Record<string, number>
   >({});
 
+  // Edge auto-scroll: native HTML5 drag won't scroll an overflow container
+  // near its edges, so a card can't be dragged to an off-screen column. While
+  // a drag is active we run a rAF loop that scrolls the board left/right when
+  // the pointer enters an edge zone — letting a drag cross the full width.
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const autoScroll = React.useRef({ dir: 0, speed: 0, raf: 0 });
+
+  function updateEdgeFromPointer(clientX: number) {
+    const el = scrollRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const zone = 110; // px from each edge that triggers scrolling
+    const max = 26; // px per frame at the very edge
+    if (clientX < rect.left + zone) {
+      autoScroll.current.dir = -1;
+      autoScroll.current.speed = Math.ceil(((rect.left + zone - clientX) / zone) * max);
+    } else if (clientX > rect.right - zone) {
+      autoScroll.current.dir = 1;
+      autoScroll.current.speed = Math.ceil(((clientX - (rect.right - zone)) / zone) * max);
+    } else {
+      autoScroll.current.dir = 0;
+    }
+  }
+
+  function beginAutoScroll() {
+    if (autoScroll.current.raf) return;
+    const tick = () => {
+      const el = scrollRef.current;
+      const { dir, speed } = autoScroll.current;
+      if (el && dir !== 0) el.scrollLeft += dir * speed;
+      autoScroll.current.raf = requestAnimationFrame(tick);
+    };
+    autoScroll.current.raf = requestAnimationFrame(tick);
+  }
+
+  function endAutoScroll() {
+    if (autoScroll.current.raf) cancelAnimationFrame(autoScroll.current.raf);
+    autoScroll.current = { dir: 0, speed: 0, raf: 0 };
+  }
+
+  // Safety net: stop the loop if the component unmounts mid-drag.
+  React.useEffect(
+    () => () => {
+      if (autoScroll.current.raf) cancelAnimationFrame(autoScroll.current.raf);
+    },
+    [],
+  );
+
   React.useEffect(() => setItems(tasks), [tasks]);
 
   const columns: TaskStatus[] = isAdmin
@@ -82,7 +130,14 @@ export function KanbanBoard({ tasks, labels, tones, isAdmin, dark = false }: Pro
   }
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-4">
+    <div
+      ref={scrollRef}
+      className="flex gap-4 overflow-x-auto pb-4"
+      onDragOver={(e) => {
+        // Bubbles up from the columns; track the pointer for edge auto-scroll.
+        updateEdgeFromPointer(e.clientX);
+      }}
+    >
       {columns.map((col) => {
         const colTasks = items.filter((t) => t.status === col);
         const limit = visibleByCol[col] ?? COL_STEP;
@@ -103,6 +158,7 @@ export function KanbanBoard({ tasks, labels, tones, isAdmin, dark = false }: Pro
               setOverCol(null);
               if (dragId) void moveTo(dragId, col);
               setDragId(null);
+              endAutoScroll();
             }}
             className="flex-shrink-0 w-[280px] rounded-section p-3 transition-colors"
             style={{
@@ -163,10 +219,14 @@ export function KanbanBoard({ tasks, labels, tones, isAdmin, dark = false }: Pro
                 <div
                   key={t.id}
                   draggable
-                  onDragStart={() => setDragId(t.id)}
+                  onDragStart={() => {
+                    setDragId(t.id);
+                    beginAutoScroll();
+                  }}
                   onDragEnd={() => {
                     setDragId(null);
                     setOverCol(null);
+                    endAutoScroll();
                   }}
                   className="group rounded-chip bg-white border border-hairline p-3 cursor-grab active:cursor-grabbing transition-shadow hover:shadow-md"
                   style={{ opacity: dragId === t.id ? 0.5 : 1 }}
