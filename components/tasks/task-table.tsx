@@ -12,6 +12,15 @@ import {
   type Table as TableInstance,
 } from "@tanstack/react-table";
 import { format } from "date-fns";
+
+// date-fns `format()` throws RangeError on a null/invalid Date — which would
+// crash the ENTIRE table render. Guard every cell so one bad row degrades to
+// "—" instead of taking down the whole list.
+function safeFormat(value: unknown, pattern: string): string {
+  if (!value) return "—";
+  const d = value instanceof Date ? value : new Date(value as string);
+  return Number.isNaN(d.getTime()) ? "—" : format(d, pattern);
+}
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { SlidersHorizontal, Check } from "lucide-react";
 import { CriticalBadge } from "@/components/ui/critical-badge";
@@ -133,7 +142,7 @@ function buildColumns(
       meta: { mobileHide: true, align: "center" },
       cell: (info) => (
         <span className="text-body-lg text-ink-muted tabular-nums">
-          {format(info.getValue<Date>(), "MMM d")}
+          {safeFormat(info.getValue<Date>(), "MMM d")}
         </span>
       ),
     },
@@ -143,7 +152,7 @@ function buildColumns(
       meta: { align: "center" },
       cell: (info) => (
         <span className="text-body-lg text-ink-muted tabular-nums">
-          {format(info.getValue<Date>(), "MMM d")}
+          {safeFormat(info.getValue<Date>(), "MMM d")}
         </span>
       ),
     },

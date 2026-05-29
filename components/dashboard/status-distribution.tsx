@@ -38,6 +38,10 @@ export function StatusDistributionChart({
   const rows = [...data.rows].sort((a, b) => b.count - a.count);
   const totalCount = rows.reduce((s, r) => s + r.count, 0);
   const denom = data.denominator;
+  // Defensive: Next's Data Cache can serve a payload cached before `summary`
+  // existed (up to the 60s revalidate window right after a deploy). Fall back
+  // to zeros so the card renders instead of throwing on `summary.pending`.
+  const summary = data.summary ?? { pending: 0, notApproved: 0, archived: 0 };
 
   if (rows.length === 0) {
     return (
@@ -149,7 +153,7 @@ export function StatusDistributionChart({
         <SummaryCard
           icon={<Clock size={15} strokeWidth={2.2} />}
           label="Pending"
-          value={data.summary.pending}
+          value={summary.pending}
           tone="amber"
           href={`/tasks?status=${PENDING_STATUSES.join(",")}` as Route}
           hint="Open & awaiting a verdict"
@@ -157,7 +161,7 @@ export function StatusDistributionChart({
         <SummaryCard
           icon={<XCircle size={15} strokeWidth={2.2} />}
           label="Not approved"
-          value={data.summary.notApproved}
+          value={summary.notApproved}
           tone="rose"
           href={"/tasks?status=not_approved" as Route}
           hint="Sent back / declined"
@@ -165,7 +169,7 @@ export function StatusDistributionChart({
         <SummaryCard
           icon={<Archive size={15} strokeWidth={2.2} />}
           label="Archived"
-          value={data.summary.archived}
+          value={summary.archived}
           tone="slate"
           href={"/archived" as Route}
           hint="Removed from active boards"
