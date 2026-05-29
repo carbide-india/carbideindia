@@ -305,10 +305,13 @@ export function TaskTable({
   );
 }
 
-// #12 — task title with a hover-to-preview popover. After ~2s of hovering
-// the title, a card shows the full title + description (the cell itself
-// truncates at 32ch). Uses Radix Tooltip (portals out of the table's
-// overflow, positions + delays for free). No popover if there's no body.
+// #12 — task title with a hover-to-preview popover. After ~1s of hovering
+// the title, a card shows the full title + description (the cell truncates
+// at 32ch). Uses Radix Tooltip (portals out of the table's overflow,
+// positions + delays for free). Shown whenever there's a description OR the
+// title is long enough to be truncated — so hovering always reveals more
+// than the few visible words. A truly short, description-less title (nothing
+// extra to show) skips the popover.
 function TaskTitleCell({ row }: { row: TaskListRow }) {
   const link = (
     <Link
@@ -320,9 +323,14 @@ function TaskTitleCell({ row }: { row: TaskListRow }) {
     </Link>
   );
   const desc = row.description?.trim();
-  if (!desc) return link;
+  const subject = row.subject?.trim();
+  // The title cell caps at ~32ch (max-md ~20ch); anything longer is clipped,
+  // so a long title alone is worth expanding even without a description.
+  const titleTruncated = row.title.trim().length > 30;
+  const hasMore = Boolean(desc) || titleTruncated;
+  if (!hasMore) return link;
   return (
-    <Tooltip.Provider delayDuration={2000}>
+    <Tooltip.Provider delayDuration={1000}>
       <Tooltip.Root>
         <Tooltip.Trigger asChild>{link}</Tooltip.Trigger>
         <Tooltip.Portal>
@@ -347,21 +355,27 @@ function TaskTitleCell({ row }: { row: TaskListRow }) {
                 fontSize: 15,
                 lineHeight: 1.3,
                 color: "var(--color-ink-strong)",
-                marginBottom: 8,
+                marginBottom: desc ? 8 : 0,
               }}
             >
               {row.title}
             </div>
-            <p
-              className="whitespace-pre-wrap"
-              style={{
-                fontSize: 14.5,
-                lineHeight: 1.55,
-                color: "var(--color-ink-soft)",
-              }}
-            >
-              {desc}
-            </p>
+            {desc ? (
+              <p
+                className="whitespace-pre-wrap"
+                style={{
+                  fontSize: 14.5,
+                  lineHeight: 1.55,
+                  color: "var(--color-ink-soft)",
+                }}
+              >
+                {desc}
+              </p>
+            ) : (
+              <p style={{ fontSize: 13, color: "var(--color-ink-subtle)" }}>
+                {subject ? `Subject — ${subject}` : "No description added yet."}
+              </p>
+            )}
             <Tooltip.Arrow style={{ fill: "var(--color-surface-card)" }} />
           </Tooltip.Content>
         </Tooltip.Portal>
