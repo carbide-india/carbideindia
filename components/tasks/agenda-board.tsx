@@ -152,9 +152,20 @@ export function AgendaBoard({
   return (
     <div>
       {/* Welcome banner */}
-      <div className="mb-6">
-        <h1 className="text-display-lg text-ink-strong">Welcome, {firstName}</h1>
-        <p className="text-body-lg text-ink-subtle mt-1">
+      <div className="mb-7">
+        <h1
+          className="text-ink-strong"
+          style={{
+            fontFamily: "var(--font-display), system-ui, sans-serif",
+            fontWeight: 900,
+            fontSize: "clamp(42px, 4.6vw, 60px)",
+            letterSpacing: "-0.025em",
+            lineHeight: 1,
+          }}
+        >
+          Welcome, {firstName}
+        </h1>
+        <p className="text-ink-subtle mt-3" style={{ fontSize: 19, lineHeight: 1.5 }}>
           You have{" "}
           <span className="font-bold text-ink-strong tabular-nums">{dueToday}</span>{" "}
           {dueToday === 1 ? "task" : "tasks"} due today
@@ -172,14 +183,14 @@ export function AgendaBoard({
       </div>
 
       {/* Day-count selector */}
-      <div className="mb-4 flex items-center gap-2">
-        <span className="text-[13px] font-semibold text-ink-subtle mr-1">Show</span>
+      <div className="mb-5 flex items-center gap-2">
+        <span className="text-[15px] font-semibold text-ink-subtle mr-1">Show</span>
         {DAY_CHOICES.map((n) => (
           <button
             key={n}
             type="button"
             onClick={() => setDayCount(n)}
-            className="px-3 py-1.5 rounded-full text-[13px] font-semibold transition-colors"
+            className="px-4 py-2 rounded-full text-[15px] font-semibold transition-colors"
             style={{
               background: dayCount === n ? "var(--color-ink-strong)" : "var(--color-surface-soft)",
               color: dayCount === n ? "#fff" : "var(--color-ink-soft)",
@@ -193,7 +204,7 @@ export function AgendaBoard({
 
       <div
         ref={scrollRef}
-        className="flex gap-4 overflow-x-auto pb-4"
+        className="flex gap-5 overflow-x-auto pb-4"
         onDragOver={(e) => {
           // Bubbles up from the day columns; track pointer + run the loop.
           updateEdgeFromPointer(e.clientX);
@@ -256,7 +267,7 @@ function Column({
   const droppable = !!ymd;
   return (
     <div
-      className="flex-shrink-0 w-[280px] rounded-section p-3 transition-colors"
+      className="flex-shrink-0 w-[360px] max-md:w-[300px] rounded-section p-4 transition-colors"
       style={{
         background: isOver ? "var(--color-blue-bg)" : "var(--color-surface-soft)",
         border: `1px solid ${isOver ? "var(--color-blue)" : "var(--color-hairline)"}`,
@@ -281,19 +292,21 @@ function Column({
           : undefined
       }
     >
-      <div className="flex items-center justify-between mb-3 px-1">
+      <div className="flex items-center justify-between mb-4 px-1">
         <span
-          className="inline-flex items-center gap-2 text-[13px] font-bold"
+          className="inline-flex items-center gap-2 text-[17px] font-bold"
           style={{ color: `var(--color-${tone}-deep)` }}
         >
-          {label === "Overdue" && <AlertTriangle size={14} strokeWidth={2.4} />}
+          {label === "Overdue" && <AlertTriangle size={17} strokeWidth={2.4} />}
           {label}
         </span>
-        <span className="text-[12px] font-semibold text-ink-subtle tabular-nums">{sub}</span>
+        <span className="text-[14px] font-semibold text-ink-subtle tabular-nums">{sub}</span>
       </div>
-      <div className="flex flex-col gap-2 min-h-[40px]">
+      {/* Tall droppable area so each column fills the screen and there's a
+          generous target to drop onto. */}
+      <div className="flex flex-col gap-3 min-h-[calc(100vh_-_330px)]">
         {tasks.length === 0 ? (
-          <p className="text-[12.5px] text-ink-subtle px-1 py-3">
+          <p className="text-[14px] text-ink-subtle px-1 py-4">
             {droppable ? "Drop a task here." : "Nothing here."}
           </p>
         ) : (
@@ -306,13 +319,14 @@ function Column({
                 e.dataTransfer.setData("text/plain", t.id);
                 e.dataTransfer.effectAllowed = "move";
               }}
-              className="rounded-chip bg-white border border-hairline p-3 transition-shadow hover:shadow-md block cursor-grab active:cursor-grabbing"
+              className="rounded-chip bg-white border border-hairline p-4 transition-shadow hover:shadow-md block cursor-grab active:cursor-grabbing"
             >
               <span
-                className="text-[14px] font-semibold text-ink-strong leading-snug block"
+                className="text-[16.5px] font-semibold text-ink-strong block"
                 style={{
+                  lineHeight: 1.4,
                   display: "-webkit-box",
-                  WebkitLineClamp: 3,
+                  WebkitLineClamp: 4,
                   WebkitBoxOrient: "vertical",
                   overflow: "hidden",
                 }}
@@ -320,7 +334,7 @@ function Column({
                 {t.description || t.title}
               </span>
               {t.subject && (
-                <span className="mt-1.5 text-[11px] font-semibold text-ink-subtle block">
+                <span className="mt-2 text-[13px] font-semibold text-ink-subtle block">
                   {t.subject}
                 </span>
               )}
