@@ -154,7 +154,8 @@ export async function inviteEmployee(input: InviteEmployeeInput): Promise<{
   try {
     const fbUser = await auth.createUser({
       email: parsed.email,
-      emailVerified: false,
+      password: DEFAULT_INVITE_PASSWORD,
+      emailVerified: true,
       disabled: false,
     });
     fbUid = fbUser.uid;
@@ -246,22 +247,20 @@ export async function inviteEmployee(input: InviteEmployeeInput): Promise<{
   //    failure to the caller via `warning` so they know to retry.
   let emailWarning: string | undefined;
   try {
-    const link = await auth.generatePasswordResetLink(parsed.email, {
-      url: `${siteUrl()}/welcome?intent=invite`,
-    });
-    const { error: sendError } = await sendInviteEmail({
+    const { error: sendError } = await sendCredentialsEmail({
       email:       parsed.email,
       inviteeName: parsed.name,
       inviterName: me.name,
-      inviteLink:  link,
+      password:    DEFAULT_INVITE_PASSWORD,
+      loginUrl:    `${siteUrl()}/login`,
     });
     if (sendError) {
-      emailWarning = `Created the account but the invite email failed: ${sendError}. Use "Resend invite" to retry.`;
-      console.error("[inviteEmployee] sendInviteEmail returned error", sendError);
+      emailWarning = `Created the account but the login-details email failed: ${sendError}. Use "Resend invite" to retry.`;
+      console.error("[inviteEmployee] sendCredentialsEmail returned error", sendError);
     }
   } catch (err: any) {
-    emailWarning = `Created the account but couldn't generate the invite link: ${err?.message ?? err}. Use "Resend invite" to retry.`;
-    console.error("[inviteEmployee] generatePasswordResetLink/sendInviteEmail threw", err);
+    emailWarning = `Created the account but the login-details email failed: ${err?.message ?? err}. Use "Resend invite" to retry.`;
+    console.error("[inviteEmployee] sendCredentialsEmail threw", err);
   }
 
   try {
@@ -471,14 +470,12 @@ export async function resendInvite(employeeId: string): Promise<{ ok: boolean; e
   if (!emp) return { ok: false, error: "Employee not found" };
   if (emp.joinedAt !== null) return { ok: false, error: "Employee has already joined." };
   try {
-    const link = await getFirebaseAdminAuth().generatePasswordResetLink(emp.email, {
-      url: `${siteUrl()}/welcome?intent=invite`,
-    });
-    const { error } = await sendInviteEmail({
+    const { error } = await sendCredentialsEmail({
       email:       emp.email,
       inviteeName: emp.name,
       inviterName: me.name,
-      inviteLink:  link,
+      password:    DEFAULT_INVITE_PASSWORD,
+      loginUrl:    `${siteUrl()}/login`,
     });
     if (error) return { ok: false, error };
   } catch (err: any) {
