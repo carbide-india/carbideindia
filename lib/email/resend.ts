@@ -7,6 +7,7 @@ import { employees, notifications, tasks } from "@/db/schema";
 import type { NotificationKind } from "@/db/schema";
 import { InviteEmail } from "@/emails/invite";
 import { ResetPasswordEmail } from "@/emails/reset-password";
+import { AdminResetPasswordEmail } from "@/emails/admin-reset-password";
 import { TaskAssignedEmail } from "@/emails/notifications/TaskAssigned";
 import { TaskInitiatedEmail } from "@/emails/notifications/TaskInitiated";
 import { StatusChangedEmail } from "@/emails/notifications/StatusChanged";
@@ -147,6 +148,26 @@ export async function sendResetPasswordEmail(args: {
         link: args.resetLink,
         recipientName: args.recipientName,
       }),
+    });
+    if (error) return { id: null, error: error.message };
+    return { id: data?.id ?? null, error: null };
+  } catch (err) {
+    return { id: null, error: errorMessage(err) };
+  }
+}
+
+export async function sendPasswordChangedByAdminEmail(args: {
+  email: string;
+  recipientName?: string;
+}): Promise<{ id: string | null; error: string | null }> {
+  try {
+    const resend = getResend();
+    if (!resend) return { id: null, error: "RESEND_API_KEY not set" };
+    const { data, error } = await resend.emails.send({
+      from: FROM,
+      to: args.email,
+      subject: `Your Altus Corp password was reset by an administrator`,
+      react: AdminResetPasswordEmail({ recipientName: args.recipientName }),
     });
     if (error) return { id: null, error: error.message };
     return { id: data?.id ?? null, error: null };
