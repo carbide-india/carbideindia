@@ -25,8 +25,13 @@ import {
   type EditEmployeeInput,
 } from "@/lib/validators/employee";
 import { getFirebaseAdminAuth } from "@/lib/firebase/admin";
-import { sendInviteEmail, sendPasswordChangedByAdminEmail } from "@/lib/email/resend";
+import {
+  sendInviteEmail,
+  sendPasswordChangedByAdminEmail,
+  sendCredentialsEmail,
+} from "@/lib/email/resend";
 import { siteUrl } from "@/lib/site-url";
+import { DEFAULT_INVITE_PASSWORD } from "@/lib/auth/default-password";
 
 /** Run an async function up to `tries` times with linear backoff. Throws
  *  the last error if all attempts fail. */
