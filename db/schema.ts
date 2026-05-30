@@ -467,6 +467,10 @@ export const tasks = pgTable(
     ),
     notes: text("notes"),
     subject: text("subject"),
+    // Client this task belongs to. Free-text mirroring `subject` (the
+    // `clients` table is just the picker roster). Added in migration 0042 and
+    // backfilled from the old "Client/Participant:" notes / form title.
+    client: text("client"),
     archived: boolean("archived").notNull().default(false),
     // M2.1 additions — provenance + approval (approved_* used in M2.2) + optimistic lock
     createdById: uuid("created_by_id").references(() => employees.id, {
