@@ -52,6 +52,12 @@ export const employees = pgTable("employees", {
   isActive: boolean("is_active").notNull().default(true),
   invitedAt: timestamp("invited_at", { withTimezone: true }),
   joinedAt: timestamp("joined_at", { withTimezone: true }),
+  // Admin password-reset lockout marker (migration 0043). Set when an admin
+  // resets the password (sessions revoked); cleared on next successful login.
+  // Non-null => show the "changed by admin" message on a failed sign-in.
+  passwordResetByAdminAt: timestamp("password_reset_by_admin_at", {
+    withTimezone: true,
+  }),
   // M2.3-lite: inbox last-visit marker — drives unread-badge math.
   lastInboxVisitAt: timestamp("last_inbox_visit_at", { withTimezone: true })
     .notNull()
