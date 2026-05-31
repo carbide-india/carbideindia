@@ -374,12 +374,12 @@ export function TaskTable({
   return (
     <div ref={listTopRef} className="scroll-mt-6">
       <div className="mb-3 flex items-center justify-between gap-3 flex-wrap">
-        <MobileSortControl table={table} className="hidden max-sm:flex" />
+        <MobileSortControl table={table} className="hidden max-md:flex" />
         <GroupByControl value={groupBy} onChange={setGroupBy} />
         <ColumnsMenu table={table} />
       </div>
       <div
-        className="bg-surface-card rounded-section border border-hairline overflow-x-auto max-sm:hidden"
+        className="bg-surface-card rounded-section border border-hairline overflow-x-auto max-md:hidden"
         style={{ boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)" }}
       >
       <table className="min-w-full">
@@ -526,7 +526,7 @@ export function TaskTable({
       {/* Phone card layout (< sm). Same rows as the table above so sort,
           group-by, and pagination apply identically. Shows every desktop
           field — parity. */}
-      <div className="hidden max-sm:flex max-sm:flex-col max-sm:gap-3">
+      <div className="hidden max-md:flex max-md:flex-col max-md:gap-3">
         {table.getRowModel().rows.map((row, i, arr) => {
           const t = row.original;
           const label = groupBy === "none" ? null : groupValue(t, groupBy);
