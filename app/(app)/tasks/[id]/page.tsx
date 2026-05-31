@@ -4,6 +4,7 @@ import { DashboardFooter } from "@/components/layout/footer";
 import { TaskDetailLoader } from "@/components/tasks/task-detail-loader";
 import { TaskDetailSkeleton } from "@/components/tasks/task-detail-skeleton";
 import { requireUser } from "@/lib/auth/current";
+import { markTaskRead } from "@/app/(app)/tasks/read-actions";
 
 export const dynamic = "force-dynamic";
 
