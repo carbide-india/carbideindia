@@ -29,6 +29,10 @@ export default async function TaskDetailPage({ params }: PageProps) {
   // and gives the loader its `me` payload without a second resolve.
   const me = await requireUser();
 
+  // Read-receipt: mark this task read on first open by anyone. Fire-and-forget;
+  // markTaskRead is best-effort and the NULL guard makes repeat opens a no-op.
+  void markTaskRead(id);
+
   return (
     <>
       <DashboardHeader generatedAt={new Date()} />
