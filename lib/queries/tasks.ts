@@ -21,6 +21,7 @@ export async function listTasks(filters: TaskListFilters): Promise<TaskListRow[]
     conditions.push(inArray(tasks.initiatorId, filters.initiatorIds));
   if (filters.priorities.length > 0) conditions.push(inArray(tasks.priority, filters.priorities));
   if (filters.subjects.length > 0)   conditions.push(inArray(tasks.subject, filters.subjects));
+  if (filters.clients.length > 0)    conditions.push(inArray(tasks.client, filters.clients));
   if (filters.taskId)                conditions.push(eq(tasks.id, filters.taskId));
 
   if (filters.departments.length > 0) {
@@ -375,6 +376,7 @@ export async function listTasksForExport(
     conditions.push(inArray(tasks.initiatorId, filters.initiatorIds));
   if (filters.priorities.length > 0) conditions.push(inArray(tasks.priority, filters.priorities));
   if (filters.subjects.length > 0)   conditions.push(inArray(tasks.subject, filters.subjects));
+  if (filters.clients.length > 0)    conditions.push(inArray(tasks.client, filters.clients));
   if (filters.taskId)                conditions.push(eq(tasks.id, filters.taskId));
 
   if (filters.departments.length > 0) {
@@ -458,6 +460,22 @@ export const listDistinctSubjects = unstable_cache(
   },
   ["list-distinct-subjects"],
   { tags: [CACHE_TAGS.subjects, CACHE_TAGS.tasks], revalidate: 600 },
+);
+
+/** Distinct non-empty `client` values across all tasks, for the filter bar's
+ *  Clients picker. Mirrors listDistinctSubjects. */
+export const listDistinctClients = unstable_cache(
+  async (): Promise<string[]> => {
+    const rows = await db
+      .selectDistinct({ client: tasks.client })
+      .from(tasks);
+    return rows
+      .map((r) => r.client)
+      .filter((c): c is string => typeof c === "string" && c.length > 0)
+      .sort();
+  },
+  ["list-distinct-clients"],
+  { tags: [CACHE_TAGS.clients, CACHE_TAGS.tasks], revalidate: 600 },
 );
 
 export type TaskDetail = {

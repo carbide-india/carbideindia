@@ -159,6 +159,7 @@ export interface TaskListFilters {
   departments: Department[];
   priorities: EisenhowerPriority[];
   subjects: string[];
+  clients: string[];
   taskId: string | null;
   archived: boolean;
   /** How the assignee filter was resolved.
