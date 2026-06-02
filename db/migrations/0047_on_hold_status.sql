@@ -20,7 +20,12 @@ create index if not exists tasks_pending_created_idx
   );
 
 -- 3. Seed the admin-editable status_settings row so the label/colour are
---    authoritative + reorderable in admin settings.
+--    authoritative + reorderable in admin settings. Upsert the label/colour
+--    (do UPDATE, not DO NOTHING) so a stale pre-existing on_hold row — e.g.
+--    an earlier "On Hold" attempt that seeded slate without adding the enum
+--    value — is corrected to the amber scheme.
 insert into status_settings (status, label, color_token, display_order)
 values ('on_hold', 'On Hold', 'amber', 85)
-on conflict (status) do nothing;
+on conflict (status) do update
+  set label = excluded.label,
+      color_token = excluded.color_token;
