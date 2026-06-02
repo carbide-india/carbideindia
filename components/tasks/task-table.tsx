@@ -16,8 +16,10 @@ import {
 } from "@tanstack/react-table";
 import { format } from "date-fns";
 
-// Classic numbered pagination: 25 rows per page with Prev / 1 2 3 … N / Next.
-const PAGE_SIZE = 25;
+// Classic numbered pagination: a rows-per-page selector (default 25) with
+// First « · Prev · 1 2 3 … N · Next · Last » controls.
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+const DEFAULT_PAGE_SIZE = 25;
 
 // Build the windowed list of page numbers to render: always first + last, the
 // current page with one neighbour on each side, and "ellipsis" gaps between.
@@ -49,6 +51,8 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   ArrowUp,
   ArrowDown,
   ChevronsUpDown,
@@ -308,6 +312,8 @@ export function TaskTable({
   // grouping off restores exactly the user's manual sort.
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [groupBy, setGroupBy] = React.useState<GroupKey>("none");
+  // Rows per page — user-selectable (10/25/50/100), default 25.
+  const [pageSize, setPageSize] = React.useState<number>(DEFAULT_PAGE_SIZE);
 
   const groupColId = groupBy === "client" ? "client" : groupBy === "subject" ? "subject" : groupBy === "status" ? "status" : null;
 
@@ -333,9 +339,16 @@ export function TaskTable({
     // Fixed PAGE_SIZE pages; sorting/visibility apply across the full set
     // before the page slice. Page index is driven by the numbered pager below.
     getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageIndex: 0, pageSize: PAGE_SIZE } },
+    initialState: { pagination: { pageIndex: 0, pageSize: DEFAULT_PAGE_SIZE } },
     autoResetPageIndex: false,
   });
+
+  // Apply the chosen rows-per-page and jump back to the first page so the
+  // user lands at the top of the re-sliced list rather than a now-stale page.
+  React.useEffect(() => {
+    table.setPageSize(pageSize);
+    table.setPageIndex(0);
+  }, [pageSize, table]);
 
   // Total rows per group across the full (unpaginated) set, for the count
   // shown in each group header. Keyed by the same label `groupValue` renders.
@@ -360,11 +373,11 @@ export function TaskTable({
   // an inline status edit doesn't yank you back to the top — you only move if
   // your page no longer exists (e.g. a filter shrank the result set).
   React.useEffect(() => {
-    const maxIndex = Math.max(0, Math.ceil(rows.length / PAGE_SIZE) - 1);
+    const maxIndex = Math.max(0, Math.ceil(rows.length / pageSize) - 1);
     if (table.getState().pagination.pageIndex > maxIndex) {
       table.setPageIndex(maxIndex);
     }
-  }, [rows, table]);
+  }, [rows, table, pageSize]);
 
   // Scroll the table back into view when the page changes, so the new rows are
   // visible without a manual scroll up.
@@ -377,8 +390,8 @@ export function TaskTable({
   const totalFiltered = table.getPrePaginationRowModel().rows.length;
   const pageCount = table.getPageCount();
   const pageIndex = table.getState().pagination.pageIndex;
-  const rangeStart = totalFiltered === 0 ? 0 : pageIndex * PAGE_SIZE + 1;
-  const rangeEnd = Math.min(totalFiltered, (pageIndex + 1) * PAGE_SIZE);
+  const rangeStart = totalFiltered === 0 ? 0 : pageIndex * pageSize + 1;
+  const rangeEnd = Math.min(totalFiltered, (pageIndex + 1) * pageSize);
   const pages = pageWindow(pageIndex + 1, pageCount);
 
   function alignClass(c: TaskCol): string {
@@ -394,7 +407,9 @@ export function TaskTable({
         <ColumnsMenu table={table} />
       </div>
       <div
-        className="bg-surface-card rounded-section border border-hairline overflow-x-auto max-md:hidden"
+        // Cap the table to the viewport and scroll it internally so the
+        // sticky header row below stays frozen while you page through rows.
+        className="bg-surface-card rounded-section border border-hairline overflow-auto max-h-[calc(100vh-260px)] max-md:hidden"
         style={{ boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)" }}
       >
       <table className="min-w-full">
@@ -418,7 +433,7 @@ export function TaskTable({
                           ? "descending"
                           : undefined
                     }
-                    className={`px-5 py-4 text-table-head whitespace-nowrap max-md:px-3 max-md:py-3 ${alignClass(col)} ${hide ? "max-md:hidden" : ""} ${isActions ? "sticky right-0 z-20" : ""}`}
+                    className={`sticky top-0 px-5 py-4 text-table-head whitespace-nowrap max-md:px-3 max-md:py-3 ${alignClass(col)} ${hide ? "max-md:hidden" : ""} ${isActions ? "right-0 z-30" : "z-20"}`}
                     style={{
                       // Highlighted header bar — a tinted strip with darker
                       // label text that sets the column row apart from the
@@ -587,6 +602,14 @@ export function TaskTable({
             aria-label="Task list pages"
           >
             <PagerNavButton
+              onClick={() => goToPage(0)}
+              disabled={!table.getCanPreviousPage()}
+              ariaLabel="First page"
+            >
+              <ChevronsLeft size={16} strokeWidth={2.4} />
+              <span className="max-sm:hidden">First</span>
+            </PagerNavButton>
+            <PagerNavButton
               onClick={() => goToPage(pageIndex - 1)}
               disabled={!table.getCanPreviousPage()}
               ariaLabel="Previous page"
@@ -629,15 +652,26 @@ export function TaskTable({
               <span className="max-sm:hidden">Next</span>
               <ChevronRight size={16} strokeWidth={2.4} />
             </PagerNavButton>
+            <PagerNavButton
+              onClick={() => goToPage(pageCount - 1)}
+              disabled={!table.getCanNextPage()}
+              ariaLabel="Last page"
+            >
+              <span className="max-sm:hidden">Last</span>
+              <ChevronsRight size={16} strokeWidth={2.4} />
+            </PagerNavButton>
           </nav>
         )}
-        <p className="text-[13px] font-semibold text-ink-subtle tabular-nums">
-          {totalFiltered === 0
-            ? "No tasks"
-            : pageCount > 1
-              ? `Page ${pageIndex + 1} of ${pageCount} · showing ${rangeStart}–${rangeEnd} of ${totalFiltered}`
-              : `Showing all ${totalFiltered} ${totalFiltered === 1 ? "task" : "tasks"}`}
-        </p>
+        <div className="flex items-center gap-4 flex-wrap justify-center">
+          <RowsPerPageSelect value={pageSize} onChange={setPageSize} />
+          <p className="text-[13px] font-semibold text-ink-subtle tabular-nums">
+            {totalFiltered === 0
+              ? "No tasks"
+              : pageCount > 1
+                ? `Page ${pageIndex + 1} of ${pageCount} · showing ${rangeStart}–${rangeEnd} of ${totalFiltered}`
+                : `Showing all ${totalFiltered} ${totalFiltered === 1 ? "task" : "tasks"}`}
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -666,6 +700,48 @@ function PagerNavButton({
     >
       {children}
     </button>
+  );
+}
+
+// Rows-per-page selector. Lets the user trade a denser list (100/page) for a
+// shorter one (10/page). Built on the app's Radix dropdown for a consistent,
+// styleable menu (a native <select> can't match the rest of the controls).
+function RowsPerPageSelect({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (n: number) => void;
+}) {
+  return (
+    <div className="inline-flex items-center gap-2">
+      <span className="text-[13px] font-semibold text-ink-subtle">Rows</span>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-pill text-[13px] font-bold tabular-nums border border-hairline bg-surface-card text-ink-strong hover:border-altus-red hover:text-altus-red transition-all"
+          >
+            {value}
+            <ChevronsUpDown size={13} strokeWidth={2.4} className="opacity-60" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="center">
+          {PAGE_SIZE_OPTIONS.map((n) => (
+            <DropdownMenuItem
+              key={n}
+              onSelect={() => onChange(n)}
+              className={n === value ? "font-bold" : ""}
+            >
+              <span className="inline-flex w-4 justify-center">
+                {n === value ? <Check size={14} strokeWidth={2.6} /> : null}
+              </span>
+              <span className="tabular-nums">{n} / page</span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
 }
 

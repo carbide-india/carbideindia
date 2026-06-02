@@ -19,6 +19,7 @@ import { motion } from "motion/react";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { DepartmentFilter } from "./filters/department-filter";
 import { PriorityFilter } from "./filters/priority-filter";
+import { StatusFilter } from "./filters/status-filter";
 import { SubjectFilter } from "./filters/subject-filter";
 
 type AssigneeMode = "default" | "all" | "specific";
@@ -33,8 +34,12 @@ interface Props {
     dept: string[];
     prio: string[];
     subj: string[];
+    status?: string[];
   };
   subjects?: string[]; // pool of distinct task subjects for autocomplete
+  /** Status options (value + admin-overridable label). When provided, the
+   *  Status filter chip is shown. Omitted on views without status filtering. */
+  statusOptions?: { value: string; label: string }[];
   /** Pass the signed-in user to enable the "My tasks / All tasks" scope chip.
    *  Only shown for non-admins on task list views. */
   me?: { id: string; isAdmin: boolean };
@@ -49,6 +54,7 @@ export function FilterBar({
   employees,
   initial,
   subjects,
+  statusOptions,
   me,
   assigneeMode: initialAssigneeMode = "all",
 }: Props) {
@@ -74,6 +80,7 @@ export function FilterBar({
   const [dept, setDept] = React.useState<string[]>(initial.dept);
   const [prio, setPrio] = React.useState<string[]>(initial.prio);
   const [subj, setSubj] = React.useState<string[]>(initial.subj);
+  const [status, setStatus] = React.useState<string[]>(initial.status ?? []);
   const [sheetOpen, setSheetOpen] = React.useState(false);
   const pathname = usePathname();
 
@@ -111,6 +118,7 @@ export function FilterBar({
     if (dept.length > 0) sp.set("dept", dept.join(",")); else sp.delete("dept");
     if (prio.length > 0) sp.set("prio", prio.join(",")); else sp.delete("prio");
     if (subj.length > 0) sp.set("subj", subj.join(",")); else sp.delete("subj");
+    if (status.length > 0) sp.set("status", status.join(",")); else sp.delete("status");
     startTransition(() => router.replace(`${pathname}?${sp.toString()}` as any));
   }
 
@@ -125,6 +133,7 @@ export function FilterBar({
     setDept([]);
     setPrio([]);
     setSubj([]);
+    setStatus([]);
   }
 
   const fmt = (s: string) => {
@@ -153,7 +162,8 @@ export function FilterBar({
     (view !== "doer" ? 1 : 0) +
     (dept.length > 0 ? 1 : 0) +
     (prio.length > 0 ? 1 : 0) +
-    (subj.length > 0 ? 1 : 0); // start/end have defaults so don't count
+    (subj.length > 0 ? 1 : 0) +
+    (status.length > 0 ? 1 : 0); // start/end have defaults so don't count
 
   return (
     <div
@@ -286,6 +296,9 @@ export function FilterBar({
 
           <DepartmentFilter selected={dept} onChange={setDept} />
           <PriorityFilter selected={prio} onChange={setPrio} />
+          {statusOptions && statusOptions.length > 0 && (
+            <StatusFilter options={statusOptions} selected={status} onChange={setStatus} />
+          )}
           {subjects && subjects.length > 0 && (
             <SubjectFilter options={subjects} selected={subj} onChange={setSubj} />
           )}
