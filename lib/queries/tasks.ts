@@ -41,6 +41,7 @@ export async function listTasks(filters: TaskListFilters): Promise<TaskListRow[]
   const rows = await db
     .select({
       id: tasks.id,
+      taskNo: tasks.taskNo,
       title: tasks.title,
       subject: tasks.subject,
       client: tasks.client,
@@ -70,6 +71,7 @@ export async function listTasks(filters: TaskListFilters): Promise<TaskListRow[]
   const now = Date.now();
   return rows.map((r) => ({
     id: r.id,
+    taskNo: r.taskNo,
     title: r.title,
     subject: r.subject,
     client: r.client,
@@ -184,6 +186,7 @@ export async function listTasksPage(
   const fetched = await db
     .select({
       id: tasks.id,
+      taskNo: tasks.taskNo,
       title: tasks.title,
       subject: tasks.subject,
       client: tasks.client,
@@ -218,6 +221,7 @@ export async function listTasksPage(
   const now = Date.now();
   const rows: TaskListRow[] = pageRows.map((r) => ({
     id: r.id,
+    taskNo: r.taskNo,
     title: r.title,
     subject: r.subject,
     client: r.client,
@@ -245,6 +249,7 @@ export async function listTasksPage(
 /** Minimal card shape for the status Kanban board. */
 export interface BoardTask {
   id: string;
+  taskNo: number | null;
   title: string;
   subject: string | null;
   client: string | null;
@@ -266,6 +271,7 @@ export async function listBoardTasks(): Promise<BoardTask[]> {
   const rows = await db
     .select({
       id: tasks.id,
+      taskNo: tasks.taskNo,
       title: tasks.title,
       subject: tasks.subject,
       client: tasks.client,
@@ -293,6 +299,7 @@ export async function listAgendaTasks(employeeId: string): Promise<BoardTask[]> 
   const rows = await db
     .select({
       id: tasks.id,
+      taskNo: tasks.taskNo,
       title: tasks.title,
       subject: tasks.subject,
       client: tasks.client,
@@ -455,6 +462,7 @@ export const listDistinctSubjects = unstable_cache(
 
 export type TaskDetail = {
   id: string;
+  taskNo: number | null;
   title: string;
   description: string | null;
   subject: string | null;
@@ -497,6 +505,7 @@ export async function getTaskById(taskId: string): Promise<TaskDetail | null> {
   const [row] = await db
     .select({
       id: tasks.id,
+      taskNo: tasks.taskNo,
       title: tasks.title,
       description: tasks.description,
       subject: tasks.subject,

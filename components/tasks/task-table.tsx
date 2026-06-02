@@ -56,6 +56,8 @@ import {
   ArrowUp,
   ArrowDown,
   ChevronsUpDown,
+  Search,
+  X,
 } from "lucide-react";
 
 // Group-by options for the Tasks table. "none" = flat list (default).
@@ -107,6 +109,7 @@ import {
 
 // Friendly labels for the column show/hide menu (#11).
 const COLUMN_LABELS: Record<string, string> = {
+  taskNo: "ID No.",
   client: "Client",
   doerName: "Doer",
   priority: "Priority",
@@ -136,6 +139,21 @@ function buildColumns(
   statusTones: StatusTones,
 ): TaskCol[] {
   return [
+    {
+      accessorKey: "taskNo",
+      header: "ID No.",
+      meta: { narrow: true },
+      cell: (info) => {
+        const n = info.getValue<number | null>();
+        return n == null ? (
+          <span className="text-ink-subtle">—</span>
+        ) : (
+          <span className="font-bold tabular-nums text-ink-soft" style={{ fontSize: 14 }}>
+            #{n}
+          </span>
+        );
+      },
+    },
     {
       accessorKey: "client",
       header: "Client",
@@ -315,6 +333,27 @@ export function TaskTable({
   // Rows per page — user-selectable (10/25/50/100), default 25.
   const [pageSize, setPageSize] = React.useState<number>(DEFAULT_PAGE_SIZE);
 
+  // Free-text search across task no + the human-readable fields. Runs purely
+  // client-side over the already-loaded rows (the list query returns the full
+  // filtered set), so it's instant and needs no server round-trip.
+  const [query, setQuery] = React.useState("");
+  const visibleRows = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return rows;
+    const qNum = q.replace(/^#/, ""); // "#1042" or "1042" both match the No.
+    return rows.filter((r) => {
+      if (r.taskNo != null && String(r.taskNo).includes(qNum)) return true;
+      return [
+        r.title,
+        r.subject ?? "",
+        r.client ?? "",
+        r.doerName ?? "",
+        r.initiatorName ?? "",
+        resolvedLabels[r.status] ?? r.status,
+      ].some((s) => s.toLowerCase().includes(q));
+    });
+  }, [rows, query, resolvedLabels]);
+
   const groupColId = groupBy === "client" ? "client" : groupBy === "subject" ? "subject" : groupBy === "status" ? "status" : null;
 
   const effectiveSorting = React.useMemo<SortingState>(() => {
@@ -329,7 +368,7 @@ export function TaskTable({
   }
 
   const table = useReactTable({
-    data: rows,
+    data: visibleRows,
     columns,
     state: { columnVisibility, sorting: effectiveSorting },
     onColumnVisibilityChange: setColumnVisibility,
@@ -355,12 +394,12 @@ export function TaskTable({
   const groupCounts = React.useMemo(() => {
     if (groupBy === "none") return null;
     const m = new Map<string, number>();
-    for (const r of rows) {
+    for (const r of visibleRows) {
       const k = groupValue(r, groupBy, resolvedLabels);
       m.set(k, (m.get(k) ?? 0) + 1);
     }
     return m;
-  }, [groupBy, rows]);
+  }, [groupBy, visibleRows, resolvedLabels]);
 
   // Jump back to the first page whenever the grouping changes, so you start at
   // the top of the newly-ordered list rather than a now-meaningless page.
@@ -373,11 +412,16 @@ export function TaskTable({
   // an inline status edit doesn't yank you back to the top — you only move if
   // your page no longer exists (e.g. a filter shrank the result set).
   React.useEffect(() => {
-    const maxIndex = Math.max(0, Math.ceil(rows.length / pageSize) - 1);
+    const maxIndex = Math.max(0, Math.ceil(visibleRows.length / pageSize) - 1);
     if (table.getState().pagination.pageIndex > maxIndex) {
       table.setPageIndex(maxIndex);
     }
-  }, [rows, table, pageSize]);
+  }, [visibleRows, table, pageSize]);
+
+  // A new search resets to the first page so results start at the top.
+  React.useEffect(() => {
+    table.setPageIndex(0);
+  }, [query, table]);
 
   // Scroll the table back into view when the page changes, so the new rows are
   // visible without a manual scroll up.
@@ -401,6 +445,9 @@ export function TaskTable({
 
   return (
     <div ref={listTopRef} className="scroll-mt-6">
+      <div className="mb-3">
+        <SearchBox value={query} onChange={setQuery} resultCount={visibleRows.length} />
+      </div>
       <div className="mb-3 flex items-center justify-between gap-3 flex-wrap">
         <MobileSortControl table={table} className="hidden max-md:flex" />
         <GroupByControl value={groupBy} onChange={setGroupBy} />
@@ -703,6 +750,54 @@ function PagerNavButton({
   );
 }
 
+// Search box for the task list. Matches the task No. (with or without the
+// leading #) plus title / subject / client / doer / initiator / status —
+// "search by task no or any other criteria".
+function SearchBox({
+  value,
+  onChange,
+  resultCount,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  resultCount: number;
+}) {
+  return (
+    <div className="flex items-center gap-3 flex-wrap">
+      <div className="relative w-full max-w-md">
+        <Search
+          size={16}
+          strokeWidth={2.2}
+          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-subtle pointer-events-none"
+        />
+        <input
+          type="search"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Search by task no. (#1042), title, subject, client, doer…"
+          aria-label="Search tasks"
+          className="w-full h-11 pl-10 pr-9 rounded-pill border border-hairline bg-surface-card text-[15px] text-ink-strong placeholder:text-ink-subtle outline-none transition-all focus:border-altus-red focus:ring-2 focus:ring-altus-red/25"
+        />
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            aria-label="Clear search"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-subtle hover:text-ink-strong transition-colors"
+          >
+            <X size={16} strokeWidth={2.4} />
+          </button>
+        )}
+      </div>
+      {value.trim() && (
+        <span className="text-[13px] font-semibold text-ink-subtle tabular-nums">
+          {resultCount} {resultCount === 1 ? "match" : "matches"}
+        </span>
+      )}
+    </div>
+  );
+}
+
 // Rows-per-page selector. Lets the user trade a denser list (100/page) for a
 // shorter one (10/page). Built on the app's Radix dropdown for a consistent,
 // styleable menu (a native <select> can't match the rest of the controls).
@@ -976,9 +1071,16 @@ function TaskCard({
       style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}
     >
       <div className="flex items-start justify-between gap-2">
-        <span className="text-ink-strong font-semibold" style={{ fontSize: 15 }}>
-          {row.client?.trim() ? row.client : "— No client"}
-        </span>
+        <div className="flex flex-col gap-0.5 min-w-0">
+          {row.taskNo != null && (
+            <span className="text-ink-subtle font-bold tabular-nums text-[12px]">
+              #{row.taskNo}
+            </span>
+          )}
+          <span className="text-ink-strong font-semibold truncate" style={{ fontSize: 15 }}>
+            {row.client?.trim() ? row.client : "— No client"}
+          </span>
+        </div>
         <div className="flex items-center gap-1 shrink-0">
           <InlineStatusCell
             taskId={row.id}

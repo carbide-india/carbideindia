@@ -172,6 +172,9 @@ export interface TaskListFilters {
 
 export interface TaskListRow {
   id: string;
+  /** Friendly sequential task number (#1042). Null only until the backfill
+   *  migration has run. */
+  taskNo: number | null;
   title: string;
   subject: string | null;
   client: string | null;

@@ -468,9 +468,14 @@ export function KanbanBoard({ tasks, labels, tones, employees, isAdmin, dark = f
                         )}
                       </div>
                       <div className="mt-2.5 flex items-center gap-2 flex-wrap">
+                        {t.taskNo != null && (
+                          <span className="text-[12.5px] font-bold tabular-nums text-ink-subtle">
+                            #{t.taskNo}
+                          </span>
+                        )}
                         {t.subject && (
                           <span className="text-[13px] font-semibold text-ink-subtle">
-                            {t.subject}
+                            {t.taskNo != null ? "· " : ""}{t.subject}
                           </span>
                         )}
                         {t.doerName && (
@@ -705,11 +710,14 @@ function TaskHoverCard({
           )}
         </div>
 
-        {/* Title */}
+        {/* Title (prefixed with the friendly task No.) */}
         <h3
           className="hc-item mt-3.5 text-ink-strong"
           style={{ animationDelay: DELAY[1], fontSize: 17, fontWeight: 800, lineHeight: 1.3, letterSpacing: "-0.01em" }}
         >
+          {t.taskNo != null && (
+            <span className="text-ink-subtle tabular-nums">#{t.taskNo} · </span>
+          )}
           {t.title}
         </h3>
 
