@@ -493,6 +493,7 @@ export type TaskDetail = {
   archived: boolean;
   doerId: string;
   doerName: string | null;
+  doerManagerId: string | null;
   initiatorId: string;
   initiatorName: string | null;
   createdById: string | null;
@@ -536,6 +537,7 @@ export async function getTaskById(taskId: string): Promise<TaskDetail | null> {
       archived: tasks.archived,
       doerId: tasks.doerId,
       doerName: doerEmp.name,
+      doerManagerId: doerEmp.managerId,
       initiatorId: tasks.initiatorId,
       initiatorName: initEmp.name,
       createdById: tasks.createdById,

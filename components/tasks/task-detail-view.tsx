@@ -115,6 +115,13 @@ const STATUS_TONE: Record<
     bg: "var(--color-red-bg)",
     live: false,
   },
+  on_hold: {
+    label: "On Hold",
+    rgb: "100, 116, 139",
+    ink: "var(--color-slate-deep)",
+    bg: "var(--color-slate-bg)",
+    live: false,
+  },
   need_info: {
     label: "Need Info",
     rgb: "225, 6, 0",
@@ -142,13 +149,6 @@ const STATUS_TONE: Record<
     ink: "var(--color-orange-deep)",
     bg: "var(--color-orange-bg)",
     live: true,
-  },
-  on_hold: {
-    label: "On Hold",
-    rgb: "245, 158, 11",
-    ink: "var(--color-amber-deep)",
-    bg: "var(--color-amber-bg)",
-    live: false,
   },
   done: {
     label: "Done · awaiting approval",

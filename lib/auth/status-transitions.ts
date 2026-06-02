@@ -42,11 +42,11 @@ export function nextStatusesFor(
     case "initiated":
     case "follow_up":         // legacy
     case "need_help":
+    case "on_hold":           // Manan 2026-05 — pending lane (neutral hold)
     case "need_info":         // Tier-3
     case "follow_up_1":       // Tier-3
     case "follow_up_2":       // Tier-3
-    case "follow_up_3":       // Tier-3
-    case "on_hold": {         // Manan 2026-06 — paused, still in the pending lane
+    case "follow_up_3": {     // Tier-3
       // Pending lane: doer + initiator may move sideways within pending,
       // and may cancel/transfer (initiator only) or mark done (doer only).
       const out: TaskStatus[] = [];

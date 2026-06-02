@@ -13,11 +13,11 @@ const COLORS: Record<TaskStatus, string> = {
   initiated:    "yellow",
   follow_up:    "orange",
   need_help:    "red",
+  on_hold:      "slate",
   need_info:    "red",
   follow_up_1:  "orange",
   follow_up_2:  "orange",
   follow_up_3:  "orange",
-  on_hold:      "amber",
   done:         "green",
   approved:     "purple",
   not_approved: "rose",    // light red
