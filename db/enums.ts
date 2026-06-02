@@ -14,6 +14,7 @@ export const TASK_STATUSES = [
   "follow_up_1",    // NEW
   "follow_up_2",    // NEW
   "follow_up_3",    // NEW
+  "on_hold",        // Manan 2026-06 — paused/blocked but still open (amber)
   "done",
   // Legacy terminal values — kept for backward compat with imported data.
   // New code should use the `approval_status` column instead.
@@ -37,6 +38,7 @@ export const USER_TASK_STATUSES = [
   "follow_up_1",
   "follow_up_2",
   "follow_up_3",
+  "on_hold",
   "done",
 ] as const satisfies readonly TaskStatus[];
 
@@ -50,6 +52,7 @@ export const PENDING_STATUSES = [
   "follow_up_1",
   "follow_up_2",
   "follow_up_3",
+  "on_hold",
 ] as const satisfies readonly TaskStatus[];
 
 // New admin-only column. Defaults to NULL (no approval verdict yet); the

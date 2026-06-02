@@ -47,6 +47,7 @@ export const STATUS_LABELS_FALLBACK: Record<TaskStatus, string> = {
   follow_up_1:  "Follow Up 1",       // Tier-3 NEW
   follow_up_2:  "Follow Up 2",       // Tier-3 NEW
   follow_up_3:  "Follow Up 3",       // Tier-3 NEW
+  on_hold:      "On Hold",           // 2026-06 — paused/blocked
   done:         "Done",
   approved:     "Approved",
   not_approved: "Not Approved",
@@ -68,6 +69,7 @@ export const STATUS_TONES_FALLBACK: Record<TaskStatus, StatusColorToken> = {
   follow_up_1:  "orange",
   follow_up_2:  "orange",
   follow_up_3:  "orange",
+  on_hold:      "amber",
   done:         "green",
   approved:     "purple",
   not_approved: "rose",

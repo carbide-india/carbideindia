@@ -143,6 +143,13 @@ const STATUS_TONE: Record<
     bg: "var(--color-orange-bg)",
     live: true,
   },
+  on_hold: {
+    label: "On Hold",
+    rgb: "245, 158, 11",
+    ink: "var(--color-amber-deep)",
+    bg: "var(--color-amber-bg)",
+    live: false,
+  },
   done: {
     label: "Done · awaiting approval",
     rgb: "34, 197, 94",
