@@ -501,6 +501,7 @@ export type TaskDetail = {
   id: string;
   taskNo: number | null;
   title: string;
+  client: string | null;
   description: string | null;
   subject: string | null;
   notes: string | null;
@@ -545,6 +546,7 @@ export async function getTaskById(taskId: string): Promise<TaskDetail | null> {
       id: tasks.id,
       taskNo: tasks.taskNo,
       title: tasks.title,
+      client: tasks.client,
       description: tasks.description,
       subject: tasks.subject,
       notes: tasks.notes,
