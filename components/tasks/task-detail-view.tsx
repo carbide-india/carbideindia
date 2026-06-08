@@ -32,7 +32,7 @@ import { CommentInput } from "./comment-input";
 import type { TaskDetail as TaskDetailModel } from "@/lib/queries/tasks";
 import type { AuditFeedRow } from "@/lib/queries/audit";
 import {
-  TASK_STATUSES,
+  ADMIN_TASK_STATUSES,
   USER_TASK_STATUSES,
   type TaskStatus,
   type StatusColorToken,
@@ -46,8 +46,6 @@ interface Props {
   canEdit: boolean;
   canApproveTask: boolean;
   canReassignTask: boolean;
-  canTransferTaskExternal: boolean;
-  canCancelTask: boolean;
   canCommentOnTask: boolean;
   events: AuditFeedRow[];
   employees: { id: string; name: string }[];
@@ -211,8 +209,6 @@ export function TaskDetailView({
   canEdit,
   canApproveTask,
   canReassignTask,
-  canTransferTaskExternal,
-  canCancelTask,
   canCommentOnTask,
   events,
   employees,
@@ -226,8 +222,6 @@ export function TaskDetailView({
   const [editing, setEditing] = useState(false);
   const [approveOpen, setApproveOpen] = useState(false);
   const [reassignOpen, setReassignOpen] = useState(false);
-  const [transferOpen, setTransferOpen] = useState(false);
-  const [cancelOpen, setCancelOpen] = useState(false);
   const expectedUpdatedAt = task.updatedAt.toISOString();
 
   // Hash-driven dialog open — preserves the row-action menu deep-links.
@@ -241,12 +235,6 @@ export function TaskDetailView({
       opened = true;
     } else if (hash === "#reassign" && canReassignTask) {
       setReassignOpen(true);
-      opened = true;
-    } else if (hash === "#transfer" && canTransferTaskExternal) {
-      setTransferOpen(true);
-      opened = true;
-    } else if (hash === "#cancel" && canCancelTask) {
-      setCancelOpen(true);
       opened = true;
     }
     if (opened) {
@@ -282,9 +270,7 @@ export function TaskDetailView({
   const anyAction =
     canEdit ||
     canApproveTask ||
-    canReassignTask ||
-    canTransferTaskExternal ||
-    canCancelTask;
+    canReassignTask;
 
   // Approval timestamp surfaced only when the task is approved/declined.
   const approvedRelative =
@@ -570,17 +556,11 @@ export function TaskDetailView({
                   canEdit={canEdit && !editing}
                   canApproveTask={canApproveTask}
                   canReassignTask={canReassignTask}
-                  canTransferTaskExternal={canTransferTaskExternal}
-                  canCancelTask={canCancelTask}
                   onStartEdit={() => setEditing(true)}
                   approveOpen={approveOpen}
                   setApproveOpen={setApproveOpen}
                   reassignOpen={reassignOpen}
                   setReassignOpen={setReassignOpen}
-                  transferOpen={transferOpen}
-                  setTransferOpen={setTransferOpen}
-                  cancelOpen={cancelOpen}
-                  setCancelOpen={setCancelOpen}
                   myRole={myRole}
                   adminOverride={!myRole && !!me?.isAdmin}
                 />
@@ -643,7 +623,7 @@ function InteractiveStatusPill({
 
   const t = STATUS_TONE[shown];
   const options: readonly TaskStatus[] = isAdmin
-    ? TASK_STATUSES
+    ? ADMIN_TASK_STATUSES
     : USER_TASK_STATUSES;
 
   function pick(next: TaskStatus) {
