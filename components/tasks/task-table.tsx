@@ -112,7 +112,7 @@ function groupValue(
 }
 import { CriticalBadge } from "@/components/ui/critical-badge";
 import { PRIORITY_LABELS, TASK_STATUSES } from "@/db/enums";
-import type { TaskStatus, StatusColorToken } from "@/db/enums";
+import type { TaskStatus, StatusColorToken, TaskPriority } from "@/db/enums";
 
 // Canonical status order (Not Read → … → Done → Approved → …) so grouping /
 // sorting by status follows the workflow rather than alphabetical by label.
@@ -123,6 +123,11 @@ import type { TaskListRow } from "@/lib/types";
 import { TaskRowActions } from "./task-row-actions";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import { InlineStatusCell } from "./inline-status-cell";
+import {
+  InlineDoerCell,
+  InlinePriorityCell,
+  InlineDueCell,
+} from "./inline-edit-cells";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -221,34 +226,27 @@ function buildColumns(
     {
       accessorKey: "doerName",
       header: "Doer",
-      cell: (info) => {
-        const name = info.getValue<string>();
-        if (!name) return <span className="text-ink-subtle">—</span>;
-        return (
-          <span className="inline-flex items-center gap-2.5">
-            <EmployeeAvatar name={name} size="sm" />
-            <span
-              className="text-ink-strong font-bold"
-              style={{ fontSize: 15 }}
-            >
-              {name}
-            </span>
-          </span>
-        );
-      },
+      cell: ({ row }) => (
+        <InlineDoerCell
+          taskId={row.original.id}
+          doerId={row.original.doerId}
+          doerName={row.original.doerName}
+          employees={employees}
+          editable={me.isAdmin}
+        />
+      ),
     },
     {
       accessorKey: "priority",
       header: "Priority",
       meta: { mobileHide: true },
-      cell: (info) => {
-        const p = info.getValue<keyof typeof PRIORITY_LABELS>();
-        return p === "imp_urgent" ? (
-          <CriticalBadge />
-        ) : (
-          <span className="text-body-lg text-ink-muted">{PRIORITY_LABELS[p]}</span>
-        );
-      },
+      cell: ({ row }) => (
+        <InlinePriorityCell
+          taskId={row.original.id}
+          priority={row.original.priority as TaskPriority}
+          editable={me.isAdmin}
+        />
+      ),
     },
     {
       accessorKey: "status",
@@ -283,27 +281,14 @@ function buildColumns(
       accessorKey: "dueAt",
       header: "Due",
       meta: { align: "center" },
-      cell: (info) => {
-        const row = info.row.original;
-        const u = taskUrgency(row.dueAt, row.status);
-        const color = URGENCY_COLOR[u.level];
-        const strong = u.level === "overdue" || u.level === "today";
-        return (
-          <span className="inline-flex flex-col items-center leading-tight">
-            <span
-              className="text-body-lg tabular-nums"
-              style={{ color, fontWeight: strong ? 700 : undefined }}
-            >
-              {safeFormat(row.dueAt, "MMM d")}
-            </span>
-            {u.label && (
-              <span className="text-[11px] font-bold tabular-nums" style={{ color }}>
-                {u.label}
-              </span>
-            )}
-          </span>
-        );
-      },
+      cell: ({ row }) => (
+        <InlineDueCell
+          taskId={row.original.id}
+          dueAt={row.original.dueAt}
+          status={row.original.status}
+          editable={me.isAdmin}
+        />
+      ),
     },
     {
       accessorKey: "ageDays",
