@@ -20,16 +20,18 @@ import {
   Check,
 } from "lucide-react";
 import {
-  USER_TASK_STATUSES,
   TASK_PRIORITIES,
   PRIORITY_LABELS,
   type TaskStatus,
   type TaskPriority,
   type StatusColorToken,
 } from "@/db/enums";
+import { ARCHIVE_COL, type ColId } from "@/lib/kanban-columns";
 import { setTaskStatus, archiveTask, unarchiveTask } from "@/app/(app)/tasks/actions";
+import { setBoardColumnOrder } from "@/app/(admin)/admin/settings/actions";
 import { fireToast } from "@/lib/toast";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
+import { GripVertical } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -53,34 +55,13 @@ interface Props {
   /** Roster for the employee filter. */
   employees: { id: string; name: string }[];
   isAdmin: boolean;
-  /** Frosted-glass columns for the dark canvas page. */
+  /** Ordered column ids to render (statuses + the synthetic Archive column).
+   *  Admins can drag column headers to reorder; the new order is persisted. */
+  columnOrder: ColId[];
+  /** Frosted-glass columns for the dark canvas page (legacy; the board now
+   *  renders on a light surface and this stays false). */
   dark?: boolean;
 }
-
-// Sentinel id for the synthetic "Archived" column (not a real TaskStatus).
-const ARCHIVE_COL = "__archived__";
-type ColId = TaskStatus | typeof ARCHIVE_COL;
-
-// Admin board column order (Manan's sequence): the working lane first, then
-// Done → Not Approved → Approved → [Archived] → Cancelled → Transferred.
-// The Archived drop-zone is slotted right before "cancelled".
-const KANBAN_ADMIN_STATUSES: TaskStatus[] = [
-  "dont_know",
-  "not_started",
-  "initiated",
-  "follow_up",
-  "follow_up_1",
-  "follow_up_2",
-  "follow_up_3",
-  "need_help",
-  "need_info",
-  "on_hold",
-  "done",
-  "not_approved",
-  "approved",
-  "cancelled",
-  "transferred",
-];
 
 /**
  * Status Kanban (Manan #25). One column per status; drag a card to another
@@ -94,12 +75,20 @@ const KANBAN_ADMIN_STATUSES: TaskStatus[] = [
 // Keeps the board light when a column holds dozens of tasks.
 const COL_STEP = 10;
 
-export function KanbanBoard({ tasks, labels, tones, employees, isAdmin, dark = false }: Props) {
+export function KanbanBoard({ tasks, labels, tones, employees, isAdmin, columnOrder, dark = false }: Props) {
   const router = useRouter();
   const [items, setItems] = React.useState(tasks);
   const [dragId, setDragId] = React.useState<string | null>(null);
   const [overCol, setOverCol] = React.useState<ColId | null>(null);
   const [savingId, setSavingId] = React.useState<string | null>(null);
+  // Column order is local state so an admin's drag-reorder is instant; it's
+  // seeded from the server order and re-synced if that prop changes.
+  const [columns, setColumns] = React.useState<ColId[]>(columnOrder);
+  React.useEffect(() => setColumns(columnOrder), [columnOrder]);
+  // Which column header is being dragged (admin reorder). Separate from card
+  // drag (`dragId`) so the two gestures never cross wires.
+  const [dragCol, setDragCol] = React.useState<ColId | null>(null);
+  const [overReorderCol, setOverReorderCol] = React.useState<ColId | null>(null);
   // Client-side filters — the board holds every task in state, so filtering is
   // instant (no server round-trip). "all" = no constraint.
   const [empFilter, setEmpFilter] = React.useState<string>("all");
@@ -169,11 +158,25 @@ export function KanbanBoard({ tasks, labels, tones, employees, isAdmin, dark = f
     [items, empFilter, prioFilter],
   );
 
-  // Admins: the curated sequence with the Archived drop-zone before Cancelled.
-  // Everyone else: their status set with Archived appended at the end.
-  const columns: ColId[] = isAdmin
-    ? KANBAN_ADMIN_STATUSES.flatMap((s) => (s === "cancelled" ? [ARCHIVE_COL, s] : [s]))
-    : [...USER_TASK_STATUSES, ARCHIVE_COL];
+  // Admin drag-to-reorder: drop the dragged column header before `target`.
+  // Optimistic local move, then persist; revert + toast on failure.
+  async function reorderColumns(target: ColId) {
+    const src = dragCol;
+    setDragCol(null);
+    setOverReorderCol(null);
+    if (!src || src === target) return;
+    const prev = columns;
+    const next = prev.filter((c) => c !== src);
+    const at = next.indexOf(target);
+    if (at < 0) return;
+    next.splice(at, 0, src);
+    setColumns(next);
+    const res = await setBoardColumnOrder(next as string[]);
+    if (!res.ok) {
+      setColumns(prev);
+      fireToast({ message: res.error || "Couldn't save the column order." });
+    }
+  }
 
   // Archive (drag a card into the Archived column). Optimistic, with revert.
   async function archiveCard(taskId: string) {
@@ -311,6 +314,7 @@ export function KanbanBoard({ tasks, labels, tones, employees, isAdmin, dark = f
         const hiddenCount = colTasks.length - shownTasks.length;
         const tone = isArchive ? null : tones[col as TaskStatus];
         const isOver = overCol === col;
+        const isReorderOver = isAdmin && dragCol != null && overReorderCol === col;
         // The Archived column has no status token — use a neutral slate accent.
         const accent = isArchive ? "#94a3b8" : `var(--color-${tone})`;
         const accentDeep = isArchive ? "#64748b" : `var(--color-${tone}-deep)`;
@@ -324,12 +328,22 @@ export function KanbanBoard({ tasks, labels, tones, employees, isAdmin, dark = f
               // Tell the browser this is a valid "move" target — without a
               // dropEffect the drop can be silently rejected in some browsers.
               e.dataTransfer.dropEffect = "move";
-              setOverCol(col);
+              if (dragCol) setOverReorderCol(col);
+              else setOverCol(col);
             }}
-            onDragLeave={() => setOverCol((c) => (c === col ? null : c))}
+            onDragLeave={() => {
+              setOverCol((c) => (c === col ? null : c));
+              setOverReorderCol((c) => (c === col ? null : c));
+            }}
             onDrop={(e) => {
               e.preventDefault();
               setOverCol(null);
+              // Column reorder takes priority — a header is being dragged.
+              if (dragCol) {
+                void reorderColumns(col);
+                endAutoScroll();
+                return;
+              }
               if (dragId) {
                 if (isArchive) {
                   void archiveCard(dragId);
@@ -344,33 +358,40 @@ export function KanbanBoard({ tasks, labels, tones, employees, isAdmin, dark = f
             }}
             className="flex-shrink-0 w-[320px] max-sm:w-[85vw] max-sm:snap-center rounded-section p-3.5 transition-colors"
             style={{
-              background: isOver
-                ? dark
-                  ? `color-mix(in srgb, ${accent} 28%, rgba(18,11,10,0.55))`
-                  : accentBgLight
-                : dark
-                  ? "rgba(255,255,255,0.055)"
-                  : "var(--color-surface-soft)",
+              background: isOver ? accentBgLight : "var(--color-surface-soft)",
               border: `1px solid ${
-                isOver
-                  ? accent
-                  : dark
-                    ? "rgba(255,255,255,0.12)"
-                    : "var(--color-hairline)"
+                isReorderOver ? accentDeep : isOver ? accent : "var(--color-hairline)"
               }`,
-              backdropFilter: dark ? "blur(12px)" : undefined,
-              WebkitBackdropFilter: dark ? "blur(12px)" : undefined,
-              boxShadow: dark
-                ? "inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 24px -12px rgba(0,0,0,0.5)"
-                : undefined,
+              outline: isReorderOver ? `2px dashed ${accentDeep}` : undefined,
+              outlineOffset: isReorderOver ? 2 : undefined,
+              opacity: dragCol === col ? 0.5 : 1,
             }}
           >
             {/* Column header — frozen to the top of the board while scrolling so
-                the status label stays readable no matter how far you scroll. */}
+                the status label stays readable no matter how far you scroll.
+                Admins can drag it to reorder the whole column (sir's #8). */}
             <div
-              className="sticky top-0 z-20 flex items-center justify-between -mx-3.5 -mt-3.5 mb-3 px-3.5 pt-3.5 pb-2.5"
+              draggable={isAdmin}
+              onDragStart={
+                isAdmin
+                  ? (e) => {
+                      e.dataTransfer.setData("application/x-kanban-col", String(col));
+                      e.dataTransfer.effectAllowed = "move";
+                      setDragCol(col);
+                    }
+                  : undefined
+              }
+              onDragEnd={
+                isAdmin
+                  ? () => {
+                      setDragCol(null);
+                      setOverReorderCol(null);
+                    }
+                  : undefined
+              }
+              className={`sticky top-0 z-20 flex items-center justify-between -mx-3.5 -mt-3.5 mb-3 px-3.5 pt-3.5 pb-2.5 ${isAdmin ? "cursor-grab active:cursor-grabbing" : ""}`}
               style={{
-                background: dark ? "rgba(18,11,10,0.82)" : "var(--color-surface-soft)",
+                background: "var(--color-surface-soft)",
                 backdropFilter: "blur(10px)",
                 WebkitBackdropFilter: "blur(10px)",
                 borderTopLeftRadius: 16,
@@ -378,11 +399,17 @@ export function KanbanBoard({ tasks, labels, tones, employees, isAdmin, dark = f
               }}
             >
               <span
-                className="inline-flex items-center gap-2 text-[15.5px] font-bold"
-                style={{
-                  color: dark ? "rgba(255,255,255,0.92)" : accentDeep,
-                }}
+                className="inline-flex items-center gap-2 text-[15.5px] font-bold min-w-0"
+                style={{ color: accentDeep }}
               >
+                {isAdmin && (
+                  <GripVertical
+                    size={15}
+                    strokeWidth={2.2}
+                    className="shrink-0 text-ink-subtle"
+                    aria-hidden
+                  />
+                )}
                 {isArchive ? (
                   <Archive size={17} strokeWidth={2.4} style={{ color: accent }} />
                 ) : (
