@@ -6,7 +6,7 @@ import type { Route } from "next";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Search, Loader2, CornerDownLeft } from "lucide-react";
 import { searchTasksAction } from "@/app/(app)/tasks/actions";
-import type { TaskSearchResult } from "@/lib/queries/tasks";
+import type { TaskSearchResult } from "@/lib/queries/task-search";
 import { STATUS_LABELS_FALLBACK, STATUS_TONES_FALLBACK } from "@/lib/format";
 
 /**

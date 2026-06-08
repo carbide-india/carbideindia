@@ -53,7 +53,7 @@ import {
 } from "@/lib/notifications/dispatch";
 import { deriveShortId, nextShortIdCandidate } from "@/lib/import/short-id";
 import { getStatusDisplayMap } from "@/lib/queries/status-display";
-import { searchTasks, type TaskSearchResult } from "@/lib/queries/tasks";
+import { searchTasks, type TaskSearchResult } from "@/lib/queries/task-search";
 
 /**
  * sir's changes #12 — app-wide task search for the header command palette.
@@ -498,6 +498,11 @@ export async function createTask(input: CreateTaskInput): Promise<
   }
 
   const createdIds: string[] = [];
+  // Notifications are collected here and fired AFTER the response (see below),
+  // never inline — the old code awaited every notify() in the loop, chaining
+  // dozens of email/Slack/WhatsApp/push network calls on the critical path,
+  // which is what intermittently surfaced "we hit a snag" on a 5-6 task batch.
+  const notifyIntents: Array<Parameters<typeof notify>[0]> = [];
   const label = taskLabel({
     subject: parsed.subject ?? null,
     title: parsed.title,
@@ -573,24 +578,36 @@ export async function createTask(input: CreateTaskInput): Promise<
       };
     }
 
-    await db.insert(taskEvents).values({
-      taskId: row.id,
-      actorId: me.id,
-      eventType: "created",
-      toValue: {
-        title: parsed.title,
-        doerId,
-        initiatorId: parsed.initiatorId,
-        priority: parsed.priority,
-        dueAt: parsed.dueAt.toISOString(),
-        tags: parsed.tags ?? null,
-      },
-    });
+    // Audit row — best-effort. The task itself is already committed; a
+    // transient failure writing the "created" event must never abort the
+    // batch (which would half-create a multi-doer upload) or bubble up as
+    // "we hit a snag".
+    try {
+      await db.insert(taskEvents).values({
+        taskId: row.id,
+        actorId: me.id,
+        eventType: "created",
+        toValue: {
+          title: parsed.title,
+          doerId,
+          initiatorId: parsed.initiatorId,
+          priority: parsed.priority,
+          dueAt: parsed.dueAt.toISOString(),
+          tags: parsed.tags ?? null,
+        },
+      });
+    } catch (err) {
+      console.warn(
+        "[createTask] created-event insert failed (non-fatal):",
+        (err as Error)?.message ?? err,
+      );
+    }
 
-    // Fan-out: doer is now assigned; initiator is on the hook for review.
-    // Both are explicit per-recipient kinds so emails can use distinct copy.
+    // Fan-out (deferred): doer is now assigned; initiator is on the hook for
+    // review. Both are explicit per-recipient kinds so emails can use distinct
+    // copy. Collected now, fired after the response.
     if (doerId !== me.id) {
-      await notify({
+      notifyIntents.push({
         userId: doerId,
         kind: "task_assigned",
         title: `${me.name} assigned you '${label}'`,
@@ -599,7 +616,7 @@ export async function createTask(input: CreateTaskInput): Promise<
       });
     }
     if (parsed.initiatorId !== me.id && parsed.initiatorId !== doerId) {
-      await notify({
+      notifyIntents.push({
         userId: parsed.initiatorId,
         kind: "task_initiated",
         title: `${me.name} made you initiator on '${label}'`,
@@ -611,8 +628,14 @@ export async function createTask(input: CreateTaskInput): Promise<
     createdIds.push(row.id);
   }
 
-  // Push each new task onto its doer's Google Calendar (if connected), after
-  // the response is sent so it never slows down task creation.
+  // Fire notifications + Google Calendar sync AFTER the response is flushed,
+  // so none of that (sequential email/Slack/WhatsApp/push + GCal API) sits on
+  // the task-creation critical path. notify() is already best-effort.
+  if (notifyIntents.length > 0) {
+    afterResponse(async () => {
+      for (const intent of notifyIntents) await notify(intent);
+    });
+  }
   for (const id of createdIds) afterResponse(() => reconcileTaskEvent(id));
 
   revalidateTaskRoutes();
