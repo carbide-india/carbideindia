@@ -89,35 +89,48 @@ import {
 } from "lucide-react";
 
 // Group-by options for the Tasks table. "none" = flat list (default).
-type GroupKey = "none" | "client" | "subject" | "status";
+type GroupKey = "none" | "client" | "subject" | "status" | "employee" | "priority";
 const GROUP_OPTIONS: { key: GroupKey; label: string }[] = [
   { key: "none", label: "None" },
   { key: "client", label: "Client" },
   { key: "subject", label: "Subject" },
   { key: "status", label: "Status" },
+  { key: "employee", label: "Employee" },
+  { key: "priority", label: "Priority" },
 ];
 
 // The section label a row falls under for the current grouping. NULL/empty
 // values collapse into a single explicit "—" bucket rather than vanishing;
-// status groups use the human label (admin-overridable).
+// status/priority groups use the human label (admin-overridable for status).
 function groupValue(
   row: TaskListRow,
   by: Exclude<GroupKey, "none">,
   statusLabels: Record<TaskStatus, string>,
 ): string {
   if (by === "status") return statusLabels[row.status] ?? row.status;
+  if (by === "priority") return PRIORITY_LABELS[row.priority];
+  if (by === "employee") {
+    const v = row.doerName?.trim();
+    return v && v.length > 0 ? v : "— Unassigned";
+  }
   const raw = by === "client" ? row.client : row.subject;
   const v = raw?.trim();
   return v && v.length > 0 ? v : by === "client" ? "— No client" : "— No subject";
 }
 import { CriticalBadge } from "@/components/ui/critical-badge";
-import { PRIORITY_LABELS, TASK_STATUSES } from "@/db/enums";
+import { PRIORITY_LABELS, TASK_STATUSES, TASK_PRIORITIES } from "@/db/enums";
 import type { TaskStatus, StatusColorToken, TaskPriority } from "@/db/enums";
 
 // Canonical status order (Not Read → … → Done → Approved → …) so grouping /
 // sorting by status follows the workflow rather than alphabetical by label.
 const STATUS_ORDER: Record<string, number> = Object.fromEntries(
   TASK_STATUSES.map((s, i) => [s, i]),
+);
+
+// Priority rank (Critical → Important → Urgent → Normal) so grouping/sorting
+// by priority follows severity, not the enum's alphabetical string order.
+const PRIORITY_RANK: Record<string, number> = Object.fromEntries(
+  TASK_PRIORITIES.map((p, i) => [p, i]),
 );
 import type { TaskListRow } from "@/lib/types";
 import { TaskRowActions } from "./task-row-actions";
@@ -240,6 +253,8 @@ function buildColumns(
       accessorKey: "priority",
       header: "Priority",
       meta: { mobileHide: true },
+      sortingFn: (a, b) =>
+        (PRIORITY_RANK[a.original.priority] ?? 99) - (PRIORITY_RANK[b.original.priority] ?? 99),
       cell: ({ row }) => (
         <InlinePriorityCell
           taskId={row.original.id}
@@ -384,7 +399,13 @@ export function TaskTable({
     });
   }, [rows, query, resolvedLabels]);
 
-  const groupColId = groupBy === "client" ? "client" : groupBy === "subject" ? "subject" : groupBy === "status" ? "status" : null;
+  const groupColId =
+    groupBy === "client" ? "client"
+    : groupBy === "subject" ? "subject"
+    : groupBy === "status" ? "status"
+    : groupBy === "employee" ? "doerName"
+    : groupBy === "priority" ? "priority"
+    : null;
 
   const effectiveSorting = React.useMemo<SortingState>(() => {
     if (!groupColId) return sorting;
