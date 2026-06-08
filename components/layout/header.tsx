@@ -5,6 +5,7 @@ import { MobileMenuServer } from "./mobile-menu-server";
 import { UserMenuServer } from "@/components/header/user-menu-server";
 import { NewTaskTrigger } from "@/components/header/new-task-trigger";
 import { AdminPill } from "@/components/header/admin-pill";
+import { GlobalSearch } from "@/components/header/global-search";
 import { getCurrentEmployee } from "@/lib/auth/current";
 
 /**
@@ -53,14 +54,20 @@ export async function DashboardHeader({
             />
           </a>
 
-          {/* CENTER: primary nav — airy, ink-on-light */}
-          <div className="flex-1 flex justify-center min-w-0 max-md:hidden">
+          {/* CENTER: primary nav — airy, ink-on-light. min-w-0 + scroll-
+              contained so that under heavy browser zoom it scrolls within its
+              own slot instead of spilling over the logo / right cluster
+              (sir's changes #13 — no more overlap). */}
+          <div className="flex-1 min-w-0 overflow-x-auto no-scrollbar flex justify-center max-md:hidden">
             <MainNavServer />
           </div>
 
-          {/* RIGHT: live indicator + actions + avatar. The Live pill hides
-              below 2xl so the centred nav has room at laptop widths. */}
+          {/* RIGHT: search + live indicator + actions + avatar. Every item is
+              shrink-0 so the flexible nav above absorbs all slack — the
+              cluster keeps its layout at any zoom. The Live pill hides below
+              2xl so the centred nav has room at laptop widths. */}
           <div className="flex items-center gap-2.5 2xl:gap-3 shrink-0 max-md:gap-1.5">
+            <GlobalSearch />
             <span className="max-2xl:hidden">
               <LiveIndicator />
             </span>

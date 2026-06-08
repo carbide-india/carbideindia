@@ -1990,3 +1990,14 @@ select.nt-input {
     transform: none;
   }
 }
+
+/* Hide scrollbars while keeping scrollability — used by the header nav so it
+   can scroll within its slot under heavy zoom instead of overlapping the
+   logo / action cluster (sir's changes #13). */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
