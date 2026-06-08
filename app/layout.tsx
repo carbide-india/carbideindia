@@ -4,6 +4,7 @@ import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { AppToaster } from "@/components/ui/sonner-toaster";
+import { Providers } from "@/components/providers";
 import { RegisterSW } from "@/components/pwa/register-sw";
 import { getCurrentEmployee } from "@/lib/auth/current";
 import { accentVars, resolveAccent } from "@/lib/appearance";
@@ -86,7 +87,7 @@ export default async function RootLayout({
             Required by nuqs v2+ — without it any client component calling
             useQueryState throws "nuqs requires an adapter". */}
         <NuqsAdapter>
-          {children}
+          <Providers>{children}</Providers>
         </NuqsAdapter>
         <AppToaster />
         <RegisterSW />
