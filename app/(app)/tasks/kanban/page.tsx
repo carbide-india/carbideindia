@@ -39,11 +39,11 @@ export default async function KanbanPage() {
   return (
     <>
       <DashboardHeader generatedAt={new Date()} />
-      <main className="mx-auto max-w-[1600px] px-8 max-md:px-4 pt-8 pb-16">
-        {/* Light canvas (sir's changes #1) — the board reads on a clean,
-            calm surface; status colour lives in the columns themselves. */}
+      <main className="w-full px-6 max-md:px-4 pt-6 pb-10">
+        {/* Light canvas (sir's changes #1) — full-bleed (no centred max-width
+            gutters), clean white surface; status colour lives in the columns. */}
         <section
-          className="relative overflow-hidden rounded-section border border-hairline p-6 max-md:p-4"
+          className="relative overflow-hidden rounded-section border border-hairline p-5 max-md:p-4"
           style={{ background: "var(--color-surface-card)" }}
         >
           <header className="relative mb-6 flex items-end justify-between gap-4 flex-wrap">

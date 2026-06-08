@@ -54,26 +54,26 @@ export async function DashboardHeader({
             />
           </a>
 
-          {/* CENTER: primary nav — airy, ink-on-light. min-w-0 + scroll-
-              contained so that under heavy browser zoom it scrolls within its
-              own slot instead of spilling over the logo / right cluster
-              (sir's changes #13 — no more overlap). */}
-          <div className="flex-1 min-w-0 overflow-x-auto no-scrollbar flex justify-center max-md:hidden">
+          {/* CENTER: primary pill nav — shown only at xl+ where the full row
+              genuinely fits. Below xl it collapses into the hamburger drawer
+              (MobileMenuServer) rather than clipping/overlapping under zoom
+              (sir's changes #13). */}
+          <div className="flex-1 min-w-0 flex justify-center max-xl:hidden">
             <MainNavServer />
           </div>
 
           {/* RIGHT: search + live indicator + actions + avatar. Every item is
-              shrink-0 so the flexible nav above absorbs all slack — the
-              cluster keeps its layout at any zoom. The Live pill hides below
-              2xl so the centred nav has room at laptop widths. */}
-          <div className="flex items-center gap-2.5 2xl:gap-3 shrink-0 max-md:gap-1.5">
+              shrink-0; secondary chrome (Live / Admin pill) hides below 2xl and
+              the search collapses to an icon there too, so the nav always has
+              room and nothing ever overlaps. */}
+          <div className="flex items-center gap-2.5 2xl:gap-3 shrink-0 max-xl:ml-auto max-md:gap-1.5">
             <GlobalSearch />
             <span className="max-2xl:hidden">
               <LiveIndicator />
             </span>
             <NewTaskTrigger />
             {isAdmin && (
-              <span className="max-lg:hidden">
+              <span className="max-2xl:hidden">
                 <AdminPill />
               </span>
             )}

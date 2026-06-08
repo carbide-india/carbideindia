@@ -297,8 +297,8 @@ export function KanbanBoard({ tasks, labels, tones, employees, isAdmin, columnOr
         // tallest one — this keeps each column's sticky header pinned for the
         // full vertical scroll, even short columns like "Approved" that would
         // otherwise run out of body and let their header scroll away.
-        className="flex items-stretch gap-4 overflow-x-auto overflow-y-auto pb-4 max-sm:snap-x max-sm:snap-mandatory"
-        style={{ maxHeight: "calc(100dvh - 280px)", minHeight: 420 }}
+        className="kanban-scroll flex items-stretch gap-4 overflow-x-auto overflow-y-auto pb-3 max-sm:snap-x max-sm:snap-mandatory"
+        style={{ maxHeight: "calc(100dvh - 230px)", minHeight: 460 }}
         onDragOver={(e) => {
           // Bubbles up from the columns; track the pointer for edge auto-scroll.
           updateEdgeFromPointer(e.clientX);
@@ -365,6 +365,7 @@ export function KanbanBoard({ tasks, labels, tones, employees, isAdmin, columnOr
               outline: isReorderOver ? `2px dashed ${accentDeep}` : undefined,
               outlineOffset: isReorderOver ? 2 : undefined,
               opacity: dragCol === col ? 0.5 : 1,
+              boxShadow: "0 1px 2px rgba(15,23,42,0.04), 0 8px 24px -18px rgba(15,23,42,0.20)",
             }}
           >
             {/* Column header — frozen to the top of the board while scrolling so

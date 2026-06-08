@@ -98,9 +98,9 @@ export function GlobalSearch() {
           className="inline-flex items-center gap-2 rounded-pill border border-hairline bg-surface-soft px-3 h-10 text-ink-subtle transition-colors hover:bg-surface-card hover:border-hairline-strong max-md:h-9 max-md:px-2.5"
         >
           <Search size={16} strokeWidth={2.2} className="shrink-0" />
-          <span className="text-[14px] font-medium max-lg:hidden">Search tasks…</span>
+          <span className="text-[14px] font-medium max-2xl:hidden">Search tasks…</span>
           <kbd
-            className="ml-2 hidden lg:inline-flex items-center gap-0.5 rounded border border-hairline bg-surface-card px-1.5 py-0.5 text-[11px] font-bold text-ink-subtle"
+            className="ml-2 hidden 2xl:inline-flex items-center gap-0.5 rounded border border-hairline bg-surface-card px-1.5 py-0.5 text-[11px] font-bold text-ink-subtle"
             aria-hidden
           >
             ⌘K
