@@ -7,20 +7,17 @@ import { db } from "@/lib/db";
 import { documents, documentEvents, type Document, type Employee } from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
 import { rateLimitOrError } from "@/lib/rate-limit";
+import { deleteBlob } from "@/lib/storage/blob";
 import {
-  uploadDocument as uploadDocumentBlob,
-  deleteBlob,
-} from "@/lib/storage/blob";
+  DOCUMENTS_PATHNAME_PREFIX,
+  MAX_DOCUMENT_BYTES,
+  validateDocumentFileShape,
+} from "@/lib/documents/upload-validation";
 
 type Result<T = unknown> = ({ ok: true } & T) | { ok: false; error: string };
 
 const TitleSchema = z.string().trim().min(1, "Title is required").max(200, "Title too long");
 const DescSchema = z.string().trim().max(2000).optional();
-const MAX_BYTES = 25 * 1024 * 1024;
-
-function safeName(name: string): string {
-  return name.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 120) || "file";
-}
 
 /**
  * Phase 3.5 — write an append-only audit row for every document mutation.
@@ -46,7 +43,6 @@ async function logDocEvent(input: {
       toValue: (input.toValue ?? null) as never,
     });
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.warn("[documents] audit write failed", err);
   }
 }
@@ -76,66 +72,85 @@ async function authorizeDocumentMutation(
 }
 
 /**
- * Server-side guard against the obvious dangerous uploads. The client
- * passes `file.type` verbatim, which a malicious caller can spoof —
- * but it's still useful as a coarse first filter, paired with an
- * extension deny-list on the filename (which is harder to lie about
- * without it looking suspicious to a human admin reviewing later).
- *
- * NOT a substitute for magic-byte sniffing; if document integrity
- * matters more, layer a `file-type` check on top of this.
+ * Client-supplied metadata describing a blob the browser already uploaded
+ * directly to Vercel Blob via /api/documents/upload. EVERYTHING here is
+ * attacker-controllable, so it gets fully re-validated below.
  */
-const DISALLOWED_EXTENSIONS =
-  /\.(exe|com|cmd|bat|msi|scr|pif|vbs|js|mjs|cjs|jar|sh|bash|app|dmg|ps1|psm1|reg|hta|cpl|gadget)$/i;
-const DISALLOWED_MIME_TYPES = new Set<string>([
-  "application/x-msdownload",
-  "application/x-msdos-program",
-  "application/x-executable",
-  "application/x-mach-binary",
-  "application/vnd.microsoft.portable-executable",
-  "application/x-sh",
-  "application/x-shellscript",
-  "text/x-shellscript",
-]);
+interface DocumentFileMeta {
+  /** Blob pathname returned by upload() — must live under `documents/`. */
+  pathname: string;
+  contentType: string | null;
+  sizeBytes: number;
+}
 
-function validateUploadShape(file: File): { ok: true } | { ok: false; error: string } {
-  if (DISALLOWED_EXTENSIONS.test(file.name)) {
-    return { ok: false, error: "This file type is not allowed." };
+/**
+ * Re-validates client-direct upload metadata. The upload token route already
+ * constrained the real upload, but this action can be called with arbitrary
+ * arguments — CRITICALLY the pathname must live under `documents/`, otherwise
+ * a malicious client could register (and later delete, via deleteDocument's
+ * blob cleanup) an `avatars/…` blob it doesn't own.
+ */
+function validateFileMeta(meta: DocumentFileMeta): { ok: true } | { ok: false; error: string } {
+  if (
+    typeof meta.pathname !== "string" ||
+    !meta.pathname.startsWith(DOCUMENTS_PATHNAME_PREFIX) ||
+    meta.pathname.length <= DOCUMENTS_PATHNAME_PREFIX.length
+  ) {
+    return { ok: false, error: "Invalid storage path." };
   }
-  if (file.type && DISALLOWED_MIME_TYPES.has(file.type)) {
-    return { ok: false, error: "This file type is not allowed." };
+  const shape = validateDocumentFileShape({ name: meta.pathname, contentType: meta.contentType });
+  if (!shape.ok) return shape;
+  if (!Number.isFinite(meta.sizeBytes) || meta.sizeBytes <= 0) {
+    return { ok: false, error: "Pick a file to upload." };
   }
+  if (meta.sizeBytes > MAX_DOCUMENT_BYTES) return { ok: false, error: "File exceeds 25 MB." };
   return { ok: true };
 }
 
-export async function uploadDocument(form: FormData): Promise<Result<{ id: string }>> {
+/**
+ * Guards against registering a blob pathname that another document row
+ * already points at — otherwise deleting the new row would delete the
+ * other document's file out from under it (storage paths come from the
+ * client now, so this is no longer guaranteed by construction).
+ */
+async function pathnameAlreadyRegistered(pathname: string): Promise<boolean> {
+  const existing = await db.query.documents.findFirst({
+    where: eq(documents.storagePath, pathname),
+  });
+  return existing !== undefined && existing !== null;
+}
+
+/**
+ * Registers the metadata row for a document the browser uploaded straight to
+ * Vercel Blob (see /api/documents/upload). The file itself never passes
+ * through the server — only this metadata does, which keeps us clear of
+ * Next's 1 MB action body limit and Vercel's ~4.5 MB function body cap.
+ */
+export async function createDocumentRecord(input: {
+  title: string;
+  description?: string;
+  pathname: string;
+  contentType: string | null;
+  sizeBytes: number;
+}): Promise<Result<{ id: string }>> {
   const me = await requireUser();
   const limited = rateLimitOrError(me.id, "write");
   if (limited) return limited;
 
-  const titleRes = TitleSchema.safeParse(form.get("title"));
+  const titleRes = TitleSchema.safeParse(input.title);
   if (!titleRes.success) return { ok: false, error: titleRes.error.issues[0]!.message };
-  const descRes = DescSchema.safeParse(form.get("description") ?? undefined);
+  const descRes = DescSchema.safeParse(input.description ?? undefined);
   if (!descRes.success) return { ok: false, error: "Description too long" };
 
-  const file = form.get("file");
-  if (!(file instanceof File) || file.size === 0) {
-    return { ok: false, error: "Pick a file to upload." };
-  }
-  if (file.size > MAX_BYTES) return { ok: false, error: "File exceeds 25 MB." };
-  const shape = validateUploadShape(file);
-  if (!shape.ok) return shape;
-
-  // Private Vercel Blob; `path` is the blob pathname stored in storage_path.
-  let path: string;
-  try {
-    path = await uploadDocumentBlob(
-      `${crypto.randomUUID()}/${safeName(file.name)}`,
-      file,
-      file.type || "application/octet-stream",
-    );
-  } catch (err) {
-    return { ok: false, error: `Upload failed: ${err instanceof Error ? err.message : String(err)}` };
+  const meta: DocumentFileMeta = {
+    pathname: input.pathname,
+    contentType: input.contentType || null,
+    sizeBytes: input.sizeBytes,
+  };
+  const valid = validateFileMeta(meta);
+  if (!valid.ok) return valid;
+  if (await pathnameAlreadyRegistered(meta.pathname)) {
+    return { ok: false, error: "This file is already registered." };
   }
 
   let inserted;
@@ -145,14 +160,18 @@ export async function uploadDocument(form: FormData): Promise<Result<{ id: strin
       .values({
         title: titleRes.data,
         description: descRes.data ?? null,
-        storagePath: path,
-        mimeType: file.type || null,
-        sizeBytes: file.size,
+        storagePath: meta.pathname,
+        mimeType: meta.contentType,
+        sizeBytes: meta.sizeBytes,
         uploadedById: me.id,
       })
       .returning({ id: documents.id });
   } catch (err) {
-    await deleteBlob(path).catch(() => {});
+    // Roll back the orphaned blob (safe: pathname was validated above to
+    // live under documents/, so this can never delete an avatar etc.).
+    await deleteBlob(meta.pathname).catch((cleanupErr) => {
+      console.warn("[documents] blob cleanup failed", cleanupErr);
+    });
     return { ok: false, error: `DB: ${err instanceof Error ? err.message : String(err)}` };
   }
   if (!inserted) return { ok: false, error: "Insert returned no row" };
@@ -161,7 +180,7 @@ export async function uploadDocument(form: FormData): Promise<Result<{ id: strin
     documentTitle: titleRes.data,
     actorId: me.id,
     eventType: "created",
-    toValue: { title: titleRes.data, description: descRes.data ?? null, mimeType: file.type || null, sizeBytes: file.size },
+    toValue: { title: titleRes.data, description: descRes.data ?? null, mimeType: meta.contentType, sizeBytes: meta.sizeBytes },
   });
   revalidatePath("/documents");
   return { ok: true, id: inserted.id };
@@ -227,48 +246,59 @@ export async function updateDocument(
   return { ok: true };
 }
 
-export async function replaceDocumentFile(id: string, form: FormData): Promise<Result> {
+/**
+ * Swaps a document's file for a blob the browser already uploaded directly
+ * to Vercel Blob. Same client-direct flow (and same re-validation) as
+ * createDocumentRecord.
+ */
+export async function replaceDocumentFile(id: string, file: DocumentFileMeta): Promise<Result> {
   const me = await requireUser();
   const limited = rateLimitOrError(me.id, "write");
   if (limited) return limited;
   const auth = await authorizeDocumentMutation(id, me);
   if (!auth.ok) return auth;
 
-  const file = form.get("file");
-  if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Pick a file." };
-  if (file.size > MAX_BYTES) return { ok: false, error: "File exceeds 25 MB." };
-  const shape = validateUploadShape(file);
-  if (!shape.ok) return shape;
-
-  let path: string;
-  try {
-    path = await uploadDocumentBlob(
-      `${crypto.randomUUID()}/${safeName(file.name)}`,
-      file,
-      file.type || "application/octet-stream",
-    );
-  } catch (err) {
-    return { ok: false, error: `Upload failed: ${err instanceof Error ? err.message : String(err)}` };
+  const meta: DocumentFileMeta = {
+    pathname: file.pathname,
+    contentType: file.contentType || null,
+    sizeBytes: file.sizeBytes,
+  };
+  const valid = validateFileMeta(meta);
+  if (!valid.ok) return valid;
+  if (meta.pathname !== auth.doc.storagePath && (await pathnameAlreadyRegistered(meta.pathname))) {
+    return { ok: false, error: "This file is already registered." };
   }
 
-  await db
-    .update(documents)
-    .set({ storagePath: path, mimeType: file.type || null, sizeBytes: file.size, updatedAt: new Date() })
-    .where(
-      me.isAdmin
-        ? eq(documents.id, id)
-        : and(eq(documents.id, id), eq(documents.uploadedById, me.id)),
-    );
+  try {
+    await db
+      .update(documents)
+      .set({ storagePath: meta.pathname, mimeType: meta.contentType, sizeBytes: meta.sizeBytes, updatedAt: new Date() })
+      .where(
+        me.isAdmin
+          ? eq(documents.id, id)
+          : and(eq(documents.id, id), eq(documents.uploadedById, me.id)),
+      );
+  } catch (err) {
+    // Roll back the orphaned blob (pathname validated to live under documents/).
+    await deleteBlob(meta.pathname).catch((cleanupErr) => {
+      console.warn("[documents] blob cleanup failed", cleanupErr);
+    });
+    return { ok: false, error: `DB: ${err instanceof Error ? err.message : String(err)}` };
+  }
   await logDocEvent({
     documentId: id,
     documentTitle: auth.doc.title,
     actorId: me.id,
     eventType: "file_replaced",
     fromValue: { storagePath: auth.doc.storagePath, mimeType: auth.doc.mimeType, sizeBytes: auth.doc.sizeBytes },
-    toValue: { storagePath: path, mimeType: file.type || null, sizeBytes: file.size },
+    toValue: { storagePath: meta.pathname, mimeType: meta.contentType, sizeBytes: meta.sizeBytes },
   });
   // Best-effort cleanup of the old blob.
-  await deleteBlob(auth.doc.storagePath).catch(() => {});
+  if (auth.doc.storagePath !== meta.pathname) {
+    await deleteBlob(auth.doc.storagePath).catch((err) => {
+      console.warn("[documents] blob cleanup failed", err);
+    });
+  }
   revalidatePath("/documents");
   return { ok: true };
 }
@@ -284,7 +314,9 @@ export async function deleteDocument(id: string): Promise<Result> {
   if (!auth.ok) return auth;
 
   // Best-effort blob cleanup — the DB row is the source of truth.
-  await deleteBlob(auth.doc.storagePath).catch(() => {});
+  await deleteBlob(auth.doc.storagePath).catch((err) => {
+    console.warn("[documents] blob cleanup failed", err);
+  });
   await db
     .delete(documents)
     .where(

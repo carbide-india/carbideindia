@@ -3,14 +3,19 @@ import "server-only";
 import { put, del, list, issueSignedToken, presignUrl } from "@vercel/blob";
 
 /**
- * All Vercel Blob I/O lives here. Requires BLOB_READ_WRITE_TOKEN at runtime
- * (auto-injected on Vercel; set manually for local / self-hosted deploys).
+ * All server-side Vercel Blob I/O lives here. Requires BLOB_READ_WRITE_TOKEN
+ * at runtime (auto-injected on Vercel; set manually for local / self-hosted
+ * deploys).
  *
  * Access model:
  * - Avatars are PUBLIC — they render in plain <img> tags across the app,
  *   so the permanent blob URL is stored directly on employees.avatarUrl.
- * - Documents are PRIVATE — business files. @vercel/blob 2.x supports
- *   `access: "private"` plus presigned GET URLs: `issueSignedToken()` is a
+ *   Small (≤2 MB), so they upload through /api/profile/avatar.
+ * - Documents are PRIVATE — business files up to 25 MB, which exceeds
+ *   Vercel's ~4.5 MB function body cap, so the FILE goes browser → Blob
+ *   directly: the client calls `upload()` (@vercel/blob/client) against the
+ *   /api/documents/upload token route, then registers metadata via a server
+ *   action. Downloads use presigned GET URLs: `issueSignedToken()` is a
  *   single network call to the Blob API, after which `presignUrl()` signs
  *   each pathname locally (HMAC, no network). The documents page issues one
  *   short-lived token per render and presigns every row's download URL in
@@ -34,37 +39,25 @@ export async function uploadAvatar(
   return blob.url;
 }
 
-/**
- * Documents: private business files. Returns the blob PATHNAME (stored in
- * documents.storage_path); download links are minted per-render via
- * getDocumentDownloadUrls().
- */
-export async function uploadDocument(
-  key: string,
-  file: Blob | Buffer,
-  contentType: string,
-): Promise<string> {
-  const blob = await put(`documents/${key}`, file, {
-    access: "private",
-    contentType,
-    addRandomSuffix: true,
-  });
-  return blob.pathname;
-}
-
 /** Delete a single blob by URL or pathname. Callers treat this as best-effort. */
 export async function deleteBlob(urlOrPathname: string): Promise<void> {
   await del(urlOrPathname);
 }
 
 /**
- * Delete every blob under a prefix (e.g. `avatars/<employeeId>/`).
- * Best-effort cleanup helper — callers catch failures.
+ * Delete every blob under a prefix (e.g. `avatars/<employeeId>/`), optionally
+ * keeping one URL (used after an avatar re-upload to reap the older blobs
+ * without touching the one just stored). Best-effort cleanup helper —
+ * callers catch failures.
  */
-export async function deleteByPrefix(prefix: string): Promise<void> {
+export async function deleteByPrefix(
+  prefix: string,
+  opts?: { keepUrl?: string },
+): Promise<void> {
   const { blobs } = await list({ prefix });
-  if (blobs.length > 0) {
-    await del(blobs.map((b) => b.url));
+  const urls = blobs.map((b) => b.url).filter((u) => u !== opts?.keepUrl);
+  if (urls.length > 0) {
+    await del(urls);
   }
 }
 

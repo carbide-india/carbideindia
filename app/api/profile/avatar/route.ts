@@ -84,6 +84,15 @@ export async function POST(req: Request) {
     );
   }
 
+  // Best-effort reap of the user's OLDER avatar blobs (each upload mints a
+  // new random-suffixed blob, so without this re-uploads leak forever).
+  // Runs after the DB points at the new URL; `keepUrl` protects it.
+  try {
+    await deleteByPrefix(`avatars/${me.id}/`, { keepUrl: url });
+  } catch (err) {
+    console.warn("[avatar] blob cleanup failed", err);
+  }
+
   updateTag(PROFILE_CACHE_TAGS.profile(me.id));
   updateTag(CACHE_TAGS.employees);
 
@@ -113,8 +122,8 @@ export async function DELETE() {
   // non-fatal — the row is already updated.
   try {
     await deleteByPrefix(`avatars/${me.id}/`);
-  } catch {
-    // ignore
+  } catch (err) {
+    console.warn("[avatar] blob cleanup failed", err);
   }
 
   updateTag(PROFILE_CACHE_TAGS.profile(me.id));

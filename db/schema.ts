@@ -186,8 +186,9 @@ export const notificationPreferences = pgTable(
 
 /**
  * Profile v2 — audit_data_exports (migration 0037).
- * "Download my data" request log. Cron picks pending rows, writes a ZIP
- * to documents bucket, emails the user.
+ * "Download my data" request log. requestDataExport (profile actions) queues
+ * rows in `pending` state; no worker consumes them yet — the table records
+ * the requests until an export pipeline ships.
  */
 export const auditDataExports = pgTable(
   "audit_data_exports",
@@ -372,9 +373,11 @@ export const projectMembers = pgTable(
 );
 
 /**
- * Document library (Manan #27/#28). The catalogue for files stored in the
- * private "documents" Storage bucket — title required, description optional,
- * with provenance and an optional link to a task.
+ * Document library (Manan #27/#28). The catalogue for files stored as
+ * private Vercel Blob objects under the `documents/` pathname prefix
+ * (storage_path holds the blob pathname; downloads are presigned per
+ * render) — title required, description optional, with provenance and an
+ * optional link to a task.
  */
 export const documents = pgTable(
   "documents",

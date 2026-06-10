@@ -3,12 +3,19 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Upload, FileText, Download, Pencil, Trash2, RefreshCw, X, Check } from "lucide-react";
+import { upload } from "@vercel/blob/client";
 import {
-  uploadDocument,
+  createDocumentRecord,
   updateDocument,
   deleteDocument,
   replaceDocumentFile,
 } from "@/app/(app)/documents/actions";
+import {
+  DOCUMENTS_PATHNAME_PREFIX,
+  MAX_DOCUMENT_BYTES,
+  safeDocumentName,
+  validateDocumentFileShape,
+} from "@/lib/documents/upload-validation";
 import { fireToast } from "@/lib/toast";
 import type { DocumentRow } from "@/lib/queries/documents";
 
@@ -19,32 +26,73 @@ function prettySize(bytes: number | null): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
+/**
+ * Fast client-side pre-check (size + denylists) so obviously-bad files fail
+ * before any network traffic. The server re-validates everything.
+ */
+function precheckFile(file: File): string | null {
+  if (file.size === 0) return "Pick a file.";
+  if (file.size > MAX_DOCUMENT_BYTES) return "File exceeds 25 MB.";
+  const shape = validateDocumentFileShape({ name: file.name, contentType: file.type });
+  return shape.ok ? null : shape.error;
+}
+
+/**
+ * Uploads the file browser → Vercel Blob directly (the 25 MB files never
+ * pass through a server action, which is body-capped at 1 MB by Next and
+ * ~4.5 MB by Vercel). /api/documents/upload mints the scoped token;
+ * contentType travels via clientPayload because handleUpload's token step
+ * doesn't receive it otherwise.
+ */
+function uploadToBlob(file: File, onProgress?: (percentage: number) => void) {
+  const contentType = file.type || "application/octet-stream";
+  return upload(`${DOCUMENTS_PATHNAME_PREFIX}${safeDocumentName(file.name)}`, file, {
+    access: "private",
+    handleUploadUrl: "/api/documents/upload",
+    contentType,
+    clientPayload: JSON.stringify({ contentType }),
+    onUploadProgress: onProgress ? (e) => onProgress(e.percentage) : undefined,
+  });
+}
+
 export function DocumentLibrary({ documents }: { documents: DocumentRow[] }) {
   const router = useRouter();
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [file, setFile] = React.useState<File | null>(null);
   const [busy, setBusy] = React.useState(false);
+  const [progress, setProgress] = React.useState<number | null>(null);
   const fileRef = React.useRef<HTMLInputElement>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) return fireToast({ message: "Title is required." });
     if (!file) return fireToast({ message: "Pick a file." });
-    const fd = new FormData();
-    fd.set("title", title.trim());
-    fd.set("description", description.trim());
-    fd.set("file", file);
+    const precheck = precheckFile(file);
+    if (precheck) return fireToast({ message: precheck });
     setBusy(true);
-    const res = await uploadDocument(fd);
-    setBusy(false);
-    if (!res.ok) return fireToast({ message: res.error });
-    fireToast({ message: `${title.trim()} uploaded.` });
-    setTitle("");
-    setDescription("");
-    setFile(null);
-    if (fileRef.current) fileRef.current.value = "";
-    router.refresh();
+    try {
+      const blob = await uploadToBlob(file, setProgress);
+      const res = await createDocumentRecord({
+        title: title.trim(),
+        description: description.trim(),
+        pathname: blob.pathname,
+        contentType: file.type || null,
+        sizeBytes: file.size,
+      });
+      if (!res.ok) return fireToast({ message: res.error });
+      fireToast({ message: `${title.trim()} uploaded.` });
+      setTitle("");
+      setDescription("");
+      setFile(null);
+      if (fileRef.current) fileRef.current.value = "";
+      router.refresh();
+    } catch (err) {
+      fireToast({ message: err instanceof Error ? err.message : "Upload failed." });
+    } finally {
+      setBusy(false);
+      setProgress(null);
+    }
   }
 
   return (
@@ -86,7 +134,11 @@ export function DocumentLibrary({ documents }: { documents: DocumentRow[] }) {
             className="rounded-md py-2 px-5 text-[14px] font-semibold text-white disabled:opacity-50"
             style={{ background: "linear-gradient(135deg, #E10600, #A80400)" }}
           >
-            {busy ? "Uploading…" : "Upload"}
+            {busy
+              ? progress != null
+                ? `Uploading… ${Math.round(progress)}%`
+                : "Uploading…"
+              : "Upload"}
           </button>
         </div>
       </form>
@@ -136,13 +188,22 @@ function DocRow({ doc }: { doc: DocumentRow }) {
     });
   }
   function replace(f: File) {
-    const fd = new FormData();
-    fd.set("file", f);
+    const precheck = precheckFile(f);
+    if (precheck) return fireToast({ message: precheck });
     start(async () => {
-      const res = await replaceDocumentFile(doc.id, fd);
-      if (!res.ok) fireToast({ message: res.error });
-      else fireToast({ message: "File replaced." });
-      router.refresh();
+      try {
+        const blob = await uploadToBlob(f);
+        const res = await replaceDocumentFile(doc.id, {
+          pathname: blob.pathname,
+          contentType: f.type || null,
+          sizeBytes: f.size,
+        });
+        if (!res.ok) fireToast({ message: res.error });
+        else fireToast({ message: "File replaced." });
+        router.refresh();
+      } catch (err) {
+        fireToast({ message: err instanceof Error ? err.message : "Upload failed." });
+      }
     });
   }
 

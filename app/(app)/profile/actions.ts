@@ -210,9 +210,9 @@ export async function patchIdentity(
 }
 
 /**
- * Create a new audit_data_exports row in `pending` state. The cron
- * route /api/cron/data-export picks it up, ZIPs the user's data,
- * stores in the documents bucket, emails the user a signed URL.
+ * Create a new audit_data_exports row in `pending` state. Nothing consumes
+ * these rows yet — there is no export worker; the table records the request
+ * (and the UI shows "being prepared") until an export pipeline ships.
  *
  * Rate-limited harder than other writes: one request per 5 minutes.
  */
@@ -226,7 +226,7 @@ export async function requestDataExport(): Promise<
   if (limited) return limited;
 
   // Don't queue a new one if there's an in-flight request younger than
-  // the cooldown — that just spams the cron with duplicate work.
+  // the cooldown — that just piles up duplicate pending rows.
   const inflight = await db
     .select({ id: auditDataExports.id, requestedAt: auditDataExports.requestedAt })
     .from(auditDataExports)
