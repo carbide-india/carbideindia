@@ -191,7 +191,7 @@ function HeroHeader({
         opacity: 0,
         animation: "fadeUp 700ms ease-out 50ms forwards",
         background:
-          "radial-gradient(ellipse 90% 70% at 85% 100%, rgba(225, 6, 0, 0.55), transparent 55%), radial-gradient(ellipse 60% 60% at 15% 0%, rgba(168, 4, 0, 0.20), transparent 60%), linear-gradient(135deg, #0E0B0A 0%, #1A0F0C 50%, #0B0708 100%)",
+          "radial-gradient(ellipse 90% 70% at 85% 100%, rgba(63, 63, 148, 0.55), transparent 55%), radial-gradient(ellipse 60% 60% at 15% 0%, rgba(47, 47, 111, 0.20), transparent 60%), linear-gradient(135deg, #0E0B0A 0%, #1A0F0C 50%, #0B0708 100%)",
         boxShadow:
           "0 24px 60px -20px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.06)",
       }}
@@ -237,8 +237,8 @@ function HeroHeader({
                 height: 0,
                 borderLeft: "6px solid transparent",
                 borderRight: "6px solid transparent",
-                borderBottom: "10px solid #E10600",
-                filter: "drop-shadow(0 0 10px rgba(225, 6, 0, 0.8))",
+                borderBottom: "10px solid #3F3F94",
+                filter: "drop-shadow(0 0 10px rgba(63, 63, 148, 0.8))",
               }}
             />
             Projects
@@ -416,9 +416,9 @@ function RailItem({
     ? {
         background:
           "linear-gradient(180deg, rgba(225,6,0,0.06), rgba(225,6,0,0.02))",
-        border: "1px solid rgba(225, 6, 0, 0.18)",
+        border: "1px solid rgba(63, 63, 148, 0.18)",
         boxShadow:
-          "0 1px 3px rgba(225, 6, 0, 0.08), inset 0 1px 0 rgba(255,255,255,0.5)",
+          "0 1px 3px rgba(63, 63, 148, 0.08), inset 0 1px 0 rgba(255,255,255,0.5)",
       }
     : { border: "1px solid transparent" };
 
@@ -445,9 +445,9 @@ function RailItem({
           className="absolute left-0 top-2 bottom-2 w-[2px] rounded-full transition-opacity"
           style={{
             background:
-              "linear-gradient(180deg, var(--color-altus-red), var(--color-altus-red-deep))",
+              "linear-gradient(180deg, var(--color-brand), var(--color-brand-deep))",
             opacity: active ? 1 : 0,
-            boxShadow: active ? "0 0 8px rgba(225, 6, 0, 0.45)" : "none",
+            boxShadow: active ? "0 0 8px rgba(63, 63, 148, 0.45)" : "none",
           }}
         />
 
@@ -484,7 +484,7 @@ function RailItem({
           className="shrink-0 transition-transform group-hover:translate-x-0.5"
           style={{
             color: active
-              ? "var(--color-altus-red)"
+              ? "var(--color-brand)"
               : "var(--color-ink-subtle)",
           }}
         />
@@ -518,7 +518,7 @@ function ProjectDetail({ project }: { project: ProjectTreeNode }) {
         className="absolute inset-x-0 top-0 h-[3px]"
         style={{
           background:
-            "linear-gradient(90deg, var(--color-altus-red) 0%, var(--color-altus-red-deep) 35%, transparent 100%)",
+            "linear-gradient(90deg, var(--color-brand) 0%, var(--color-brand-deep) 35%, transparent 100%)",
           opacity: 0.85,
         }}
       />
@@ -713,10 +713,10 @@ function KindGlyph({ kind, depth }: { kind: NodeKind; depth: number }) {
       <Diamond
         size={11}
         strokeWidth={2.2}
-        fill="var(--color-altus-red)"
+        fill="var(--color-brand)"
         style={{
-          color: "var(--color-altus-red)",
-          filter: "drop-shadow(0 0 6px rgba(225, 6, 0, 0.30))",
+          color: "var(--color-brand)",
+          filter: "drop-shadow(0 0 6px rgba(63, 63, 148, 0.30))",
         }}
         aria-hidden
       />
@@ -891,7 +891,7 @@ function TreeNode({
   // Guide line color: a faint red at the milestone level, hairline elsewhere.
   const guideColor =
     depth === 0
-      ? "color-mix(in srgb, var(--color-altus-red) 25%, transparent)"
+      ? "color-mix(in srgb, var(--color-brand) 25%, transparent)"
       : "var(--color-hairline-strong)";
 
   return (
@@ -923,7 +923,7 @@ function TreeNode({
       style={{
         opacity: dnd.isDragging ? 0.45 : 1,
         borderTop: dnd.isOver
-          ? "2px solid var(--color-altus-red)"
+          ? "2px solid var(--color-brand)"
           : "2px solid transparent",
         borderRadius: 6,
       }}
@@ -1051,9 +1051,9 @@ function NodeRow({
             fontSize: 13.5,
             fontFamily: "var(--font-mono)",
             fontWeight: 600,
-            color: "var(--color-altus-red-deep)",
-            background: "color-mix(in srgb, var(--color-altus-red) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--color-altus-red) 26%, transparent)",
+            color: "var(--color-brand-deep)",
+            background: "color-mix(in srgb, var(--color-brand) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--color-brand) 26%, transparent)",
           }}
           title="View linked tasks"
         >
@@ -1069,12 +1069,12 @@ function NodeRow({
         onClick={onToggleDetails}
         aria-label={detailsOpen ? "Hide details" : "Edit team, target date & notes"}
         aria-expanded={detailsOpen}
-        className="shrink-0 inline-flex items-center justify-center size-8 rounded-lg border transition-all hover:border-altus-red"
+        className="shrink-0 inline-flex items-center justify-center size-8 rounded-lg border transition-all hover:border-brand"
         style={{
           borderColor: detailsOpen
-            ? "var(--color-altus-red)"
+            ? "var(--color-brand)"
             : "var(--color-hairline-strong)",
-          color: detailsOpen ? "var(--color-altus-red)" : "var(--color-ink-soft)",
+          color: detailsOpen ? "var(--color-brand)" : "var(--color-ink-soft)",
           background: "var(--color-surface-card)",
         }}
         title="Team, target date & notes"
@@ -1170,7 +1170,7 @@ function EditableName({
         onBlur={save}
         disabled={pending}
         maxLength={160}
-        className="flex-1 min-w-0 bg-transparent outline-none border-b border-hairline-strong focus:border-altus-red"
+        className="flex-1 min-w-0 bg-transparent outline-none border-b border-hairline-strong focus:border-brand"
         style={sharedStyle}
       />
     );
@@ -1358,8 +1358,8 @@ function DeleteNodeDialog({
               aria-hidden
               className="inline-flex shrink-0 items-center justify-center size-10 rounded-xl"
               style={{
-                background: "color-mix(in srgb, var(--color-altus-red) 12%, transparent)",
-                color: "var(--color-altus-red)",
+                background: "color-mix(in srgb, var(--color-brand) 12%, transparent)",
+                color: "var(--color-brand)",
               }}
             >
               <Trash2 size={19} strokeWidth={2.2} />
@@ -1421,7 +1421,7 @@ function DeleteNodeDialog({
                   className="rounded-pill px-5 py-2.5 text-[14px] font-bold text-white transition-all hover:-translate-y-px"
                   style={{
                     background:
-                      "linear-gradient(135deg, var(--color-altus-red), var(--color-altus-red-deep))",
+                      "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
                   }}
                 >
                   Continue
@@ -1443,7 +1443,7 @@ function DeleteNodeDialog({
                   if (e.key === "Enter" && confirmable && !pending) onConfirm();
                 }}
                 placeholder={node.name}
-                className="w-full rounded-md border px-3.5 py-2.5 text-[15px] outline-none focus:border-altus-red mb-4"
+                className="w-full rounded-md border px-3.5 py-2.5 text-[15px] outline-none focus:border-brand mb-4"
                 style={{ borderColor: "var(--color-hairline-strong)" }}
               />
               <div className="flex justify-between gap-2">
@@ -1462,7 +1462,7 @@ function DeleteNodeDialog({
                   className="rounded-pill px-5 py-2.5 text-[14px] font-bold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed enabled:hover:-translate-y-px"
                   style={{
                     background:
-                      "linear-gradient(135deg, var(--color-altus-red), var(--color-altus-red-deep))",
+                      "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
                   }}
                 >
                   {pending ? "Deleting…" : `Permanently delete`}
@@ -1492,11 +1492,11 @@ function MenuItem({
       type="button"
       onClick={onClick}
       className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[14.5px] transition-colors hover:bg-surface-soft"
-      style={{ color: danger ? "var(--color-altus-red-deep)" : "var(--color-ink-strong)" }}
+      style={{ color: danger ? "var(--color-brand-deep)" : "var(--color-ink-strong)" }}
     >
       <span
         className="shrink-0"
-        style={{ color: danger ? "var(--color-altus-red)" : "var(--color-ink-muted)" }}
+        style={{ color: danger ? "var(--color-brand)" : "var(--color-ink-muted)" }}
       >
         {icon}
       </span>
@@ -1610,13 +1610,13 @@ function OwnerPicker({
             type="button"
             disabled={pending}
             title={node.ownerName ? `Owner: ${node.ownerName}` : "Assign an owner"}
-            className="inline-flex items-center gap-1.5 rounded-pill border px-3.5 py-2 text-[15px] font-semibold transition-colors hover:border-altus-red disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-pill border px-3.5 py-2 text-[15px] font-semibold transition-colors hover:border-brand disabled:opacity-50"
             style={{
               borderColor: node.ownerName
-                ? "color-mix(in srgb, var(--color-altus-red) 35%, transparent)"
+                ? "color-mix(in srgb, var(--color-brand) 35%, transparent)"
                 : "var(--color-hairline-strong)",
               background: node.ownerName
-                ? "color-mix(in srgb, var(--color-altus-red) 8%, transparent)"
+                ? "color-mix(in srgb, var(--color-brand) 8%, transparent)"
                 : "var(--color-surface-card)",
               color: node.ownerName
                 ? "var(--color-ink-strong)"
@@ -1629,7 +1629,7 @@ function OwnerPicker({
               className="shrink-0"
               style={{
                 color: node.ownerName
-                  ? "var(--color-altus-red)"
+                  ? "var(--color-brand)"
                   : "var(--color-ink-subtle)",
               }}
             />
@@ -1654,7 +1654,7 @@ function OwnerPicker({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search people…"
-              className="w-full rounded-md border border-hairline px-2.5 py-1.5 text-[14.5px] outline-none focus:border-altus-red mb-1"
+              className="w-full rounded-md border border-hairline px-2.5 py-1.5 text-[14.5px] outline-none focus:border-brand mb-1"
             />
             <div className="max-h-[240px] overflow-y-auto">
               <PickerRow
@@ -1728,7 +1728,7 @@ function MembersPicker({ node }: { node: ProjectTreeNode }) {
               onClick={() => toggle(m.id)}
               disabled={pending}
               aria-label={`Remove ${m.name ?? "member"}`}
-              className="hover:text-altus-red disabled:opacity-50"
+              className="hover:text-brand disabled:opacity-50"
             >
               <X size={13} strokeWidth={2.6} />
             </button>
@@ -1739,7 +1739,7 @@ function MembersPicker({ node }: { node: ProjectTreeNode }) {
             <button
               type="button"
               disabled={pending}
-              className="inline-flex items-center gap-1 rounded-pill border border-dashed px-2.5 py-1 text-[13.5px] font-semibold text-ink-muted hover:text-altus-red hover:border-altus-red transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1 rounded-pill border border-dashed px-2.5 py-1 text-[13.5px] font-semibold text-ink-muted hover:text-brand hover:border-brand transition-colors disabled:opacity-50"
               style={{ borderColor: "var(--color-hairline-strong)" }}
             >
               <Plus size={13} strokeWidth={2.6} />
@@ -1761,7 +1761,7 @@ function MembersPicker({ node }: { node: ProjectTreeNode }) {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search people…"
-                className="w-full rounded-md border border-hairline px-2.5 py-1.5 text-[14.5px] outline-none focus:border-altus-red mb-1"
+                className="w-full rounded-md border border-hairline px-2.5 py-1.5 text-[14.5px] outline-none focus:border-brand mb-1"
               />
               <div className="max-h-[240px] overflow-y-auto">
                 {matches.map((e) => (
@@ -1816,7 +1816,7 @@ function PickerRow({
           border: selected
             ? "none"
             : "1.5px solid var(--color-hairline-strong)",
-          background: selected ? "var(--color-altus-red)" : "transparent",
+          background: selected ? "var(--color-brand)" : "transparent",
           color: "#fff",
         }}
       >
@@ -1850,7 +1850,7 @@ function TargetDateEditor({ node }: { node: ProjectTreeNode }) {
           defaultValue={toYmd(node.targetDate)}
           disabled={pending}
           onChange={(e) => save(e.target.value || null)}
-          className="rounded-md border px-3 py-1.5 text-[14.5px] outline-none focus:border-altus-red disabled:opacity-50 tabular-nums"
+          className="rounded-md border px-3 py-1.5 text-[14.5px] outline-none focus:border-brand disabled:opacity-50 tabular-nums"
           style={{
             borderColor: "var(--color-hairline-strong)",
             background: "var(--color-surface-card)",
@@ -1863,7 +1863,7 @@ function TargetDateEditor({ node }: { node: ProjectTreeNode }) {
             onClick={() => save(null)}
             disabled={pending}
             aria-label="Clear target date"
-            className="ml-1 text-ink-muted hover:text-altus-red disabled:opacity-50"
+            className="ml-1 text-ink-muted hover:text-brand disabled:opacity-50"
           >
             <X size={13} strokeWidth={2.4} />
           </button>
@@ -1906,7 +1906,7 @@ function NotesEditor({ node, big }: { node: ProjectTreeNode; big: boolean }) {
             className="inline-flex items-center gap-1.5 rounded-pill px-3 py-1 text-[13.5px] font-bold text-white disabled:opacity-50"
             style={{
               background:
-                "linear-gradient(135deg, var(--color-altus-red), var(--color-altus-red-deep))",
+                "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
             }}
           >
             <Check size={13} strokeWidth={3} />
@@ -1921,7 +1921,7 @@ function NotesEditor({ node, big }: { node: ProjectTreeNode; big: boolean }) {
         placeholder="Context, intent, acceptance criteria… written here so whoever picks this up knows what's expected."
         rows={big ? 4 : 3}
         maxLength={8000}
-        className="w-full resize-y rounded-md border bg-surface-card px-3 py-2.5 outline-none focus:border-altus-red"
+        className="w-full resize-y rounded-md border bg-surface-card px-3 py-2.5 outline-none focus:border-brand"
         style={{
           borderColor: "var(--color-hairline-strong)",
           fontSize: big ? 17 : 15.5,
@@ -1969,7 +1969,7 @@ function AddChildButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 rounded-pill border px-3.5 py-1.5 text-[15px] font-semibold text-ink-soft hover:text-altus-red hover:border-altus-red transition-colors"
+        className="inline-flex items-center gap-1.5 rounded-pill border px-3.5 py-1.5 text-[15px] font-semibold text-ink-soft hover:text-brand hover:border-brand transition-colors"
         style={{
           borderColor: "var(--color-hairline-strong)",
           background: "var(--color-surface-card)",
@@ -1997,7 +1997,7 @@ function AddChildButton({
         placeholder={`${KIND_LABEL[kind]} name`}
         maxLength={160}
         disabled={pending}
-        className="rounded-md border border-hairline-strong px-2.5 py-1.5 text-[14.5px] outline-none focus:border-altus-red"
+        className="rounded-md border border-hairline-strong px-2.5 py-1.5 text-[14.5px] outline-none focus:border-brand"
         style={{ minWidth: 240 }}
       />
       <button
@@ -2037,9 +2037,9 @@ function NewProjectButton({ hero = false }: { hero?: boolean }) {
               className="group relative inline-flex items-center gap-2 px-5 py-3 rounded-pill text-white font-bold text-[13.5px] transition-all hover:-translate-y-px shrink-0"
               style={{
                 background:
-                  "linear-gradient(135deg, var(--color-altus-red), var(--color-altus-red-deep))",
+                  "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
                 boxShadow:
-                  "0 8px 24px -8px rgba(225, 6, 0, 0.55), inset 0 1px 0 rgba(255,255,255,0.18)",
+                  "0 8px 24px -8px rgba(63, 63, 148, 0.55), inset 0 1px 0 rgba(255,255,255,0.18)",
                 letterSpacing: "0.01em",
               }}
             >
@@ -2049,7 +2049,7 @@ function NewProjectButton({ hero = false }: { hero?: boolean }) {
                 aria-hidden
                 className="absolute inset-0 rounded-pill pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"
                 style={{
-                  boxShadow: "0 0 24px 0 rgba(225, 6, 0, 0.45)",
+                  boxShadow: "0 0 24px 0 rgba(63, 63, 148, 0.45)",
                 }}
               />
             </button>
@@ -2059,7 +2059,7 @@ function NewProjectButton({ hero = false }: { hero?: boolean }) {
           <button
             type="button"
             onClick={openFn}
-            className="inline-flex items-center gap-1.5 rounded-pill border border-hairline-strong bg-surface-card px-3.5 py-2 text-[13px] font-semibold text-ink-strong hover:border-altus-red transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-pill border border-hairline-strong bg-surface-card px-3.5 py-2 text-[13px] font-semibold text-ink-strong hover:border-brand transition-colors"
           >
             <Plus size={14} strokeWidth={2.4} />
             New Project
@@ -2077,7 +2077,7 @@ function NewProjectInlineLink() {
         <button
           type="button"
           onClick={openFn}
-          className="inline-flex items-center gap-1.5 text-[15px] font-semibold text-ink-muted hover:text-altus-red transition-colors py-1"
+          className="inline-flex items-center gap-1.5 text-[15px] font-semibold text-ink-muted hover:text-brand transition-colors py-1"
         >
           <Plus size={12} strokeWidth={2.4} />
           New Project
@@ -2155,10 +2155,10 @@ function NewProjectControl({
         onClick={add}
         disabled={pending || !name.trim()}
         aria-label="Save"
-        className="size-7 inline-flex items-center justify-center rounded-full bg-altus-red text-white hover:opacity-90 disabled:opacity-40"
+        className="size-7 inline-flex items-center justify-center rounded-full bg-brand text-white hover:opacity-90 disabled:opacity-40"
         style={{
           background:
-            "linear-gradient(135deg, var(--color-altus-red), var(--color-altus-red-deep))",
+            "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
         }}
       >
         <Check size={14} strokeWidth={2.6} />
@@ -2196,21 +2196,21 @@ function EmptyState() {
         className="absolute inset-x-0 top-0 h-[3px]"
         style={{
           background:
-            "linear-gradient(90deg, var(--color-altus-red) 0%, var(--color-altus-red-deep) 35%, transparent 100%)",
+            "linear-gradient(90deg, var(--color-brand) 0%, var(--color-brand-deep) 35%, transparent 100%)",
         }}
       />
       <div
         className="inline-flex items-center justify-center size-14 rounded-2xl mb-5"
         style={{
           background:
-            "radial-gradient(ellipse 70% 70% at 50% 50%, rgba(225, 6, 0, 0.10), transparent 70%)",
-          border: "1px solid color-mix(in srgb, var(--color-altus-red) 18%, transparent)",
+            "radial-gradient(ellipse 70% 70% at 50% 50%, rgba(63, 63, 148, 0.10), transparent 70%)",
+          border: "1px solid color-mix(in srgb, var(--color-brand) 18%, transparent)",
         }}
       >
         <FolderKanban
           size={24}
           strokeWidth={1.8}
-          style={{ color: "var(--color-altus-red)" }}
+          style={{ color: "var(--color-brand)" }}
         />
       </div>
       <p

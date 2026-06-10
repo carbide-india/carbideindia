@@ -83,7 +83,7 @@ export function AuditEvent({ row, fresh, statusLabels, me }: Props) {
             className="text-[11px] uppercase tracking-[0.08em] font-bold px-2 py-0.5 rounded-full"
             style={{
               background:
-                "linear-gradient(135deg, var(--color-altus-red), var(--color-altus-red-deep))",
+                "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
               color: "#ffffff",
               letterSpacing: "0.06em",
             }}
@@ -347,7 +347,7 @@ function CommentBody({
               onClick={save}
               disabled={pending || draft.trim() === ""}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-white font-semibold disabled:opacity-50"
-              style={{ background: "linear-gradient(135deg, #E10600, #A80400)" }}
+              style={{ background: "linear-gradient(135deg, #D32F2F, #B71C1C)" }}
             >
               {pending ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} strokeWidth={2.6} />}
               Save

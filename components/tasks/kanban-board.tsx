@@ -326,7 +326,7 @@ export function KanbanBoard({ tasks, labels, tones, isAdmin, columnOrder }: Prop
         {/* Floating drag preview. */}
         <DragOverlay dropAnimation={{ duration: 200, easing: "cubic-bezier(0.2,0.7,0.3,1)" }}>
           {activeCard ? (
-            <div className="w-[300px] rotate-2 cursor-grabbing rounded-chip border border-altus-red/40 bg-white p-3.5 shadow-2xl">
+            <div className="w-[300px] rotate-2 cursor-grabbing rounded-chip border border-brand/40 bg-white p-3.5 shadow-2xl">
               <span
                 className="block text-[15.5px] font-semibold text-ink-strong leading-snug"
                 style={{ display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}
@@ -465,7 +465,7 @@ function KanbanCard({
     >
       <Tooltip.Root delayDuration={220}>
         <Tooltip.Trigger asChild>
-          <div className="group rounded-chip bg-white border border-hairline p-3.5 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 hover:border-altus-red/40">
+          <div className="group rounded-chip bg-white border border-hairline p-3.5 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 hover:border-brand/40">
             <div className="flex items-start justify-between gap-2">
               <Link
                 href={`/tasks/${t.id}/focus` as Route}

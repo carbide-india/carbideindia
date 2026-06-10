@@ -115,7 +115,7 @@ function StatCard({ label, value, tone = "default" }: { label: string; value: nu
     <div className="rounded-section border border-hairline bg-surface-card p-4">
       <div className="text-[10px] uppercase tracking-[0.10em] font-bold text-ink-subtle">{label}</div>
       <div
-        className={`mt-1 text-display-md font-serif italic ${tone === "red" ? "text-altus-red" : "text-ink-strong"}`}
+        className={`mt-1 text-display-md font-serif italic ${tone === "red" ? "text-brand" : "text-ink-strong"}`}
       >
         {value}
       </div>

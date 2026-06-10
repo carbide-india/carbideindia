@@ -200,7 +200,7 @@ export const AGE_BUCKETS = [
 export type AgeBucketId = (typeof AGE_BUCKETS)[number]["id"];
 
 // ── Attendance (migration 0053) ─────────────────────────────────────────────
-// Ported from the Altus Ecosystem static forms (2026-06-10). The DB columns
+// Ported from the legacy ecosystem static forms (2026-06-10). The DB columns
 // are `text` (not pgEnums) so these unions are the canonical source of truth.
 
 export const ATTENDANCE_KINDS = ["in", "out"] as const;

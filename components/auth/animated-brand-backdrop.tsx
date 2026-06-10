@@ -1,21 +1,20 @@
 "use client";
 
 /**
- * Cinematic brand backdrop for /login. (rev 3)
+ * Cinematic brand backdrop for /login. (rev 4 — Carbide India)
  *
- * Two elements loop a slow ballet across the viewport: the Altus
- * brand-mark on the LEFT, the italic "Altus Corp." display wordmark
- * on the RIGHT. Both fade in at centre, slide apart, park at the
- * edges, then drift back and fade out. Designed to read as ambient
+ * Two elements loop a slow ballet across the viewport: the Carbide
+ * India brand-mark on the LEFT, the stacked "Carbide India" display
+ * wordmark on the RIGHT. Both fade in at centre, slide apart, park at
+ * the edges, then drift back and fade out. Designed to read as ambient
  * video — the form card is the hero.
  *
- * Uses `/logo-mark.png` (the dedicated white-text variant of the
- * brand mark) rather than the legacy `/logo.png` which had grey
- * wordmark baked in. Because the new asset is already correctly
- * coloured for a dark canvas, we render it as a single image with
- * no masking overlay — simpler, sharper, no compositing tricks.
+ * The brand-mark is `/brand/logo.png` (red script "Carbide" + indigo
+ * block "India" on white), so it rides inside a soft white chip — the
+ * same treatment the header and admin sidebar use — to stay legible
+ * over the dark canvas.
  *
- * The right lane stacks "Altus" / "Corp." on two lines so neither
+ * The right lane stacks "Carbide" / "India" on two lines so neither
  * word gets clipped at the viewport edge. The left lane parks at
  * 40vw (further than the right's 28vw) to read as the dominant
  * brand presence behind the form card.
@@ -32,32 +31,39 @@ export function AnimatedBrandBackdrop() {
       {/* ── Brand-mark lane (orbits to the LEFT) ── */}
       <div className="absolute inset-0 flex items-center justify-center">
         <div
-          className="altus-brand-mark"
+          className="carbide-brand-mark"
           style={{ width: "clamp(220px, 24vw, 420px)" }}
         >
-          {/* The dedicated white-font variant of the brand mark — already
-              tuned for a dark canvas, so we render it raw with no
-              overlay/masking trickery. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/logo-mark.png"
-            alt=""
-            draggable={false}
+          {/* Logo artwork lives on white, so present it in a soft white
+              chip rather than compositing it raw onto the dark canvas. */}
+          <div
             style={{
-              width: "100%",
-              height: "auto",
-              display: "block",
-              userSelect: "none",
-              filter:
-                "drop-shadow(0 24px 80px rgba(225, 6, 0, 0.30)) drop-shadow(0 0 40px rgba(0, 0, 0, 0.35))",
+              background: "rgba(255, 255, 255, 0.96)",
+              borderRadius: 24,
+              padding: "10% 8%",
+              boxShadow:
+                "0 24px 80px rgba(63, 63, 148, 0.35), 0 0 40px rgba(0, 0, 0, 0.35)",
             }}
-          />
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/brand/logo.png"
+              alt=""
+              draggable={false}
+              style={{
+                width: "100%",
+                height: "auto",
+                display: "block",
+                userSelect: "none",
+              }}
+            />
+          </div>
         </div>
       </div>
 
-      {/* ── Italic-wordmark lane (orbits to the RIGHT) ── */}
+      {/* ── Stacked-wordmark lane (orbits to the RIGHT) ── */}
       <div className="absolute inset-0 flex items-center justify-center">
-        <div className="altus-brand-wordmark">
+        <div className="carbide-brand-wordmark">
           <div
             style={{
               fontFamily: "var(--font-display)",
@@ -74,18 +80,29 @@ export function AnimatedBrandBackdrop() {
             }}
           >
             {/* Stacked so the wordmark never spills past the viewport
-                edge — "Altus" on top, "Corp." below. */}
-            <div>Altus</div>
+                edge — "Carbide" (brand red) on top, "India" (brand
+                indigo, brightened for the dark canvas) below. */}
             <div
               style={{
                 background:
-                  "linear-gradient(110deg, #F4554D, #E10600 50%, #A80400)",
+                  "linear-gradient(110deg, #E57373, #D32F2F 50%, #B71C1C)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
               }}
             >
-              Corp.
+              Carbide
+            </div>
+            <div
+              style={{
+                background:
+                  "linear-gradient(110deg, #9D9DDB, #7979B4 50%, #3F3F94)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+            >
+              India
             </div>
           </div>
         </div>
@@ -112,7 +129,7 @@ export function AnimatedBrandBackdrop() {
          * lands in the correct spot on a 1280, 1440, 1920, or 2560
          * screen with no per-breakpoint tuning.
          */
-        @keyframes altus-mark-orbit {
+        @keyframes carbide-mark-orbit {
           0%   { transform: translateX(0)                       scale(0.94); opacity: 0; }
           8%   { transform: translateX(0)                       scale(0.96); opacity: 0.55; }
           28%  { transform: translateX(calc(-25vw - 165px))     scale(1);    opacity: 0.95; }
@@ -124,7 +141,7 @@ export function AnimatedBrandBackdrop() {
            the card's RIGHT edge and the viewport's right edge:
              (3W + 660)/4 − W/2  =  (W + 660)/4  =  +25vw + 165px
            Same calc() pattern as the left lane, just positive. */
-        @keyframes altus-wordmark-orbit {
+        @keyframes carbide-wordmark-orbit {
           0%   { transform: translateX(0)                       scale(0.94); opacity: 0; }
           8%   { transform: translateX(0)                       scale(0.96); opacity: 0.40; }
           28%  { transform: translateX(calc(25vw + 165px))      scale(1);    opacity: 0.70; }
@@ -134,38 +151,38 @@ export function AnimatedBrandBackdrop() {
         }
         /* Gentle vertical bob layered on the inner element so even
            during the long parked phase nothing feels frozen. */
-        @keyframes altus-bob {
+        @keyframes carbide-bob {
           0%, 100% { transform: translateY(0); }
           50%      { transform: translateY(-8px); }
         }
 
-        .altus-brand-mark {
-          animation: altus-mark-orbit 22s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+        .carbide-brand-mark {
+          animation: carbide-mark-orbit 22s cubic-bezier(0.45, 0, 0.25, 1) infinite;
           will-change: transform, opacity;
         }
-        .altus-brand-wordmark {
-          animation: altus-wordmark-orbit 22s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+        .carbide-brand-wordmark {
+          animation: carbide-wordmark-orbit 22s cubic-bezier(0.45, 0, 0.25, 1) infinite;
           will-change: transform, opacity;
         }
-        .altus-brand-mark > :global(img) {
-          animation: altus-bob 6s ease-in-out infinite;
+        .carbide-brand-mark > :global(div) {
+          animation: carbide-bob 6s ease-in-out infinite;
         }
-        .altus-brand-wordmark > :global(div) {
-          animation: altus-bob 6s ease-in-out infinite 0.8s;
+        .carbide-brand-wordmark > :global(div) {
+          animation: carbide-bob 6s ease-in-out infinite 0.8s;
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .altus-brand-mark,
-          .altus-brand-wordmark,
-          .altus-brand-mark > :global(img),
-          .altus-brand-wordmark > :global(div) {
+          .carbide-brand-mark,
+          .carbide-brand-wordmark,
+          .carbide-brand-mark > :global(div),
+          .carbide-brand-wordmark > :global(div) {
             animation: none;
           }
-          .altus-brand-mark {
+          .carbide-brand-mark {
             transform: translateX(calc(-25vw - 165px));
             opacity: 0.95;
           }
-          .altus-brand-wordmark {
+          .carbide-brand-wordmark {
             transform: translateX(calc(25vw + 165px));
             opacity: 0.7;
           }
@@ -173,14 +190,14 @@ export function AnimatedBrandBackdrop() {
 
         /* Tighter parking + smaller scale on phones. */
         @media (max-width: 768px) {
-          .altus-brand-mark {
-            animation-name: altus-mark-orbit-mobile;
+          .carbide-brand-mark {
+            animation-name: carbide-mark-orbit-mobile;
           }
-          .altus-brand-wordmark {
-            animation-name: altus-wordmark-orbit-mobile;
+          .carbide-brand-wordmark {
+            animation-name: carbide-wordmark-orbit-mobile;
           }
         }
-        @keyframes altus-mark-orbit-mobile {
+        @keyframes carbide-mark-orbit-mobile {
           0%   { transform: translateX(0)     scale(0.92); opacity: 0; }
           8%   { transform: translateX(0)     scale(0.94); opacity: 0.5; }
           28%  { transform: translateX(-30vw) scale(1);    opacity: 0.85; }
@@ -188,7 +205,7 @@ export function AnimatedBrandBackdrop() {
           88%  { transform: translateX(0)     scale(0.94); opacity: 0.5; }
           100% { transform: translateX(0)     scale(0.92); opacity: 0; }
         }
-        @keyframes altus-wordmark-orbit-mobile {
+        @keyframes carbide-wordmark-orbit-mobile {
           0%   { transform: translateX(0)     scale(0.92); opacity: 0; }
           8%   { transform: translateX(0)     scale(0.94); opacity: 0.30; }
           28%  { transform: translateX(22vw)  scale(1);    opacity: 0.55; }

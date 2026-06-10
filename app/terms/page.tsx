@@ -2,47 +2,47 @@ import type { Metadata } from "next";
 import { LegalShell } from "@/components/legal/legal-shell";
 
 export const metadata: Metadata = {
-  title: "Terms of Service · Altus Corp Dashboard",
+  title: "Terms of Service · Carbide India WMS",
   description:
-    "Terms governing access to the Altus Corp operations dashboard.",
+    "Terms governing access to the Carbide India operations dashboard.",
 };
 
 export default function TermsPage() {
   return (
     <LegalShell
-      eyebrow="Altus Corp · Legal"
+      eyebrow="Carbide India · Legal"
       title="Terms of Service"
       lastUpdated="2026-05-14"
-      intro="These terms govern your access to the Altus Corp operations dashboard. The platform is for the exclusive use of Altus Corp and the staff they authorise."
+      intro="These terms govern your access to the Carbide India operations dashboard. The platform is for the exclusive use of Carbide India and the staff they authorise."
     >
       <h2>1 · The short version</h2>
       <p>
         The dashboard is an internal operations tool. You only get access if a
-        Altus Corp administrator invites you. You agree to use it for
-        Altus Corp's business purposes, to keep client information
+        Carbide India administrator invites you. You agree to use it for
+        Carbide India's business purposes, to keep client information
         confidential, and to not share your password with anyone.
       </p>
 
       <h2>2 · Who's behind this</h2>
       <p>
-        <strong>The platform owner:</strong> Altus Corp. Altus Corp
+        <strong>The platform owner:</strong> Carbide India. Carbide India
         builds and maintains the dashboard software and owns the operational
         data captured in it.
       </p>
       <p>
         When you sign in, you accept these terms: you agree to abide by
-        Altus Corp's platform rules and to handle Altus Corp's
+        Carbide India's platform rules and to handle Carbide India's
         operational data responsibly.
       </p>
 
       <h2>3 · Eligibility &amp; accounts</h2>
       <p>
-        Access is invite-only. Public sign-up is disabled. A Altus Corp
+        Access is invite-only. Public sign-up is disabled. A Carbide India
         administrator must create an account on your behalf. By accepting an
         invite you confirm that:
       </p>
       <ul>
-        <li>You are a Altus Corp employee, director, or contractor with a written engagement.</li>
+        <li>You are a Carbide India employee, director, or contractor with a written engagement.</li>
         <li>The email address tied to your invite is your work email and remains under your sole control.</li>
         <li>You are at least 18 years old.</li>
         <li>You will not let anyone else use your credentials.</li>
@@ -58,7 +58,7 @@ export default function TermsPage() {
       <ul>
         <li>
           Use the dashboard to view, copy, or share client data
-          for any purpose outside your role at Altus Corp.
+          for any purpose outside your role at Carbide India.
         </li>
         <li>
           Attempt to access tasks, employees, or settings that fall outside
@@ -88,7 +88,7 @@ export default function TermsPage() {
       <p>
         Client communications, internal notes, and the operational task data
         captured in the dashboard are confidential business information of
-        Altus Corp. You will treat them as such — no screenshots in public
+        Carbide India. You will treat them as such — no screenshots in public
         channels, no forwarding outside the organisation, no public
         commentary on identifiable clients.
       </p>
@@ -100,9 +100,9 @@ export default function TermsPage() {
       <h2>6 · Intellectual property</h2>
       <p>
         The dashboard software, its design, brand marks, and all derivative
-        analytics are owned by Altus Corp. The operational data you
+        analytics are owned by Carbide India. The operational data you
         generate using the dashboard — tasks, comments, status history,
-        attached notes — belongs to Altus Corp.
+        attached notes — belongs to Carbide India.
       </p>
 
       <h2>7 · Service availability</h2>
@@ -118,7 +118,7 @@ export default function TermsPage() {
 
       <h2>8 · Termination</h2>
       <p>
-        A Altus Corp administrator may deactivate your account at any time
+        A Carbide India administrator may deactivate your account at any time
         — immediately on separation from the organisation, or sooner if
         these terms are violated. Deactivation revokes your session
         and prevents further sign-in; your historical task contributions
@@ -128,14 +128,14 @@ export default function TermsPage() {
       <h2>9 · Disclaimers &amp; liability</h2>
       <p>
         The dashboard is provided <strong>"AS IS"</strong>, without warranties
-        of any kind. Altus Corp does not warrant that the software is free
+        of any kind. Carbide India does not warrant that the software is free
         of defects, that data will never be lost, or that the analytics
         derived from it are accurate enough for regulatory or legal
         decisions. You will not rely on the dashboard as the sole record of
         any operational decision.
       </p>
       <p>
-        To the maximum extent permitted by Indian law, Altus Corp is not
+        To the maximum extent permitted by Indian law, Carbide India is not
         liable for any indirect, incidental, special, or consequential
         damages arising from your use of the dashboard.
       </p>
@@ -143,7 +143,7 @@ export default function TermsPage() {
       <h2>10 · Governing law</h2>
       <p>
         These terms are governed by the laws of India. Any dispute will be
-        subject to the exclusive jurisdiction of the courts at Mumbai,
+        subject to the exclusive jurisdiction of the courts at Nashik,
         Maharashtra.
       </p>
 

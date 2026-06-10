@@ -38,5 +38,5 @@ function normalizeRow(row: (string | number | null | undefined)[]): (string | nu
 
 export function exportFilename(resource: string, date: Date = new Date()): string {
   const iso = date.toISOString().slice(0, 10);
-  return `altus-corp-${resource}-${iso}.csv`;
+  return `carbide-india-${resource}-${iso}.csv`;
 }

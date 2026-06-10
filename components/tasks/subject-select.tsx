@@ -193,7 +193,7 @@ export function SubjectSelect({
           </button>
         </div>
         {error && (
-          <p className="text-[13px]" style={{ color: "rgb(168, 4, 0)" }}>
+          <p className="text-[13px]" style={{ color: "rgb(47, 47, 111)" }}>
             {error}
           </p>
         )}
@@ -302,8 +302,8 @@ export function SubjectSelect({
             onClick={() => startAdd()}
             className="flex items-center gap-2 mx-1.5 mt-1 px-3 py-2.5 rounded-lg cursor-pointer font-bold transition-colors"
             style={{
-              background: hi === filtered.length ? "color-mix(in srgb, var(--color-altus-red) 8%, transparent)" : "transparent",
-              color: "var(--color-altus-red-deep)",
+              background: hi === filtered.length ? "color-mix(in srgb, var(--color-brand) 8%, transparent)" : "transparent",
+              color: "var(--color-brand-deep)",
               borderTop: "1px solid var(--color-hairline)",
               fontSize: 15,
             }}

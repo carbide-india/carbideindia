@@ -201,7 +201,7 @@ export async function sendIntegrationTestAction(
     await notify({
       userId: me.id,
       kind: "task_assigned",
-      title: "Altus Corp integration test",
+      title: "Carbide India integration test",
       body: `This is a test message sent through the ${channel} channel from /admin/settings.`,
       actorId: me.id,
       forceChannels: [channel],

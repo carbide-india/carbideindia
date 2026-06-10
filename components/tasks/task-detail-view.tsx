@@ -112,7 +112,7 @@ const STATUS_TONE: Record<
   },
   need_help: {
     label: "Need Help",
-    rgb: "225, 6, 0",
+    rgb: "211, 47, 47",
     ink: "var(--color-red-deep)",
     bg: "var(--color-red-bg)",
     live: false,
@@ -126,7 +126,7 @@ const STATUS_TONE: Record<
   },
   need_info: {
     label: "Need Info",
-    rgb: "225, 6, 0",
+    rgb: "211, 47, 47",
     ink: "var(--color-red-deep)",
     bg: "var(--color-red-bg)",
     live: false,
@@ -292,7 +292,7 @@ export function TaskDetailView({
         className="pointer-events-none absolute inset-0 -z-10"
         style={{
           background:
-            "radial-gradient(ellipse 38% 60% at 92% 10%, rgba(225, 6, 0, 0.04), transparent 65%)",
+            "radial-gradient(ellipse 38% 60% at 92% 10%, rgba(63, 63, 148, 0.04), transparent 65%)",
         }}
       />
 
@@ -451,7 +451,7 @@ export function TaskDetailView({
                     className="absolute inset-x-0 top-0 h-[3px]"
                     style={{
                       background:
-                        "linear-gradient(90deg, var(--color-altus-red) 0%, var(--color-altus-red-deep) 40%, transparent 100%)",
+                        "linear-gradient(90deg, var(--color-brand) 0%, var(--color-brand-deep) 40%, transparent 100%)",
                       opacity: 0.85,
                     }}
                   />
@@ -972,9 +972,9 @@ function TopHeaderStrip({
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-semibold text-white transition-all hover:-translate-y-px"
             style={{
               background:
-                "linear-gradient(135deg, var(--color-altus-red), var(--color-altus-red-deep))",
+                "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
               boxShadow:
-                "0 6px 18px -8px rgba(225, 6, 0, 0.55), inset 0 1px 0 rgba(255,255,255,0.18)",
+                "0 6px 18px -8px rgba(63, 63, 148, 0.55), inset 0 1px 0 rgba(255,255,255,0.18)",
             }}
           >
             <Pencil size={14} strokeWidth={2.6} />

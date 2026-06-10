@@ -2,18 +2,18 @@ import type { Metadata } from "next";
 import { LegalShell } from "@/components/legal/legal-shell";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy · Altus Corp Dashboard",
+  title: "Privacy Policy · Carbide India WMS",
   description:
-    "How the Altus Corp operations dashboard collects, stores, and shares personal data — written for the staff and contractors who use it daily.",
+    "How the Carbide India operations dashboard collects, stores, and shares personal data — written for the staff and contractors who use it daily.",
 };
 
 export default function PrivacyPage() {
   return (
     <LegalShell
-      eyebrow="Altus Corp · Legal"
+      eyebrow="Carbide India · Legal"
       title="Privacy Policy"
       lastUpdated="2026-05-14"
-      intro="This policy explains what personal data flows through the Altus Corp dashboard, why it's collected, where it sits, and what controls you have. Written plainly so you can read it once and trust what's happening behind the chrome."
+      intro="This policy explains what personal data flows through the Carbide India dashboard, why it's collected, where it sits, and what controls you have. Written plainly so you can read it once and trust what's happening behind the chrome."
     >
       <h2>1 · The short version</h2>
       <p>
@@ -23,18 +23,18 @@ export default function PrivacyPage() {
         We send you email notifications via
         Resend and — if you enable it — Web Push notifications. We do not
         sell, rent, or share your data
-        with anyone outside Altus Corp's narrow list of operational
+        with anyone outside Carbide India's narrow list of operational
         sub-processors. You can request a copy of your data or have it
         deactivated by writing to your administrator.
       </p>
 
       <h2>2 · Who controls the data</h2>
       <p>
-        <strong>Data controller:</strong> Altus Corp — the operational data
+        <strong>Data controller:</strong> Carbide India — the operational data
         (tasks, comments, assignments, statuses) is theirs.
       </p>
       <p>
-        Altus Corp operates the dashboard for internal use only. We do not
+        Carbide India operates the dashboard for internal use only. We do not
         use your data for any purpose other than running the dashboard.
       </p>
 
@@ -72,7 +72,7 @@ export default function PrivacyPage() {
         <li><strong>To let you sign in.</strong> Email + Clerk user ID; nothing more.</li>
         <li><strong>To run the operations workflow.</strong> Tasks, assignments, status transitions, approvals — the dashboard's core purpose.</li>
         <li><strong>To notify the right people at the right time.</strong> The fan-out matrix is locked in code; you don't get notifications for events you aren't a participant in.</li>
-        <li><strong>To audit who did what, when.</strong> Every task event is logged for Altus Corp's internal compliance.</li>
+        <li><strong>To audit who did what, when.</strong> Every task event is logged for Carbide India's internal compliance.</li>
         <li><strong>To deliver on the channels you've consented to.</strong> Email is on by default; Web Push requires your browser permission.</li>
       </ul>
 
@@ -125,9 +125,9 @@ export default function PrivacyPage() {
         Active accounts: indefinitely, while the engagement is live. Deactivated
         accounts: the row is preserved with{" "}
         <code>is_active = false</code> so historical attributions on tasks
-        remain accurate — Altus Corp's audit needs require this. Hard
+        remain accurate — Carbide India's audit needs require this. Hard
         deletion is not exposed in the dashboard; if you want a row purged,
-        that becomes a manual ops runbook with Altus Corp's legal point of
+        that becomes a manual ops runbook with Carbide India's legal point of
         contact.
       </p>
       <p>
@@ -142,7 +142,7 @@ export default function PrivacyPage() {
       </p>
       <ul>
         <li>
-          <strong>The right to know.</strong> Ask your Altus Corp
+          <strong>The right to know.</strong> Ask your Carbide India
           administrator for a copy of the data the dashboard holds about you.
           We support CSV exports on the employees + tasks tables out of the
           box.
@@ -199,7 +199,7 @@ export default function PrivacyPage() {
         Privacy questions:{" "}
         <a href="mailto:heteshvichare927@gmail.com">heteshvichare927@gmail.com</a>.
         Operational data requests (export your row, deactivate your account,
-        correct a record): your Altus Corp administrator.
+        correct a record): your Carbide India administrator.
       </p>
     </LegalShell>
   );

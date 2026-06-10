@@ -11,7 +11,7 @@ import type { TaskStatus, TaskPriority, ApprovalStatus } from "@/db/enums";
  * GET /tasks/export.pdf
  *
  * Admin-only landscape A4 PDF export of the current /tasks view. The
- * renderer is intentionally publication-grade — a thin Altus-red top
+ * renderer is intentionally publication-grade — a thin brand-red top
  * stripe, an editorial masthead, a four-up KPI band, then a tightly
  * typeset table with status pills, priority dots, and an overdue
  * marker rail down the left edge. Pagination is bottom-anchored with
@@ -72,7 +72,7 @@ const COLORS = {
   paper: "#FFFFFF",
   hairline: "#E5E5E5",
   hairlineSoft: "#F4F4F5",
-  brand: "#E10600", // Altus red (matches --color-altus-red in globals.css)
+  brand: "#D32F2F", // Carbide red (the script "Carbide" in the logo)
   brandDeep: "#B00500",
 } as const;
 
@@ -143,8 +143,8 @@ async function renderPdf(
     // breathe without crowding the first table row.
     margin: 40,
     info: {
-      Title: meta.archived ? "Altus Corp — Archived Tasks" : "Altus Corp — Tasks",
-      Author: "Altus Corp Dashboard",
+      Title: meta.archived ? "Carbide India — Archived Tasks" : "Carbide India — Tasks",
+      Author: "Carbide India WMS",
       Subject: "Internal Task Report",
     },
     bufferPages: true, // required for the "Page X of Y" pass at the end
@@ -272,7 +272,7 @@ function drawMasthead(
     .font("Helvetica-Bold")
     .fontSize(20)
     .fillColor(COLORS.ink)
-    .text("ALTUS CORP", left, top, {
+    .text("CARBIDE INDIA", left, top, {
       characterSpacing: 2.2,
       lineBreak: false,
     });
@@ -490,7 +490,7 @@ function drawContinuationHeader(
     .font("Helvetica-Bold")
     .fontSize(8)
     .fillColor(COLORS.ink)
-    .text("ALTUS CORP", left, doc.page.margins.top + 8, {
+    .text("CARBIDE INDIA", left, doc.page.margins.top + 8, {
       characterSpacing: 1.8,
       lineBreak: false,
     });
@@ -514,7 +514,7 @@ function drawFooter(
 ): void {
   const y = doc.page.height - doc.page.margins.bottom + 8;
   // Brand red triangle glyph on the far left — mirrors the dashboard's
-  // header mark and gives the page a recognisable Altus stamp.
+  // header mark and gives the page a recognisable Carbide India stamp.
   doc
     .save()
     .moveTo(left, y + 8)
@@ -527,7 +527,7 @@ function drawFooter(
     .font("Helvetica-Bold")
     .fontSize(6.5)
     .fillColor(COLORS.inkMuted)
-    .text("ALTUS CORP · CONFIDENTIAL", left + 12, y + 2, {
+    .text("CARBIDE INDIA · CONFIDENTIAL", left + 12, y + 2, {
       characterSpacing: 1.4,
       lineBreak: false,
     });

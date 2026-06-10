@@ -9,7 +9,7 @@ import type { TaskStatus, StatusColorToken } from "@/db/enums";
 
 type DayCol = { ymd: string; label: string; sub: string };
 type View = "agenda" | "list";
-const VIEW_STORAGE_KEY = "altus.myday.view.v1";
+const VIEW_STORAGE_KEY = "carbide.myday.view.v1";
 
 /**
  * "My Day" — a personal task workspace with two views over the SAME filtered
@@ -158,7 +158,7 @@ function ViewToggle({ view, onPick }: { view: View; onPick: (v: View) => void })
             aria-selected={active}
             onClick={() => onPick(o.key)}
             className={`inline-flex items-center gap-1.5 px-4 h-9 rounded-pill text-[14px] font-bold transition-all ${
-              active ? "bg-altus-red text-white" : "text-ink-soft hover:text-ink-strong"
+              active ? "bg-brand text-white" : "text-ink-soft hover:text-ink-strong"
             }`}
           >
             <Icon size={15} strokeWidth={2.3} />

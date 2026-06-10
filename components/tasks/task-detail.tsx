@@ -10,7 +10,7 @@ const PRIORITY_PILL: Record<
 > = {
   imp_urgent: {
     label: "Urgent · Important",
-    rgb: "225, 6, 0",
+    rgb: "211, 47, 47",
     toneVar: "var(--color-red-deep)",
   },
   imp_not_urgent: {
@@ -171,7 +171,7 @@ export function TaskDetail({ task }: { task: TaskDetailModel }) {
 }
 
 function DuePill({ dueAt, overdue }: { dueAt: Date; overdue: boolean }) {
-  const rgb = overdue ? "225, 6, 0" : "100, 116, 139";
+  const rgb = overdue ? "211, 47, 47" : "100, 116, 139";
   return (
     <span
       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[14px] tabular-nums"

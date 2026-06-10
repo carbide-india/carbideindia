@@ -1,6 +1,6 @@
 """
 One-shot generator for the PWA / Web Push icons under public/, sourced from
-the Altus Corp logo at the repo root.
+the Carbide India logo at the repo root.
 
 Outputs:
   public/icon-192.png    192x192 — logo on white, maskable-safe (~78% safe zone)
@@ -17,7 +17,7 @@ import os
 
 HERE = os.path.dirname(__file__)
 PROJECT_ROOT = os.path.join(HERE, "..")
-SOURCE_LOGO = os.path.join(PROJECT_ROOT, "Altus_Corp_logo.png")
+SOURCE_LOGO = os.path.join(PROJECT_ROOT, "public", "brand", "logo.png")
 PUBLIC_DIR = os.path.join(PROJECT_ROOT, "public")
 APP_DIR = os.path.join(PROJECT_ROOT, "app")
 

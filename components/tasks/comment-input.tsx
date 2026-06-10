@@ -67,10 +67,10 @@ export function CommentInput({ taskId, me }: Props) {
             className="relative rounded-2xl bg-white transition-all"
             style={{
               border: focused
-                ? "1px solid rgba(225, 6, 0, 0.45)"
+                ? "1px solid rgba(63, 63, 148, 0.45)"
                 : "1px solid var(--color-hairline-strong)",
               boxShadow: focused
-                ? "0 0 0 4px rgba(225, 6, 0, 0.06), 0 4px 14px -8px rgba(15,23,42,0.10)"
+                ? "0 0 0 4px rgba(63, 63, 148, 0.06), 0 4px 14px -8px rgba(15,23,42,0.10)"
                 : "0 1px 2px rgba(15, 23, 42, 0.03)",
             }}
           >
@@ -103,11 +103,11 @@ export function CommentInput({ taskId, me }: Props) {
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[14px] font-semibold text-white transition-all disabled:cursor-not-allowed"
                 style={{
                   background: canSubmit
-                    ? "linear-gradient(135deg, #ff3845, var(--color-altus-red) 45%, var(--color-altus-red-deep))"
+                    ? "linear-gradient(135deg, #7979B4, var(--color-brand) 45%, var(--color-brand-deep))"
                     : "rgba(15, 23, 42, 0.12)",
                   color: canSubmit ? "#ffffff" : "var(--color-ink-subtle)",
                   boxShadow: canSubmit
-                    ? "0 6px 16px -8px rgba(225, 6, 0, 0.55)"
+                    ? "0 6px 16px -8px rgba(63, 63, 148, 0.55)"
                     : "none",
                   letterSpacing: "0.01em",
                 }}

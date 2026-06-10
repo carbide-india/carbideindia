@@ -10,7 +10,7 @@ import { getCurrentEmployee } from "@/lib/auth/current";
 /**
  * Light glassy application header — single row, ~72px tall.
  *
- * Cyan triangle mark + bold "Altus Corp" wordmark on the left, primary
+ * Cyan triangle mark + bold "Carbide India" wordmark on the left, primary
  * nav centered with airy spacing, right cluster carries live indicator +
  * actions + avatar. Frosted-glass white surface with a single hairline
  * bottom border — no decorative washes, no rainbow strip. The nav-pill
@@ -42,12 +42,12 @@ export async function DashboardHeader({
           <NavHistoryButtons />
           <MobileMenuServer isAdmin={isAdmin} />
 
-          {/* LEFT: Altus Corp logo. The image is the brand mark — no
+          {/* LEFT: Carbide India logo. The image is the brand mark — no
               accompanying text wordmark, the logo already includes the name. */}
-          <a href="/" className="flex items-center shrink-0" aria-label="Altus Corp home">
+          <a href="/" className="flex items-center shrink-0" aria-label="Carbide India home">
             <img
-              src="/logo.png"
-              alt="Altus Corp"
+              src="/brand/logo.png"
+              alt="Carbide India"
               className="h-16 w-auto max-md:h-14"
               style={{ display: "block" }}
             />

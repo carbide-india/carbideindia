@@ -1,8 +1,8 @@
 {
-  "name": "altus-corp-dashboard",
+  "name": "carbide-india-wms",
   "version": "0.1.0",
   "private": true,
-  "description": "Editorial-minimal work-management dashboard for Altus Corp",
+  "description": "Work-management system for Carbide India (Yogeshwar Engineering Pvt Ltd)",
   "packageManager": "pnpm@10.33.0",
   "scripts": {
     "dev": "next dev --turbopack",

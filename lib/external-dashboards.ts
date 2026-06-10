@@ -17,7 +17,6 @@ export interface DashboardLink {
 // Kept here (not in env / DB) because Manan asked for exactly these two
 // people; a third address would be a one-line edit + redeploy.
 const SPECIAL_EMAILS = new Set<string>([
-  "altus@vpinnacle.com",
   "pravin@vpinnacle.com",
 ]);
 

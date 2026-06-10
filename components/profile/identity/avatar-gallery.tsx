@@ -103,7 +103,7 @@ export function AvatarGallery({ initialName, currentUrl, onPicked }: Props) {
                   ? "linear-gradient(135deg, rgba(225,6,0,0.12), rgba(168,4,0,0.08))"
                   : "rgba(15, 23, 42, 0.03)",
                 border: `2px solid ${
-                  active ? "#E10600" : "rgba(15, 23, 42, 0.06)"
+                  active ? "#D32F2F" : "rgba(15, 23, 42, 0.06)"
                 }`,
                 cursor: busy ? "wait" : "pointer",
                 overflow: "hidden",
@@ -113,7 +113,7 @@ export function AvatarGallery({ initialName, currentUrl, onPicked }: Props) {
                 if (!active && !busy) {
                   e.currentTarget.style.transform = "translateY(-2px)";
                   e.currentTarget.style.borderColor =
-                    "rgba(225, 6, 0, 0.35)";
+                    "rgba(63, 63, 148, 0.35)";
                 }
               }}
               onMouseLeave={(e) => {
@@ -147,13 +147,13 @@ export function AvatarGallery({ initialName, currentUrl, onPicked }: Props) {
                     width: 22,
                     height: 22,
                     borderRadius: 999,
-                    background: "#E10600",
+                    background: "#D32F2F",
                     color: "white",
                     display: "grid",
                     placeItems: "center",
                     fontSize: 13,
                     fontWeight: 700,
-                    boxShadow: "0 2px 6px rgba(225, 6, 0, 0.45)",
+                    boxShadow: "0 2px 6px rgba(63, 63, 148, 0.45)",
                   }}
                 >
                   ✓

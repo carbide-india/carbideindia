@@ -17,7 +17,7 @@ export function Spinner({
     <span
       role="status"
       aria-label="Loading"
-      className={className || "text-altus-red"}
+      className={className || "text-brand"}
       style={{ display: "inline-flex", lineHeight: 0 }}
     >
       <svg
@@ -67,7 +67,7 @@ export function BufferingState({
       role="status"
       aria-live="polite"
     >
-      <Spinner size={34} strokeWidth={2.75} className="text-altus-red" />
+      <Spinner size={34} strokeWidth={2.75} className="text-brand" />
       <span className="text-[14px] font-semibold text-ink-soft">{label}</span>
     </div>
   );
@@ -87,7 +87,7 @@ export function PageBuffering({ label = "Loading…" }: { label?: string }) {
       className="pointer-events-none fixed inset-0 z-30 flex items-center justify-center"
     >
       <div className="flex flex-col items-center gap-3 rounded-2xl bg-white/65 px-7 py-6 backdrop-blur-[2px] shadow-sm">
-        <Spinner size={34} strokeWidth={2.75} className="text-altus-red" />
+        <Spinner size={34} strokeWidth={2.75} className="text-brand" />
         <span className="text-[14px] font-semibold text-ink-soft">{label}</span>
       </div>
     </div>

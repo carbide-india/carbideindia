@@ -1217,7 +1217,7 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "default": "'#E10600'"
+          "default": "'#D32F2F'"
         },
         "ooo_start": {
           "name": "ooo_start",
@@ -1776,7 +1776,7 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "default": "'Altus Corp'"
+          "default": "'Carbide India'"
         },
         "logo_url": {
           "name": "logo_url",

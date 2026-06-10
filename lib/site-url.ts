@@ -11,7 +11,7 @@
  *
  * Returns a URL with no trailing slash.
  */
-const FALLBACK = "https://altus-corp-dashboard.vercel.app";
+const FALLBACK = "https://wms.carbideindia.com";
 
 export function siteUrl(): string {
   const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim();

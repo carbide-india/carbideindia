@@ -86,7 +86,7 @@ export function PunchCard({
           disabled={pending || outLabel !== null}
           onClick={() => punch("out")}
           className="inline-flex items-center gap-2 rounded-md py-2.5 px-5 text-[14px] font-semibold text-white disabled:opacity-40"
-          style={{ background: "linear-gradient(135deg, #E10600, #A80400)" }}
+          style={{ background: "linear-gradient(135deg, #D32F2F, #B71C1C)" }}
         >
           <LogOut size={16} strokeWidth={2.4} />
           {outLabel ? "Checked out" : "Check out"}

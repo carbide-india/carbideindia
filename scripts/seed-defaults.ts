@@ -17,7 +17,7 @@
 //     task_assigned + overdue_digest; everything else inbox-only) so a fresh
 //     install doesn't fall back to all-channels-for-everything.
 //
-// Deliberately NOT preserved (Altus-era master data): the clients roster
+// Deliberately NOT preserved (legacy-era master data): the clients roster
 // (0022), the subjects roster (0025) and the department list (0023). Those are
 // admin-managed lists the new org builds up itself via the UI.
 //

@@ -117,7 +117,7 @@ export function SettingsTabNotifications({
           type="button"
           onClick={save}
           disabled={pending}
-          className="inline-flex items-center gap-1.5 rounded-md bg-[var(--color-altus-red)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-md bg-[var(--color-brand)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
           {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
           {pending ? "Saving…" : "Save changes"}

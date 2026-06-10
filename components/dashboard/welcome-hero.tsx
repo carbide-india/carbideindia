@@ -11,7 +11,7 @@ export function WelcomeHero() {
         className="rounded-section p-16 max-md:p-8 text-center"
         style={{
           background:
-            "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(225, 6, 0, 0.10), transparent 70%), linear-gradient(180deg, var(--color-surface-card) 0%, var(--color-surface-soft) 100%)",
+            "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(63, 63, 148, 0.10), transparent 70%), linear-gradient(180deg, var(--color-surface-card) 0%, var(--color-surface-soft) 100%)",
           border: "1px solid var(--color-hairline)",
           boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)",
         }}

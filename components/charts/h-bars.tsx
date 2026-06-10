@@ -52,7 +52,7 @@ export function HBars({
               const color =
                 row.color ??
                 (highlightLast && i === data.length - 1
-                  ? "var(--color-altus-red)"
+                  ? "var(--color-brand)"
                   : defaultColor);
               return <Cell key={row.label} fill={color} />;
             })}

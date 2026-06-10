@@ -50,7 +50,7 @@ export function UserMenu({
   const ringStyle: React.CSSProperties = isAdmin
     ? {
         background:
-          "linear-gradient(135deg, var(--color-altus-red), var(--color-rose))",
+          "linear-gradient(135deg, var(--color-brand), var(--color-rose))",
         padding: 2,
         animation: "avatarRingPulse 2.6s ease-out 1",
       }
@@ -75,7 +75,7 @@ export function UserMenu({
             <span
               aria-hidden
               className="absolute -top-0.5 -right-0.5 z-10 h-2.5 w-2.5 rounded-full ring-2 ring-white"
-              style={{ background: "var(--color-altus-red)" }}
+              style={{ background: "var(--color-brand)" }}
             />
           )}
           <span
@@ -128,7 +128,7 @@ export function UserMenu({
                   isAdmin
                     ? {
                         background:
-                          "linear-gradient(135deg, var(--color-altus-red), var(--color-rose))",
+                          "linear-gradient(135deg, var(--color-brand), var(--color-rose))",
                         padding: 2,
                       }
                     : { background: "rgba(15, 23, 42, 0.08)", padding: 1.5 }
@@ -166,8 +166,8 @@ export function UserMenu({
                   className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold tracking-wide text-white"
                   style={{
                     background:
-                      "linear-gradient(135deg, var(--color-altus-red), var(--color-altus-red-deep))",
-                    boxShadow: "0 1px 4px rgba(225, 6, 0, 0.35)",
+                      "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
+                    boxShadow: "0 1px 4px rgba(63, 63, 148, 0.35)",
                   }}
                 >
                   <Crown size={11} strokeWidth={2.4} />
@@ -196,7 +196,7 @@ export function UserMenu({
                 className="mt-1 flex items-center justify-between gap-2.5 px-3.5 py-2.5 text-[15px] rounded-lg cursor-pointer outline-none"
                 style={{
                   background:
-                    "linear-gradient(135deg, rgba(225, 6, 0, 0.06), rgba(244, 63, 94, 0.04))",
+                    "linear-gradient(135deg, rgba(63, 63, 148, 0.06), rgba(244, 63, 94, 0.04))",
                   color: "#0F172A",
                 }}
               >
@@ -204,7 +204,7 @@ export function UserMenu({
                   <Crown
                     size={14}
                     strokeWidth={2.2}
-                    style={{ color: "var(--color-altus-red)" }}
+                    style={{ color: "var(--color-brand)" }}
                   />
                   <span className="font-medium">Admin panel</span>
                 </span>
@@ -297,9 +297,9 @@ export function UserMenu({
 
           <DropdownMenu.Item
             onSelect={handleSignOut}
-            className="flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] rounded-lg cursor-pointer outline-none text-[#A80400] data-[highlighted]:bg-[#FEF2F2]"
+            className="flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] rounded-lg cursor-pointer outline-none text-[#B71C1C] data-[highlighted]:bg-[#FEF2F2]"
           >
-            <LogOut size={14} strokeWidth={2.2} style={{ color: "#A80400" }} />
+            <LogOut size={14} strokeWidth={2.2} style={{ color: "#B71C1C" }} />
             <span className="font-medium">Sign out</span>
           </DropdownMenu.Item>
         </DropdownMenu.Content>
@@ -317,7 +317,7 @@ function MenuCount({ n, tone }: { n: number; tone: "red" | "neutral" }) {
       className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-bold tabular-nums"
       style={
         tone === "red"
-          ? { background: "var(--color-altus-red)", color: "#fff" }
+          ? { background: "var(--color-brand)", color: "#fff" }
           : { background: "#F1F5F9", color: "#475569" }
       }
     >

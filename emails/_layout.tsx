@@ -27,14 +27,14 @@ export function EmailLayout({
               display: "inline-block",
               padding: "4px 10px",
               borderRadius: 999,
-              backgroundColor: "#E10600",
+              backgroundColor: "#D32F2F",
               color: "#ffffff",
               fontSize: 11,
               fontWeight: 600,
               letterSpacing: "0.05em",
-            }}>ALTUS</span>
+            }}>CARBIDE</span>
             <span style={{ color: "#0F172A", fontWeight: 600, fontSize: 16 }}>
-              Altus Corp Dashboard
+              Carbide India WMS
             </span>
           </div>
           <div style={{
@@ -47,7 +47,7 @@ export function EmailLayout({
           </div>
           <Hr style={{ borderColor: "#E2E8F0", margin: "24px 0 16px" }} />
           <Text style={{ fontSize: 12, color: "#64748B", textAlign: "center", margin: 0 }}>
-            Altus Corp Dashboard · Mumbai
+            Carbide India WMS · Nashik
           </Text>
           <Text style={{ fontSize: 11, color: "#94A3B8", textAlign: "center", margin: "4px 0 0" }}>
             Operational notifications. To stop receiving them, deactivate your account.

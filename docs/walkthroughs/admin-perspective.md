@@ -1,4 +1,4 @@
-# Admin perspective — running Altus Corp Dashboard
+# Admin perspective — running Carbide India WMS
 
 This walkthrough is for *you* — the person who owns the system. As an admin you get the full keyboard: inviting people, watching the team's day unfold on the dashboard, and stepping into any task to approve, reassign, cancel or transfer it. Below is every screen you'll see on a demo, in the order you meet them.
 
@@ -8,11 +8,11 @@ This walkthrough is for *you* — the person who owns the system. As an admin yo
 
 Your account is set up the same way everyone else's is — another admin invites you, your inbox gets the email, you set a password. The only difference is the **Admin** flag on your `employees` row, which unlocks an extra menu and side panel.
 
-**The `/login` screen.** Visit the root URL with no session; the `requireUser()` guard in `app/(app)/layout.tsx` bounces you to `/login?next=/`. A centred white card on a soft off-white canvas: a brand **ALTUS** pill next to *Altus Corp Dashboard* in serif, the heading **"Sign in"**, the line *"Use the email your admin set up for you,"* two fields — **Email** and **Password** — a red gradient **"Sign in"** button, and a "Forgot password?" link. On success the form calls Firebase Auth, POSTs the ID token to `/api/auth/session` to swap it for a server-side session cookie, and redirects you to `/`.
+**The `/login` screen.** Visit the root URL with no session; the `requireUser()` guard in `app/(app)/layout.tsx` bounces you to `/login?next=/`. A centred white card on a soft off-white canvas: a brand **CARBIDE** pill next to *Carbide India WMS* in serif, the heading **"Sign in"**, the line *"Use the email your admin set up for you,"* two fields — **Email** and **Password** — a red gradient **"Sign in"** button, and a "Forgot password?" link. On success the form calls Firebase Auth, POSTs the ID token to `/api/auth/session` to swap it for a server-side session cookie, and redirects you to `/`.
 
 **Access control on `/admin`.** The admin route group has its own server-side `requireAdmin()` guard. If a signed-in non-admin visits `/admin` (or any subroute), the guard throws "Forbidden" and `app/(admin)/admin/error.tsx` catches it to render a styled **403** page — an "Admin only" headline on the Light Vibrant canvas with two CTAs (**Go to dashboard** and **Try again**). The unsigned-in case still falls through to `/login?next=...` as before. The matching `app/not-found.tsx` and `app/error.tsx` provide the same treatment for 404 and 500.
 
-**The Dashboard.** The dark-navy header has two soft radial gradients (red bottom-left, purple top-right) and a rainbow gradient strip across the bottom edge. Left: a brand caps line *"Altus Corp · Operations Dashboard"*, the big serif italic *"Altus Corp"* headline (*India* in a brand gradient), and a shimmering "Altus Corp" pill. Centre: three nav pills — **Dashboard**, **Tasks** (live count), **Archived** (live count). There's no "Admin" pill; admin lives in the user menu. Right: the red **"+ New task"** button, your avatar, a green/amber **Live** dot for the Supabase Realtime channel, and *"Updated X seconds ago"*.
+**The Dashboard.** The dark-navy header has two soft radial gradients (red bottom-left, purple top-right) and a rainbow gradient strip across the bottom edge. Left: a brand caps line *"Carbide India · Operations Dashboard"*, the big serif italic *"Carbide India"* headline (*India* in a brand gradient), and a shimmering "Carbide India" pill. Centre: three nav pills — **Dashboard**, **Tasks** (live count), **Archived** (live count). There's no "Admin" pill; admin lives in the user menu. Right: the red **"+ New task"** button, your avatar, a green/amber **Live** dot for the Supabase Realtime channel, and *"Updated X seconds ago"*.
 
 As an admin you also see a dedicated red **Admin** pill in the header (`components/header/admin-pill.tsx`) that jumps straight to `/admin` — the Admin entry in the avatar dropdown is the same target, but the pill makes it one click.
 
@@ -32,7 +32,7 @@ With no employees and no tasks, the six sections collapse into one **"Welcome."*
 
 ## B. Invite a new employee
 
-The Admin section has its own layout: a dark sidebar with the Altus Corp brand block, an identity chip with your avatar, and six nav links — **Overview**, **Activity**, **Notifications**, **Employees**, **Departments**, **Settings** — followed by **"← Back to app"** and **Sign out**.
+The Admin section has its own layout: a dark sidebar with the Carbide India brand block, an identity chip with your avatar, and six nav links — **Overview**, **Activity**, **Notifications**, **Employees**, **Departments**, **Settings** — followed by **"← Back to app"** and **Sign out**.
 
 **`/admin` — Overview.** A serif *"The shape of the team today."* headline with four KPI tiles (*Active employees*, *Pending invites*, *Open tasks*, *Overdue* — computed by `getAdminOverview()`; Overdue counts non-archived pending-status tasks past their `due_at`), a **Quick actions** strip (*Invite employee*, *New task*, *View activity*, *Settings*), and a **Recent activity** preview that streams from the unified UNION query.
 
@@ -42,7 +42,7 @@ The Admin section has its own layout: a dark sidebar with the Altus Corp brand b
 
 Press the red **"Send invite"** button. The `inviteEmployee` Server Action (`app/(admin)/admin/employees/actions.ts`) does four things: creates the Firebase user (no password yet); sets a `role: "authenticated"` custom claim for Supabase third-party auth; inserts the `employees` row with `invitedAt = now()` and `joinedAt = null`; generates a Firebase password-reset link pointed at `/welcome`, emailed via Resend. DB-insert failure rolls back the Firebase user; email failure keeps the row, and `resendInvite` handles retries.
 
-**What the invitee sees.** A "Altus Corp Dashboard" email with one red **"Set password and sign in"** button. It drops them at `/set-password` for a password (min 8 chars, confirmed). On save they auto-redirect to `/welcome`, which stamps `joinedAt` and shows a one-time card before forwarding to `/`. Future sign-ins skip the welcome card.
+**What the invitee sees.** A "Carbide India WMS" email with one red **"Set password and sign in"** button. It drops them at `/set-password` for a password (min 8 chars, confirmed). On save they auto-redirect to `/welcome`, which stamps `joinedAt` and shows a one-time card before forwarding to `/`. Future sign-ins skip the welcome card.
 
 **Row actions on the employees table.** The kebab on each row opens a small menu. Which entries are visible depends on that employee's state:
 

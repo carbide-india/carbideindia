@@ -11,7 +11,7 @@ import { orgSettings, type OrgSettings } from "@/db/schema";
  */
 const DEFAULTS: OrgSettings = {
   id: 1,
-  companyName: "Altus Corp",
+  companyName: "Carbide India",
   logoUrl: null,
   digestHourIst: 9,
   idleTimeoutMinutes: 10,

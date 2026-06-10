@@ -17,7 +17,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         className="pointer-events-none absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] rounded-full"
         style={{
           background:
-            "radial-gradient(closest-side, rgba(225, 6, 0, 0.22), rgba(225, 6, 0, 0) 70%)",
+            "radial-gradient(closest-side, rgba(63, 63, 148, 0.22), rgba(63, 63, 148, 0) 70%)",
           filter: "blur(8px)",
           animation: "auraDriftA 18s ease-in-out infinite",
         }}
@@ -75,7 +75,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         className="absolute top-0 left-0 right-0 h-[3px]"
         style={{
           background:
-            "linear-gradient(90deg, var(--color-altus-red) 0%, var(--color-rose) 20%, var(--color-purple) 40%, var(--color-blue) 60%, var(--color-green) 80%, var(--color-amber) 100%, var(--color-altus-red) 120%)",
+            "linear-gradient(90deg, var(--color-brand) 0%, var(--color-rose) 20%, var(--color-purple) 40%, var(--color-blue) 60%, var(--color-green) 80%, var(--color-amber) 100%, var(--color-brand) 120%)",
           backgroundSize: "200% 100%",
           animation: "accentStripFlow 14s linear infinite",
         }}
@@ -100,7 +100,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           color: "rgba(15, 23, 42, 0.32)",
         }}
       >
-        Altus Corp
+        Carbide India
       </div>
     </div>
   );

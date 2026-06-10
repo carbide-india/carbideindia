@@ -23,7 +23,8 @@ function applyAppearanceLive(patch: { density?: Density; accent?: string }) {
 type Density = "cozy" | "compact";
 
 const ACCENT_PRESETS = [
-  { label: "Altus red", value: "#E10600" },
+  { label: "Carbide indigo", value: "#3F3F94" },
+  { label: "Carbide red", value: "#D32F2F" },
   { label: "Forest", value: "#16A34A" },
   { label: "Royal", value: "#2563EB" },
   { label: "Sunset", value: "#D97706" },
@@ -206,7 +207,7 @@ export function AppearanceControls({ initial }: Props) {
             id="accent-custom"
             type="text"
             value={accent}
-            placeholder="#E10600"
+            placeholder="#3F3F94"
             maxLength={7}
             onChange={(e) => setAccent(e.target.value)}
             onBlur={() => {
@@ -229,7 +230,7 @@ export function AppearanceControls({ initial }: Props) {
           />
           <input
             type="color"
-            value={/^#[0-9a-fA-F]{6}$/.test(accent) ? accent : "#E10600"}
+            value={/^#[0-9a-fA-F]{6}$/.test(accent) ? accent : "#3F3F94"}
             onChange={(e) => {
               setAccent(e.target.value);
               save({ accent: e.target.value });

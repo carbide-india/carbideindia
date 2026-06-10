@@ -118,7 +118,7 @@ export function ScheduleSection({ value, onChange }: Props) {
           checked={value.allDay}
           onChange={(e) => setAllDay(e.target.checked)}
           className="size-4"
-          style={{ accentColor: "rgb(168, 4, 0)" }}
+          style={{ accentColor: "rgb(47, 47, 111)" }}
         />
         All day
       </label>

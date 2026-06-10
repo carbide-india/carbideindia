@@ -82,7 +82,7 @@ export function AdminSidebar({ adminName, adminEmail, avatarUrl }: Props) {
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 80% 50% at 0% 0%, rgba(225, 6, 0, 0.22), transparent 70%), radial-gradient(ellipse 70% 60% at 100% 100%, rgba(168, 85, 247, 0.16), transparent 70%)",
+            "radial-gradient(ellipse 80% 50% at 0% 0%, rgba(63, 63, 148, 0.22), transparent 70%), radial-gradient(ellipse 70% 60% at 100% 100%, rgba(168, 85, 247, 0.16), transparent 70%)",
         }}
       />
 
@@ -101,23 +101,23 @@ export function AdminSidebar({ adminName, adminEmail, avatarUrl }: Props) {
             }}
           >
             <img
-              src="/logo.png"
-              alt="Altus Corp"
+              src="/brand/logo.png"
+              alt="Carbide India"
               style={{ height: 48, width: "auto", display: "block" }}
             />
             <span
               className="inline-flex items-center text-[10px] font-bold uppercase text-white px-2 py-0.5 rounded-full"
               style={{
                 background:
-                  "linear-gradient(135deg, var(--color-altus-red), var(--color-altus-red-deep))",
-                boxShadow: "0 2px 8px rgba(225, 6, 0, 0.35)",
+                  "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
+                boxShadow: "0 2px 8px rgba(63, 63, 148, 0.35)",
                 letterSpacing: "0.08em",
               }}
             >
               Admin
             </span>
           </div>
-          <p className="text-[12.5px] mt-3 text-white/60">altuscorp.com</p>
+          <p className="text-[12.5px] mt-3 text-white/60">carbideindia.com</p>
         </div>
 
         {/* Avatar + identity chip */}
@@ -133,7 +133,7 @@ export function AdminSidebar({ adminName, adminEmail, avatarUrl }: Props) {
               className="inline-flex rounded-full shrink-0"
               style={{
                 background:
-                  "linear-gradient(135deg, var(--color-altus-red), var(--color-rose))",
+                  "linear-gradient(135deg, var(--color-brand), var(--color-rose))",
                 padding: 1.5,
               }}
             >
@@ -182,10 +182,10 @@ export function AdminSidebar({ adminName, adminEmail, avatarUrl }: Props) {
                   active
                     ? {
                         background:
-                          "linear-gradient(135deg, var(--color-altus-red), var(--color-altus-red-deep))",
+                          "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
                         color: "#ffffff",
                         boxShadow:
-                          "0 8px 22px -10px rgba(225, 6, 0, 0.55), inset 0 1px 0 rgba(255,255,255,0.14)",
+                          "0 8px 22px -10px rgba(63, 63, 148, 0.55), inset 0 1px 0 rgba(255,255,255,0.14)",
                       }
                     : {
                         color: "rgba(255, 255, 255, 0.80)",

@@ -144,7 +144,7 @@ function ClientRow({
               type="button"
               aria-label="Client actions"
               disabled={pending}
-              className="inline-flex items-center justify-center size-9 rounded-lg border border-hairline text-ink-soft hover:border-hairline-strong hover:text-ink-strong transition-colors disabled:opacity-50 data-[state=open]:border-altus-red data-[state=open]:text-altus-red"
+              className="inline-flex items-center justify-center size-9 rounded-lg border border-hairline text-ink-soft hover:border-hairline-strong hover:text-ink-strong transition-colors disabled:opacity-50 data-[state=open]:border-brand data-[state=open]:text-brand"
             >
               <MoreHorizontal size={18} strokeWidth={2.2} />
             </button>
@@ -260,7 +260,7 @@ function EditClientDialog({
             {error && (
               <div
                 role="alert"
-                className="rounded-md border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-[14px] text-[#A80400]"
+                className="rounded-md border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-[14px] text-[#B71C1C]"
               >
                 {error}
               </div>
@@ -279,7 +279,7 @@ function EditClientDialog({
                 type="submit"
                 disabled={pending}
                 className="rounded-md py-2.5 px-5 text-[14px] font-medium text-white disabled:opacity-50"
-                style={{ background: "linear-gradient(135deg, #E10600, #A80400)" }}
+                style={{ background: "linear-gradient(135deg, #D32F2F, #B71C1C)" }}
               >
                 {pending ? "Saving…" : "Save"}
               </button>
@@ -327,7 +327,7 @@ function DeleteClientDialog({
             {client && client.taskCount > 0 && (
               <>
                 {" "}
-                <span className="text-[#A80400] font-medium">
+                <span className="text-[#B71C1C] font-medium">
                   {client.taskCount} {client.taskCount === 1 ? "task is" : "tasks are"} filed
                   under this name
                 </span>{" "}
@@ -350,7 +350,7 @@ function DeleteClientDialog({
               onClick={confirmDelete}
               disabled={pending}
               className="inline-flex items-center gap-2 rounded-md py-2.5 px-5 text-[14px] font-semibold text-white disabled:opacity-50"
-              style={{ background: "linear-gradient(135deg, #E10600, #A80400)" }}
+              style={{ background: "linear-gradient(135deg, #D32F2F, #B71C1C)" }}
             >
               <Trash2 size={15} strokeWidth={2.4} />
               {pending ? "Deleting…" : "Delete client"}

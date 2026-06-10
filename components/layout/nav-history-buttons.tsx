@@ -21,7 +21,7 @@ export function NavHistoryButtons() {
     justifyContent: "center",
     borderRadius: 9999,
     background: "var(--vp-cyan-tint)",
-    border: "1.5px solid rgba(225, 6, 0, 0.28)",
+    border: "1.5px solid rgba(63, 63, 148, 0.28)",
     color: "rgb(var(--vp-cyan-deep))",
     cursor: "pointer",
     transition:
@@ -31,16 +31,16 @@ export function NavHistoryButtons() {
 
   const onEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
     const el = e.currentTarget;
-    el.style.background = "rgba(225, 6, 0, 0.16)";
+    el.style.background = "rgba(63, 63, 148, 0.16)";
     el.style.borderColor = "rgb(var(--vp-cyan))";
     el.style.transform = "translateY(-1px)";
-    el.style.boxShadow = "0 4px 12px rgba(225, 6, 0, 0.22)";
+    el.style.boxShadow = "0 4px 12px rgba(63, 63, 148, 0.22)";
   };
 
   const onLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
     const el = e.currentTarget;
     el.style.background = "var(--vp-cyan-tint)";
-    el.style.borderColor = "rgba(225, 6, 0, 0.28)";
+    el.style.borderColor = "rgba(63, 63, 148, 0.28)";
     el.style.transform = "";
     el.style.boxShadow = "";
   };

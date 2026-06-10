@@ -91,7 +91,7 @@ export function BulkActionBar({
       aria-label="Bulk actions"
     >
       <span className="inline-flex items-center gap-2 text-[14px] font-bold text-ink-strong">
-        {pending && <Loader2 size={14} className="animate-spin text-altus-red" />}
+        {pending && <Loader2 size={14} className="animate-spin text-brand" />}
         {count} selected
       </span>
 
@@ -192,7 +192,7 @@ export function BulkActionBar({
                 run("Deleted", () => bulkDelete(selectedIds));
               }
             }}
-            className="inline-flex items-center gap-1.5 rounded-pill border border-hairline-strong px-3 py-1.5 text-[13px] font-bold text-altus-red hover:bg-altus-red/8 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-pill border border-hairline-strong px-3 py-1.5 text-[13px] font-bold text-brand hover:bg-brand/8 transition-colors disabled:opacity-50"
           >
             <Trash2 size={14} strokeWidth={2.2} />
             Delete
@@ -213,4 +213,4 @@ export function BulkActionBar({
 }
 
 const chipBtn =
-  "inline-flex items-center gap-1.5 rounded-pill border border-hairline-strong px-3 py-1.5 text-[13px] font-bold text-ink-soft hover:border-altus-red hover:text-altus-red transition-colors disabled:opacity-50";
+  "inline-flex items-center gap-1.5 rounded-pill border border-hairline-strong px-3 py-1.5 text-[13px] font-bold text-ink-soft hover:border-brand hover:text-brand transition-colors disabled:opacity-50";

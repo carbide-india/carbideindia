@@ -1,4 +1,4 @@
-# Altus Corp Dashboard — walkthroughs
+# Carbide India WMS — walkthroughs
 
 This folder is the entry point for anyone seeing the dashboard for the first time. Three documents, in reading order:
 
@@ -10,7 +10,7 @@ This folder is the entry point for anyone seeing the dashboard for the first tim
 
 ## The shape of the system
 
-Altus Corp Dashboard is a "Light Vibrant" work-management app for the Altus Corp team. It replaces a single-file HTML dashboard. The current build covers:
+Carbide India WMS is a "Light Vibrant" work-management app for the Carbide India team. It replaces a single-file HTML dashboard. The current build covers:
 
 - **Auth foundation (M2.0)** — Firebase email/password via next-firebase-auth-edge, admin-only employee invite + reset-password flows, Supabase RLS gating reads.
 - **Task CRUD (M2.1)** — `/tasks/new`, `/tasks/[id]`, edit-in-place with optimistic locking, full audit-event provenance.
@@ -26,7 +26,7 @@ Altus Corp Dashboard is a "Light Vibrant" work-management app for the Altus Corp
 - **M5.3** — Sentry, structured logging, performance pass (next milestone, not started).
 - **Operational** — set up custom domain for the production deployment; invite emails for the imported employees. See CLAUDE.md for the running list.
 
-The app is deployed on Vercel at the default `altus-corp-dashboard.vercel.app` URL (custom domain pending) against prod Supabase, seeded with 14 imported employees + 240 imported tasks.
+The app is deployed on Vercel at the default `carbide-india-wms.vercel.app` URL (custom domain pending) against prod Supabase, seeded with 14 imported employees + 240 imported tasks.
 
 ## Demo flow (15 minutes)
 

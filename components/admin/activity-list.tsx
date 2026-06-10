@@ -241,7 +241,7 @@ function TaskRowBody({
         <span className="text-ink-subtle">·</span>
         <Link
           href={`/tasks/${row.taskId}` as Route}
-          className="text-[15px] text-ink-soft hover:text-altus-red transition-colors max-w-[40ch] truncate"
+          className="text-[15px] text-ink-soft hover:text-brand transition-colors max-w-[40ch] truncate"
           style={{ color: "var(--color-ink-soft)" }}
           title={subject}
         >

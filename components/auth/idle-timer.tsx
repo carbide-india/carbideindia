@@ -81,7 +81,7 @@ export function IdleTimer({ timeoutMs, warningMs = 30_000, onTimeout }: Props) {
           lastResetRef.current = Date.now();
           schedule();
         }}
-        className="px-3 py-2 rounded-md bg-altus-red text-white text-[13px] font-bold whitespace-nowrap"
+        className="px-3 py-2 rounded-md bg-brand text-white text-[13px] font-bold whitespace-nowrap"
       >
         Stay signed in
       </button>

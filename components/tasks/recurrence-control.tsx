@@ -201,7 +201,7 @@ export function RecurrenceControl({ anchor, recurrence, recurrenceRule, onChange
             <button
               type="button"
               onClick={() => setOpen(true)}
-              className="underline underline-offset-2 hover:text-altus-red"
+              className="underline underline-offset-2 hover:text-brand"
             >
               Edit
             </button>
@@ -329,7 +329,7 @@ function CustomDialog({
                       aria-label={d.full}
                       className="h-9 w-9 rounded-full text-[13px] font-bold transition-colors"
                       style={{
-                        background: on ? "var(--color-altus-red)" : "var(--color-surface-soft)",
+                        background: on ? "var(--color-brand)" : "var(--color-surface-soft)",
                         color: on ? "#fff" : "var(--color-ink-soft)",
                         border: "1px solid var(--color-hairline)",
                       }}
@@ -367,7 +367,7 @@ function CustomDialog({
                   name="ends"
                   checked={draft.endsType === "never"}
                   onChange={() => patch({ endsType: "never" })}
-                  style={{ accentColor: "var(--color-altus-red)" }}
+                  style={{ accentColor: "var(--color-brand)" }}
                 />
                 Never
               </label>
@@ -382,7 +382,7 @@ function CustomDialog({
                       until: draft.until ?? ymd(new Date(anchor.getTime() + 90 * 86400000)),
                     })
                   }
-                  style={{ accentColor: "var(--color-altus-red)" }}
+                  style={{ accentColor: "var(--color-brand)" }}
                 />
                 On
                 <input
@@ -400,7 +400,7 @@ function CustomDialog({
                   name="ends"
                   checked={draft.endsType === "count"}
                   onChange={() => patch({ endsType: "count", count: draft.count ?? 13 })}
-                  style={{ accentColor: "var(--color-altus-red)" }}
+                  style={{ accentColor: "var(--color-brand)" }}
                 />
                 After
                 <input
@@ -432,7 +432,7 @@ function CustomDialog({
                 onOpenChange(false);
               }}
               className="rounded-md py-2.5 px-5 text-[14px] font-semibold text-white"
-              style={{ background: "linear-gradient(135deg, #E10600, #A80400)" }}
+              style={{ background: "linear-gradient(135deg, #D32F2F, #B71C1C)" }}
             >
               Done
             </button>

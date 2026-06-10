@@ -6,7 +6,7 @@
  * Read-only. Does NOT create users, send emails, or write to the DB. Just
  * checks env-var presence + shape. Prints a per-section checklist and exits
  * non-zero if anything is missing or still on a placeholder value from
- * .env.local.example.
+ * .env.example.
  */
 
 type Check = { ok: boolean; label: string; detail?: string };
@@ -25,7 +25,7 @@ function isPlaceholder(value: string): boolean {
 
 function check(label: string, value: string | undefined, validate?: (v: string) => string | null): Check {
   if (!value) return { ok: false, label, detail: "missing" };
-  if (isPlaceholder(value)) return { ok: false, label, detail: "still on .env.local.example placeholder" };
+  if (isPlaceholder(value)) return { ok: false, label, detail: "still on .env.example placeholder" };
   if (validate) {
     const err = validate(value);
     if (err) return { ok: false, label, detail: err };
@@ -79,7 +79,7 @@ function optional(
       continue;
     }
     if (isPlaceholder(value)) {
-      console.log(`  ▲ ${name} — still on .env.local.example placeholder`);
+      console.log(`  ▲ ${name} — still on .env.example placeholder`);
       warn++;
       continue;
     }

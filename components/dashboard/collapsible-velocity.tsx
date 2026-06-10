@@ -45,9 +45,9 @@ export function CollapsibleVelocity({ data }: { data: VelocityPoint[] }) {
             className="inline-flex size-11 shrink-0 items-center justify-center rounded-full transition-all"
             style={{
               background: open
-                ? "var(--color-altus-red)"
-                : "color-mix(in srgb, var(--color-altus-red) 12%, transparent)",
-              color: open ? "#fff" : "var(--color-altus-red)",
+                ? "var(--color-brand)"
+                : "color-mix(in srgb, var(--color-brand) 12%, transparent)",
+              color: open ? "#fff" : "var(--color-brand)",
             }}
           >
             {open ? (

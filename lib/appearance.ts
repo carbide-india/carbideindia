@@ -3,15 +3,15 @@
  *
  * The user's accent preference is stored as a 6-digit hex. To make it
  * actually re-tint the UI, we map it onto the brand accent CSS variables
- * the whole app already consumes (`--color-altus-red*` and the `--vp-cyan*`
+ * the whole app already consumes (`--color-brand*` and the `--vp-cyan*`
  * RGB-triplet family used by nav pills, hover rails, focus glows). Setting
  * these on <html> (server-rendered) cascades everywhere.
  *
- * For the default Altus red (#E10600) this reproduces the exact values
- * hard-coded in globals.css, so default users see no change.
+ * For the default Carbide indigo (#3F3F94) this reproduces the exact
+ * values hard-coded in globals.css, so default users see no change.
  */
 
-const DEEP_FACTOR = 0.747; // 225*0.747 ≈ 168  → #E10600 deep ≈ #A80400
+const DEEP_FACTOR = 0.747; // 63*0.747 ≈ 47, 148*0.747 ≈ 111 → #3F3F94 deep ≈ #2F2F6F
 
 function clampByte(n: number): number {
   return Math.max(0, Math.min(255, Math.round(n)));
@@ -45,8 +45,8 @@ export function accentVars(hex: string): Record<string, string> {
   const normalized = rgbToHex(r, g, b);
   return {
     "--user-accent": normalized,
-    "--color-altus-red": normalized,
-    "--color-altus-red-deep": rgbToHex(dr, dg, db),
+    "--color-brand": normalized,
+    "--color-brand-deep": rgbToHex(dr, dg, db),
     "--vp-cyan": `${r} ${g} ${b}`,
     "--vp-cyan-deep": `${dr} ${dg} ${db}`,
     "--vp-cyan-glow": `rgba(${r}, ${g}, ${b}, 0.25)`,
@@ -54,8 +54,8 @@ export function accentVars(hex: string): Record<string, string> {
   };
 }
 
-/** The default Altus-red accent, used when the user hasn't set one. */
-export const DEFAULT_ACCENT = "#E10600";
+/** The default Carbide-indigo accent, used when the user hasn't set one. */
+export const DEFAULT_ACCENT = "#3F3F94";
 
 /** Normalises a stored value to a valid accent hex (falls back to default). */
 export function resolveAccent(value: string | null | undefined): string {

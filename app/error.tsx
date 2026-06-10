@@ -20,7 +20,7 @@ export default function ErrorBoundary({
 
   const washRgba = isForbidden
     ? "rgba(245, 158, 11, 0.10)" // amber wash for 403
-    : "rgba(225, 6, 0, 0.10)"; // altus red wash for generic
+    : "rgba(211, 47, 47, 0.10)"; // red error wash for generic
 
   return (
     <main className="min-h-screen flex items-center justify-center px-8 py-24">
@@ -71,8 +71,8 @@ export default function ErrorBoundary({
             className="text-cta text-white px-6 py-3 rounded-chip inline-flex items-center gap-2"
             style={{
               background:
-                "linear-gradient(135deg, var(--color-altus-red), var(--color-altus-red-deep))",
-              boxShadow: "0 4px 12px rgba(225, 6, 0, 0.25)",
+                "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
+              boxShadow: "0 4px 12px rgba(63, 63, 148, 0.25)",
             }}
           >
             Go to dashboard →

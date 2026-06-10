@@ -446,8 +446,8 @@ export function NewTaskForm({ employees, clients, subjects, projectNodes = [], o
           className="text-cta text-white px-8 py-4 rounded-chip transition-transform disabled:opacity-50"
           style={{
             background:
-              "linear-gradient(135deg, rgb(225, 6, 0), rgb(168, 4, 0))",
-            boxShadow: "0 6px 16px rgba(225, 6, 0, 0.34)",
+              "linear-gradient(135deg, rgb(63, 63, 148), rgb(47, 47, 111))",
+            boxShadow: "0 6px 16px rgba(63, 63, 148, 0.34)",
             fontWeight: 800,
             fontSize: 18,
             letterSpacing: "0.005em",
@@ -456,12 +456,12 @@ export function NewTaskForm({ employees, clients, subjects, projectNodes = [], o
             if (pending) return;
             e.currentTarget.style.transform = "translateY(-1px)";
             e.currentTarget.style.boxShadow =
-              "0 10px 24px rgba(225, 6, 0, 0.45)";
+              "0 10px 24px rgba(63, 63, 148, 0.45)";
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.transform = "translateY(0)";
             e.currentTarget.style.boxShadow =
-              "0 6px 16px rgba(225, 6, 0, 0.34)";
+              "0 6px 16px rgba(63, 63, 148, 0.34)";
           }}
         >
           {pending ? "Creating…" : "Create Task"}
@@ -823,7 +823,7 @@ function Field({
       >
         {label}
         {required && (
-          <span style={{ color: "rgb(168, 4, 0)" }}> *</span>
+          <span style={{ color: "#D32F2F" }}> *</span>
         )}
       </label>
       {children}
@@ -1084,10 +1084,10 @@ function LinksSection({
           style={{
             width: 52,
             background:
-              "linear-gradient(135deg, rgb(225, 6, 0), rgb(168, 4, 0))",
+              "linear-gradient(135deg, rgb(63, 63, 148), rgb(47, 47, 111))",
             color: "#ffffff",
             border: "none",
-            boxShadow: "0 4px 12px rgba(225, 6, 0, 0.32)",
+            boxShadow: "0 4px 12px rgba(63, 63, 148, 0.32)",
           }}
         >
           <Plus size={22} strokeWidth={2.4} />

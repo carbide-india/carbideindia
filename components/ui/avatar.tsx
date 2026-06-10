@@ -69,7 +69,7 @@ export function Avatar({
 function gradientFor(name: string): string {
   // 8 hand-picked gradients tuned to the Light Vibrant palette.
   const palette = [
-    "linear-gradient(135deg, #E10600, #A80400)",     // altus red
+    "linear-gradient(135deg, #D32F2F, #B71C1C)",     // carbide red
     "linear-gradient(135deg, #f43f5e, #be123c)",     // rose
     "linear-gradient(135deg, #a855f7, #7c3aed)",     // purple
     "linear-gradient(135deg, #3b82f6, #1d4ed8)",     // blue

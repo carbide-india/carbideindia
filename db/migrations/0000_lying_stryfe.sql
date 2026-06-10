@@ -124,7 +124,7 @@ CREATE TABLE "employees" (
 	"digest_frequency" text DEFAULT 'daily' NOT NULL,
 	"theme" text DEFAULT 'system' NOT NULL,
 	"density" text DEFAULT 'cozy' NOT NULL,
-	"accent" text DEFAULT '#E10600' NOT NULL,
+	"accent" text DEFAULT '#D32F2F' NOT NULL,
 	"ooo_start" date,
 	"ooo_end" date,
 	"ooo_delegate_id" uuid,
@@ -175,7 +175,7 @@ CREATE TABLE "notifications" (
 --> statement-breakpoint
 CREATE TABLE "org_settings" (
 	"id" integer PRIMARY KEY DEFAULT 1 NOT NULL,
-	"company_name" text DEFAULT 'Altus Corp' NOT NULL,
+	"company_name" text DEFAULT 'Carbide India' NOT NULL,
 	"logo_url" text,
 	"digest_hour_ist" integer DEFAULT 9 NOT NULL,
 	"idle_timeout_minutes" integer DEFAULT 10 NOT NULL,

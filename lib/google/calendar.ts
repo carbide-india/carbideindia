@@ -182,7 +182,7 @@ export function taskToEvent(task: CalendarTask): Record<string, unknown> {
     description: meta,
     start,
     end,
-    source: { title: "Altus WMS", url: `${APP_URL}/tasks/${task.id}` },
+    source: { title: "Carbide India WMS", url: `${APP_URL}/tasks/${task.id}` },
   };
   if (task.recurrenceRule) {
     body.recurrence = toGoogleRecurrence(task.recurrenceRule, !timed);

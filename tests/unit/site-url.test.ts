@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { siteUrl } from "@/lib/site-url";
 
-const FALLBACK = "https://altus-corp-dashboard.vercel.app";
+const FALLBACK = "https://wms.carbideindia.com";
 const ORIGINAL = process.env.NEXT_PUBLIC_SITE_URL;
 
 afterEach(() => {

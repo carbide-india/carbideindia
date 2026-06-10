@@ -153,8 +153,8 @@ export function TaskListPage({
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-[14.5px] font-bold text-white transition-all hover:brightness-110 active:scale-[0.98]"
             style={{
               background:
-                "linear-gradient(135deg, var(--color-altus-red), var(--color-altus-red-deep))",
-              boxShadow: "0 6px 18px -6px rgba(225, 6, 0, 0.55)",
+                "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
+              boxShadow: "0 6px 18px -6px rgba(63, 63, 148, 0.55)",
             }}
           >
             <LayoutGrid size={16} strokeWidth={2.4} />
@@ -183,7 +183,7 @@ export function TaskListPage({
               key={spec.key}
               href={cardHref(filterKey)}
               aria-label={`View ${spec.label.toLowerCase()} tasks`}
-              className="block rounded-section focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-altus-red/40"
+              className="block rounded-section focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
             >
               <StatCard spec={spec} value={counts[spec.key]} active={cardActive(filterKey)} />
             </Link>

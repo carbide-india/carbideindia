@@ -20,7 +20,7 @@ export function RegisterSW() {
       .register("/sw.js")
       .catch((err) => {
         // Logging only — failure to register the SW must not crash the app.
-        console.error("[Altus Corp] SW register failed", err);
+        console.error("[Carbide India] SW register failed", err);
       });
   }, []);
   return null;

@@ -302,7 +302,7 @@ export function ActionRail({
  * doer", "you're the initiator", or "admin override".  Sits above the
  * action cards so the user understands *why* certain affordances appear.
  *
- * Uses the same blue/purple/altus-red palette as the /tasks "My role"
+ * Uses the same blue/purple/brand palette as the /tasks "My role"
  * column for cross-page consistency.
  */
 function RoleBanner({
@@ -315,7 +315,7 @@ function RoleBanner({
   if (!role && !adminOverride) return null;
 
   const lines: Array<{
-    tone: "blue" | "purple" | "altus";
+    tone: "blue" | "purple" | "brand";
     icon: React.ReactNode;
     label: string;
     detail: string;
@@ -339,7 +339,7 @@ function RoleBanner({
   }
   if (!role && adminOverride) {
     lines.push({
-      tone: "altus",
+      tone: "brand",
       icon: <Pencil size={13} strokeWidth={2.6} />,
       label: "Admin override",
       detail: "You're not on this task but can still act.",
@@ -366,9 +366,9 @@ function RoleBanner({
                 }
               : {
                   bg: "var(--color-red-bg)",
-                  ring: "color-mix(in srgb, var(--color-altus-red) 25%, transparent)",
-                  fg: "var(--color-altus-red-deep)",
-                  iconFg: "var(--color-altus-red)",
+                  ring: "color-mix(in srgb, var(--color-brand) 25%, transparent)",
+                  fg: "var(--color-brand-deep)",
+                  iconFg: "var(--color-brand)",
                 };
         return (
           <div

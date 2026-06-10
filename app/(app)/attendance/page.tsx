@@ -187,8 +187,8 @@ function TeamSection({
                   <span
                     className="rounded-pill px-2 py-0.5 text-[12px] font-semibold"
                     style={{
-                      background: "color-mix(in srgb, var(--color-altus-red) 10%, transparent)",
-                      color: "var(--color-altus-red)",
+                      background: "color-mix(in srgb, var(--color-brand) 10%, transparent)",
+                      color: "var(--color-brand)",
                     }}
                   >
                     Absent

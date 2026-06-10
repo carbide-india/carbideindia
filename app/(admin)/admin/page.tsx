@@ -37,7 +37,7 @@ interface QuickAction {
   description: string;
   href: Route;
   icon: LucideIcon;
-  tone: "altus" | "ink";
+  tone: "brand" | "ink";
 }
 
 const QUICK_ACTIONS: QuickAction[] = [
@@ -46,7 +46,7 @@ const QUICK_ACTIONS: QuickAction[] = [
     description: "Send an invite email",
     href: "/admin/employees" as Route,
     icon: UserPlus,
-    tone: "altus",
+    tone: "brand",
   },
   {
     label: "New Task",
@@ -137,7 +137,7 @@ export default async function AdminOverviewPage() {
         </h1>
         <p className="text-body-lg text-ink-subtle mt-2 max-w-2xl">
           A snapshot of headcount, pending work, and the most recent
-          activity across Altus Corp.
+          activity across Carbide India.
         </p>
       </header>
 
@@ -165,7 +165,7 @@ export default async function AdminOverviewPage() {
         <div className="grid grid-cols-4 max-lg:grid-cols-2 max-sm:grid-cols-1 gap-3">
           {QUICK_ACTIONS.map((q) => {
             const Icon = q.icon;
-            const isAltus = q.tone === "altus";
+            const isBrand = q.tone === "brand";
             return (
               <Link
                 key={q.label}
@@ -178,13 +178,13 @@ export default async function AdminOverviewPage() {
                 <span
                   className="inline-flex items-center justify-center w-9 h-9 rounded-lg shrink-0 transition-colors"
                   style={
-                    isAltus
+                    isBrand
                       ? {
                           background:
-                            "linear-gradient(135deg, var(--color-altus-red), var(--color-altus-red-deep))",
+                            "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
                           color: "#ffffff",
                           boxShadow:
-                            "0 4px 10px -4px rgba(225, 6, 0, 0.45)",
+                            "0 4px 10px -4px rgba(63, 63, 148, 0.45)",
                         }
                       : {
                           background: "rgba(15, 23, 42, 0.04)",

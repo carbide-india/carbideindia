@@ -219,7 +219,7 @@ export function ChannelMatrix({
                         border: "none",
                         color: locked
                           ? "rgb(148, 163, 184)"
-                          : "rgb(225, 6, 0)",
+                          : "rgb(63, 63, 148)",
                         fontSize: 11,
                         fontWeight: 600,
                         cursor: locked ? "not-allowed" : "pointer",

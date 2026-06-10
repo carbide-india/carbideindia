@@ -144,7 +144,7 @@ export function InlineDoerCell({
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search…"
-              className="w-full h-9 pl-8 pr-2 rounded-chip border border-hairline bg-surface-soft text-[14px] outline-none focus:border-altus-red"
+              className="w-full h-9 pl-8 pr-2 rounded-chip border border-hairline bg-surface-soft text-[14px] outline-none focus:border-brand"
             />
           </div>
           <ul role="listbox" className="max-h-[260px] overflow-y-auto">
@@ -161,7 +161,7 @@ export function InlineDoerCell({
                 >
                   <EmployeeAvatar name={e.name} size="sm" />
                   <span className="flex-1 text-ink-strong">{e.name}</span>
-                  {sel && <Check size={14} strokeWidth={2.6} className="text-altus-red" />}
+                  {sel && <Check size={14} strokeWidth={2.6} className="text-brand" />}
                 </li>
               );
             })}
@@ -256,7 +256,7 @@ export function InlinePriorityCell({
                   style={{ fontWeight: sel ? 700 : 500 }}
                 >
                   <span className="flex-1 text-ink-strong">{PRIORITY_LABELS[p]}</span>
-                  {sel && <Check size={14} strokeWidth={2.6} className="text-altus-red" />}
+                  {sel && <Check size={14} strokeWidth={2.6} className="text-brand" />}
                 </li>
               );
             })}
@@ -348,7 +348,7 @@ export function InlineDueCell({
             type="date"
             defaultValue={toYmd(shown)}
             onChange={(e) => void commit(e.target.value)}
-            className="h-10 px-3 rounded-chip border border-hairline bg-surface-soft text-[14px] outline-none focus:border-altus-red"
+            className="h-10 px-3 rounded-chip border border-hairline bg-surface-soft text-[14px] outline-none focus:border-brand"
           />
         </Popover.Content>
       </Popover.Portal>

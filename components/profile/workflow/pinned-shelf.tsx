@@ -78,9 +78,9 @@ export function PinnedShelf({ initial }: Props) {
                 padding: "12px 16px",
                 background: p.exists
                   ? "rgba(15, 23, 42, 0.025)"
-                  : "rgba(168, 4, 0, 0.04)",
+                  : "rgba(47, 47, 111, 0.04)",
                 border: `1px solid ${
-                  p.exists ? "rgba(15, 23, 42, 0.06)" : "rgba(168, 4, 0, 0.18)"
+                  p.exists ? "rgba(15, 23, 42, 0.06)" : "rgba(47, 47, 111, 0.18)"
                 }`,
                 borderRadius: 10,
                 gap: 12,
@@ -130,7 +130,7 @@ export function PinnedShelf({ initial }: Props) {
                     style={{
                       fontSize: 15,
                       fontWeight: 500,
-                      color: "rgb(168, 4, 0)",
+                      color: "rgb(47, 47, 111)",
                     }}
                   >
                     {p.title}

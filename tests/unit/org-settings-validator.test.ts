@@ -4,14 +4,14 @@ import { UpdateOrgSettingsSchema } from "@/lib/validators/org-settings";
 describe("UpdateOrgSettingsSchema", () => {
   it("accepts a valid single-field patch", () => {
     const res = UpdateOrgSettingsSchema.safeParse({
-      companyName: "Altus Corp",
+      companyName: "Carbide India",
     });
     expect(res.success).toBe(true);
   });
 
   it("accepts a full patch", () => {
     const res = UpdateOrgSettingsSchema.safeParse({
-      companyName: "Altus Corp",
+      companyName: "Carbide India",
       logoUrl: "https://example.com/logo.png",
       digestHourIst: 9,
       workingDays: [1, 2, 3, 4, 5],
@@ -31,7 +31,7 @@ describe("UpdateOrgSettingsSchema", () => {
 
   it("rejects unknown keys (strict)", () => {
     const res = UpdateOrgSettingsSchema.safeParse({
-      companyName: "Altus Corp",
+      companyName: "Carbide India",
       bogus: "value",
     });
     expect(res.success).toBe(false);

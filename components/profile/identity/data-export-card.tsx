@@ -208,7 +208,7 @@ export function DataExportCard({ recent }: Props) {
                       style={{
                         marginTop: 2,
                         fontSize: 12,
-                        color: "rgb(168, 4, 0)",
+                        color: "rgb(47, 47, 111)",
                       }}
                     >
                       {r.error}

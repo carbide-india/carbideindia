@@ -151,7 +151,7 @@ function EmptyState({ isPaginated }: { isPaginated: boolean }) {
       {isPaginated && (
         <Link
           href={"/inbox" as Route}
-          className="mt-6 inline-block text-body text-altus-red hover:underline underline-offset-4"
+          className="mt-6 inline-block text-body text-brand hover:underline underline-offset-4"
         >
           ← Back to latest
         </Link>

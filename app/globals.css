@@ -20,16 +20,17 @@
   --color-hairline:        rgba(15, 23, 42, 0.06);
   --color-hairline-strong: rgba(15, 23, 42, 0.10);
 
-  /* Altus accent red — token name kept (--color-altus-red) for back-compat
-     with ~50 component refs; value now matches the Altus Corp logo. */
-  --color-altus-red:       #E10600;
-  --color-altus-red-deep:  #A80400;
+  /* Carbide India brand accent — indigo from the "India" block of the
+     logo. Renamed from the legacy accent token; consumed
+     by ~50 components as the primary accent. */
+  --color-brand:       #3F3F94;
+  --color-brand-deep:  #2F2F6F;
 
   /* status palette */
   --color-blue:    #3b82f6;  --color-blue-deep:   #1d4ed8;  --color-blue-bg:   #eff6ff;
   --color-green:   #22c55e;  --color-green-deep:  #15803d;  --color-green-bg:  #ecfdf5;
   --color-amber:   #f59e0b;  --color-amber-deep:  #b45309;  --color-amber-bg:  #fffbeb;
-  --color-red:     #E10600;  --color-red-deep:    #A80400;  --color-red-bg:    #fef2f2;
+  --color-red:     #D32F2F;  --color-red-deep:    #B71C1C;  --color-red-bg:    #fef2f2;
   --color-rose:    #f43f5e;  --color-rose-deep:   #be123c;  --color-rose-bg:   #fff1f2;
   --color-purple:  #a855f7;  --color-purple-deep: #7c3aed;  --color-purple-bg: #faf5ff;
   /* extended tones (Manan status palette): yellow, orange, slate=dark grey, brown */
@@ -82,7 +83,7 @@
   --color-blue:    #3b82f6;  --color-blue-deep:   #1d4ed8;  --color-blue-bg:   #eff6ff;
   --color-green:   #22c55e;  --color-green-deep:  #15803d;  --color-green-bg:  #ecfdf5;
   --color-amber:   #f59e0b;  --color-amber-deep:  #b45309;  --color-amber-bg:  #fffbeb;
-  --color-red:     #E10600;  --color-red-deep:    #A80400;  --color-red-bg:    #fef2f2;
+  --color-red:     #D32F2F;  --color-red-deep:    #B71C1C;  --color-red-bg:    #fef2f2;
   --color-rose:    #f43f5e;  --color-rose-deep:   #be123c;  --color-rose-bg:   #fff1f2;
   --color-purple:  #a855f7;  --color-purple-deep: #7c3aed;  --color-purple-bg: #faf5ff;
   --color-yellow:  #eab308;  --color-yellow-deep: #a16207;  --color-yellow-bg: #fefce8;
@@ -99,12 +100,12 @@
   --heat-1: linear-gradient(135deg, #86efac, #4ade80);
   --heat-2: linear-gradient(135deg, #fcd34d, #f59e0b);
   --heat-3: linear-gradient(135deg, #fb923c, #ea580c);
-  --heat-4: linear-gradient(135deg, #fca5a5, #E10600);
+  --heat-4: linear-gradient(135deg, #fca5a5, #D32F2F);
 
-  /* Profile v2 — accent. Defaults to the Altus red; the root layout
-     overrides via inline style="--user-accent: <hex>" once the user
-     sets their pref. Components can opt in with var(--user-accent). */
-  --user-accent: #E10600;
+  /* Profile v2 — accent. Defaults to the Carbide brand indigo; the root
+     layout overrides via inline style="--user-accent: <hex>" once the
+     user sets their pref. Components can opt in with var(--user-accent). */
+  --user-accent: #3F3F94;
 }
 
 /* ────────────────────────────────────────────────────────────────────
@@ -144,7 +145,7 @@ html[data-density="compact"] body {
     min-height: 100dvh;
     background:
       radial-gradient(ellipse 80% 50% at 0% 0%, rgba(168, 85, 247, 0.08), transparent 60%),
-      radial-gradient(ellipse 60% 50% at 100% 0%, rgba(225, 6, 0, 0.10), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 100% 0%, rgba(63, 63, 148, 0.10), transparent 60%),
       radial-gradient(ellipse 60% 50% at 50% 100%, rgba(34, 197, 94, 0.05), transparent 60%),
       linear-gradient(180deg, #fafbfc 0%, #f5f5f7 100%);
     background-attachment: fixed;
@@ -152,7 +153,7 @@ html[data-density="compact"] body {
   }
 
   ::selection {
-    background: var(--color-altus-red);
+    background: var(--color-brand);
     color: #fff;
   }
 
@@ -160,7 +161,7 @@ html[data-density="compact"] body {
     outline: none;
   }
   :focus-visible {
-    outline: 2px solid rgb(168, 4, 0);
+    outline: 2px solid rgb(47, 47, 111);
     outline-offset: 2px;
   }
 
@@ -317,8 +318,8 @@ html[data-density="compact"] body {
 }
 
 @keyframes pillShimmer {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(225, 6, 0, 0.0); }
-  50%      { box-shadow: 0 0 0 6px rgba(225, 6, 0, 0.18); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(63, 63, 148, 0.0); }
+  50%      { box-shadow: 0 0 0 6px rgba(63, 63, 148, 0.18); }
 }
 
 /* Streaming page skeletons — used by TaskDetailSkeleton et al. */
@@ -337,20 +338,20 @@ html[data-density="compact"] body {
   0%, 100% {
     box-shadow:
       0 0 0 2px rgba(15, 23, 42, 0.82),
-      0 4px 10px rgba(225, 6, 0, 0.45),
-      0 0 0 0 rgba(225, 6, 0, 0.55);
+      0 4px 10px rgba(63, 63, 148, 0.45),
+      0 0 0 0 rgba(63, 63, 148, 0.55);
   }
   50% {
     box-shadow:
       0 0 0 2px rgba(15, 23, 42, 0.82),
-      0 4px 14px rgba(225, 6, 0, 0.65),
-      0 0 0 6px rgba(225, 6, 0, 0.0);
+      0 4px 14px rgba(63, 63, 148, 0.65),
+      0 0 0 6px rgba(63, 63, 148, 0.0);
   }
 }
 
 @keyframes heatPulse {
-  0%, 100% { box-shadow: 0 0 14px 0 rgba(225, 6, 0, 0.55); }
-  50%      { box-shadow: 0 0 24px 4px rgba(225, 6, 0, 0.75); }
+  0%, 100% { box-shadow: 0 0 14px 0 rgba(211, 47, 47, 0.55); }
+  50%      { box-shadow: 0 0 24px 4px rgba(211, 47, 47, 0.75); }
 }
 
 /* Header affordances: new-task CTA, user-menu, avatar ring, first-time hint */
@@ -365,9 +366,9 @@ html[data-density="compact"] body {
 }
 
 @keyframes avatarRingPulse {
-  0%   { box-shadow: 0 0 0 0 rgba(225, 6, 0, 0.55); }
-  60%  { box-shadow: 0 0 0 8px rgba(225, 6, 0, 0.0); }
-  100% { box-shadow: 0 0 0 0 rgba(225, 6, 0, 0.0); }
+  0%   { box-shadow: 0 0 0 0 rgba(63, 63, 148, 0.55); }
+  60%  { box-shadow: 0 0 0 8px rgba(63, 63, 148, 0.0); }
+  100% { box-shadow: 0 0 0 0 rgba(63, 63, 148, 0.0); }
 }
 
 @keyframes hintBalloonIn {
@@ -487,8 +488,8 @@ html[data-density="compact"] body {
 }
 
 @keyframes ringPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(225, 6, 0, 0.42), 0 18px 38px -14px rgba(225, 6, 0, 0.55); }
-  50%      { box-shadow: 0 0 0 8px rgba(225, 6, 0, 0.0),  0 22px 46px -12px rgba(225, 6, 0, 0.7); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(63, 63, 148, 0.42), 0 18px 38px -14px rgba(63, 63, 148, 0.55); }
+  50%      { box-shadow: 0 0 0 8px rgba(63, 63, 148, 0.0),  0 22px 46px -12px rgba(63, 63, 148, 0.7); }
 }
 
 /* ── Task detail showcase — status pill glow, timeline dot pulse, ring-once
@@ -520,9 +521,9 @@ html[data-density="compact"] body {
 
 /* One-shot ring around the newest audit event card on mount. */
 @keyframes auditRingOnce {
-  0%   { box-shadow: 0 0 0 0 rgba(225, 6, 0, 0.0); }
-  20%  { box-shadow: 0 0 0 4px rgba(225, 6, 0, 0.20); }
-  100% { box-shadow: 0 0 0 0 rgba(225, 6, 0, 0.0); }
+  0%   { box-shadow: 0 0 0 0 rgba(63, 63, 148, 0.0); }
+  20%  { box-shadow: 0 0 0 4px rgba(63, 63, 148, 0.20); }
+  100% { box-shadow: 0 0 0 0 rgba(63, 63, 148, 0.0); }
 }
 
 /* Soft pulse on a timeline dot. */
@@ -588,10 +589,10 @@ html[data-density="compact"] body {
   }
 }
 @utility audit-filter-chip-active {
-  background: linear-gradient(135deg, var(--color-altus-red), var(--color-altus-red-deep));
+  background: linear-gradient(135deg, var(--color-brand), var(--color-brand-deep));
   color: #ffffff;
   border-color: transparent;
-  box-shadow: 0 4px 10px -4px rgba(225, 6, 0, 0.4);
+  box-shadow: 0 4px 10px -4px rgba(63, 63, 148, 0.4);
 }
 
 @keyframes brandFadeIn {
@@ -719,8 +720,8 @@ html[data-density="compact"] body {
 @utility settings-tab-trigger {
   &:hover { color: var(--color-ink-strong); }
   &[data-state="active"] {
-    color: var(--color-altus-red);
-    border-color: var(--color-altus-red);
+    color: var(--color-brand);
+    border-color: var(--color-brand);
   }
 }
 @utility login-sso-glyph {
@@ -744,7 +745,7 @@ html[data-density="compact"] body {
     0 1px 0 rgba(255, 255, 255, 0.9) inset,
     0 1px 3px rgba(15, 23, 42, 0.04),
     0 24px 60px -28px rgba(15, 23, 42, 0.18),
-    0 4px 14px -4px rgba(225, 6, 0, 0.06);
+    0 4px 14px -4px rgba(63, 63, 148, 0.06);
   transition: box-shadow 320ms ease, transform 320ms ease;
 }
 @utility auth-card {
@@ -753,7 +754,7 @@ html[data-density="compact"] body {
       0 1px 0 rgba(255, 255, 255, 0.9) inset,
       0 1px 3px rgba(15, 23, 42, 0.04),
       0 32px 80px -28px rgba(15, 23, 42, 0.28),
-      0 8px 22px -6px rgba(225, 6, 0, 0.12);
+      0 8px 22px -6px rgba(63, 63, 148, 0.12);
   }
 }
 
@@ -770,10 +771,10 @@ html[data-density="compact"] body {
   &:hover { border-color: rgba(15, 23, 42, 0.18); }
   &:focus-within {
     background: rgba(255, 255, 255, 0.9);
-    border-color: rgba(225, 6, 0, 0.55);
+    border-color: rgba(63, 63, 148, 0.55);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.7),
-      0 0 0 4px rgba(225, 6, 0, 0.08);
+      0 0 0 4px rgba(63, 63, 148, 0.08);
   }
 }
 
@@ -785,7 +786,7 @@ html[data-density="compact"] body {
   bottom: 6px;
   height: 1.5px;
   border-radius: 2px;
-  background: linear-gradient(90deg, var(--color-altus-red), var(--color-rose), var(--color-purple));
+  background: linear-gradient(90deg, var(--color-brand), var(--color-rose), var(--color-purple));
   transform: scaleX(0);
   transform-origin: left center;
   transition: transform 380ms cubic-bezier(0.2, 0.7, 0.3, 1);
@@ -807,12 +808,12 @@ html[data-density="compact"] body {
   font-weight: 700;
   letter-spacing: 0.01em;
   color: #ffffff;
-  background: linear-gradient(135deg, #F4554D 0%, rgb(225, 6, 0) 45%, rgb(168, 4, 0) 100%);
-  border: 1px solid rgba(168, 4, 0, 0.6);
+  background: linear-gradient(135deg, #7979B4 0%, rgb(63, 63, 148) 45%, rgb(47, 47, 111) 100%);
+  border: 1px solid rgba(47, 47, 111, 0.6);
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.28) inset,
-    0 10px 24px -10px rgba(225, 6, 0, 0.55),
-    0 2px 4px rgba(168, 4, 0, 0.28);
+    0 10px 24px -10px rgba(63, 63, 148, 0.55),
+    0 2px 4px rgba(47, 47, 111, 0.28);
   transition: transform 180ms ease, box-shadow 220ms ease, filter 220ms ease;
   cursor: pointer;
   overflow: hidden;
@@ -841,7 +842,7 @@ html[data-density="compact"] body {
   position: relative;
 }
 @utility auth-link {
-  &:hover { color: rgb(168, 4, 0); }
+  &:hover { color: rgb(47, 47, 111); }
 }
 
 /* Editorial prose styling for /terms and /privacy.  Scoped so it
@@ -886,7 +887,7 @@ html[data-density="compact"] body {
 }
 .legal-prose li { margin-bottom: 4px; }
 .legal-prose strong { color: var(--color-ink-strong); font-weight: 600; }
-.legal-prose a { color: var(--color-altus-red); font-weight: 500; }
+.legal-prose a { color: var(--color-brand); font-weight: 500; }
 .legal-prose a:hover { text-decoration: underline; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -966,8 +967,8 @@ html[data-density="compact"] body {
   color: #ffffff;
   border-color: transparent;
   box-shadow:
-    0 8px 24px rgba(225, 6, 0, 0.38),
-    0 0 0 4px rgba(225, 6, 0, 0.18);
+    0 8px 24px rgba(63, 63, 148, 0.38),
+    0 0 0 4px rgba(63, 63, 148, 0.18);
   transform: translateY(-1px);
 }
 @utility nav-pill-count {
@@ -991,7 +992,7 @@ html[data-density="compact"] body {
    on the white surface. Active pill stays full cyan gradient. */
 .header-light .nav-pill {
   background: var(--vp-cyan-tint);
-  border: 1.5px solid rgba(225, 6, 0, 0.28);
+  border: 1.5px solid rgba(63, 63, 148, 0.28);
   color: rgb(var(--vp-cyan-deep));
   font-size: 15px;
   font-weight: 700;
@@ -1001,11 +1002,11 @@ html[data-density="compact"] body {
   line-height: 1;
 }
 .header-light .nav-pill:hover {
-  background: rgba(225, 6, 0, 0.16);
+  background: rgba(63, 63, 148, 0.16);
   border-color: rgb(var(--vp-cyan));
   color: rgb(var(--vp-cyan-deep));
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(225, 6, 0, 0.22);
+  box-shadow: 0 4px 12px rgba(63, 63, 148, 0.22);
 }
 .header-light .nav-pill-active,
 .header-light .nav-pill-active:hover {
@@ -1013,11 +1014,11 @@ html[data-density="compact"] body {
   color: #ffffff;
   border-color: transparent;
   box-shadow:
-    0 10px 24px rgba(225, 6, 0, 0.38),
-    0 0 0 4px rgba(225, 6, 0, 0.16);
+    0 10px 24px rgba(63, 63, 148, 0.38),
+    0 0 0 4px rgba(63, 63, 148, 0.16);
 }
 .header-light .nav-pill-count {
-  background: rgba(225, 6, 0, 0.18);
+  background: rgba(63, 63, 148, 0.18);
   color: rgb(var(--vp-cyan-deep));
   font-weight: 800;
 }
@@ -1045,10 +1046,10 @@ html[data-density="compact"] body {
 
 /* react-day-picker theme overrides — match Light Vibrant palette */
 .rdp-root {
-  --rdp-accent-color: var(--color-altus-red);
-  --rdp-accent-background-color: color-mix(in srgb, var(--color-altus-red) 12%, transparent);
-  --rdp-today-color: var(--color-altus-red-deep);
-  --rdp-range_middle-background-color: color-mix(in srgb, var(--color-altus-red) 12%, transparent);
+  --rdp-accent-color: var(--color-brand);
+  --rdp-accent-background-color: color-mix(in srgb, var(--color-brand) 12%, transparent);
+  --rdp-today-color: var(--color-brand-deep);
+  --rdp-range_middle-background-color: color-mix(in srgb, var(--color-brand) 12%, transparent);
   --rdp-range_start-color: #ffffff;
   --rdp-range_end-color: #ffffff;
   --rdp-day-height: 36px;
@@ -1154,7 +1155,7 @@ html[data-density="compact"] body {
 /* Per-status neon palette. RGB triplets so we can use them in
    rgba()/color-mix() consumers without breaking. */
 :root {
-  --kpi-neon-total:        225 6 0;   /* #E10600 — Altus red */
+  --kpi-neon-total:        63 63 148;   /* #3F3F94 — Carbide indigo */
   --kpi-neon-need-help:    248 113 113; /* red-400   */
   --kpi-neon-not-approved: 244 114 182; /* pink-400  */
   --kpi-neon-done:         163 230 53;  /* lime-400  */
@@ -1164,22 +1165,22 @@ html[data-density="compact"] body {
   /* Deep companions — used for label text on a white tile so each
      channel stays colour-coded but high-contrast (the bright neon
      above is reserved for the dot, sparkline, and shadow accents). */
-  --kpi-neon-total-deep:        168 4 0;   /* #A80400 — Altus red deep */
+  --kpi-neon-total-deep:        47 47 111;   /* #2F2F6F — Carbide indigo deep */
   --kpi-neon-need-help-deep:    153 27 27;   /* red-800    */
   --kpi-neon-not-approved-deep: 157 23 77;   /* pink-800   */
   --kpi-neon-done-deep:         63 98 18;    /* lime-800   */
   --kpi-neon-pending-deep:      146 64 14;   /* amber-800  */
   --kpi-neon-not-started-deep:  91 33 182;   /* violet-800 */
 
-  /* Altus Corp brand indigo — primary accent across the dashboard
+  /* Carbide India brand indigo — primary accent across the dashboard
      surface. RGB triplets compose with rgba()/color-mix() the same way
      the neon palette does. Token names kept (--vp-cyan*) for back-compat
-     with ~50 component refs; values now match the Altus Corp logo. */
-  --vp-cyan:        225 6 0;   /* #E10600 */
-  --vp-cyan-bright: 244 85 77; /* #F4554D */
-  --vp-cyan-deep:   168 4 0;   /* #A80400 */
-  --vp-cyan-glow:   rgba(225, 6, 0, 0.25);
-  --vp-cyan-tint:   rgba(225, 6, 0, 0.08);
+     with ~50 component refs; values now match the Carbide India logo. */
+  --vp-cyan:        63 63 148;    /* #3F3F94 */
+  --vp-cyan-bright: 121 121 180;  /* #7979B4 */
+  --vp-cyan-deep:   47 47 111;    /* #2F2F6F */
+  --vp-cyan-glow:   rgba(63, 63, 148, 0.25);
+  --vp-cyan-tint:   rgba(63, 63, 148, 0.08);
 }
 
 /* The strip's substrate band. Light warm-white gradient with a soft
@@ -1195,7 +1196,7 @@ html[data-density="compact"] body {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.9),
     inset 0 -1px 0 rgba(15, 23, 42, 0.04),
-    0 20px 60px -20px rgba(225, 6, 0, 0.25),
+    0 20px 60px -20px rgba(63, 63, 148, 0.25),
     0 8px 24px -8px rgba(15, 23, 42, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.6);
 }
@@ -1208,7 +1209,7 @@ html[data-density="compact"] body {
   inset: -10%;
   background:
     radial-gradient(circle at 20% 30%,
-      rgba(168, 4, 0, 0.25), transparent 35%),
+      rgba(63, 63, 148, 0.25), transparent 35%),
     radial-gradient(circle at 80% 70%,
       rgba(167, 139, 250, 0.22), transparent 35%),
     radial-gradient(circle at 50% 50%,
@@ -1459,9 +1460,9 @@ html[data-density="compact"] body {
 }
 .aging-lane:hover {
   transform: translateY(-2px);
-  border-color: rgba(168, 4, 0, 0.35);
+  border-color: rgba(183, 28, 28, 0.35);
   box-shadow:
-    0 16px 36px -16px rgba(168, 4, 0, 0.32),
+    0 16px 36px -16px rgba(183, 28, 28, 0.32),
     0 4px 14px -4px rgba(15, 23, 42, 0.08);
 }
 .aging-lane:focus-visible {
@@ -1469,7 +1470,7 @@ html[data-density="compact"] body {
   border-color: rgb(var(--vp-cyan));
   box-shadow:
     0 0 0 3px rgb(var(--vp-cyan) / 0.32),
-    0 16px 36px -16px rgba(168, 4, 0, 0.28);
+    0 16px 36px -16px rgba(183, 28, 28, 0.28);
 }
 .aging-lane-chevron > svg {
   transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -1477,7 +1478,7 @@ html[data-density="compact"] body {
 .aging-lane:hover .aging-lane-chevron > svg,
 .aging-lane:focus-visible .aging-lane-chevron > svg {
   transform: translateX(3px);
-  color: #A80400;
+  color: #B71C1C;
 }
 
 /* Mobile menu drawer keyframes — slide in from the left, overlay fades. */
@@ -1613,7 +1614,7 @@ select.nt-input {
   background-size: 14px, auto;
 }
 
-/* Task title link — cyan hover instead of altus red */
+/* Task title link — cyan hover instead of the brand accent */
 .task-title-link:hover {
   color: rgb(var(--vp-cyan-deep));
   text-decoration: underline;
@@ -1955,7 +1956,7 @@ select.nt-input {
     rgb(var(--vp-cyan-bright)) 50%,
     rgb(var(--vp-cyan-deep)) 100%
   );
-  box-shadow: 0 0 12px rgba(225, 6, 0, 0.45);
+  box-shadow: 0 0 12px rgba(63, 63, 148, 0.45);
   opacity: 1;
   border-radius: 2px;
 }
@@ -2055,5 +2056,5 @@ select.nt-input {
   border-radius: 9999px;
 }
 .nav-scroll::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--color-altus-red) 55%, transparent);
+  background: color-mix(in srgb, var(--color-brand) 55%, transparent);
 }

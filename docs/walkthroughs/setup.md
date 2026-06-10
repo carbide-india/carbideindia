@@ -1,6 +1,6 @@
-# Setup: Altus Corp Dashboard end-to-end
+# Setup: Carbide India WMS end-to-end
 
-This is the walkthrough for getting the dashboard running on a fresh machine — from zero to "I can sign in as an admin and see real tasks." Follow it top-to-bottom. Every command below is copy-pasteable from the repo root (`D:\altus-corp-dashboard`).
+This is the walkthrough for getting the dashboard running on a fresh machine — from zero to "I can sign in as an admin and see real tasks." Follow it top-to-bottom. Every command below is copy-pasteable from the repo root (`D:\carbide-india-wms`).
 
 ## Prerequisites
 
@@ -39,7 +39,7 @@ pnpm dlx firebase login   # one-time, needed only if you plan to run the emulato
 2. **Authentication → Get started → Email/Password → Enable.** Leave "Email link (passwordless sign-in)" off. **Disable public sign-up** by leaving no other providers on — the dashboard is invite-only.
 3. **Project Settings (gear icon) → General → Your apps → Add app → Web (`</>`)**. Nickname it anything. Firebase shows a `firebaseConfig` block — copy these:
    - `apiKey` → **`NEXT_PUBLIC_FIREBASE_API_KEY`**
-   - `authDomain` → **`NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`** (e.g. `altus-corp-dev.firebaseapp.com`)
+   - `authDomain` → **`NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`** (e.g. `carbide-india-dev.firebaseapp.com`)
    - `projectId` → **`NEXT_PUBLIC_FIREBASE_PROJECT_ID`** *and* **`FIREBASE_PROJECT_ID`** (same value, two vars — one for the client bundle, one for server)
    - `appId` → **`NEXT_PUBLIC_FIREBASE_APP_ID`** (format `1:000000000:web:0000…`)
 4. **Project Settings → Service accounts → Generate new private key.** Downloads a JSON file. From that JSON, extract:
@@ -58,7 +58,7 @@ pnpm dlx firebase login   # one-time, needed only if you plan to run the emulato
 1. Sign up at [resend.com](https://resend.com).
 2. **API Keys → Create API Key** (full-access is fine for now) → **`RESEND_API_KEY`** (starts with `re_`).
 3. **Optional but recommended: verify your sending domain** under *Domains → Add Domain*. Add the DNS records they show you. Until verified, Resend will only let you send to the address you signed up with — useful for testing, not for inviting real teammates.
-4. Set **`RESEND_FROM_EMAIL`** to either a verified address (e.g. `"Altus Corp Dashboard <dashboard@your-domain.com>"`) or fall back to `"Altus Corp Dashboard <onboarding@resend.dev>"` (Resend's shared sandbox) for first-light testing.
+4. Set **`RESEND_FROM_EMAIL`** to either a verified address (e.g. `"Carbide India WMS <dashboard@your-domain.com>"`) or fall back to `"Carbide India WMS <onboarding@resend.dev>"` (Resend's shared sandbox) for first-light testing.
 
 ## Step 4 — Fill `.env.local`
 
@@ -156,7 +156,7 @@ pnpm bootstrap-admin --email heteshvichare927@gmail.com --name "Hetesh Vichare"
 2. Inserts an `employees` row with `isAdmin: true`, `isActive: true`, `firebaseUid` linked.
 3. Generates a Firebase password-reset link pointing at `${NEXT_PUBLIC_SITE_URL}/welcome` and emails it via Resend. If Resend isn't configured, the link prints to stdout — share it out of band.
 
-You'll receive an email like "Reset your Altus Corp password." Click through to `/set-password`, set a password, land on `/welcome`.
+You'll receive an email like "Reset your Carbide India password." Click through to `/set-password`, set a password, land on `/welcome`.
 
 **Then delete `.env.bootstrap`** — it contains the service-role key. Full runbook with troubleshooting at `docs/runbooks/bootstrap-first-admin.md`.
 

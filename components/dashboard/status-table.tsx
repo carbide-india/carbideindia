@@ -232,7 +232,7 @@ export function StatusTable({
                 setQuery("");
                 setSelectedDept(null);
               }}
-              className="mt-3 text-cta text-altus-red hover:underline"
+              className="mt-3 text-cta text-brand hover:underline"
             >
               Clear filters
             </button>
@@ -343,7 +343,7 @@ function FilterBar({
         className="relative flex items-center bg-surface-card border border-hairline rounded-chip pl-3 pr-2 h-10 min-w-[260px] max-md:min-w-full max-md:w-full transition-shadow focus-within:border-hairline-strong"
         style={{
           boxShadow: query
-            ? "0 0 0 3px color-mix(in srgb, var(--color-altus-red) 12%, transparent), 0 1px 2px rgba(15,23,42,0.04)"
+            ? "0 0 0 3px color-mix(in srgb, var(--color-brand) 12%, transparent), 0 1px 2px rgba(15,23,42,0.04)"
             : "0 1px 2px rgba(15,23,42,0.04)",
         }}
       >
@@ -395,7 +395,7 @@ function FilterBar({
         <button
           type="button"
           onClick={onClear}
-          className="ml-auto inline-flex items-center gap-1.5 text-[14px] font-bold text-ink-muted hover:text-altus-red transition-colors"
+          className="ml-auto inline-flex items-center gap-1.5 text-[14px] font-bold text-ink-muted hover:text-brand transition-colors"
         >
           <X className="size-3.5" />
           Clear filters

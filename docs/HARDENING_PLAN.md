@@ -1,4 +1,4 @@
-# Altus WMS — Hardening, Performance & Reliability Plan
+# Carbide India WMS — Hardening, Performance & Reliability Plan
 
 **Status:** active · **Last updated:** 2026-06-09 · **Owner:** Hetesh + Claude pair
 **Trigger:** Manan reported "clicking on a task takes multiple seconds to load."

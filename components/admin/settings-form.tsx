@@ -185,10 +185,10 @@ export function SettingsForm({ current }: Props) {
                         ? {
                             borderColor: "transparent",
                             background:
-                              "linear-gradient(135deg, var(--color-altus-red), var(--color-altus-red-deep))",
+                              "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
                             color: "#ffffff",
                             boxShadow:
-                              "0 4px 10px -4px rgba(225, 6, 0, 0.40)",
+                              "0 4px 10px -4px rgba(63, 63, 148, 0.40)",
                           }
                         : {
                             borderColor: "var(--color-hairline-strong)",
@@ -225,7 +225,7 @@ export function SettingsForm({ current }: Props) {
               type="checkbox"
               checked={allowSelfRegister}
               onChange={(e) => setAllowSelfRegister(e.target.checked)}
-              className="mt-1 h-4 w-4 accent-altus-red"
+              className="mt-1 h-4 w-4 accent-brand"
             />
             <span>
               <span className="block text-[15px] font-semibold text-ink-strong">
@@ -260,8 +260,8 @@ export function SettingsForm({ current }: Props) {
             className="rounded-lg py-3 px-6 text-[15px] font-semibold text-white disabled:opacity-50 transition-transform hover:-translate-y-px"
             style={{
               background:
-                "linear-gradient(135deg, var(--color-altus-red), var(--color-altus-red-deep))",
-              boxShadow: "0 8px 22px -10px rgba(225, 6, 0, 0.55)",
+                "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
+              boxShadow: "0 8px 22px -10px rgba(63, 63, 148, 0.55)",
             }}
           >
             {pending ? "Saving…" : "Save settings"}
@@ -313,7 +313,7 @@ export function SettingsForm({ current }: Props) {
             <button
               type="button"
               onClick={resetDefaults}
-              className="mt-3 text-[13px] font-semibold text-altus-red hover:underline underline-offset-2"
+              className="mt-3 text-[13px] font-semibold text-brand hover:underline underline-offset-2"
             >
               Reset to current values
             </button>
@@ -385,9 +385,9 @@ function Input({
         borderColor: "var(--color-hairline-strong)",
       }}
       onFocus={(e) => {
-        e.currentTarget.style.borderColor = "var(--color-altus-red)";
+        e.currentTarget.style.borderColor = "var(--color-brand)";
         e.currentTarget.style.boxShadow =
-          "0 0 0 3px color-mix(in srgb, var(--color-altus-red) 14%, transparent)";
+          "0 0 0 3px color-mix(in srgb, var(--color-brand) 14%, transparent)";
         rest.onFocus?.(e);
       }}
       onBlur={(e) => {

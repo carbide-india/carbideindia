@@ -139,7 +139,7 @@ export function NotificationFilterBar({ employees, initial }: Props) {
                 minWidth: 18,
                 height: 18,
                 padding: "0 6px",
-                background: "var(--color-altus-red)",
+                background: "var(--color-brand)",
               }}
             >
               {activeCount}
@@ -258,8 +258,8 @@ export function NotificationFilterBar({ employees, initial }: Props) {
             className="inline-flex items-center gap-2 text-cta text-white px-6 py-3 rounded-chip transition-transform disabled:opacity-60"
             style={{
               background:
-                "linear-gradient(135deg, var(--color-altus-red), var(--color-altus-red-deep))",
-              boxShadow: "0 6px 16px rgba(225, 6, 0, 0.28)",
+                "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
+              boxShadow: "0 6px 16px rgba(63, 63, 148, 0.28)",
             }}
           >
             {isPending ? "Applying…" : "Apply"}

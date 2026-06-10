@@ -120,7 +120,7 @@ export function AuditFeed({ events, statusLabels, me }: Props) {
               style={{
                 left: 7,
                 background:
-                  "linear-gradient(180deg, color-mix(in srgb, var(--color-altus-red) 20%, transparent), color-mix(in srgb, var(--color-purple) 16%, transparent) 50%, transparent)",
+                  "linear-gradient(180deg, color-mix(in srgb, var(--color-brand) 20%, transparent), color-mix(in srgb, var(--color-purple) 16%, transparent) 50%, transparent)",
               }}
             />
             <AnimatePresence initial={false}>

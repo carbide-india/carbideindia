@@ -27,7 +27,7 @@ export function LegalShell({ eyebrow, title, lastUpdated, intro, children }: Pro
 
   return (
     <div className="min-h-screen bg-[var(--color-canvas-base)]">
-      {/* Top chrome — Altus Corp brand + back-to-sign-in */}
+      {/* Top chrome — Carbide India brand + back-to-sign-in */}
       <header className="sticky top-0 z-40 border-b border-hairline bg-[rgba(250,251,252,0.85)] backdrop-blur-xl">
         <div className="mx-auto max-w-[1200px] flex items-center justify-between px-8 py-4 max-md:px-4">
           <Link
@@ -39,21 +39,21 @@ export function LegalShell({ eyebrow, title, lastUpdated, intro, children }: Pro
               className="inline-block h-[10px] w-[10px] rounded-full shrink-0"
               style={{
                 background:
-                  "linear-gradient(135deg, #ff5560, var(--color-altus-red))",
-                boxShadow: "0 0 12px rgba(225, 6, 0, 0.45)",
+                  "linear-gradient(135deg, #7979B4, var(--color-brand))",
+                boxShadow: "0 0 12px rgba(63, 63, 148, 0.45)",
               }}
             />
             <span
               className="font-serif text-[22px] leading-none whitespace-nowrap text-ink-strong"
               style={{ fontStyle: "italic", letterSpacing: "-0.01em" }}
             >
-              Altus{" "}
+              Carbide{" "}
               <span
                 style={{
                   display: "inline-block",
                   paddingRight: "0.18em",
                   background:
-                    "linear-gradient(135deg, #ff5560, var(--color-altus-red))",
+                    "linear-gradient(135deg, #7979B4, var(--color-brand))",
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
                   backgroundClip: "text",
@@ -76,7 +76,7 @@ export function LegalShell({ eyebrow, title, lastUpdated, intro, children }: Pro
       <main className="mx-auto max-w-[760px] px-8 max-md:px-4 py-16 max-md:py-10">
         <div
           className="text-[11px] uppercase tracking-[0.18em] font-bold mb-3"
-          style={{ color: "var(--color-altus-red)" }}
+          style={{ color: "var(--color-brand)" }}
         >
           {eyebrow}
         </div>
@@ -108,7 +108,7 @@ export function LegalShell({ eyebrow, title, lastUpdated, intro, children }: Pro
           style={{
             height: 2,
             background:
-              "linear-gradient(90deg, var(--color-altus-red) 0%, var(--color-rose) 20%, var(--color-purple) 40%, var(--color-blue) 60%, var(--color-green) 80%, var(--color-amber) 100%)",
+              "linear-gradient(90deg, var(--color-brand) 0%, var(--color-rose) 20%, var(--color-purple) 40%, var(--color-blue) 60%, var(--color-green) 80%, var(--color-amber) 100%)",
             opacity: 0.7,
             borderRadius: 2,
             maxWidth: 80,

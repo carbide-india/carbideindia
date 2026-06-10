@@ -39,7 +39,7 @@ export function TransferredEmail(props: TransferredProps) {
       <NotificationParagraph>
         {props.actorName} transferred this task
         {props.externalTo ? <> to <strong>{props.externalTo}</strong></> : null}
-        . It's no longer tracked inside Altus Corp Dashboard.
+        . It's no longer tracked inside Carbide India WMS.
       </NotificationParagraph>
       {props.note && <Quote>{props.note}</Quote>}
       <NotificationCTA href={taskUrl(props.siteUrl, props.taskId)}>

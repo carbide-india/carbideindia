@@ -211,7 +211,7 @@ function BackgroundFX() {
         className="absolute inset-0 -z-10"
         style={{
           background:
-            "radial-gradient(ellipse 100% 80% at 85% 110%, rgba(225, 6, 0, 0.45), transparent 55%), radial-gradient(ellipse 60% 60% at 10% 0%, rgba(168, 4, 0, 0.18), transparent 60%), radial-gradient(ellipse 60% 50% at 50% 50%, rgba(168, 85, 247, 0.08), transparent 70%), linear-gradient(135deg, #0E0B0A 0%, #1A0F0C 50%, #0B0708 100%)",
+            "radial-gradient(ellipse 100% 80% at 85% 110%, rgba(63, 63, 148, 0.45), transparent 55%), radial-gradient(ellipse 60% 60% at 10% 0%, rgba(47, 47, 111, 0.18), transparent 60%), radial-gradient(ellipse 60% 50% at 50% 50%, rgba(168, 85, 247, 0.08), transparent 70%), linear-gradient(135deg, #0E0B0A 0%, #1A0F0C 50%, #0B0708 100%)",
         }}
       />
 
@@ -257,7 +257,7 @@ function BackgroundFX() {
           width: "440px",
           height: "440px",
           background:
-            "radial-gradient(circle, rgba(225, 6, 0, 0.25) 0%, transparent 60%)",
+            "radial-gradient(circle, rgba(63, 63, 148, 0.25) 0%, transparent 60%)",
           filter: "blur(40px)",
         }}
       />
@@ -346,8 +346,8 @@ function TopBar({
             aria-hidden
             className="inline-block size-1.5 rounded-full"
             style={{
-              background: "#E10600",
-              boxShadow: "0 0 8px rgba(225, 6, 0, 0.75)",
+              background: "#3F3F94",
+              boxShadow: "0 0 8px rgba(63, 63, 148, 0.75)",
             }}
           />
           Focus mode
@@ -517,11 +517,11 @@ function Chip({
     <span
       className="inline-flex items-center rounded-full px-3 py-1.5"
       style={{
-        background: muted ? "rgba(255,255,255,0.05)" : "rgba(225, 6, 0, 0.12)",
+        background: muted ? "rgba(255,255,255,0.05)" : "rgba(63, 63, 148, 0.12)",
         color: muted ? "rgba(255,255,255,0.78)" : "rgba(255, 184, 184, 0.95)",
         border: muted
           ? "1px solid rgba(255,255,255,0.12)"
-          : "1px solid rgba(225, 6, 0, 0.32)",
+          : "1px solid rgba(63, 63, 148, 0.32)",
         fontSize: 12.5,
         fontWeight: 700,
         letterSpacing: "0.04em",
@@ -666,7 +666,7 @@ function FocusTimer() {
     totalRef.current = preset.minutes * 60;
   }
 
-  const accent = preset.kind === "break" ? "#10b981" : "#E10600";
+  const accent = preset.kind === "break" ? "#10b981" : "#D32F2F";
 
   return (
     <div
@@ -1067,9 +1067,9 @@ function QuickActions({
             style={{
               background: commentSent
                 ? "linear-gradient(135deg, #10b981, #047857)"
-                : "linear-gradient(135deg, var(--color-altus-red), var(--color-altus-red-deep))",
+                : "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
               color: "#fff",
-              boxShadow: "0 6px 18px -8px rgba(225, 6, 0, 0.45)",
+              boxShadow: "0 6px 18px -8px rgba(63, 63, 148, 0.45)",
             }}
           >
             {commentSent ? (

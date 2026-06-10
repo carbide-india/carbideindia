@@ -92,7 +92,7 @@ function FieldShell({
       >
         {label}
         {required && (
-          <span className="ml-1" style={{ color: "rgb(168, 4, 0)" }}>
+          <span className="ml-1" style={{ color: "#D32F2F" }}>
             *
           </span>
         )}
@@ -106,7 +106,7 @@ function FieldShell({
         className="block h-[1.5px] mt-px rounded-full"
         style={{
           background:
-            "linear-gradient(90deg, rgb(225, 6, 0), rgb(168, 4, 0))",
+            "linear-gradient(90deg, rgb(63, 63, 148), rgb(47, 47, 111))",
           transform: focused ? "scaleX(1)" : "scaleX(0)",
           transformOrigin: "left center",
           transition: "transform 380ms cubic-bezier(0.2, 0.7, 0.3, 1)",
@@ -272,7 +272,7 @@ export function TaskEditForm({
   }
 
   const inputClass =
-    "w-full rounded-lg border border-hairline px-3.5 py-3 text-[15px] bg-white outline-none transition-shadow focus:border-[rgba(225, 6, 0,0.55)] focus:shadow-[0_0_0_4px_rgba(225, 6, 0,0.10)]";
+    "w-full rounded-lg border border-hairline px-3.5 py-3 text-[15px] bg-white outline-none transition-shadow focus:border-[rgba(63, 63, 148,0.55)] focus:shadow-[0_0_0_4px_rgba(63, 63, 148,0.10)]";
 
   return (
     <motion.form
@@ -498,7 +498,7 @@ export function TaskEditForm({
           className="rounded-lg p-4 grid grid-cols-2 gap-3 max-md:grid-cols-1"
           style={{
             background: "var(--vp-cyan-tint)",
-            border: "1px solid rgba(225, 6, 0, 0.32)",
+            border: "1px solid rgba(63, 63, 148, 0.32)",
           }}
         >
           <div className="col-span-2 -mb-1">
@@ -583,8 +583,8 @@ export function TaskEditForm({
           className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg text-[14px] font-semibold text-white disabled:opacity-50"
           style={{
             background:
-              "linear-gradient(135deg, rgb(244, 85, 77), rgb(225, 6, 0) 45%, rgb(168, 4, 0))",
-            boxShadow: "0 8px 20px -10px rgba(225, 6, 0, 0.55)",
+              "linear-gradient(135deg, rgb(121, 121, 180), rgb(63, 63, 148) 45%, rgb(47, 47, 111))",
+            boxShadow: "0 8px 20px -10px rgba(63, 63, 148, 0.55)",
           }}
         >
           {pending ? "Saving…" : "Save changes"}

@@ -141,7 +141,7 @@ export function NotificationRow({ row, statusLabels, statusTones }: Props) {
         <span
           aria-hidden
           className="absolute left-0 top-0 bottom-0 w-[3px]"
-          style={{ background: "var(--color-altus-red)" }}
+          style={{ background: "var(--color-brand)" }}
         />
       )}
       <button
@@ -151,7 +151,7 @@ export function NotificationRow({ row, statusLabels, statusTones }: Props) {
         className="flex w-full items-start gap-4 px-7 py-5 max-md:px-4 text-left transition-colors hover:bg-[rgba(15,23,42,0.025)] disabled:opacity-70"
         style={{
           background: unread
-            ? "color-mix(in srgb, var(--color-altus-red) 4%, transparent)"
+            ? "color-mix(in srgb, var(--color-brand) 4%, transparent)"
             : undefined,
         }}
       >
@@ -222,8 +222,8 @@ export function NotificationRow({ row, statusLabels, statusTones }: Props) {
               <span
                 className="ml-1 inline-flex items-center rounded-pill px-2 py-0.5 text-[10.5px] font-black uppercase tracking-[0.06em]"
                 style={{
-                  color: "var(--color-altus-red-deep)",
-                  background: "color-mix(in srgb, var(--color-altus-red) 12%, transparent)",
+                  color: "var(--color-brand-deep)",
+                  background: "color-mix(in srgb, var(--color-brand) 12%, transparent)",
                 }}
               >
                 New
@@ -237,7 +237,7 @@ export function NotificationRow({ row, statusLabels, statusTones }: Props) {
           <span
             aria-hidden
             className="mt-1.5 inline-flex h-2.5 w-2.5 shrink-0 rounded-full"
-            style={{ background: "var(--color-altus-red)" }}
+            style={{ background: "var(--color-brand)" }}
           />
         )}
       </button>

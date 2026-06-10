@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * One-time importer for the legacy Altus Corp Google Sheet.
+ * One-time importer for the legacy Carbide India Google Sheet.
  * Spec: docs/superpowers/specs/2026-05-14-vpinnacle-m4-import-and-multichannel-design.md
  *
  * Usage:

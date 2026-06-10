@@ -3,7 +3,7 @@ import { CreateClientSchema } from "@/lib/validators/client";
 
 describe("CreateClientSchema", () => {
   it("accepts a normal client name", () => {
-    expect(CreateClientSchema.safeParse({ name: "Altus Corp" }).success).toBe(
+    expect(CreateClientSchema.safeParse({ name: "Carbide India" }).success).toBe(
       true,
     );
   });

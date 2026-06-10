@@ -98,7 +98,7 @@ export const employees = pgTable("employees", {
     .default("system")
     .$type<"light" | "dark" | "system">(),
   density: text("density").notNull().default("cozy").$type<"cozy" | "compact">(),
-  accent: text("accent").notNull().default("#E10600"),
+  accent: text("accent").notNull().default("#D32F2F"),
   oooStart: date("ooo_start"),
   oooEnd: date("ooo_end"),
   oooDelegateId: uuid("ooo_delegate_id").references((): AnyPgColumn => employees.id, {
@@ -762,7 +762,7 @@ export const orgSettings = pgTable(
   "org_settings",
   {
     id: integer("id").primaryKey().default(1),
-    companyName: text("company_name").notNull().default("Altus Corp"),
+    companyName: text("company_name").notNull().default("Carbide India"),
     logoUrl: text("logo_url"),
     digestHourIst: integer("digest_hour_ist").notNull().default(9),
     idleTimeoutMinutes: integer("idle_timeout_minutes").notNull().default(10),

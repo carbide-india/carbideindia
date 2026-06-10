@@ -14,7 +14,7 @@ import type { ReactNode } from "react";
  * Shared shell for every M2.3 notification email. Lives alongside
  * `emails/_layout.tsx` (the auth-flow shell) but adds:
  *  - a multi-color accent stripe at the top of the card,
- *  - a slightly richer header (Altus Corp pill + "Altus Corp" wordmark
+ *  - a slightly richer header (Carbide India pill + "Carbide India" wordmark
  *    in a serif fallback),
  *  - a footer with the inbox "manage preferences" link.
  *
@@ -25,7 +25,7 @@ import type { ReactNode } from "react";
  */
 
 const STRIPE_COLORS = [
-  "#E10600", // altus red
+  "#D32F2F", // carbide red
   "#F43F5E", // rose
   "#A855F7", // purple
   "#3B82F6", // blue
@@ -61,7 +61,7 @@ export function NotificationEmailLayout({
         }}
       >
         <Container style={{ maxWidth: 580, margin: "0 auto", padding: 0 }}>
-          {/* Header — Altus Corp pill + serif wordmark */}
+          {/* Header — Carbide India pill + serif wordmark */}
           <div
             style={{
               marginBottom: 20,
@@ -75,7 +75,7 @@ export function NotificationEmailLayout({
                 display: "inline-block",
                 padding: "4px 10px",
                 borderRadius: 999,
-                backgroundColor: "#E10600",
+                backgroundColor: "#D32F2F",
                 color: "#ffffff",
                 fontSize: 11,
                 fontWeight: 600,
@@ -83,7 +83,7 @@ export function NotificationEmailLayout({
                 textTransform: "uppercase",
               }}
             >
-              Altus Corp
+              Carbide India
             </span>
             <span
               style={{
@@ -95,7 +95,7 @@ export function NotificationEmailLayout({
                 letterSpacing: "-0.01em",
               }}
             >
-              Altus Corp
+              Carbide India
             </span>
           </div>
 
@@ -163,7 +163,7 @@ export function NotificationEmailLayout({
               margin: 0,
             }}
           >
-            Altus Corp Dashboard
+            Carbide India WMS
           </Text>
         </Container>
       </Body>
@@ -230,7 +230,7 @@ export function NotificationCTA({
         href={href}
         style={{
           display: "inline-block",
-          backgroundColor: "#E10600",
+          backgroundColor: "#3F3F94",
           color: "#ffffff",
           padding: "12px 24px",
           borderRadius: 8,

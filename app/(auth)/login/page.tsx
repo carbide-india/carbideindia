@@ -48,13 +48,13 @@ export default async function LoginPage({ searchParams }: PageProps) {
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto overflow-x-hidden">
-      {/* ── Layer 1 — warm-dark canvas with red radial ── */}
+      {/* ── Layer 1 — warm-dark canvas with indigo radial ── */}
       <div
         aria-hidden
         className="fixed inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 90% 70% at 75% 95%, rgba(225, 6, 0, 0.55), transparent 55%), radial-gradient(ellipse 60% 60% at 20% 10%, rgba(168, 4, 0, 0.25), transparent 60%), linear-gradient(135deg, #0E0B0A 0%, #1A0F0C 50%, #0B0708 100%)",
+            "radial-gradient(ellipse 90% 70% at 75% 95%, rgba(63, 63, 148, 0.55), transparent 55%), radial-gradient(ellipse 60% 60% at 20% 10%, rgba(47, 47, 111, 0.30), transparent 60%), linear-gradient(135deg, #0A0A12 0%, #10102A 50%, #07070E 100%)",
         }}
       />
       {/* Layer 2a — fine dot grid */}
@@ -91,7 +91,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
             border: "1px solid rgba(255, 255, 255, 0.10)",
             borderRadius: 24,
             boxShadow:
-              "0 40px 100px -20px rgba(0, 0, 0, 0.60), 0 1px 0 rgba(255, 255, 255, 0.10) inset, 0 -28px 80px -40px rgba(225, 6, 0, 0.30) inset",
+              "0 40px 100px -20px rgba(0, 0, 0, 0.60), 0 1px 0 rgba(255, 255, 255, 0.10) inset, 0 -28px 80px -40px rgba(63, 63, 148, 0.40) inset",
           }}
         >
           {reason === "idle" && (

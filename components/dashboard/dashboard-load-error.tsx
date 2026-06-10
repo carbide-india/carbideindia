@@ -14,7 +14,7 @@ export function DashboardLoadError() {
       className="mx-auto max-w-[720px] px-8 max-md:px-4 mt-16 mb-24 text-center"
       style={{
         background:
-          "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(225, 6, 0, 0.08), transparent 70%), linear-gradient(180deg, var(--color-surface-card) 0%, var(--color-surface-soft) 100%)",
+          "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(211, 47, 47, 0.08), transparent 70%), linear-gradient(180deg, var(--color-surface-card) 0%, var(--color-surface-soft) 100%)",
         border: "1px solid var(--color-hairline)",
         borderRadius: 20,
         padding: 48,
@@ -53,8 +53,8 @@ export function DashboardLoadError() {
         className="text-cta text-white mt-8 inline-flex items-center gap-2 px-6 py-3 rounded-chip"
         style={{
           background:
-            "linear-gradient(135deg, var(--color-altus-red), var(--color-altus-red-deep))",
-          boxShadow: "0 4px 12px rgba(225, 6, 0, 0.25)",
+            "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
+          boxShadow: "0 4px 12px rgba(63, 63, 148, 0.25)",
           cursor: "pointer",
           border: "none",
         }}

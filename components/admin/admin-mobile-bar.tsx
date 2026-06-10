@@ -145,11 +145,11 @@ export function AdminMobileBar({ adminName, adminEmail }: Props) {
                     className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors"
                     style={{
                       background: active
-                        ? "rgba(225, 6, 0, 0.18)"
+                        ? "rgba(63, 63, 148, 0.18)"
                         : "transparent",
                       color: active ? "white" : "rgba(255, 255, 255, 0.78)",
                       border: active
-                        ? "1px solid rgba(225, 6, 0, 0.42)"
+                        ? "1px solid rgba(63, 63, 148, 0.42)"
                         : "1px solid transparent",
                     }}
                   >
@@ -170,7 +170,7 @@ export function AdminMobileBar({ adminName, adminEmail }: Props) {
                   className="size-9 rounded-full flex items-center justify-center text-white font-bold"
                   style={{
                     background:
-                      "linear-gradient(135deg, rgb(225, 6, 0), rgb(168, 4, 0))",
+                      "linear-gradient(135deg, rgb(63, 63, 148), rgb(47, 47, 111))",
                   }}
                 >
                   {initials}
@@ -211,8 +211,8 @@ export function AdminMobileBar({ adminName, adminEmail }: Props) {
         style={{ boxShadow: "0 2px 8px rgba(0, 0, 0, 0.25)" }}
       >
         <img
-          src="/logo.png"
-          alt="Altus Corp"
+          src="/brand/logo.png"
+          alt="Carbide India"
           style={{ height: 28, width: "auto", display: "block" }}
         />
       </div>

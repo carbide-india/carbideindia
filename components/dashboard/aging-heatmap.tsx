@@ -95,7 +95,7 @@ export function AgingHeatmap({
             "linear-gradient(160deg, #fffefb 0%, #fef7ed 60%, #fef2f2 100%)",
           border: "1px solid var(--color-hairline)",
           boxShadow:
-            "0 1px 3px rgba(15, 23, 42, 0.04), 0 20px 50px -28px rgba(225, 6, 0, 0.15)",
+            "0 1px 3px rgba(15, 23, 42, 0.04), 0 20px 50px -28px rgba(211, 47, 47, 0.15)",
         }}
       >
         {/* Heat wash backdrop */}
@@ -218,12 +218,12 @@ function AlertBanner({ count }: { count: number }) {
       className="mt-1 mb-3 flex items-center gap-3 rounded-chip px-5 py-3.5"
       style={{
         background:
-          "linear-gradient(90deg, rgba(225, 6, 0, 0.12), rgba(225, 6, 0, 0.04))",
+          "linear-gradient(90deg, rgba(211, 47, 47, 0.12), rgba(211, 47, 47, 0.04))",
         borderLeft: "4px solid #dc2626",
         boxShadow: "0 4px 14px -8px rgba(220, 38, 38, 0.45)",
       }}
     >
-      <AlertTriangle className="size-6 shrink-0" style={{ color: "#A80400" }} />
+      <AlertTriangle className="size-6 shrink-0" style={{ color: "#B71C1C" }} />
       <p style={{ fontSize: 17, color: "var(--color-ink-strong)" }}>
         <span className="tabular-nums font-black" style={{ fontSize: 22 }}>
           {count}

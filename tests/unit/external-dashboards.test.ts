@@ -52,8 +52,8 @@ describe("getVisibleDashboards", () => {
     expect(ids).toEqual([]);
   });
 
-  it("non-admin user with altus@vpinnacle.com sees all three", () => {
-    const me = fakeEmployee({ email: "altus@vpinnacle.com", isAdmin: false });
+  it("non-admin user with pravin@vpinnacle.com sees all three", () => {
+    const me = fakeEmployee({ email: "pravin@vpinnacle.com", isAdmin: false });
     const ids = getVisibleDashboards(me).map((d) => d.id);
     expect(ids).toEqual(ALL_IDS);
   });
@@ -65,13 +65,13 @@ describe("getVisibleDashboards", () => {
   });
 
   it("admin with an unrelated email still sees all three", () => {
-    const me = fakeEmployee({ email: "hetesh@altuscorp.in", isAdmin: true });
+    const me = fakeEmployee({ email: "hetesh@carbideindia.com", isAdmin: true });
     const ids = getVisibleDashboards(me).map((d) => d.id);
     expect(ids).toEqual(ALL_IDS);
   });
 
   it("trims surrounding whitespace before comparing emails", () => {
-    const me = fakeEmployee({ email: "  altus@vpinnacle.com  ", isAdmin: false });
+    const me = fakeEmployee({ email: "  pravin@vpinnacle.com  ", isAdmin: false });
     expect(getVisibleDashboards(me)).toHaveLength(3);
   });
 });

@@ -231,8 +231,8 @@ export function EmployeeRowActions({
               <span
                 className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
                 style={{
-                  background: "rgba(225, 6, 0, 0.10)",
-                  color: "#A80400",
+                  background: "rgba(63, 63, 148, 0.10)",
+                  color: "#B71C1C",
                 }}
                 aria-hidden
               >
@@ -256,7 +256,7 @@ export function EmployeeRowActions({
                 Counting impact…
               </div>
             ) : !deleteImpact.ok ? (
-              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-[13px] text-[#A80400] mb-4">
+              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-[13px] text-[#B71C1C] mb-4">
                 {deleteImpact.error ?? "Could not load impact."}
               </div>
             ) : (
@@ -277,7 +277,7 @@ export function EmployeeRowActions({
 
             <label className="block mb-2">
               <span className="block text-[13px] font-semibold text-[#334155] mb-1.5">
-                Type <span className="font-mono text-[12.5px] text-[#A80400]">{employee.email}</span> to confirm
+                Type <span className="font-mono text-[12.5px] text-[#B71C1C]">{employee.email}</span> to confirm
               </span>
               <input
                 type="text"
@@ -305,7 +305,7 @@ export function EmployeeRowActions({
                 onClick={handleDelete}
                 disabled={!confirmMatches || deletePending}
                 className="rounded-md py-2.5 px-5 text-[14px] font-semibold text-white disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{ background: "linear-gradient(135deg, #E10600, #A80400)" }}
+                style={{ background: "linear-gradient(135deg, #D32F2F, #B71C1C)" }}
               >
                 {deletePending ? "Deleting…" : "Delete permanently"}
               </button>
@@ -360,7 +360,7 @@ export function EmployeeRowActions({
                 className="rounded-md py-2.5 px-5 text-[14px] font-medium text-white disabled:opacity-50"
                 style={
                   confirm === "deactivate"
-                    ? { background: "linear-gradient(135deg, #E10600, #A80400)" }
+                    ? { background: "linear-gradient(135deg, #D32F2F, #B71C1C)" }
                     : { background: "linear-gradient(135deg, #10B981, #059669)" }
                 }
               >

@@ -30,7 +30,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           variantClass[variant],
           className,
         )}
-        style={{ outlineColor: "var(--color-altus-red)" }}
+        style={{ outlineColor: "var(--color-brand)" }}
         {...props}
       >
         {children}

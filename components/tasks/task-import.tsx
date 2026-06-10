@@ -23,7 +23,7 @@ import { fireToast } from "@/lib/toast";
 const TEMPLATE =
   "Client,Subject,Doer,Initiator,Priority,Due Date,Description,Notes,Tags\n" +
   "Acme Corp,Marketing,Riya Shah,Manan Vasa,Critical,2026-06-20,Prepare the Q3 campaign deck,Share internally first,deck;q3\n" +
-  "Globex,Documentation,arjun@altus.in,Manan Vasa,Normal,2026-06-25,Collect signed agreements,,docs";
+  "Globex,Documentation,arjun@carbideindia.com,Priya Sharma,Normal,2026-06-25,Collect signed agreements,,docs";
 
 const COLUMNS: { name: string; required: boolean }[] = [
   { name: "Client", required: true },
@@ -141,7 +141,7 @@ export function TaskImport({
           <div className="flex items-start gap-3.5">
             <span
               className="inline-flex items-center justify-center h-12 w-12 rounded-2xl shrink-0"
-              style={{ background: "var(--color-red-bg, #fef2f2)", color: "var(--color-altus-red)" }}
+              style={{ background: "var(--color-red-bg, #fef2f2)", color: "var(--color-brand)" }}
             >
               <Upload size={22} strokeWidth={2.2} />
             </span>
@@ -183,7 +183,7 @@ export function TaskImport({
         }}
         className="group flex flex-col items-center justify-center gap-3 rounded-section border-2 border-dashed px-6 py-12 cursor-pointer transition-all"
         style={{
-          borderColor: dragging ? "var(--color-altus-red)" : "var(--color-hairline-strong)",
+          borderColor: dragging ? "var(--color-brand)" : "var(--color-hairline-strong)",
           background: dragging ? "var(--color-red-bg, #fef2f2)" : "var(--color-surface-soft)",
         }}
       >
@@ -199,7 +199,7 @@ export function TaskImport({
           style={{ background: "var(--color-surface-card)", border: "1px solid var(--color-hairline)" }}
         >
           {file ? (
-            <FileSpreadsheet size={26} className="text-altus-red" strokeWidth={2} />
+            <FileSpreadsheet size={26} className="text-brand" strokeWidth={2} />
           ) : (
             <Upload size={26} className="text-ink-subtle" strokeWidth={2} />
           )}
@@ -209,7 +209,7 @@ export function TaskImport({
         ) : (
           <>
             <span className="text-[16px] font-bold text-ink-strong">
-              Drop your file here, or <span className="text-altus-red">browse</span>
+              Drop your file here, or <span className="text-brand">browse</span>
             </span>
             <span className="text-[13px] text-ink-subtle">CSV or Excel (.xlsx) · up to 500 rows</span>
           </>
@@ -240,7 +240,7 @@ export function TaskImport({
               >
                 {c.name}
                 {c.required ? (
-                  <span className="text-altus-red" title="Required">*</span>
+                  <span className="text-brand" title="Required">*</span>
                 ) : (
                   <span className="text-ink-subtle text-[11px] font-medium">optional</span>
                 )}
@@ -248,7 +248,7 @@ export function TaskImport({
             ))}
           </div>
           <p className="mt-2.5 text-[12.5px] text-ink-subtle">
-            <span className="text-altus-red font-bold">*</span> required · Priority accepts
+            <span className="text-brand font-bold">*</span> required · Priority accepts
             Critical / Important / Urgent / Normal · dates accept ISO or dd/mm/yyyy · Tags
             comma- or semicolon-separated.
           </p>

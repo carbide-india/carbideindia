@@ -86,12 +86,12 @@ export function DepartmentMultiSelect({
                     : "Select first to set primary"
               }
               className="inline-flex items-center gap-1 text-[12px] font-semibold shrink-0 disabled:opacity-30 disabled:cursor-not-allowed"
-              style={{ color: isPrimary ? "#A80400" : "#94A3B8" }}
+              style={{ color: isPrimary ? "#B71C1C" : "#94A3B8" }}
             >
               <Star
                 size={14}
                 strokeWidth={2.2}
-                fill={isPrimary ? "#A80400" : "none"}
+                fill={isPrimary ? "#B71C1C" : "none"}
               />
               {isPrimary ? "Primary" : ""}
             </button>

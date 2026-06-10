@@ -27,8 +27,8 @@ export function ComingSoon({
         <span
           className="inline-flex size-16 items-center justify-center rounded-2xl"
           style={{
-            background: "color-mix(in srgb, var(--color-altus-red) 12%, transparent)",
-            color: "var(--color-altus-red)",
+            background: "color-mix(in srgb, var(--color-brand) 12%, transparent)",
+            color: "var(--color-brand)",
           }}
         >
           <Icon size={30} strokeWidth={2.1} />

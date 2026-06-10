@@ -72,7 +72,7 @@ export function AdminActivityPreview({ events, statusLabels }: Props) {
         </div>
         <Link
           href={"/admin/activity" as Route}
-          className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-ink-soft hover:text-altus-red transition-colors"
+          className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-ink-soft hover:text-brand transition-colors"
         >
           View all
           <ArrowRight size={14} strokeWidth={2.4} />
@@ -203,7 +203,7 @@ function PreviewTaskBody({
       <div className="flex items-baseline gap-1.5 flex-wrap">
         <Link
           href={`/tasks/${row.taskId}` as Route}
-          className="text-[14px] font-semibold text-ink-strong hover:text-altus-red transition-colors max-w-[36ch] truncate"
+          className="text-[14px] font-semibold text-ink-strong hover:text-brand transition-colors max-w-[36ch] truncate"
           title={subject}
         >
           {subject}

@@ -35,11 +35,11 @@ function DepartmentCell({
           className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-semibold ring-1 ring-inset"
           style={{
             background: m.isPrimary ? "#FEF2F2" : "#F1F5F9",
-            color: m.isPrimary ? "#A80400" : "#334155",
+            color: m.isPrimary ? "#B71C1C" : "#334155",
             boxShadow: `inset 0 0 0 1px ${m.isPrimary ? "#FECACA" : "#CBD5E1"}`,
           }}
         >
-          {m.isPrimary && <Star size={11} strokeWidth={2.4} fill="#A80400" />}
+          {m.isPrimary && <Star size={11} strokeWidth={2.4} fill="#B71C1C" />}
           {m.name}
         </span>
       ))}
@@ -76,8 +76,8 @@ function AdminCell({ isAdmin }: { isAdmin: boolean }) {
     <span
       className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-semibold text-white"
       style={{
-        background: "linear-gradient(135deg, var(--color-altus-red), var(--color-altus-red-deep))",
-        boxShadow: "0 1px 4px rgba(225, 6, 0, 0.30)",
+        background: "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
+        boxShadow: "0 1px 4px rgba(63, 63, 148, 0.30)",
       }}
     >
       <Crown size={12} strokeWidth={2.4} />
@@ -209,7 +209,7 @@ export function EmployeeList({
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by name, email, or department"
             aria-label="Search employees"
-            className="w-full pl-10 pr-3.5 py-3 text-[15px] rounded-chip bg-surface-card border border-hairline focus:border-altus-red focus:outline-none transition-colors"
+            className="w-full pl-10 pr-3.5 py-3 text-[15px] rounded-chip bg-surface-card border border-hairline focus:border-brand focus:outline-none transition-colors"
             style={{
               boxShadow: "0 1px 2px rgba(15, 23, 42, 0.03)",
             }}

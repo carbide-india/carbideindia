@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 test.describe("dashboard", () => {
   test("header renders brand mark", async ({ page }) => {
     await page.goto("/");
-    await expect(page.locator("text=Altus").first()).toBeAttached();
+    await expect(page.locator("text=Carbide").first()).toBeAttached();
   });
 
   test("renders either the welcome hero or the populated 6 sections", async ({
@@ -41,9 +41,9 @@ test.describe("dashboard", () => {
     }
   });
 
-  test("footer renders Altus Corp credits", async ({ page }) => {
+  test("footer renders Carbide India credits", async ({ page }) => {
     await page.goto("/");
-    const footer = page.locator("text=Altus Corp").first();
+    const footer = page.locator("text=Carbide India").first();
     await footer.scrollIntoViewIfNeeded();
     await expect(footer).toBeVisible();
   });

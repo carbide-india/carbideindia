@@ -43,9 +43,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Altus Corp — Work Management Dashboard",
-  description: "Altus Corp work management dashboard",
-  metadataBase: new URL("https://altus-corp-dashboard.vercel.app"),
+  title: "Carbide India — Work Management System",
+  description: "Work-management system for Carbide India (Yogeshwar Engineering Pvt Ltd)",
+  metadataBase: new URL("https://wms.carbideindia.com"),
   manifest: "/manifest.json",
 };
 
@@ -65,7 +65,7 @@ export default async function RootLayout({
   const me = await getCurrentEmployee();
   const density = me?.density ?? "cozy";
   // Map the user's accent onto the brand accent CSS variables the whole app
-  // consumes (--color-altus-red*, --vp-cyan*). For the default red this
+  // consumes (--color-brand*, --vp-cyan*). For the default red this
   // reproduces globals.css exactly, so default users see no change.
   const htmlStyle = accentVars(resolveAccent(me?.accent)) as React.CSSProperties;
 

@@ -18,7 +18,7 @@ function profileV2Defaults() {
     digestFrequency: "daily" as const,
     theme: "system" as const,
     density: "cozy" as const,
-    accent: "#E10600",
+    accent: "#D32F2F",
     oooStart: null as string | null,
     oooEnd: null as string | null,
     oooDelegateId: null as string | null,
@@ -34,7 +34,7 @@ export const fixtureEmployees: Employee[] = [
   {
     id: "11111111-1111-1111-1111-111111111111",
     name: "Ankit Sharma",
-    email: "ankit@altus.test",
+    email: "ankit@carbide.test",
     role: "both",
     avatarUrl: null,
     department: "Operations",
@@ -52,7 +52,7 @@ export const fixtureEmployees: Employee[] = [
   {
     id: "22222222-2222-2222-2222-222222222222",
     name: "Priya Iyer",
-    email: "priya@altus.test",
+    email: "priya@carbide.test",
     role: "doer",
     avatarUrl: null,
     department: "Underwriting",
@@ -70,7 +70,7 @@ export const fixtureEmployees: Employee[] = [
   {
     id: "33333333-3333-3333-3333-333333333333",
     name: "Ravi Kumar",
-    email: "ravi@altus.test",
+    email: "ravi@carbide.test",
     role: "initiator",
     avatarUrl: null,
     department: "Sales",

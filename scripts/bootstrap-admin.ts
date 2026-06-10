@@ -3,7 +3,7 @@
  *
  * Usage:
  *   cp .env.local .env.bootstrap
- *   pnpm bootstrap-admin --email altus@carbideindia.com --name "Admin Name"
+ *   pnpm bootstrap-admin --email admin@carbideindia.com --name "Admin Name"
  *
  * (pnpm 10 dropped the `--` separator — it's now passed as a literal arg.)
  *

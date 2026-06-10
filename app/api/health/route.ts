@@ -58,7 +58,7 @@ export async function GET() {
   return Response.json(
     {
       ok: dbCheck.ok,
-      service: "altus-corp-dashboard",
+      service: "carbide-india-wms",
       ts: new Date().toISOString(),
       checks: [dbCheck],
     },

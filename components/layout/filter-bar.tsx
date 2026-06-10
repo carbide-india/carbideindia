@@ -215,7 +215,7 @@ export function FilterBar({
                   minWidth: 18,
                   height: 18,
                   padding: "0 6px",
-                  background: "var(--color-altus-red)",
+                  background: "var(--color-brand)",
                 }}
               >
                 {activeCount}
@@ -380,7 +380,7 @@ export function FilterBar({
                         type="button"
                         aria-label="Import and export"
                         title="Import / export"
-                        className="inline-flex items-center justify-center h-9 w-9 rounded-chip border border-hairline bg-surface-card text-ink-soft hover:text-ink-strong hover:border-altus-red transition-colors"
+                        className="inline-flex items-center justify-center h-9 w-9 rounded-chip border border-hairline bg-surface-card text-ink-soft hover:text-ink-strong hover:border-brand transition-colors"
                         style={{ boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)" }}
                       >
                         <MoreHorizontal size={16} strokeWidth={2.4} />
@@ -389,7 +389,7 @@ export function FilterBar({
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem asChild>
                         <Link href={"/tasks/import" as Route}>
-                          <Upload size={14} strokeWidth={2} style={{ color: "var(--color-altus-red)" }} />
+                          <Upload size={14} strokeWidth={2} style={{ color: "var(--color-brand)" }} />
                           Import tasks
                         </Link>
                       </DropdownMenuItem>
@@ -401,7 +401,7 @@ export function FilterBar({
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <a href={buildExportHref("/tasks/export.pdf")} download>
-                          <FileText size={14} strokeWidth={2} style={{ color: "var(--color-altus-red, #dc2626)" }} />
+                          <FileText size={14} strokeWidth={2} style={{ color: "var(--color-brand, #dc2626)" }} />
                           Export PDF
                         </a>
                       </DropdownMenuItem>
@@ -438,19 +438,19 @@ export function FilterBar({
               className="inline-flex items-center gap-2 text-cta text-white px-6 py-3 rounded-chip transition-transform disabled:opacity-60"
               style={{
                 background:
-                  "linear-gradient(135deg, rgb(225, 6, 0), rgb(168, 4, 0))",
-                boxShadow: "0 6px 16px rgba(225, 6, 0, 0.32)",
+                  "linear-gradient(135deg, rgb(63, 63, 148), rgb(47, 47, 111))",
+                boxShadow: "0 6px 16px rgba(63, 63, 148, 0.32)",
               }}
               onMouseEnter={(e) => {
                 if (isPending) return;
                 e.currentTarget.style.transform = "translateY(-1px)";
                 e.currentTarget.style.boxShadow =
-                  "0 10px 24px rgba(225, 6, 0, 0.42)";
+                  "0 10px 24px rgba(63, 63, 148, 0.42)";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = "translateY(0)";
                 e.currentTarget.style.boxShadow =
-                  "0 6px 16px rgba(225, 6, 0, 0.32)";
+                  "0 6px 16px rgba(63, 63, 148, 0.32)";
               }}
             >
               {isPending ? "Applying…" : "Apply Filter"}

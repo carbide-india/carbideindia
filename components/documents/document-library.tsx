@@ -132,7 +132,7 @@ export function DocumentLibrary({ documents }: { documents: DocumentRow[] }) {
             type="submit"
             disabled={busy}
             className="rounded-md py-2 px-5 text-[14px] font-semibold text-white disabled:opacity-50"
-            style={{ background: "linear-gradient(135deg, #E10600, #A80400)" }}
+            style={{ background: "linear-gradient(135deg, #D32F2F, #B71C1C)" }}
           >
             {busy
               ? progress != null

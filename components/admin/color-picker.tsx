@@ -72,7 +72,7 @@ export function ColorPicker({ value, onChange }: Props) {
                 onClick={() => onChange(t)}
                 className={`h-7 w-7 rounded-full border transition ${
                   value === t
-                    ? "border-[var(--color-altus-red)] ring-2 ring-[var(--color-altus-red)]/30"
+                    ? "border-[var(--color-brand)] ring-2 ring-[var(--color-brand)]/30"
                     : "border-[rgba(15,23,42,0.12)] hover:scale-110"
                 }`}
                 style={{ background: TOKEN_BG[t] }}

@@ -168,7 +168,7 @@ export function NotificationList({ rows, hasMore, loadOlderHref }: Props) {
         <li className="text-center py-4">
           <a
             href={loadOlderHref}
-            className="inline-flex items-center gap-1.5 text-altus-red text-chip font-semibold hover:underline"
+            className="inline-flex items-center gap-1.5 text-brand text-chip font-semibold hover:underline"
           >
             Load older
             <span aria-hidden>→</span>

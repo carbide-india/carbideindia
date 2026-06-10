@@ -34,8 +34,8 @@ export function Checkbox({
       }}
       className={`inline-flex size-[18px] shrink-0 items-center justify-center rounded-[5px] border transition-colors ${
         filled
-          ? "bg-altus-red border-altus-red text-white"
-          : "bg-surface-card border-hairline-strong text-transparent hover:border-altus-red"
+          ? "bg-brand border-brand text-white"
+          : "bg-surface-card border-hairline-strong text-transparent hover:border-brand"
       } ${className}`}
     >
       {mixed ? (

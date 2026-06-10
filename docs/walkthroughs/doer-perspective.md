@@ -1,6 +1,6 @@
-# Doer perspective — your day on Altus Corp Dashboard
+# Doer perspective — your day on Carbide India WMS
 
-This walkthrough is for a regular employee at Altus Corp — someone who *does* the work, rather than someone who hands it out. It walks you through every screen you'll touch in a normal week, in the order you'll meet them. Every button name, colour and message below is the exact text the system shows you today, so you can follow along on the live site without guesswork.
+This walkthrough is for a regular employee at Carbide India — someone who *does* the work, rather than someone who hands it out. It walks you through every screen you'll touch in a normal week, in the order you'll meet them. Every button name, colour and message below is the exact text the system shows you today, so you can follow along on the live site without guesswork.
 
 ---
 
@@ -8,7 +8,7 @@ This walkthrough is for a regular employee at Altus Corp — someone who *does* 
 
 You don't sign yourself up — your admin creates your account first. The moment they do, you receive an email.
 
-**The email.** Subject line: **"You've been invited to Altus Corp Dashboard"**, from *Altus Corp Dashboard*. The body opens with "Hi *[Your name]*, *[Admin's name]* has invited you to the Altus Corp Dashboard — the work-management tool Altus Corp is using to track tasks across the team." There's a single red button: **"Set password and sign in"**. The link is valid for 24 hours.
+**The email.** Subject line: **"You've been invited to Carbide India WMS"**, from *Carbide India WMS*. The body opens with "Hi *[Your name]*, *[Admin's name]* has invited you to the Carbide India WMS — the work-management tool Carbide India is using to track tasks across the team." There's a single red button: **"Set password and sign in"**. The link is valid for 24 hours.
 
 **Step 1 — Set your password.** Clicking the button drops you on the **Set your password** page. It shows the email it's setting the password *for*, then two fields: *New password* and *Confirm*. The password must be at least 8 characters and the two fields have to match. Press the red **Save and sign in** button. Behind the scenes the system is talking to Firebase to record the password, then immediately trading the result for a session cookie so you don't have to log in again.
 

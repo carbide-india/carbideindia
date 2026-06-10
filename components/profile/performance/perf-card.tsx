@@ -69,7 +69,7 @@ export function PerfCard({ stats }: Props) {
             { label: "Avg cycle", value: hours(stats.lifetime.avgCycleHours) },
             { label: "Overdue", value: pct(stats.lifetime.overdueRate) },
           ]}
-          accent="#E10600"
+          accent="#D32F2F"
         />
       </div>
 
@@ -228,7 +228,7 @@ function TrendChart({
         <path
           d={mePath}
           fill="none"
-          stroke="#E10600"
+          stroke="#D32F2F"
           strokeWidth={2.5}
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -240,7 +240,7 @@ function TrendChart({
             cx={PAD + i * xStep}
             cy={H - PAD - (t.me / max) * (H - PAD * 2)}
             r={3}
-            fill="#E10600"
+            fill="#D32F2F"
           />
         ))}
       </svg>
@@ -254,7 +254,7 @@ function TrendChart({
         }}
       >
         <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-          <span style={{ width: 16, height: 2, background: "#E10600" }} /> You
+          <span style={{ width: 16, height: 2, background: "#D32F2F" }} /> You
         </span>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
           <span

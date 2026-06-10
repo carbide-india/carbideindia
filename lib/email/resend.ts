@@ -58,7 +58,7 @@ function getResend(): Resend | null {
   return cached;
 }
 
-const FROM = process.env.RESEND_FROM_EMAIL || "Altus Corp Dashboard <onboarding@resend.dev>";
+const FROM = process.env.RESEND_FROM_EMAIL || "Carbide India WMS <onboarding@resend.dev>";
 
 const SUBJECT_MAX = 80;
 
@@ -70,10 +70,10 @@ function clampSubject(s: string): string {
 
 export function digestSubject(pendingCount: number): string {
   if (pendingCount === 0) {
-    return "You're all clear — no pending tasks — Altus Corp Dashboard";
+    return "You're all clear — no pending tasks — Carbide India WMS";
   }
   const noun = pendingCount === 1 ? "task" : "tasks";
-  return `You have ${pendingCount} pending ${noun} — Altus Corp Dashboard`;
+  return `You have ${pendingCount} pending ${noun} — Carbide India WMS`;
 }
 
 function errorMessage(err: unknown): string {

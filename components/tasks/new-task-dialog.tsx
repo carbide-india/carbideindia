@@ -123,9 +123,9 @@ export function NewTaskDialog({ employees, clients, subjects, projectNodes, defa
                     fontSize: 14,
                     letterSpacing: "0.005em",
                     background:
-                      "linear-gradient(135deg, rgb(225, 6, 0), rgb(168, 4, 0))",
+                      "linear-gradient(135deg, rgb(63, 63, 148), rgb(47, 47, 111))",
                     boxShadow:
-                      "0 4px 14px rgba(225, 6, 0, 0.45), inset 0 0 0 1px rgba(255,255,255,0.22)",
+                      "0 4px 14px rgba(63, 63, 148, 0.45), inset 0 0 0 1px rgba(255,255,255,0.22)",
                     transition:
                       "transform 180ms ease, box-shadow 220ms ease, filter 180ms ease",
                     animation:
@@ -135,13 +135,13 @@ export function NewTaskDialog({ employees, clients, subjects, projectNodes, defa
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = "scale(1.04)";
                     e.currentTarget.style.boxShadow =
-                      "0 10px 28px rgba(225, 6, 0, 0.6), 0 0 0 6px rgba(225, 6, 0, 0.14), inset 0 0 0 1px rgba(255,255,255,0.32)";
+                      "0 10px 28px rgba(63, 63, 148, 0.6), 0 0 0 6px rgba(63, 63, 148, 0.14), inset 0 0 0 1px rgba(255,255,255,0.32)";
                     e.currentTarget.style.filter = "brightness(1.05)";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = "";
                     e.currentTarget.style.boxShadow =
-                      "0 4px 14px rgba(225, 6, 0, 0.45), inset 0 0 0 1px rgba(255,255,255,0.22)";
+                      "0 4px 14px rgba(63, 63, 148, 0.45), inset 0 0 0 1px rgba(255,255,255,0.22)";
                     e.currentTarget.style.filter = "";
                   }}
                 >
@@ -201,8 +201,8 @@ export function NewTaskDialog({ employees, clients, subjects, projectNodes, defa
                 "linear-gradient(135deg, #ffffff 0%, #F0FBFF 100%)",
               color: "#0F172A",
               boxShadow:
-                "0 18px 36px -10px rgba(225, 6, 0, 0.38), 0 4px 12px rgba(15, 23, 42, 0.10)",
-              border: "1px solid rgba(225, 6, 0, 0.22)",
+                "0 18px 36px -10px rgba(63, 63, 148, 0.38), 0 4px 12px rgba(15, 23, 42, 0.10)",
+              border: "1px solid rgba(63, 63, 148, 0.22)",
               animation:
                 "hintBalloonIn 360ms cubic-bezier(0.16, 1, 0.3, 1) both",
               fontSize: 14,
@@ -221,14 +221,14 @@ export function NewTaskDialog({ employees, clients, subjects, projectNodes, defa
                 height: 12,
                 background:
                   "linear-gradient(135deg, #ffffff 0%, #F0FBFF 100%)",
-                borderTop: "1px solid rgba(225, 6, 0, 0.22)",
-                borderLeft: "1px solid rgba(225, 6, 0, 0.22)",
+                borderTop: "1px solid rgba(63, 63, 148, 0.22)",
+                borderLeft: "1px solid rgba(63, 63, 148, 0.22)",
                 transform: "rotate(45deg)",
               }}
             />
             <span className="block font-semibold" style={{ color: "#0F172A" }}>
               Start by creating your first task
-              <span style={{ color: "rgb(168, 4, 0)" }}> →</span>
+              <span style={{ color: "rgb(47, 47, 111)" }}> →</span>
             </span>
             <span
               className="block mt-0.5"
@@ -277,7 +277,7 @@ export function NewTaskDialog({ employees, clients, subjects, projectNodes, defa
               style={{
                 height: 5,
                 background:
-                  "linear-gradient(90deg, rgb(225, 6, 0), rgb(168, 4, 0))",
+                  "linear-gradient(90deg, rgb(63, 63, 148), rgb(47, 47, 111))",
               }}
             />
             <Dialog.Title
@@ -315,7 +315,7 @@ export function NewTaskDialog({ employees, clients, subjects, projectNodes, defa
                     color: "var(--color-ink-strong)",
                   }}
                 >
-                  <Upload size={17} strokeWidth={2.2} style={{ color: "var(--color-altus-red)" }} />
+                  <Upload size={17} strokeWidth={2.2} style={{ color: "var(--color-brand)" }} />
                   <span className="max-md:hidden">Import</span>
                 </button>
               )}
@@ -381,13 +381,13 @@ export function NewTaskDialog({ employees, clients, subjects, projectNodes, defa
               <span
                 aria-hidden
                 className="absolute inset-x-0 top-0"
-                style={{ height: 5, background: "linear-gradient(90deg, rgb(225, 6, 0), rgb(168, 4, 0))" }}
+                style={{ height: 5, background: "linear-gradient(90deg, rgb(63, 63, 148), rgb(47, 47, 111))" }}
               />
               <Dialog.Title
                 className="text-ink-strong inline-flex items-center gap-2.5"
                 style={{ fontFamily: "var(--font-display), system-ui, sans-serif", fontWeight: 900, fontSize: "clamp(26px, 2.6vw, 36px)", letterSpacing: "-0.02em", lineHeight: 1.05 }}
               >
-                <Upload size={26} strokeWidth={2.4} style={{ color: "var(--color-altus-red)" }} />
+                <Upload size={26} strokeWidth={2.4} style={{ color: "var(--color-brand)" }} />
                 Import tasks
               </Dialog.Title>
               <Dialog.Close asChild>

@@ -179,7 +179,7 @@ const COLUMN_LABELS: Record<string, string> = {
   ageDays: "Age",
 };
 
-const COLUMN_VIS_STORAGE_KEY = "altus.tasks.columnVisibility.v1";
+const COLUMN_VIS_STORAGE_KEY = "carbide.tasks.columnVisibility.v1";
 
 type StatusLabels = Record<TaskStatus, string>;
 type StatusTones = Record<TaskStatus, StatusColorToken>;
@@ -238,7 +238,7 @@ function buildColumns(
       accessorKey: "client",
       header: "Client",
       meta: { narrow: true },
-      // Sort nulls last and case-insensitively so "altus" and "Altus" cluster.
+      // Sort nulls last and case-insensitively so "acme" and "Acme" cluster.
       sortingFn: (a, b) =>
         (a.original.client ?? "￿").localeCompare(b.original.client ?? "￿", undefined, {
           sensitivity: "base",
@@ -740,7 +740,7 @@ export function TaskTable({
                       >
                         {label}
                       </span>
-                      <span className="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-altus-red/10 text-altus-red font-bold tabular-nums text-[12px]">
+                      <span className="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-brand/10 text-brand font-bold tabular-nums text-[12px]">
                         {groupCounts?.get(label!) ?? 0}
                       </span>
                     </span>
@@ -750,14 +750,14 @@ export function TaskTable({
             <tr
               data-task-row={row.original.id}
               className={`task-row border-b border-hairline last:border-b-0 transition-colors ${
-                row.original.id === focusedId ? "bg-altus-red/[0.06]" : ""
+                row.original.id === focusedId ? "bg-brand/[0.06]" : ""
               }`}
               style={{
                 boxShadow:
                   [
                     rowAccent,
                     row.original.id === focusedId
-                      ? "inset 0 0 0 2px var(--color-altus-red)"
+                      ? "inset 0 0 0 2px var(--color-brand)"
                       : null,
                   ]
                     .filter(Boolean)
@@ -822,7 +822,7 @@ export function TaskTable({
                   >
                     {label}
                   </span>
-                  <span className="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-altus-red/10 text-altus-red font-bold tabular-nums text-[12px]">
+                  <span className="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-brand/10 text-brand font-bold tabular-nums text-[12px]">
                     {groupCounts?.get(label!) ?? 0}
                   </span>
                 </div>
@@ -897,8 +897,8 @@ function CompactPager({
             aria-current={p - 1 === pageIndex ? "page" : undefined}
             className={`inline-flex items-center justify-center min-w-9 h-9 px-2.5 rounded-lg text-[13.5px] font-bold tabular-nums border transition-all ${
               p - 1 === pageIndex
-                ? "bg-altus-red text-white border-altus-red"
-                : "bg-surface-card text-ink-strong border-hairline hover:border-altus-red hover:text-altus-red"
+                ? "bg-brand text-white border-brand"
+                : "bg-surface-card text-ink-strong border-hairline hover:border-brand hover:text-brand"
             }`}
           >
             {p}
@@ -910,7 +910,7 @@ function CompactPager({
         onClick={() => onGoto(pageIndex + 1)}
         disabled={!canNext}
         aria-label="Next page"
-        className="inline-flex items-center gap-1 h-9 px-3 rounded-lg text-[13.5px] font-bold border border-hairline bg-surface-card text-ink-strong transition-all enabled:hover:border-altus-red enabled:hover:text-altus-red disabled:opacity-40 disabled:cursor-not-allowed"
+        className="inline-flex items-center gap-1 h-9 px-3 rounded-lg text-[13.5px] font-bold border border-hairline bg-surface-card text-ink-strong transition-all enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed"
       >
         Next
         <ChevronRight size={15} strokeWidth={2.4} />
@@ -920,7 +920,7 @@ function CompactPager({
         onClick={() => onGoto(pageCount - 1)}
         disabled={!canNext}
         aria-label="Last page"
-        className="inline-flex items-center gap-1 h-9 px-3 rounded-lg text-[13.5px] font-bold border border-hairline bg-surface-card text-ink-strong transition-all enabled:hover:border-altus-red enabled:hover:text-altus-red disabled:opacity-40 disabled:cursor-not-allowed"
+        className="inline-flex items-center gap-1 h-9 px-3 rounded-lg text-[13.5px] font-bold border border-hairline bg-surface-card text-ink-strong transition-all enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed"
       >
         Last
         <ChevronsRight size={15} strokeWidth={2.4} />
@@ -955,7 +955,7 @@ function SearchBox({
           onChange={(e) => onChange(e.target.value)}
           placeholder="Search by task no. (#1042), title, subject, client, doer…"
           aria-label="Search tasks"
-          className="w-full h-11 pl-10 pr-9 rounded-pill border border-hairline bg-surface-card text-[15px] text-ink-strong placeholder:text-ink-subtle outline-none transition-all focus:border-altus-red focus:ring-2 focus:ring-altus-red/25"
+          className="w-full h-11 pl-10 pr-9 rounded-pill border border-hairline bg-surface-card text-[15px] text-ink-strong placeholder:text-ink-subtle outline-none transition-all focus:border-brand focus:ring-2 focus:ring-brand/25"
         />
         {value && (
           <button
@@ -994,7 +994,7 @@ function RowsPerPageSelect({
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-pill text-[13px] font-bold tabular-nums border border-hairline bg-surface-card text-ink-strong hover:border-altus-red hover:text-altus-red transition-all"
+            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-pill text-[13px] font-bold tabular-nums border border-hairline bg-surface-card text-ink-strong hover:border-brand hover:text-brand transition-all"
           >
             {value}
             <ChevronsUpDown size={13} strokeWidth={2.4} className="opacity-60" />
@@ -1041,7 +1041,7 @@ function GroupByControl({
           aria-label="Group tasks by"
           className={`inline-flex items-center gap-2 h-9 px-3.5 rounded-pill text-[13px] font-bold border transition-all ${
             grouped
-              ? "border-altus-red bg-altus-red/10 text-altus-red"
+              ? "border-brand bg-brand/10 text-brand"
               : "border-hairline bg-surface-card text-ink-soft hover:border-hairline-strong hover:text-ink-strong"
           }`}
         >
@@ -1059,7 +1059,7 @@ function GroupByControl({
             <DropdownMenuItem
               key={opt.key}
               onSelect={() => onChange(opt.key)}
-              className={sel ? "font-bold text-altus-red" : ""}
+              className={sel ? "font-bold text-brand" : ""}
             >
               <span className="inline-flex w-4 justify-center">
                 {sel ? <Check size={14} strokeWidth={2.6} /> : null}
@@ -1067,7 +1067,7 @@ function GroupByControl({
               <Icon
                 size={15}
                 strokeWidth={2.2}
-                className={sel ? "text-altus-red" : "text-ink-soft"}
+                className={sel ? "text-brand" : "text-ink-soft"}
               />
               {opt.label}
             </DropdownMenuItem>
@@ -1286,7 +1286,7 @@ function TaskCard({
   return (
     <div
       className={`bg-surface-card rounded-section border p-4 transition-colors ${
-        selected ? "border-altus-red" : "border-hairline"
+        selected ? "border-brand" : "border-hairline"
       }`}
       style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}
     >

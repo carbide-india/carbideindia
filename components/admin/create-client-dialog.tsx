@@ -44,7 +44,7 @@ export function CreateClientDialog() {
       <Dialog.Trigger asChild>
         <button
           className="rounded-md py-2.5 px-5 text-[14px] font-medium text-white"
-          style={{ background: "linear-gradient(135deg, #E10600, #A80400)" }}
+          style={{ background: "linear-gradient(135deg, #D32F2F, #B71C1C)" }}
         >
           + New client
         </button>
@@ -87,7 +87,7 @@ export function CreateClientDialog() {
             {error && (
               <div
                 role="alert"
-                className="rounded-md border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-[14px] text-[#A80400]"
+                className="rounded-md border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-[14px] text-[#B71C1C]"
               >
                 {error}
               </div>
@@ -106,7 +106,7 @@ export function CreateClientDialog() {
                 type="submit"
                 disabled={pending}
                 className="rounded-md py-2.5 px-5 text-[14px] font-medium text-white disabled:opacity-50"
-                style={{ background: "linear-gradient(135deg, #E10600, #A80400)" }}
+                style={{ background: "linear-gradient(135deg, #D32F2F, #B71C1C)" }}
               >
                 {pending ? "Creating…" : "Create"}
               </button>
