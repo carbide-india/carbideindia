@@ -231,7 +231,7 @@ export function EmployeeRowActions({
               <span
                 className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
                 style={{
-                  background: "rgba(63, 63, 148, 0.10)",
+                  background: "rgba(211, 47, 47, 0.10)",
                   color: "#B71C1C",
                 }}
                 aria-hidden
