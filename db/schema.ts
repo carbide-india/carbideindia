@@ -907,54 +907,6 @@ export const attendanceLogs = pgTable(
 );
 
 /**
- * Incentive requests (migration 0053) — ported from the Ecosystem "Incentive
- * Request" form. `type` picks one of the four request shapes; the per-type
- * fields live in `details` (validated against lib/incentive-fields.ts at the
- * action layer, same generic field-config the form renders from). Admins
- * approve/reject via the decided_* columns.
- */
-export const incentiveRequests = pgTable(
-  "incentive_requests",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    employeeId: uuid("employee_id")
-      .notNull()
-      .references(() => employees.id, { onDelete: "cascade" }),
-    type: text("type")
-      .$type<
-        "bss_conversion" | "sales_pitch" | "client_happiness" | "group_intro"
-      >()
-      .notNull(),
-    status: text("status")
-      .$type<"pending" | "approved" | "rejected">()
-      .notNull()
-      .default("pending"),
-    details: jsonb("details")
-      .notNull()
-      .$type<Record<string, string>>()
-      .default({}),
-    decidedById: uuid("decided_by_id").references(() => employees.id, {
-      onDelete: "set null",
-    }),
-    decidedAt: timestamp("decided_at", { withTimezone: true }),
-    decisionNote: text("decision_note"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (t) => [
-    index("incentive_requests_employee_created_idx").on(
-      t.employeeId,
-      t.createdAt,
-    ),
-    index("incentive_requests_status_created_idx").on(t.status, t.createdAt),
-  ],
-);
-
-/**
  * Outstanding tracker (migration 0053) — receivables ledger. The Ecosystem
  * version lived in a Google Apps Script app (tracker / collection /
  * dashboard); this is the native rebuild. Entries are admin-managed; any
@@ -1071,8 +1023,6 @@ export type AchievementEarned = typeof achievementsEarned.$inferSelect;
 export type NewAchievementEarned = typeof achievementsEarned.$inferInsert;
 export type AttendanceLog = typeof attendanceLogs.$inferSelect;
 export type NewAttendanceLog = typeof attendanceLogs.$inferInsert;
-export type IncentiveRequest = typeof incentiveRequests.$inferSelect;
-export type NewIncentiveRequest = typeof incentiveRequests.$inferInsert;
 export type OutstandingEntry = typeof outstandingEntries.$inferSelect;
 export type NewOutstandingEntry = typeof outstandingEntries.$inferInsert;
 export type OutstandingFollowup = typeof outstandingFollowups.$inferSelect;

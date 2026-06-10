@@ -199,36 +199,12 @@ export const AGE_BUCKETS = [
 
 export type AgeBucketId = (typeof AGE_BUCKETS)[number]["id"];
 
-// ── Attendance / Incentive / Outstanding (migration 0053) ──────────────────
+// ── Attendance / Outstanding (migration 0053) ──────────────────────────────
 // Ported from the Altus Ecosystem static forms (2026-06-10). The DB columns
 // are `text` (not pgEnums) so these unions are the canonical source of truth.
 
 export const ATTENDANCE_KINDS = ["in", "out"] as const;
 export type AttendanceKind = (typeof ATTENDANCE_KINDS)[number];
-
-export const INCENTIVE_TYPES = [
-  "bss_conversion",
-  "sales_pitch",
-  "client_happiness",
-  "group_intro",
-] as const;
-export type IncentiveType = (typeof INCENTIVE_TYPES)[number];
-
-export const INCENTIVE_TYPE_LABELS: Record<IncentiveType, string> = {
-  bss_conversion:   "BSS Conversion",
-  sales_pitch:      "Sales Pitch",
-  client_happiness: "Client Happiness",
-  group_intro:      "Group Introduction",
-};
-
-export const INCENTIVE_STATUSES = ["pending", "approved", "rejected"] as const;
-export type IncentiveStatus = (typeof INCENTIVE_STATUSES)[number];
-
-export const INCENTIVE_STATUS_LABELS: Record<IncentiveStatus, string> = {
-  pending:  "Pending",
-  approved: "Approved",
-  rejected: "Rejected",
-};
 
 export const OUTSTANDING_STATUSES = [
   "open",
