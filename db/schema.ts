@@ -1,6 +1,7 @@
 import {
   pgEnum,
   pgTable,
+  pgSequence,
   text,
   timestamp,
   uuid,
@@ -13,6 +14,7 @@ import {
   time,
   date,
   uniqueIndex,
+  check,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
@@ -22,6 +24,17 @@ import {
   TASK_PRIORITIES,
   APPROVAL_STATUSES,
 } from "./enums";
+
+/**
+ * Friendly sequential task number (#1042). Originally created by migration
+ * 0048 (Supabase era); declared here so the squashed Neon init migration
+ * recreates it. Starts at 1000 so every task reads as a tidy 4-digit number.
+ * `tasks.task_no` defaults to nextval() of this sequence — the DB assigns
+ * the number; app inserts never supply it.
+ */
+export const tasksTaskNoSeq = pgSequence("tasks_task_no_seq", {
+  startWith: 1000,
+});
 
 export const taskStatusEnum = pgEnum("task_status", TASK_STATUSES);
 export const employeeRoleEnum = pgEnum("employee_role", EMPLOYEE_ROLES);
@@ -451,10 +464,10 @@ export const tasks = pgTable(
       .defaultNow(),
     legacyImportKey: text("legacy_import_key"),
     shortId: text("short_id"),
-    // Friendly sequential task number (#1042). DB-assigned via a sequence
-    // default + NOT NULL (see migration 0046); kept nullable here so inserts
-    // don't have to supply it and the DB fills it in.
-    taskNo: integer("task_no"),
+    // Friendly sequential task number (#1042). DB-assigned via the
+    // `tasks_task_no_seq` sequence default declared above; kept nullable in
+    // TS so inserts don't have to supply it and the DB fills it in.
+    taskNo: integer("task_no").default(sql`nextval('tasks_task_no_seq')`),
     // Tier-3 (2026-05-20) additions:
     //   tags          — comma-of-chips, free-form (no enum). NULL = no tags.
     //   approvalStatus — admin-only verdict layered on top of `status`. NULL
@@ -516,6 +529,16 @@ export const tasks = pgTable(
     index("tasks_approved_by_idx").on(t.approvedById),
     index("tasks_transferred_from_idx").on(t.transferredFromId),
     index("tasks_project_node_idx").on(t.projectNodeId),
+    // Uniqueness guards originally from migrations 0013 + 0048. The
+    // `tasks_short_id_uidx` name is load-bearing: createTask / importTasks
+    // catch error 23505 on that constraint and retry with a fresh slug.
+    uniqueIndex("tasks_legacy_import_key_uidx")
+      .on(t.legacyImportKey)
+      .where(sql`${t.legacyImportKey} is not null`),
+    uniqueIndex("tasks_short_id_uidx")
+      .on(t.shortId)
+      .where(sql`${t.shortId} is not null`),
+    uniqueIndex("tasks_task_no_uidx").on(t.taskNo),
   ],
 );
 
@@ -732,37 +755,45 @@ export const pushSubscriptions = pgTable(
  * via `orgSettings` queries that hard-code `id = 1`.  Adding new
  * org-level knobs = add a column here + bump the form on /admin/settings.
  */
-export const orgSettings = pgTable("org_settings", {
-  id: integer("id").primaryKey().default(1),
-  companyName: text("company_name").notNull().default("Altus Corp"),
-  logoUrl: text("logo_url"),
-  digestHourIst: integer("digest_hour_ist").notNull().default(9),
-  idleTimeoutMinutes: integer("idle_timeout_minutes").notNull().default(10),
-  workingDays: integer("working_days")
-    .array()
-    .notNull()
-    .default(sql`array[1,2,3,4,5]`),
-  timezone: text("timezone").notNull().default("Asia/Kolkata"),
-  allowSelfRegister: boolean("allow_self_register").notNull().default(false),
-  // M5.1 — per-event channel routing. Key = NotificationKind, value = channels
-  // array. SQL default seeded in migration 0017; the empty TS default below is
-  // only used if a fresh insert ever bypasses the migration default.
-  notificationMatrix: jsonb("notification_matrix")
-    .notNull()
-    .$type<Record<string, string[]>>()
-    .default({}),
-  // sir's changes #8 — admin-defined kanban column order (ordered array of
-  // column ids: TaskStatus values + the synthetic "__archived__"). null = use
-  // the built-in default order. Lives here, not status_settings, because the
-  // Archived column isn't a real status.
-  boardColumnOrder: jsonb("board_column_order").$type<string[]>(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updatedById: uuid("updated_by_id").references(() => employees.id, {
-    onDelete: "set null",
-  }),
-});
+export const orgSettings = pgTable(
+  "org_settings",
+  {
+    id: integer("id").primaryKey().default(1),
+    companyName: text("company_name").notNull().default("Altus Corp"),
+    logoUrl: text("logo_url"),
+    digestHourIst: integer("digest_hour_ist").notNull().default(9),
+    idleTimeoutMinutes: integer("idle_timeout_minutes").notNull().default(10),
+    workingDays: integer("working_days")
+      .array()
+      .notNull()
+      .default(sql`array[1,2,3,4,5]`),
+    timezone: text("timezone").notNull().default("Asia/Kolkata"),
+    allowSelfRegister: boolean("allow_self_register").notNull().default(false),
+    // M5.1 — per-event channel routing. Key = NotificationKind, value = channels
+    // array. The real default matrix is seeded onto the singleton row by
+    // scripts/seed-defaults.ts; the empty object below is only the column
+    // default for any insert that bypasses the seed.
+    notificationMatrix: jsonb("notification_matrix")
+      .notNull()
+      .$type<Record<string, string[]>>()
+      .default({}),
+    // sir's changes #8 — admin-defined kanban column order (ordered array of
+    // column ids: TaskStatus values + the synthetic "__archived__"). null = use
+    // the built-in default order. Lives here, not status_settings, because the
+    // Archived column isn't a real status.
+    boardColumnOrder: jsonb("board_column_order").$type<string[]>(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedById: uuid("updated_by_id").references(() => employees.id, {
+      onDelete: "set null",
+    }),
+  },
+  (t) => [
+    // Single-row table — enforced at the DB level (originally migration 0011).
+    check("org_settings_id_check", sql`${t.id} = 1`),
+  ],
+);
 
 /**
  * M3 close-out — append-only admin audit trails.  Two tables so the

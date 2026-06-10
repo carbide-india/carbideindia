@@ -13,14 +13,14 @@ const globalForDb = globalThis as unknown as {
 const client =
   globalForDb.__pg ??
   postgres(env.DATABASE_URL, {
-    // Required for Supabase's pgbouncer (transaction-mode pooler):
+    // Required for Neon's pooled endpoint (transaction-mode pgbouncer):
     // prepared statements are per-session and break under txn pooling.
     prepare: false,
     // Higher ceiling so the dashboard's query burst (header counts +
     // loadDashboardData's ~5 selects + My Day + status map ≈ 15-20
     // concurrent reads) runs in parallel instead of queuing 10-at-a-time
-    // and piling up to 25s+ on a cold remote DB. Supabase pooled allows
-    // ~200, so 18 is safe headroom.
+    // and piling up to 25s+ on a cold remote DB. Neon's pooled endpoint
+    // allows up to ~10k client connections, so 18 is safe headroom.
     max: 18,
     // Keep connections warm for a minute so back-to-back navigations
     // reuse the TLS handshake. The previous 20s window meant any quiet

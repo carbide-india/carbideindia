@@ -1,1 +1,0 @@
-DROP INDEX "employees_firebase_uid_idx";
