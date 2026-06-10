@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, lte, lt, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, lte, lt, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   notifications,
@@ -11,17 +11,18 @@ import {
 import { sendNotificationEmail } from "@/lib/email/resend";
 import { sendWebPushToUser } from "@/lib/web-push/client";
 import { getRecipientChannelPrefs } from "@/lib/notifications/channel-prefs";
-import { getStatusDisplayMap } from "@/lib/queries/status-display";
 import { nextRetryAt } from "@/lib/notifications/dispatch";
-import type { TaskStatus } from "@/db/enums";
 
 const MAX_ATTEMPTS = 3;
-type ChannelName = "email" | "web_push";
+const RETRYABLE_CHANNELS = ["email", "web_push"] as const;
 
 interface RetryRow {
   id: string;
   notificationId: string;
-  channel: ChannelName;
+  // Plain text in the DB — legacy rows may carry retired channel names
+  // (e.g. "slack"/"whatsapp"), so we treat this as an open string and
+  // let runChannel's default arm terminal-fail anything unknown.
+  channel: string;
   attemptCount: number;
 }
 
@@ -69,6 +70,7 @@ export async function retryFailedDispatches(opts: { limit?: number } = {}): Prom
     .where(
       and(
         eq(notificationDispatchLog.status, "failed"),
+        inArray(notificationDispatchLog.channel, [...RETRYABLE_CHANNELS]),
         lte(notificationDispatchLog.nextAttemptAt, now),
         lt(notificationDispatchLog.attemptCount, MAX_ATTEMPTS),
       ),
@@ -85,7 +87,6 @@ export async function retryFailedDispatches(opts: { limit?: number } = {}): Prom
   const prefsCache = new Map<string, Awaited<ReturnType<typeof getRecipientChannelPrefs>>>();
   const taskCache = new Map<string, { title: string; subject: string | null; shortId: string | null } | null>();
   const actorCache = new Map<string, string>();
-  let statusDisplay: Awaited<ReturnType<typeof getStatusDisplayMap>> | null = null;
 
   for (const row of pending) {
     const next = row.attemptCount + 1;
@@ -154,11 +155,12 @@ export async function retryFailedDispatches(opts: { limit?: number } = {}): Prom
     const outcome = await runChannel(row.channel, notif, prefs, {
       taskCache,
       actorCache,
-      statusDisplay: async () => (statusDisplay ??= await getStatusDisplayMap()),
     });
 
     // 4. Persist the new outcome.
-    const isTerminal = outcome.status === "failed" && next >= MAX_ATTEMPTS;
+    const isTerminal =
+      outcome.status === "failed_terminal" ||
+      (outcome.status === "failed" && next >= MAX_ATTEMPTS);
     const finalStatus = isTerminal ? "failed_terminal" : outcome.status;
     await db
       .update(notificationDispatchLog)
@@ -196,18 +198,17 @@ export async function retryFailedDispatches(opts: { limit?: number } = {}): Prom
 }
 
 interface ChannelOutcome {
-  status: "sent" | "skipped" | "failed";
+  status: "sent" | "skipped" | "failed" | "failed_terminal";
   error?: string;
 }
 
 interface ChannelHelpers {
   taskCache: Map<string, { title: string; subject: string | null; shortId: string | null } | null>;
   actorCache: Map<string, string>;
-  statusDisplay: () => Promise<Awaited<ReturnType<typeof getStatusDisplayMap>>>;
 }
 
 async function runChannel(
-  channel: ChannelName,
+  channel: string,
   notif: NotificationCtx,
   prefs: NonNullable<Awaited<ReturnType<typeof getRecipientChannelPrefs>>>,
   helpers: ChannelHelpers,
@@ -237,6 +238,15 @@ async function runChannel(
         });
         return outcomeFromChannelResult(res);
       }
+      default: {
+        // Legacy/unknown channel name in the DB (e.g. a retired "slack"
+        // or "whatsapp" row). Terminal-fail it so it can never wedge the
+        // retry queue.
+        return {
+          status: "failed_terminal",
+          error: `unknown channel: ${channel}`,
+        };
+      }
     }
   } catch (err) {
     return { status: "failed", error: errMsg(err).slice(0, 2000) };
@@ -263,7 +273,6 @@ async function buildOutboundCtx(
   taskSubject: string;
   body: string | undefined;
   shortId: string;
-  statusLabel: string | undefined;
 }> {
   // Task (cached per notification id).
   let task = notif.taskId ? helpers.taskCache.get(notif.taskId) : null;
@@ -294,37 +303,11 @@ async function buildOutboundCtx(
     }
   }
 
-  // Status label (lazy global cache).
-  let statusLabel: string | undefined;
-  if (notif.kind === "status_changed") {
-    const toStatus = extractToStatus(notif.body);
-    if (toStatus) {
-      const display = await helpers.statusDisplay();
-      statusLabel = display[toStatus]?.label;
-    }
-  }
-
   return {
     kind: notif.kind,
     actorName,
     taskSubject: (task?.subject ?? task?.title ?? notif.title) || "",
     body: notif.body ?? undefined,
     shortId: task?.shortId ?? "",
-    statusLabel,
   };
-}
-
-function extractToStatus(body: string | null): TaskStatus | undefined {
-  if (!body) return undefined;
-  const trimmed = body.trim();
-  if (!trimmed.startsWith("{")) return undefined;
-  try {
-    const parsed = JSON.parse(trimmed);
-    if (parsed && typeof parsed === "object" && typeof parsed.toStatus === "string") {
-      return parsed.toStatus as TaskStatus;
-    }
-  } catch {
-    // not JSON; ignore
-  }
-  return undefined;
 }

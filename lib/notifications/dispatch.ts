@@ -19,27 +19,6 @@ import {
 import { sendWebPushToUser } from "@/lib/web-push/client";
 import { getNotificationMatrix } from "@/lib/queries/notification-matrix";
 import { resolveChannels } from "@/lib/notifications/resolve-channels";
-import { getStatusDisplayMap } from "@/lib/queries/status-display";
-import type { TaskStatus } from "@/db/enums";
-
-// Pulls `toStatus` out of the row.body JSON meta written by Server
-// Actions for status_changed notifications. Returns undefined when the
-// body is missing/non-JSON or doesn't carry a toStatus field.
-function extractToStatus(body: string | null | undefined): TaskStatus | undefined {
-  if (!body) return undefined;
-  const trimmed = body.trim();
-  if (!trimmed.startsWith("{")) return undefined;
-  try {
-    const parsed = JSON.parse(trimmed);
-    if (parsed && typeof parsed === "object" && typeof parsed.toStatus === "string") {
-      return parsed.toStatus as TaskStatus;
-    }
-  } catch {
-    // not JSON — caller's fault if they handed us a free-text body for a
-    // status_changed kind. Fall through to undefined.
-  }
-  return undefined;
-}
 
 /**
  * M2.3 -> M4 — server-side fan-out from a Server Action mutation to the
@@ -187,26 +166,12 @@ async function notifyImpl(opts: NotifyOpts): Promise<void> {
       )?.name ?? ""
     : "";
 
-  // M5.1 — for status_changed kinds, resolve the admin-configured label
-  // for `toStatus` so outbound payloads surface renames. The status
-  // display map is React-cached, so this is one DB call per RSC tick
-  // even when many notifications fire.
-  let statusLabel: string | undefined;
-  if (row.kind === "status_changed") {
-    const toStatus = extractToStatus(row.body);
-    if (toStatus) {
-      const display = await getStatusDisplayMap();
-      statusLabel = display[toStatus]?.label;
-    }
-  }
-
   const outboundCtx = {
     kind: row.kind as NotificationKind,
     actorName,
     taskSubject: (task?.subject ?? task?.title ?? row.title) || "",
     body: row.body ?? undefined,
     shortId: task?.shortId ?? "",
-    statusLabel,
   };
 
   // M5.1 — admin-configured per-event channel routing. opts.forceChannels
