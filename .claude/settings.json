@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm typecheck)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm test)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm vitest run:*)",
+      "Bash(pnpm build)",
+      "Bash(pnpm db:generate)",
+      "Bash(pnpm db:migrate:dry)",
+      "Bash(pnpm verify:env)",
+      "Bash(git status)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Read(//d/carbide-india-/**)",
+      "Grep(*)",
+      "Glob(*)"
+    ],
+    "deny": [
+      "Read(./.env.local)",
+      "Read(./.env.bootstrap)",
+      "Read(//d/carbide-india-/.env.local)"
+    ]
+  }
+}

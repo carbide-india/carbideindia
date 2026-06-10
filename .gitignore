@@ -41,8 +41,9 @@ playwright-report/
 test-results/
 .playwright/
 
-# claude session-local state
-.claude/
+# claude session-local state (shared settings.json IS committed)
+.claude/*
+!.claude/settings.json
 .superpowers/
 
 # vercel
@@ -73,8 +74,7 @@ functions/node_modules/
 # Bootstrap (one-time, contains service-role keys)
 .env.bootstrap
 
-# Internal Claude/workflow artifacts — kept on disk, not committed
-CLAUDE.md
+# Internal workflow artifacts — kept on disk, not committed
 .env.local.example
 docs/superpowers/
 docs/2026-05-13-timeline-and-training-plan.md
