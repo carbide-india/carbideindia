@@ -16,7 +16,7 @@ You don't sign yourself up — your admin creates your account first. The moment
 
 - **Tasks** — your work, ordered by due date.
 - **Dashboard** — KPIs across the team.
-- **Inbox** — `/inbox` — every notification on tasks you're part of: assignment, status change, comment, approval, decline. Email + Slack + WhatsApp + browser push fan out from the same event (whichever channels you've opted into at `/profile`).
+- **Inbox** — `/inbox` — every notification on tasks you're part of: assignment, status change, comment, approval, decline. Email + browser push fan out from the same event (whichever channels you've opted into at `/profile`).
 
 Press the red **Take me in** button — this drops you on `/` (the team Dashboard). Behind the scenes this is the only time you'll ever see the Welcome screen: the database stamps a `joinedAt` time on your record so future sign-ins skip straight to the dashboard.
 
@@ -164,13 +164,11 @@ You can also re-open an archived task's detail page directly; the audit feed and
 
 ## J. Inbox, notifications, and channel prefs
 
-Click **Inbox** in the header to see `/inbox` — a vertical timeline of every notification on tasks you're part of. Each row is one event (assigned, status change, comment, approval, decline, transfer, cancel) with a coloured dot, the actor, the task title, and a "Mark all read" button at the top-right. Notifications are written to the `notifications` table by `dispatch.notify()` whenever an action fires; the same event fans out to Email + Slack + WhatsApp + browser push in parallel, governed by the org's `notification_matrix` and your personal opt-ins.
+Click **Inbox** in the header to see `/inbox` — a vertical timeline of every notification on tasks you're part of. Each row is one event (assigned, status change, comment, approval, decline, transfer, cancel) with a coloured dot, the actor, the task title, and a "Mark all read" button at the top-right. Notifications are written to the `notifications` table by `dispatch.notify()` whenever an action fires; the same event fans out to Email + browser push in parallel, governed by the org's `notification_matrix` and your personal opt-ins.
 
 Open `/profile` to toggle which channels you want:
 
 - **Email** — defaults on. Goes to your Firebase email via Resend.
-- **Slack DM** — link your Slack workspace handle; the server resolves it to a `slack_user_id` and DMs land in a channel called *Altus Corp Dashboard*.
-- **WhatsApp** — supply your phone number + opt in. WhatsApp Cloud API sends through an approved template; reply STOP to opt out, and the webhook flips you off.
 - **Browser push** — click **Enable browser push** to register this device with the service worker (`public/sw.js`). Per-device — repeat on every browser you use.
 
 You also get a daily overdue digest at 09:00 IST via Vercel cron — that lands in whatever channels you've enabled.

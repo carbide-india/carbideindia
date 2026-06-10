@@ -3,8 +3,8 @@ import type { NotificationKind } from "@/db/schema";
 /**
  * M4 Commit 3c — Web Push payload builder.
  *
- * Mirrors the "actor + verb + subject" pattern used by the email / slack
- * / whatsapp arms so the four channels stay editorially consistent.  The
+ * Mirrors the "actor + verb + subject" pattern used by the email arm so
+ * the two channels stay editorially consistent.  The
  * payload here is what the server stringifies and hands to
  * `webpush.sendNotification`; the Service Worker (public/sw.js) re-parses
  * it and feeds the fields to `showNotification`.

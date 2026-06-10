@@ -25,8 +25,6 @@ export type NotificationKindKey = (typeof NOTIFICATION_KINDS)[number];
 
 export const NOTIFICATION_CHANNELS = [
   "email",
-  "slack",
-  "whatsapp",
   "push",
 ] as const;
 export type NotificationChannelKey = (typeof NOTIFICATION_CHANNELS)[number];

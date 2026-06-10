@@ -64,15 +64,8 @@ export const employees = pgTable("employees", {
   lastInboxVisitAt: timestamp("last_inbox_visit_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-  // M4 — multi-channel dispatch: per-channel opt-in flags + auxiliary
-  // contact info (Slack uid cached after first email lookup, WhatsApp
-  // phone in E.164 format, locale for template rendering).
-  slackUserId: text("slack_user_id"),
+  // M4 — multi-channel dispatch: per-channel opt-in flags.
   emailOptIn: boolean("email_opt_in").notNull().default(true),
-  slackOptIn: boolean("slack_opt_in").notNull().default(true),
-  whatsappPhone: text("whatsapp_phone"),
-  whatsappOptedIn: boolean("whatsapp_opted_in").notNull().default(false),
-  whatsappTemplateLocale: text("whatsapp_template_locale").notNull().default("en"),
   // Profile v2 (migration 0035) — identity, workflow, appearance preferences.
   // All columns NOT NULL with defaults so existing rows behave identically.
   bio: text("bio"),
@@ -163,8 +156,7 @@ export const pinnedItems = pgTable(
 /**
  * Profile v2 — notification_preferences (migration 0038).
  * Per-recipient × per-kind × per-channel override matrix. Absence of a
- * row means "fall back to the legacy email_opt_in / slack_opt_in /
- * whatsapp_opted_in scalars on employees".
+ * row means "fall back to the legacy email_opt_in scalar on employees".
  */
 export const notificationPreferences = pgTable(
   "notification_preferences",
@@ -700,7 +692,7 @@ export const documentEvents = pgTable(
 
 /**
  * Phase 2.1 — Per-attempt audit + retry queue for notification dispatch.
- * One row per (notification, channel) attempt. The 4-arm fan-out in
+ * One row per (notification, channel) attempt. The two-arm fan-out in
  * `lib/notifications/dispatch.ts` writes one row per attempt; the
  * `/api/cron/retry-dispatch` route picks up `failed` rows whose
  * `next_attempt_at` has elapsed and re-runs that single channel.
@@ -719,7 +711,7 @@ export const notificationDispatchLog = pgTable(
       .notNull()
       .references(() => notifications.id, { onDelete: "cascade" }),
     channel: text("channel")
-      .$type<"email" | "slack" | "whatsapp" | "web_push">()
+      .$type<"email" | "web_push">()
       .notNull(),
     status: text("status")
       .$type<"sent" | "skipped" | "failed" | "failed_terminal">()

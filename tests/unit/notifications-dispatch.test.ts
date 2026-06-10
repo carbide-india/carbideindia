@@ -43,11 +43,6 @@ vi.mock("@/lib/db", () => {
       name: "Recipient",
       email: "recipient@example.com",
       emailOptIn: true,
-      slackOptIn: false,
-      slackUserId: null,
-      whatsappOptedIn: false,
-      whatsappPhone: null,
-      whatsappTemplateLocale: "en",
       mentionEscalation: true,
     },
   ]);
@@ -76,11 +71,6 @@ vi.mock("@/db/schema", () => ({
     name: "employees.name",
     email: "employees.email",
     emailOptIn: "employees.emailOptIn",
-    slackOptIn: "employees.slackOptIn",
-    slackUserId: "employees.slackUserId",
-    whatsappOptedIn: "employees.whatsappOptedIn",
-    whatsappPhone: "employees.whatsappPhone",
-    whatsappTemplateLocale: "employees.whatsappTemplateLocale",
   },
   NOTIFICATION_KINDS: [
     "task_assigned",
@@ -101,22 +91,16 @@ vi.mock("@/lib/email/resend", () => ({
 }));
 
 // M5.1 — dispatch.notify() now reads org_settings.notification_matrix
-// via this helper. Empty object means "all 4 channels allowed for every
+// via this helper. Empty object means "all channels allowed for every
 // kind" (resolveChannels handles the fallback), which keeps these legacy
 // tests' "email always tried" expectations.
 vi.mock("@/lib/queries/notification-matrix", () => ({
   getNotificationMatrix: vi.fn(async () => ({})),
 }));
 
-// M4 — stub the three new channel modules so they're no-ops in
-// the legacy "inserts + email" tests below.  These return "skip" so
+// M4 — stub the web-push channel module so it's a no-op in the legacy
+// "inserts + email" tests below.  It returns "skip" so
 // `delivered_channels` ends up with just `["email"]` when email fires.
-vi.mock("@/lib/slack/dispatch", () => ({
-  sendSlackDM: vi.fn(async () => "skip" as const),
-}));
-vi.mock("@/lib/whatsapp/dispatch", () => ({
-  sendWhatsApp: vi.fn(async () => "skip" as const),
-}));
 vi.mock("@/lib/web-push/client", () => ({
   sendWebPushToUser: vi.fn(async () => "skip" as const),
 }));

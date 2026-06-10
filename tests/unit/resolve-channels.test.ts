@@ -4,14 +4,14 @@ import { resolveChannels } from "@/lib/notifications/resolve-channels";
 describe("resolveChannels", () => {
   it("returns the matrix entry when present", () => {
     const out = resolveChannels("task_assigned", {
-      task_assigned: ["email", "slack"],
+      task_assigned: ["email"],
     });
-    expect(out).toEqual(["email", "slack"]);
+    expect(out).toEqual(["email"]);
   });
 
-  it("falls back to all 4 channels when the key is missing", () => {
+  it("falls back to all channels when the key is missing", () => {
     const out = resolveChannels("task_assigned", {});
-    expect(out).toEqual(["email", "slack", "whatsapp", "push"]);
+    expect(out).toEqual(["email", "push"]);
   });
 
   it("ignores unknown channel names in matrix data", () => {
@@ -28,8 +28,8 @@ describe("resolveChannels", () => {
 
   it("preserves channel order from the matrix entry", () => {
     const out = resolveChannels("approved", {
-      approved: ["push", "email", "slack"],
+      approved: ["push", "email"],
     });
-    expect(out).toEqual(["push", "email", "slack"]);
+    expect(out).toEqual(["push", "email"]);
   });
 });

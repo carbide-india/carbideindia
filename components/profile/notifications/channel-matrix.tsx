@@ -17,7 +17,7 @@ type Kind =
   | "cancelled"
   | "commented";
 
-type Channel = "email" | "slack" | "whatsapp" | "push";
+type Channel = "email" | "push";
 
 const KINDS: { key: Kind; label: string; hint: string }[] = [
   { key: "task_assigned", label: "Task assigned", hint: "Someone assigns you a task" },
@@ -33,20 +33,16 @@ const KINDS: { key: Kind; label: string; hint: string }[] = [
 
 const CHANNELS: { key: Channel; label: string; subtext: string }[] = [
   { key: "email", label: "Email", subtext: "Resend" },
-  { key: "slack", label: "Slack", subtext: "DM" },
-  { key: "whatsapp", label: "WhatsApp", subtext: "" },
   { key: "push", label: "Push", subtext: "Browser" },
 ];
 
 interface Props {
   initialMatrix: Record<string, boolean>;
-  hasWhatsapp: boolean;
   hasPushSubscription: boolean;
 }
 
 export function ChannelMatrix({
   initialMatrix,
-  hasWhatsapp,
   hasPushSubscription,
 }: Props) {
   const router = useRouter();
@@ -68,9 +64,6 @@ export function ChannelMatrix({
   }
 
   function isChannelLocked(channel: Channel): string | null {
-    if (channel === "whatsapp" && !hasWhatsapp) {
-      return "Ask your admin to register your WhatsApp number.";
-    }
     if (channel === "push" && !hasPushSubscription) {
       return "Enable browser push below first.";
     }

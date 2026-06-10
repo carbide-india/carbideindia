@@ -110,7 +110,7 @@ export default function TermsPage() {
         The dashboard is provided on a best-effort basis. We use Vercel for
         the application layer, Supabase (Singapore region) for the database,
         Firebase Auth (US region) for identity, Resend for email, and
-        optionally Slack / WhatsApp Cloud API / Web Push for notifications.
+        optionally Web Push for notifications.
         We do not guarantee uninterrupted service — providers occasionally
         have outages, and we may take the dashboard down for maintenance
         with notice in the team channel.

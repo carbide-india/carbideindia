@@ -297,7 +297,7 @@ export async function setTaskStatus(
   // commit or both roll back. Without a transaction, a failure on the
   // task_events insert leaves the row updated with no audit trail —
   // silent desync. Notifications stay OUTSIDE the txn so a slow
-  // Slack/email send doesn't hold the row lock.
+  // email/push send doesn't hold the row lock.
   const now = new Date();
   const stale = await db.transaction(async (tx) => {
     const u = await tx
@@ -325,8 +325,8 @@ export async function setTaskStatus(
   if (stale) return { ok: false, error: "stale" };
 
   // Fan-out: every other participant (creator/initiator/doer minus me).
-  // Tier-3 fix — the notification body MUST be JSON meta so email/Slack/
-  // WhatsApp templates can pluck `toStatus` + `fromStatus` and render the
+  // Tier-3 fix — the notification body MUST be JSON meta so the email
+  // template can pluck `toStatus` + `fromStatus` and render the
   // real transition (the templates default `toStatus` to "done" which
   // made every status_changed email lie). Also resolve the new-status
   // human label server-side so the title never includes raw enum tokens
@@ -767,7 +767,7 @@ export async function createTask(input: CreateTaskInput): Promise<
   const createdIds: string[] = [];
   // Notifications are collected here and fired AFTER the response (see below),
   // never inline — the old code awaited every notify() in the loop, chaining
-  // dozens of email/Slack/WhatsApp/push network calls on the critical path,
+  // dozens of email/push network calls on the critical path,
   // which is what intermittently surfaced "we hit a snag" on a 5-6 task batch.
   const notifyIntents: Array<Parameters<typeof notify>[0]> = [];
   const label = taskLabel({
@@ -896,7 +896,7 @@ export async function createTask(input: CreateTaskInput): Promise<
   }
 
   // Fire notifications + Google Calendar sync AFTER the response is flushed,
-  // so none of that (sequential email/Slack/WhatsApp/push + GCal API) sits on
+  // so none of that (sequential email/push + GCal API) sits on
   // the task-creation critical path. notify() is already best-effort.
   if (notifyIntents.length > 0) {
     afterResponse(async () => {

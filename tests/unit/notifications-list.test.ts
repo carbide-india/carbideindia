@@ -67,7 +67,7 @@ beforeEach(() => {
 describe("listNotifications channel-status derivation", () => {
   it("marks attempted-but-not-delivered channels as 'failed'", async () => {
     settingsResult = [
-      { matrix: { task_assigned: ["email", "slack", "whatsapp"] } },
+      { matrix: { task_assigned: ["email", "push"] } },
     ];
     notifResult = [
       {
@@ -86,9 +86,7 @@ describe("listNotifications channel-status derivation", () => {
     const { listNotifications } = await import("@/lib/queries/notifications");
     const res = await listNotifications();
     expect(res.rows[0]!.channelStatus.email).toBe("delivered");
-    expect(res.rows[0]!.channelStatus.slack).toBe("failed");
-    expect(res.rows[0]!.channelStatus.whatsapp).toBe("failed");
-    expect(res.rows[0]!.channelStatus.push).toBe("not_attempted");
+    expect(res.rows[0]!.channelStatus.push).toBe("failed");
   });
 
   it("returns all not_attempted when matrix has no entry for the kind", async () => {
@@ -109,7 +107,7 @@ describe("listNotifications channel-status derivation", () => {
     ];
     const { listNotifications } = await import("@/lib/queries/notifications");
     const res = await listNotifications();
-    for (const ch of ["email", "slack", "whatsapp", "push"] as const) {
+    for (const ch of ["email", "push"] as const) {
       expect(res.rows[0]!.channelStatus[ch]).toBe("not_attempted");
     }
   });
@@ -157,7 +155,6 @@ describe("listNotifications channel-status derivation", () => {
     expect(res.rows[0]!.attemptedChannels).toEqual(["email", "push"]);
     expect(res.rows[0]!.channelStatus.email).toBe("failed");
     expect(res.rows[0]!.channelStatus.push).toBe("failed");
-    expect(res.rows[0]!.channelStatus.slack).toBe("not_attempted");
   });
 });
 

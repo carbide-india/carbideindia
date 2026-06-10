@@ -14,11 +14,6 @@ export interface RecipientChannelPrefs {
   name: string;
   email: string;
   emailOptIn: boolean;
-  slackOptIn: boolean;
-  slackUserId: string | null;
-  whatsappOptedIn: boolean;
-  whatsappPhone: string | null;
-  whatsappTemplateLocale: string;
   // Profile v2 — used by dispatch matrix gating + mention escalation + OOO.
   mentionEscalation: boolean;
   oooStart: string | null;
@@ -40,11 +35,6 @@ export async function getRecipientChannelPrefs(
       name: employees.name,
       email: employees.email,
       emailOptIn: employees.emailOptIn,
-      slackOptIn: employees.slackOptIn,
-      slackUserId: employees.slackUserId,
-      whatsappOptedIn: employees.whatsappOptedIn,
-      whatsappPhone: employees.whatsappPhone,
-      whatsappTemplateLocale: employees.whatsappTemplateLocale,
       mentionEscalation: employees.mentionEscalation,
       oooStart: employees.oooStart,
       oooEnd: employees.oooEnd,

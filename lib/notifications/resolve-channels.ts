@@ -1,11 +1,9 @@
 import type { NotificationKind } from "@/db/schema";
 
-// Single source of truth for the 4 dispatch channels. Mirrors the arm layout
+// Single source of truth for the dispatch channels. Mirrors the arm layout
 // inside lib/notifications/dispatch.ts.
 export const NOTIFICATION_CHANNELS = [
   "email",
-  "slack",
-  "whatsapp",
   "push",
 ] as const;
 export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];

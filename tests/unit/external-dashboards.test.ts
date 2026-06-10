@@ -21,12 +21,7 @@ function fakeEmployee(over: Partial<Employee>): Employee {
     invitedAt: null,
     joinedAt: null,
     lastInboxVisitAt: new Date(),
-    slackUserId: null,
     emailOptIn: true,
-    slackOptIn: true,
-    whatsappPhone: null,
-    whatsappOptedIn: false,
-    whatsappTemplateLocale: "en",
     ...over,
   } as unknown as Employee;
 }

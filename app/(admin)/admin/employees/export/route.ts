@@ -10,10 +10,7 @@ import { requireAdmin } from "@/lib/auth/current";
  * `requireAdmin` redirects/throws for non-admins.
  *
  * The endpoint is unfiltered: it ships the whole table in one go (the
- * roster is small — tens to a few hundred rows max).  The two integration
- * columns are emitted as a presence flag (`yes` / `no`) rather than the
- * raw Slack id / E.164 phone number so the CSV is safe to share with
- * non-IT recipients.
+ * roster is small — tens to a few hundred rows max).
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,8 +33,6 @@ export async function GET(): Promise<Response> {
       "is_admin",
       "joined_at",
       "last_inbox_visit_at",
-      "slack_user_id_present",
-      "whatsapp_phone_present",
     ],
     rows: employees.map((e) => [
       e.name,
@@ -48,8 +43,6 @@ export async function GET(): Promise<Response> {
       String(e.isAdmin),
       e.joinedAt?.toISOString() ?? "",
       e.lastInboxVisitAt.toISOString(),
-      e.slackUserId ? "yes" : "no",
-      e.whatsappPhone ? "yes" : "no",
     ]),
   });
 }

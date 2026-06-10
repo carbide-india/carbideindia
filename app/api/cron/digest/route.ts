@@ -3,9 +3,6 @@ import { eq } from "drizzle-orm";
 import { db, employees, notifications } from "@/lib/db";
 import { listPendingByEmployee } from "@/lib/queries/overdue";
 import { sendDigestEmail } from "@/lib/email/resend";
-import { getRecipientChannelPrefs } from "@/lib/notifications/channel-prefs";
-import { sendSlackDigest } from "@/lib/slack/dispatch";
-import { sendWhatsAppDigest } from "@/lib/whatsapp/dispatch";
 import { getOrgSettings } from "@/lib/queries/org-settings";
 
 /**
@@ -62,8 +59,8 @@ function getIstHour(now: Date): number {
 
 /**
  * Race a promise against a timer. Used in the cron digest loop so a
- * hung Slack / WhatsApp / SMTP call can't sit forever and starve the
- * Vercel function timeout — we'd rather skip a delivery and log it.
+ * hung SMTP call can't sit forever and starve the Vercel function
+ * timeout — we'd rather skip a delivery and log it.
  * The timer is `.unref()`ed so it doesn't keep the Node event loop
  * alive on its own.
  */
@@ -130,7 +127,7 @@ async function runDigest(request: Request): Promise<NextResponse> {
     const count = pendingTasks.length;
     // No pending tasks → send nothing on any channel. A daily "all clear" ping
     // just fills the inbox and mailbox with noise, so skip these recipients
-    // entirely (Slack/WhatsApp already did).
+    // entirely.
     if (count === 0) {
       skipped++;
       continue;
@@ -179,42 +176,6 @@ async function runDigest(request: Request): Promise<NextResponse> {
       }
     } catch (err) {
       console.error(`[cron/digest] sendDigestEmail threw for ${recipient.email}`, err);
-    }
-
-    // 3) Slack + WhatsApp.
-    const channelPrefs = await getRecipientChannelPrefs(recipient.id).catch((err) => {
-      console.error(`[cron/digest] getRecipientChannelPrefs failed for ${recipient.email}`, err);
-      return null;
-    });
-    if (channelPrefs) {
-      try {
-        await withTimeout(
-          sendSlackDigest(
-            channelPrefs,
-            pendingTasks.map((t) => ({
-              subject: t.subject,
-              shortId: t.shortId ?? "",
-              daysOverdue: t.daysOverdue,
-            })),
-          ),
-          SEND_TIMEOUT_MS,
-          "sendSlackDigest",
-        );
-      } catch (err) {
-        console.error(`[cron/digest] sendSlackDigest threw for ${recipient.email}`, err);
-      }
-      try {
-        await withTimeout(
-          sendWhatsAppDigest(
-            channelPrefs,
-            pendingTasks.map((t) => ({ subject: t.subject, daysOverdue: t.daysOverdue })),
-          ),
-          SEND_TIMEOUT_MS,
-          "sendWhatsAppDigest",
-        );
-      } catch (err) {
-        console.error(`[cron/digest] sendWhatsAppDigest threw for ${recipient.email}`, err);
-      }
     }
   }
 

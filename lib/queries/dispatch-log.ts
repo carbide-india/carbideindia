@@ -10,7 +10,7 @@ import {
 export interface DispatchFailureRow {
   id: string;
   notificationId: string;
-  channel: "email" | "slack" | "whatsapp" | "web_push";
+  channel: "email" | "web_push";
   status: "failed" | "failed_terminal";
   errorMessage: string | null;
   attemptCount: number;
@@ -25,8 +25,8 @@ export interface DispatchFailureRow {
 /**
  * Phase 3.5-companion — list the most recent dispatch failures + terminal
  * giveups for the admin Integrations tab. Surfaces what would otherwise
- * be silent — every Slack/email/WhatsApp send that didn't land, with
- * the error and how many times we've retried.
+ * be silent — every email/push send that didn't land, with the error
+ * and how many times we've retried.
  *
  * Caps at `limit` rows (default 50). Joined with `notifications` for the
  * title/kind and `employees` for the recipient name so the row is

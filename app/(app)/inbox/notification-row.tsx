@@ -48,8 +48,8 @@ const KIND_META: Record<NotificationKind, { icon: LucideIcon; tone: string }> = 
 
 /**
  * Parse the notification `body`. The body is INTERNAL JSON metadata (e.g.
- * `{"fromStatus":"approved","toStatus":"cancelled"}`) used by the Slack /
- * WhatsApp templates — it must never be shown raw. We extract a status
+ * `{"fromStatus":"approved","toStatus":"cancelled"}`) used by the outbound
+ * channel templates — it must never be shown raw. We extract a status
  * transition when present, treat genuine free text (a comment) as text, and
  * otherwise show nothing.
  */

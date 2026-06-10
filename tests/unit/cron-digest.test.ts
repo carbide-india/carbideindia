@@ -5,9 +5,8 @@ import type { PendingTask } from "@/lib/queries/overdue";
 // Vitest hoists vi.mock(), so the mocks are in place when the route
 // imports its dependencies.
 
-// `lib/notifications/channel-prefs.ts` and `lib/slack/dispatch.ts` both
-// `import "server-only"` at the top.  The real module throws when
-// loaded outside an RSC; Vitest needs a no-op.
+// Several imported modules `import "server-only"` at the top.  The real
+// module throws when loaded outside an RSC; Vitest needs a no-op.
 vi.mock("server-only", () => ({}));
 
 const {
@@ -34,16 +33,6 @@ vi.mock("@/lib/queries/overdue", () => ({
 
 vi.mock("@/lib/email/resend", () => ({
   sendDigestEmail,
-}));
-
-vi.mock("@/lib/notifications/channel-prefs", () => ({
-  getRecipientChannelPrefs: vi.fn(async () => null),
-}));
-vi.mock("@/lib/slack/dispatch", () => ({
-  sendSlackDigest: vi.fn(async () => "skip" as const),
-}));
-vi.mock("@/lib/whatsapp/dispatch", () => ({
-  sendWhatsAppDigest: vi.fn(async () => "skip" as const),
 }));
 
 // M5 — handler consults `org_settings.digest_hour_ist` and skips when the

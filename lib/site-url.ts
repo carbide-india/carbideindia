@@ -1,6 +1,6 @@
 /**
  * Canonical public base URL of this deployment, used for email links,
- * invite/password-reset continue URLs, Slack/WhatsApp callbacks, etc.
+ * invite/password-reset continue URLs, web-push deep links, etc.
  *
  * Hardened against the most common misconfiguration: `NEXT_PUBLIC_SITE_URL`
  * set WITHOUT a scheme (e.g. `wms.mananvasa.com`). Firebase's

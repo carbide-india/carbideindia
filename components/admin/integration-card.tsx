@@ -7,8 +7,6 @@ import { sendIntegrationTestAction } from "@/app/(admin)/admin/settings/actions"
 
 const TITLES: Record<IntegrationStatus["channel"], string> = {
   email: "Email (Resend)",
-  slack: "Slack",
-  whatsapp: "WhatsApp",
   push: "Web Push",
 };
 

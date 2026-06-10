@@ -202,13 +202,13 @@ export async function markAllRead(userId: string): Promise<void> {
 // `org_settings.notification_matrix[kind]` (what was supposed to be tried).
 // ---------------------------------------------------------------------------
 
-export type Channel = "email" | "slack" | "whatsapp" | "push";
+export type Channel = "email" | "push";
 export type ChannelStatus = "delivered" | "failed" | "not_attempted";
 
-const ALL_CHANNELS: readonly Channel[] = ["email", "slack", "whatsapp", "push"];
+const ALL_CHANNELS: readonly Channel[] = ["email", "push"];
 
 function isChannel(v: string): v is Channel {
-  return v === "email" || v === "slack" || v === "whatsapp" || v === "push";
+  return v === "email" || v === "push";
 }
 
 export interface NotificationRow {
@@ -317,8 +317,6 @@ export async function listNotifications(
     );
     const status: Record<Channel, ChannelStatus> = {
       email: "not_attempted",
-      slack: "not_attempted",
-      whatsapp: "not_attempted",
       push: "not_attempted",
     };
     // Attempted-but-not-delivered → failed; delivered overrides.
@@ -362,7 +360,7 @@ export interface NotificationDeliveryStats {
  * numbers are derived in one round-trip against the rolling 24h window.
  * "failures" = rows where `delivered_channels` is empty (no arm
  * succeeded).  `byChannel24h` counts how many notifications had each
- * channel in their delivered set (so an email-AND-slack row counts in
+ * channel in their delivered set (so an email-AND-push row counts in
  * both).
  */
 export async function getNotificationDeliveryStats(
@@ -382,8 +380,6 @@ export async function getNotificationDeliveryStats(
       ) AS with_failures,
       jsonb_build_object(
         'email',    COUNT(*) FILTER (WHERE 'email'    = ANY(delivered_channels)),
-        'slack',    COUNT(*) FILTER (WHERE 'slack'    = ANY(delivered_channels)),
-        'whatsapp', COUNT(*) FILTER (WHERE 'whatsapp' = ANY(delivered_channels)),
         'push',     COUNT(*) FILTER (WHERE 'push'     = ANY(delivered_channels))
       ) AS by_channel
     FROM last_24h
@@ -397,8 +393,6 @@ export async function getNotificationDeliveryStats(
   const byChannel = row?.by_channel ?? null;
   const defaults: Record<Channel, number> = {
     email: 0,
-    slack: 0,
-    whatsapp: 0,
     push: 0,
   };
   const merged: Record<Channel, number> = { ...defaults };

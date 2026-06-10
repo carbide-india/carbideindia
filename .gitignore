@@ -56,14 +56,6 @@ test-results/
 _reference/
 demo website video.mp4
 WhatsApp*
-# Override: M4 source dir `lib/whatsapp/` is lowercased but still matches
-# `WhatsApp*` on case-insensitive filesystems (Windows / macOS default).
-!lib/whatsapp/
-!lib/whatsapp/**
-!lib/validators/whatsapp.ts
-!app/api/whatsapp/
-!app/api/whatsapp/**
-!tests/unit/whatsapp-*.test.ts
 ddd.py
 *.jpeg
 vpinnacle.html

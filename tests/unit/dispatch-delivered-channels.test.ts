@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("server-only", () => ({}));
 
 /**
- * M4 — exercises the four-arm Promise.allSettled fan-out in
+ * M4 — exercises the two-arm Promise.allSettled fan-out in
  * `dispatch.notify()`.  We mock the underlying DB layer + every channel
  * sender; the test asserts what gets stamped on `delivered_channels`
  * given different opt-in shapes and sender outcomes.
@@ -24,19 +24,8 @@ const { insertSpy, returningSpy, updateSpy, whereSpy, setSpy, selectChain } =
     return { insertSpy, returningSpy, updateSpy, whereSpy, setSpy, selectChain };
   });
 
-const {
-  emailSpy,
-  slackSpy,
-  whatsappSpy,
-  webPushSpy,
-} = vi.hoisted(() => ({
+const { emailSpy, webPushSpy } = vi.hoisted(() => ({
   emailSpy: vi.fn<() => Promise<void>>(async () => undefined),
-  slackSpy: vi.fn<() => Promise<"sent" | "skip" | { error: string }>>(
-    async () => "skip",
-  ),
-  whatsappSpy: vi.fn<() => Promise<"sent" | "skip" | { error: string }>>(
-    async () => "skip",
-  ),
   webPushSpy: vi.fn<() => Promise<"sent" | "skip" | { error: string }>>(
     async () => "skip",
   ),
@@ -98,12 +87,10 @@ vi.mock("@/db/schema", () => ({
 vi.mock("@/lib/email/resend", () => ({
   sendNotificationEmail: emailSpy,
 }));
-vi.mock("@/lib/slack/dispatch", () => ({ sendSlackDM: slackSpy }));
-vi.mock("@/lib/whatsapp/dispatch", () => ({ sendWhatsApp: whatsappSpy }));
 vi.mock("@/lib/web-push/client", () => ({ sendWebPushToUser: webPushSpy }));
 
 // M5.1 — dispatch.notify() consults org_settings.notification_matrix.
-// Empty object → resolveChannels falls back to all 4 channels allowed,
+// Empty object → resolveChannels falls back to all channels allowed,
 // which is what these stamping tests expect.
 vi.mock("@/lib/queries/notification-matrix", () => ({
   getNotificationMatrix: vi.fn(async () => ({})),
@@ -128,11 +115,6 @@ function setPrefs(p: Partial<{
   name: string;
   email: string;
   emailOptIn: boolean;
-  slackOptIn: boolean;
-  slackUserId: string | null;
-  whatsappOptedIn: boolean;
-  whatsappPhone: string | null;
-  whatsappTemplateLocale: string;
   mentionEscalation: boolean;
 }>): void {
   selectChain.prefs = {
@@ -140,11 +122,6 @@ function setPrefs(p: Partial<{
     name: "Recipient",
     email: "recipient@example.com",
     emailOptIn: true,
-    slackOptIn: false,
-    slackUserId: null,
-    whatsappOptedIn: false,
-    whatsappPhone: null,
-    whatsappTemplateLocale: "en",
     mentionEscalation: true,
     ...p,
   };
@@ -166,18 +143,14 @@ beforeEach(() => {
   whereSpy.mockClear();
   emailSpy.mockClear();
   emailSpy.mockResolvedValue(undefined);
-  slackSpy.mockClear();
-  slackSpy.mockResolvedValue("skip");
-  whatsappSpy.mockClear();
-  whatsappSpy.mockResolvedValue("skip");
   webPushSpy.mockClear();
   webPushSpy.mockResolvedValue("skip");
   selectChain.prefs = null;
 });
 
 describe("notify() — delivered_channels stamping", () => {
-  it("stamps ['email'] when only email is enabled and succeeds", async () => {
-    setPrefs({ emailOptIn: true, slackOptIn: false, whatsappOptedIn: false });
+  it("stamps ['email'] when only email succeeds", async () => {
+    setPrefs({ emailOptIn: true });
 
     await notify({
       userId: "u-1",
@@ -186,8 +159,6 @@ describe("notify() — delivered_channels stamping", () => {
     });
 
     expect(emailSpy).toHaveBeenCalledTimes(1);
-    expect(slackSpy).not.toHaveBeenCalled();
-    expect(whatsappSpy).not.toHaveBeenCalled();
     // web push always runs — the function itself decides "skip" when no subs.
     expect(webPushSpy).toHaveBeenCalledTimes(1);
 
@@ -198,16 +169,8 @@ describe("notify() — delivered_channels stamping", () => {
     expect(patch!.emailSentAt).toBeInstanceOf(Date);
   });
 
-  it("stamps all four when every channel succeeds", async () => {
-    setPrefs({
-      emailOptIn: true,
-      slackOptIn: true,
-      slackUserId: "U999",
-      whatsappOptedIn: true,
-      whatsappPhone: "+919820062511",
-    });
-    slackSpy.mockResolvedValue("sent");
-    whatsappSpy.mockResolvedValue("sent");
+  it("stamps both channels when every channel succeeds", async () => {
+    setPrefs({ emailOptIn: true });
     webPushSpy.mockResolvedValue("sent");
 
     await notify({
@@ -217,25 +180,14 @@ describe("notify() — delivered_channels stamping", () => {
     });
 
     expect(emailSpy).toHaveBeenCalledTimes(1);
-    expect(slackSpy).toHaveBeenCalledTimes(1);
-    expect(whatsappSpy).toHaveBeenCalledTimes(1);
     expect(webPushSpy).toHaveBeenCalledTimes(1);
 
     const patch = lastUpdatePatch();
-    expect(patch!.deliveredChannels).toEqual([
-      "email",
-      "slack",
-      "whatsapp",
-      "web_push",
-    ]);
+    expect(patch!.deliveredChannels).toEqual(["email", "web_push"]);
   });
 
   it("stamps [] when every arm is opted out or skipped", async () => {
-    setPrefs({
-      emailOptIn: false,
-      slackOptIn: false,
-      whatsappOptedIn: false,
-    });
+    setPrefs({ emailOptIn: false });
     // web_push returns "skip" (no subs) by default.
 
     await notify({
@@ -245,8 +197,6 @@ describe("notify() — delivered_channels stamping", () => {
     });
 
     expect(emailSpy).not.toHaveBeenCalled();
-    expect(slackSpy).not.toHaveBeenCalled();
-    expect(whatsappSpy).not.toHaveBeenCalled();
     // Even though web_push is invoked, it returns "skip" -> not stamped.
     expect(webPushSpy).toHaveBeenCalledTimes(1);
 

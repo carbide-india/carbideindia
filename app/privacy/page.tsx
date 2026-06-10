@@ -20,8 +20,8 @@ export default function PrivacyPage() {
         The dashboard collects your name, work email, role, department, and a
         record of the tasks you create, edit, or work on. Data sits in Supabase
         (Singapore) and Firebase Auth (US). We send you email notifications via
-        Resend and — if your admin enables it — Slack DMs, WhatsApp messages,
-        and Web Push notifications. We do not sell, rent, or share your data
+        Resend and — if you enable it — Web Push notifications. We do not
+        sell, rent, or share your data
         with anyone outside Altus Corp's narrow list of operational
         sub-processors. You can request a copy of your data or have it
         deactivated by writing to your administrator.
@@ -58,8 +58,6 @@ export default function PrivacyPage() {
       </ul>
       <h3>Channel-specific identifiers (only if enabled)</h3>
       <ul>
-        <li>Slack member ID — looked up automatically by email when Slack notifications are enabled at the workspace level</li>
-        <li>WhatsApp phone number in E.164 format — entered by an admin with your consent</li>
         <li>Web Push browser subscription endpoint + per-device encryption keys — captured when you click "Enable push notifications" on /profile</li>
       </ul>
       <h3>Technical metadata</h3>
@@ -74,7 +72,7 @@ export default function PrivacyPage() {
         <li><strong>To run the operations workflow.</strong> Tasks, assignments, status transitions, approvals — the dashboard's core purpose.</li>
         <li><strong>To notify the right people at the right time.</strong> The fan-out matrix is locked in code; you don't get notifications for events you aren't a participant in.</li>
         <li><strong>To audit who did what, when.</strong> Every task event is logged for Altus Corp's internal compliance.</li>
-        <li><strong>To deliver on the channels you've consented to.</strong> Email is on by default; Slack auto-discovers via email; WhatsApp requires explicit admin-recorded consent; Web Push requires your browser permission.</li>
+        <li><strong>To deliver on the channels you've consented to.</strong> Email is on by default; Web Push requires your browser permission.</li>
       </ul>
 
       <h2>5 · Where it sits — sub-processors</h2>
@@ -104,18 +102,6 @@ export default function PrivacyPage() {
           <strong>Resend</strong> — transactional email delivery (invites,
           notifications, daily digest). Sees email address + body of each
           message.
-        </li>
-        <li>
-          <strong>Slack</strong> (if your workspace enables it) — the bot
-          token + your Slack user ID + the body of each notification message.
-          Workspace install scopes are read-only beyond <code>chat:write</code>{" "}
-          and <code>users:read.email</code>.
-        </li>
-        <li>
-          <strong>Meta WhatsApp Cloud API</strong> (if enabled) — your phone
-          number + the parameter values that fill the approved utility
-          templates. Each message is bound to a Meta-approved template; we
-          cannot send freeform content.
         </li>
         <li>
           <strong>Google / Mozilla / Apple Push Services</strong> (if you
@@ -171,12 +157,10 @@ export default function PrivacyPage() {
           your account; further sign-in is blocked immediately.
         </li>
         <li>
-          <strong>The right to withdraw consent.</strong> WhatsApp opt-in can be
-          flipped off by replying STOP to any WhatsApp notification — the
-          webhook flips your flag within seconds. Web Push opt-in is revoked
-          via your browser's notification settings. Email + in-app inbox
-          delivery cannot be fully suppressed without deactivation, because
-          they are part of the operational record.
+          <strong>The right to withdraw consent.</strong> Web Push opt-in is
+          revoked via your browser's notification settings. Email + in-app
+          inbox delivery cannot be fully suppressed without deactivation,
+          because they are part of the operational record.
         </li>
       </ul>
 

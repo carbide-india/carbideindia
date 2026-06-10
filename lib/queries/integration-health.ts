@@ -50,25 +50,6 @@ export const getIntegrationHealth = cache(
       ...emailStats,
     });
 
-    const slackToken = process.env.SLACK_BOT_TOKEN;
-    const slackStats = await deliveryStats("slack");
-    out.push({
-      channel: "slack",
-      connected: !!slackToken,
-      maskedKey: mask(slackToken),
-      ...slackStats,
-    });
-
-    const waToken = process.env.WHATSAPP_ACCESS_TOKEN;
-    const waPhoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-    const waStats = await deliveryStats("whatsapp");
-    out.push({
-      channel: "whatsapp",
-      connected: !!waToken && !!waPhoneId,
-      maskedKey: mask(waToken),
-      ...waStats,
-    });
-
     const vapidPub = process.env.VAPID_PUBLIC_KEY;
     const subRow = await db
       .select({ n: sql<number>`count(*)::int` })

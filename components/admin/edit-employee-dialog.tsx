@@ -28,8 +28,6 @@ export interface EditEmployeeDialogProps {
     role: Role;
     departments: EmployeeDepartmentMembership[];
     isAdmin: boolean;
-    whatsappPhone: string | null;
-    whatsappOptedIn: boolean;
     managerId?: string | null;
   };
   isSelf: boolean;
@@ -64,8 +62,6 @@ export function EditEmployeeDialog({
   const [primaryId, setPrimaryId] = useState<string | null>(initialPrimaryId);
   const [isAdmin, setIsAdmin]   = useState(employee.isAdmin);
   const [managerId, setManagerId] = useState<string | null>(employee.managerId ?? null);
-  const [waPhone, setWaPhone]   = useState(employee.whatsappPhone ?? "");
-  const [waOptIn, setWaOptIn]   = useState(employee.whatsappOptedIn);
   const [error, setError]       = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -83,8 +79,6 @@ export function EditEmployeeDialog({
       );
       setIsAdmin(employee.isAdmin);
       setManagerId(employee.managerId ?? null);
-      setWaPhone(employee.whatsappPhone ?? "");
-      setWaOptIn(employee.whatsappOptedIn);
       setError(null);
     }
     // employee.departments is a fresh array per render; key on id only.
@@ -96,8 +90,6 @@ export function EditEmployeeDialog({
     employee.role,
     employee.isAdmin,
     employee.managerId,
-    employee.whatsappPhone,
-    employee.whatsappOptedIn,
   ]);
 
   function onSubmit(e: React.FormEvent) {
@@ -112,12 +104,8 @@ export function EditEmployeeDialog({
       primaryDepartmentId?: string | null;
       isAdmin?: boolean;
       managerId?: string | null;
-      whatsappPhone?: string | null;
-      whatsappOptedIn?: boolean;
     } = {};
     const trimmedName = name.trim();
-    const trimmedWaPhone = waPhone.trim();
-    const currentWaPhone = employee.whatsappPhone ?? "";
 
     if (trimmedName !== employee.name) patch.name = trimmedName;
     if (role !== employee.role) patch.role = role;
@@ -127,12 +115,6 @@ export function EditEmployeeDialog({
     }
     if (isAdmin !== employee.isAdmin) patch.isAdmin = isAdmin;
     if (managerId !== (employee.managerId ?? null)) patch.managerId = managerId;
-    if (trimmedWaPhone !== currentWaPhone) {
-      patch.whatsappPhone = trimmedWaPhone === "" ? null : trimmedWaPhone;
-    }
-    if (waOptIn !== employee.whatsappOptedIn) {
-      patch.whatsappOptedIn = waOptIn;
-    }
 
     if (Object.keys(patch).length === 0) {
       setError("No changes to save.");
@@ -206,31 +188,6 @@ export function EditEmployeeDialog({
                 }}
               />
             </Field>
-            <Field label="WhatsApp phone (E.164, optional)">
-              <input
-                value={waPhone}
-                onChange={(e) => setWaPhone(e.target.value)}
-                placeholder="+919820062511"
-                maxLength={20}
-                className="w-full rounded-md border border-[#CBD5E1] px-3.5 py-2.5 text-[15px]"
-              />
-            </Field>
-            <label className="flex items-start gap-2.5 text-[15px] text-[#334155]" style={{ lineHeight: 1.5 }}>
-              <input
-                type="checkbox"
-                checked={waOptIn}
-                onChange={(e) => setWaOptIn(e.target.checked)}
-                className="mt-1.5 h-4 w-4"
-              />
-              <span>
-                <span className="font-semibold text-[#0F172A]">
-                  I have this employee&apos;s consent to send WhatsApp notifications
-                </span>
-                <span className="block text-[13px] text-[#64748B] mt-0.5">
-                  Required by Meta + DPDP — leave off if the employee hasn&apos;t agreed.
-                </span>
-              </span>
-            </label>
             <label
               className={`flex items-center gap-2.5 text-[15px] text-[#334155] ${
                 isSelf ? "opacity-60 cursor-not-allowed" : ""

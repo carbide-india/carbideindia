@@ -9,8 +9,6 @@ import {
   type NotificationKind,
 } from "@/db/schema";
 import { sendNotificationEmail } from "@/lib/email/resend";
-import { sendSlackDM } from "@/lib/slack/dispatch";
-import { sendWhatsApp } from "@/lib/whatsapp/dispatch";
 import { sendWebPushToUser } from "@/lib/web-push/client";
 import { getRecipientChannelPrefs } from "@/lib/notifications/channel-prefs";
 import { getStatusDisplayMap } from "@/lib/queries/status-display";
@@ -18,7 +16,7 @@ import { nextRetryAt } from "@/lib/notifications/dispatch";
 import type { TaskStatus } from "@/db/enums";
 
 const MAX_ATTEMPTS = 3;
-type ChannelName = "email" | "slack" | "whatsapp" | "web_push";
+type ChannelName = "email" | "web_push";
 
 interface RetryRow {
   id: string;
@@ -227,20 +225,6 @@ async function runChannel(
           taskId: notif.taskId,
         });
         return { status: "sent" };
-      }
-      case "slack": {
-        if (!prefs.slackOptIn) return { status: "skipped" };
-        const ctx = await buildOutboundCtx(notif, helpers);
-        const res = await sendSlackDM(prefs, ctx);
-        return outcomeFromChannelResult(res);
-      }
-      case "whatsapp": {
-        if (!prefs.whatsappOptedIn || !prefs.whatsappPhone) {
-          return { status: "skipped" };
-        }
-        const ctx = await buildOutboundCtx(notif, helpers);
-        const res = await sendWhatsApp(prefs, ctx);
-        return outcomeFromChannelResult(res);
       }
       case "web_push": {
         const ctx = await buildOutboundCtx(notif, helpers);

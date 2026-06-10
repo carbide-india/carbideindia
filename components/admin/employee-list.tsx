@@ -288,8 +288,6 @@ export function EmployeeList({
                         isAdmin: e.isAdmin,
                         isActive: e.isActive,
                         joinedAt: e.joinedAt,
-                        whatsappPhone: e.whatsappPhone,
-                        whatsappOptedIn: e.whatsappOptedIn,
                         managerId: e.managerId,
                       }}
                       isSelf={e.id === currentEmployeeId}

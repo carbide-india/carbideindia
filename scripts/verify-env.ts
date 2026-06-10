@@ -205,15 +205,6 @@ async function main() {
   // None of these are required for the app to boot.  Missing vars
   // disable the matching channel at runtime — the dispatcher's
   // Promise.allSettled simply records "skip" for that arm.
-  const slackOptional = optional("Slack (M4)", {
-    SLACK_BOT_TOKEN: (v) => v.startsWith("xoxb-") || "must start with xoxb-",
-  });
-  const whatsappOptional = optional("WhatsApp (M4)", {
-    META_WHATSAPP_PHONE_NUMBER_ID:     (v) => /^\d+$/.test(v) || "numeric ID",
-    META_WHATSAPP_ACCESS_TOKEN:        (v) => v.length > 20 || "looks too short",
-    META_WHATSAPP_BUSINESS_ACCOUNT_ID: (v) => /^\d+$/.test(v) || "numeric ID",
-    META_WHATSAPP_VERIFY_TOKEN:        (v) => v.length > 16 || "≥16 chars",
-  });
   const webPushOptional = optional("Web Push (M4)", {
     NEXT_PUBLIC_VAPID_PUBLIC_KEY: (v) => v.length > 80 || "VAPID public key",
     VAPID_PRIVATE_KEY:            (v) => v.length > 40 || "VAPID private key",
@@ -229,12 +220,9 @@ async function main() {
     resendChecks.ok +
     siteChecks.ok +
     cronChecks.ok +
-    slackOptional.ok +
-    whatsappOptional.ok +
     webPushOptional.ok;
   const totalFail = dbChecks.fail + fbClientChecks.fail + fbAdminChecks.fail + cookieChecks.fail + resendChecks.fail + siteChecks.fail + cronChecks.fail;
-  const totalWarn =
-    slackOptional.warn + whatsappOptional.warn + webPushOptional.warn;
+  const totalWarn = webPushOptional.warn;
 
   console.log(
     `\nSummary: ${totalOk} OK · ${totalFail} failed · ${totalWarn} optional warnings`,

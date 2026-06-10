@@ -202,7 +202,6 @@ export default async function ProfilePage() {
                 <div style={{ display: "grid", gap: 24 }}>
                   <ChannelMatrix
                     initialMatrix={prefsMatrix}
-                    hasWhatsapp={!!me.whatsappPhone && me.whatsappOptedIn}
                     hasPushSubscription={hasPushSubscription}
                   />
                   <DigestAndQuiet

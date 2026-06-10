@@ -349,20 +349,9 @@ export async function editEmployee(
     patch.managerId = parsed.data.managerId;
   }
 
-  // M4 — multi-channel fields.  WhatsApp phone is normalised to null
-  // when empty/null; other flags are passed through verbatim.
-  if (parsed.data.whatsappPhone !== undefined) {
-    const v = parsed.data.whatsappPhone;
-    patch.whatsappPhone = v === null || v === "" ? null : v;
-  }
-  if (parsed.data.whatsappOptedIn !== undefined) {
-    patch.whatsappOptedIn = parsed.data.whatsappOptedIn;
-  }
+  // M4 — multi-channel fields.
   if (parsed.data.emailOptIn !== undefined) {
     patch.emailOptIn = parsed.data.emailOptIn;
-  }
-  if (parsed.data.slackOptIn !== undefined) {
-    patch.slackOptIn = parsed.data.slackOptIn;
   }
 
   if (Object.keys(patch).length === 0) {
@@ -423,7 +412,7 @@ export async function editEmployee(
 
 /**
  * Generate the Firebase password-reset link for an existing employee
- * and return it so the admin can ship it manually (DM / WhatsApp /
+ * and return it so the admin can ship it manually (DM /
  * paste-into-an-email-they-control). This is the bypass for when
  * Resend is down or the recipient's domain isn't on Resend's verified
  * sender list yet.

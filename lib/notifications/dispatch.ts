@@ -16,8 +16,6 @@ import {
   NOTIFICATION_KINDS,
   type NotificationKindKey,
 } from "@/lib/profile/notification-prefs";
-import { sendSlackDM } from "@/lib/slack/dispatch";
-import { sendWhatsApp } from "@/lib/whatsapp/dispatch";
 import { sendWebPushToUser } from "@/lib/web-push/client";
 import { getNotificationMatrix } from "@/lib/queries/notification-matrix";
 import { resolveChannels } from "@/lib/notifications/resolve-channels";
@@ -51,8 +49,8 @@ function extractToStatus(body: string | null | undefined): TaskStatus | undefine
  *   - `notify()` inserts a notification row first.  This is the only
  *     thing that ever blocks the calling action's tx.
  *   - It then loads the recipient's per-channel opt-in flags and fans
- *     four arms in parallel under `Promise.allSettled`:
- *         email · slack · whatsapp · web_push
+ *     two arms in parallel under `Promise.allSettled`:
+ *         email · web_push
  *     Each arm internally returns "sent" | "skip" | { error }.  We
  *     translate fulfilled+"sent" into the channel's name in the
  *     `delivered_channels` text[] on the row.
@@ -82,7 +80,7 @@ export interface NotifyOpts {
    * buttons so an admin can verify one channel without flipping the
    * org-wide config.
    */
-  forceChannels?: ReadonlyArray<"email" | "slack" | "whatsapp" | "push">;
+  forceChannels?: ReadonlyArray<"email" | "push">;
   /**
    * Profile v2 — when true, the recipient's per-(kind,channel) matrix is
    * overridden so every enabled-at-the-channel-level arm fires. Set by
@@ -167,13 +165,12 @@ async function notifyImpl(opts: NotifyOpts): Promise<void> {
     return;
   }
 
-  // M4 Commit 3a — outbound channels (slack/whatsapp/web_push) want the
-  // task's human subject + short-id so their templates can render
-  // `*Subject* … View task →` with a deep link.  We look the task up
-  // once here so all three arms (email reuses title/body already) share
-  // the same projection.  When `taskId` is null (overdue digest etc.)
-  // we leave the fields empty and let the templates fall back to the
-  // notification title.
+  // M4 Commit 3a — the web_push arm wants the task's human subject +
+  // short-id so its payload can render `Subject … View task →` with a
+  // deep link.  We look the task up once here so both arms (email reuses
+  // title/body already) share the same projection.  When `taskId` is
+  // null (overdue digest etc.) we leave the fields empty and fall back
+  // to the notification title.
   const task = row.taskId
     ? await db.query.tasks.findFirst({
         where: eq(tasks.id, row.taskId),
@@ -191,9 +188,9 @@ async function notifyImpl(opts: NotifyOpts): Promise<void> {
     : "";
 
   // M5.1 — for status_changed kinds, resolve the admin-configured label
-  // for `toStatus` so Slack + WhatsApp templates surface renames. The
-  // status display map is React-cached, so this is one DB call per RSC
-  // tick even when many notifications fire.
+  // for `toStatus` so outbound payloads surface renames. The status
+  // display map is React-cached, so this is one DB call per RSC tick
+  // even when many notifications fire.
   let statusLabel: string | undefined;
   if (row.kind === "status_changed") {
     const toStatus = extractToStatus(row.body);
@@ -215,7 +212,7 @@ async function notifyImpl(opts: NotifyOpts): Promise<void> {
   // M5.1 — admin-configured per-event channel routing. opts.forceChannels
   // wins (used by /admin/settings Integrations "send test"); otherwise we
   // resolve via the org_settings.notification_matrix JSONB. Missing entries
-  // fall back to all 4 channels (resolveChannels handles that). The matrix
+  // fall back to all channels (resolveChannels handles that). The matrix
   // uses the user-friendly name "push"; we map it to the historical arm
   // name "web_push" below so delivered_channels keeps its existing shape.
   const allowedChannels = new Set<string>(
@@ -223,7 +220,7 @@ async function notifyImpl(opts: NotifyOpts): Promise<void> {
       ? opts.forceChannels
       : resolveChannels(row.kind as NotificationKind, await getNotificationMatrix()),
   );
-  const allowed = (matrixName: "email" | "slack" | "whatsapp" | "push") =>
+  const allowed = (matrixName: "email" | "push") =>
     allowedChannels.has(matrixName);
 
   // Profile v2 — per-(kind,channel) matrix. Mention escalation: if the
@@ -238,22 +235,16 @@ async function notifyImpl(opts: NotifyOpts): Promise<void> {
   // Capture into a local that TypeScript can track inside the inner closure.
   const recipPrefs = prefs;
   const escalated = !!opts.isMention && recipPrefs.mentionEscalation;
-  function personalEnabled(channelKey: "email" | "slack" | "whatsapp" | "push"): boolean {
+  function personalEnabled(channelKey: "email" | "push"): boolean {
     if (!kindKey) return true; // unknown kind (e.g. overdue_digest) — no override
     if (escalated) return true;
-    // Map legacy scalar by channel
-    const legacy =
-      channelKey === "email"
-        ? recipPrefs.emailOptIn
-        : channelKey === "slack"
-          ? recipPrefs.slackOptIn
-          : channelKey === "whatsapp"
-            ? recipPrefs.whatsappOptedIn
-            : true; // push has no legacy scalar — default true; subscription absence is its own skip
+    // Map legacy scalar by channel. Push has no legacy scalar — default
+    // true; subscription absence is its own skip.
+    const legacy = channelKey === "email" ? recipPrefs.emailOptIn : true;
     return effectiveEnabled(personalMatrix, kindKey, channelKey, legacy);
   }
 
-  // Four-arm fan-out.  Each entry is `[channelName, runner]`.  The
+  // Two-arm fan-out.  Each entry is `[channelName, runner]`.  The
   // runner returns "sent" | "skip" | { error }.  When the user is
   // opted-out (or required contact info is missing), we synthesize
   // "skip" without ever invoking the channel sender.
@@ -275,23 +266,6 @@ async function notifyImpl(opts: NotifyOpts): Promise<void> {
           taskId: row.taskId,
         });
         return "sent";
-      },
-    ],
-    [
-      "slack",
-      async () => {
-        if (!allowed("slack")) return "skip";
-        if (!personalEnabled("slack")) return "skip";
-        return sendSlackDM(prefs, outboundCtx);
-      },
-    ],
-    [
-      "whatsapp",
-      async () => {
-        if (!allowed("whatsapp")) return "skip";
-        if (!personalEnabled("whatsapp")) return "skip";
-        if (!prefs.whatsappPhone) return "skip";
-        return sendWhatsApp(prefs, outboundCtx);
       },
     ],
     [
@@ -321,7 +295,7 @@ async function notifyImpl(opts: NotifyOpts): Promise<void> {
   // INSERT can't hold up the user-facing read of delivered_channels.
   const logRows: Array<{
     notificationId: string;
-    channel: "email" | "slack" | "whatsapp" | "web_push";
+    channel: "email" | "web_push";
     status: "sent" | "skipped" | "failed";
     errorMessage: string | null;
     nextAttemptAt: Date | null;
@@ -330,7 +304,7 @@ async function notifyImpl(opts: NotifyOpts): Promise<void> {
     const armEntry = arms[i];
     const settled = results[i];
     if (!armEntry || !settled) continue;
-    const name = armEntry[0] as "email" | "slack" | "whatsapp" | "web_push";
+    const name = armEntry[0] as "email" | "web_push";
     // settled.status is always "fulfilled" because safeSend swallows
     // rejections, but the type system doesn't know that; guard for safety.
     if (settled.status !== "fulfilled") {
@@ -530,7 +504,7 @@ async function notifyManyForTaskImpl(
   const recipients = dedupeRecipients(candidates, opts.actorId);
 
   // Fan-out in parallel — each notify() does its own DB insert + email/
-  // Slack/WhatsApp/push work, none of which depends on the others.
+  // push work, none of which depends on the others.
   // Serial awaits made a 5-recipient fan-out cost 5× the latency of a
   // single one; Promise.allSettled here so one bad channel for one
   // recipient can't poison the whole batch.

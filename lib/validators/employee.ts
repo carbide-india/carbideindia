@@ -79,24 +79,8 @@ export const EditEmployeeSchema = z
     primaryDepartmentId:  z.string().uuid().nullable().optional(),
     managerId:  z.string().uuid().nullable().optional(),
     isAdmin:    z.boolean().optional(),
-    // M4 — multi-channel admin controls.  `whatsappPhone` must be valid
-    // E.164 (or empty/null to clear); the other three are simple booleans.
-    whatsappPhone: z
-      .union([
-        z
-          .string()
-          .trim()
-          .regex(
-            /^\+[1-9]\d{1,14}$/,
-            "WhatsApp phone must be E.164 (e.g. +919820062511)",
-          ),
-        z.literal(""),
-        z.null(),
-      ])
-      .optional(),
-    whatsappOptedIn: z.boolean().optional(),
-    emailOptIn:      z.boolean().optional(),
-    slackOptIn:      z.boolean().optional(),
+    // M4 — multi-channel admin controls.
+    emailOptIn: z.boolean().optional(),
   })
   .strict()
   .refine(

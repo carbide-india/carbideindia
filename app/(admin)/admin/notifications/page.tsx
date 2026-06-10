@@ -79,7 +79,7 @@ export default async function AdminNotificationsPage({ searchParams }: PageProps
           Every message we sent.
         </h1>
         <p className="text-body-lg text-ink-subtle mt-2 max-w-2xl">
-          Per-notification delivery log across email, Slack, WhatsApp, and Web Push.
+          Per-notification delivery log across email and Web Push.
         </p>
       </header>
 
@@ -87,10 +87,7 @@ export default async function AdminNotificationsPage({ searchParams }: PageProps
         <StatCard label="Last 24h" value={stats.total24h} />
         <StatCard label="Failures" value={stats.failures24h} tone="red" />
         <StatCard label="Email" value={stats.byChannel24h.email} />
-        <StatCard
-          label="Slack + WA + Push"
-          value={stats.byChannel24h.slack + stats.byChannel24h.whatsapp + stats.byChannel24h.push}
-        />
+        <StatCard label="Push" value={stats.byChannel24h.push} />
       </div>
 
       <NotificationFilterBar

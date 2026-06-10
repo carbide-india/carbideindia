@@ -65,17 +65,13 @@ export async function syncGoogleCalendarNow(): Promise<
 }
 
 /**
- * M4 — self-serve per-channel opt-in flags.  Only the two channels the
- * employee can fully control today (email + Slack) are mutable here.
- * WhatsApp opt-in is admin-gated because it requires capturing the
- * employee's phone number, which we ask admins to do on their behalf
- * (DPDP / Meta-policy reasons).  Web Push opt-in lives on the
- * subscription itself (one row per device) — not on this scalar.
+ * M4 — self-serve per-channel opt-in flags.  Only email is mutable here.
+ * Web Push opt-in lives on the subscription itself (one row per device)
+ * — not on this scalar.
  */
 const PatchSchema = z
   .object({
     emailOptIn: z.boolean().optional(),
-    slackOptIn: z.boolean().optional(),
   })
   .strict()
   .refine((v) => Object.keys(v).length > 0, { message: "No changes." });

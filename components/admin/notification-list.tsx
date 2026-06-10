@@ -10,12 +10,10 @@ import type {
 
 const CHANNEL_LABELS: Record<Channel, string> = {
   email: "Email",
-  slack: "Slack",
-  whatsapp: "WhatsApp",
   push: "Push",
 };
 
-const CHANNEL_ORDER: readonly Channel[] = ["email", "slack", "whatsapp", "push"];
+const CHANNEL_ORDER: readonly Channel[] = ["email", "push"];
 
 const STATUS_GLYPH: Record<ChannelStatus, string> = {
   delivered: "✓",
@@ -58,7 +56,7 @@ interface Props {
 
 /**
  * Renders the admin notifications log: one row per notification, with a
- * 4-chip channel status block (email / slack / whatsapp / push) on the
+ * per-channel status chip block (email / push) on the
  * right and an inline expand to reveal the full body + delivery audit.
  * Matches the Light Vibrant rhythm of `activity-list.tsx` (hairline
  * borders, 1px shadow, ink-subtle metadata line).

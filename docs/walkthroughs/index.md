@@ -17,14 +17,14 @@ Altus Corp Dashboard is a "Light Vibrant" work-management app for the Altus Corp
 - **Task workflow (M2.2)** — pure-function status-transition matrix, Approve/Decline/Reassign/Transfer-externally/Cancel/Comment all as Server Actions writing `task_events` rows, and a per-task audit feed UI.
 - **Notifications + Inbox (M2.3)** — `/inbox` route, per-action fan-out, 11 React Email templates, Vercel cron daily overdue digest at 09:00 IST.
 - **Admin panel (M3 + M5.1)** — tabbed `/admin/settings` (General · Statuses · Integrations · Notifications), `/admin/departments` (real table, replacing the enum), `status_settings` CRUD with label + color overrides, integration health cards with send-test, event×channel notification matrix. Admin audit tables `employee_events` + `settings_events` write on every mutation.
-- **Imports + multi-channel (M4)** — `pnpm import:legacy` one-time CSV importer + 4-channel dispatch (Resend email + Slack DM + WhatsApp Cloud API + Web Push PWA). `dispatch.notify()` is a `Promise.allSettled` across all four arms with per-notification `delivered_channels` audit.
+- **Imports + multi-channel (M4)** — `pnpm import:legacy` one-time CSV importer + multi-channel dispatch (Resend email + Web Push PWA). `dispatch.notify()` is a `Promise.allSettled` across the channel arms with per-notification `delivered_channels` audit.
 - **Admin power + session timeout (M5.2)** — unified `/admin/activity` UNION across `task_events` + `employee_events` + `settings_events` (Source filter, per-source icons), `/admin/notifications` delivery log against `notification_matrix`, 3 CSV exports (`/tasks/export`, `/admin/employees/export`, `/admin/activity/export` — UTF-8 BOM, 10k cap), 10-min `IdleTimer` (admin-tunable), browser-close sign-out via session cookies + Firebase `browserSessionPersistence`.
 - **Polish** — default `/tasks` and `/archived` to "My tasks" for non-admins; row-action `#hash` deep-links auto-open the matching dialog on `/tasks/[id]`; Light Vibrant styled 403/404/500 error pages; per-employee notification channel prefs at `/profile`; PWA install + browser push opt-in.
 
 ## Open follow-ups
 
 - **M5.3** — Sentry, structured logging, performance pass (next milestone, not started).
-- **Operational** — set up custom domain for the production deployment; invite emails for the imported employees; WhatsApp template Meta Business Manager approval. See CLAUDE.md for the running list.
+- **Operational** — set up custom domain for the production deployment; invite emails for the imported employees. See CLAUDE.md for the running list.
 
 The app is deployed on Vercel at the default `altus-corp-dashboard.vercel.app` URL (custom domain pending) against prod Supabase, seeded with 14 imported employees + 240 imported tasks.
 

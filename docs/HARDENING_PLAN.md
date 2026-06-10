@@ -130,9 +130,9 @@ Without numbers we'll make changes that feel faster but aren't. Establish the ba
 ## Phase 2 — Reliability: things that fail silently today (2–3 days)
 
 - [x] **2.1 Persist notification dispatch attempts.**
-  - **What:** New table `notification_dispatch_log(id, notification_id, channel, status, error, attempted_at)`. Each Slack/email/WhatsApp send writes a row. Failures retry up to 3× with backoff via a cron route (`/api/cron/retry-notifications`).
+  - **What:** New table `notification_dispatch_log(id, notification_id, channel, status, error, attempted_at)`. Each email/push send writes a row. Failures retry up to 3× with backoff via a cron route (`/api/cron/retry-notifications`).
   - **Why:** Sends are fire-and-forget; failures get a `console.error` and nothing more. People silently miss task assignments.
-  - **Verify:** Kill the Slack token temporarily, trigger a task assignment, see 3 retry rows then a `failed` status.
+  - **Verify:** Kill the Resend key temporarily, trigger a task assignment, see 3 retry rows then a `failed` status.
   - **Outcome:** Migration `0029_notification_dispatch_log.sql` applied. Schema in `db/schema.ts` (`notificationDispatchLog`). `lib/notifications/dispatch.ts` now persists one row per channel-arm outcome (`sent`/`skipped`/`failed`) after the existing fan-out — non-blocking, swallow-and-continue same contract. Retry path in new `lib/notifications/retry.ts`: picks rows where `status='failed' AND next_attempt_at<=now() AND attempt_count<3`, re-runs the single channel with shared caches (notification, prefs, task, actor). Backoff schedule: 1min → 5min → 30min, then `failed_terminal`. Cron route `/api/cron/retry-dispatch` (every 5 min in `vercel.json`) guarded by `Authorization: Bearer $CRON_SECRET`. **Side fix:** discovered + fixed a pre-existing middleware bug where `/api/cron/*` was being auth-redirected to `/login` before reaching the route — added `/api/cron/` to `PUBLIC_API` allowlist. This was silently breaking the existing digest cron in production. End-to-end smoke-tested: seeded a failed log row, hit the cron endpoint as Vercel would, got `{picked:1, sent:1}` (real email delivered to recipient).
 
 - [x] **2.2 Storage RLS as defense-in-depth.**
@@ -209,7 +209,7 @@ Without numbers we'll make changes that feel faster but aren't. Establish the ba
 
 - [x] **4.4 `.env.example`.**
   - **What:** Commit a `task-management/.env.example` with every required env var (name + comment, no values). The next person bootstrapping won't have to spelunk.
-  - **Outcome:** Created. Grouped by purpose (database, supabase, firebase, app, email, slack, whatsapp, web-push, cron, observability, dev-only); calls out NEXT_PUBLIC_ vs server-only and the 5432-vs-6543 pooler-port rule; includes `SLOW_QUERY_MS` from Phase 0.1. Commit `5982ec2`.
+  - **Outcome:** Created. Grouped by purpose (database, supabase, firebase, app, email, web-push, cron, observability, dev-only); calls out NEXT_PUBLIC_ vs server-only and the 5432-vs-6543 pooler-port rule; includes `SLOW_QUERY_MS` from Phase 0.1. Commit `5982ec2`.
 
 - [x] **4.5 Health check.**
   - **What:** `app/api/health` exists — verify it actually checks the DB + Supabase storage + a sample query, not just `200 OK`. Hook into a free uptime monitor (BetterStack / UptimeRobot).

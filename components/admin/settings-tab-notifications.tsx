@@ -24,10 +24,8 @@ const KIND_LABEL: Record<NotificationKind, string> = {
 };
 
 const CHANNEL_LABEL: Record<NotificationChannel, string> = {
-  email:    "Email",
-  slack:    "Slack",
-  whatsapp: "WhatsApp",
-  push:     "Push",
+  email: "Email",
+  push:  "Push",
 };
 
 export function SettingsTabNotifications({

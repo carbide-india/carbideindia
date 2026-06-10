@@ -18,7 +18,7 @@ const TRIMMED: NotificationMatrix = {
 };
 
 describe("trimmed notification matrix", () => {
-  it("keeps email for task_assigned (email only — no push/slack/whatsapp)", () => {
+  it("keeps email for task_assigned (email only — no push)", () => {
     expect(resolveChannels("task_assigned", TRIMMED)).toEqual(["email"]);
   });
 

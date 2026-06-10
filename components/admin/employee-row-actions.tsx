@@ -48,8 +48,6 @@ type RowEmployee = {
   isAdmin: boolean;
   isActive: boolean;
   joinedAt: Date | null;
-  whatsappPhone: string | null;
-  whatsappOptedIn: boolean;
   managerId: string | null;
 };
 
@@ -259,8 +257,6 @@ export function EmployeeRowActions({
           role: employee.role,
           departments: employee.departments,
           isAdmin: employee.isAdmin,
-          whatsappPhone: employee.whatsappPhone,
-          whatsappOptedIn: employee.whatsappOptedIn,
           managerId: employee.managerId,
         }}
         isSelf={isSelf}
