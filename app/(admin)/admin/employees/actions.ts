@@ -44,6 +44,37 @@ async function sendClerkInvitation(email: string): Promise<void> {
   });
 }
 
+/**
+ * Best-effort revoke of any pending Clerk invitations addressed to `email`,
+ * so the emailed invite link stops working once the employee is deactivated
+ * or deleted before ever signing in. Failures are logged, never fatal —
+ * the DB is already the source of truth and an unrevoked invitation can't
+ * link to a row that is inactive or gone.
+ */
+async function revokePendingInvitations(email: string, logTag: string): Promise<void> {
+  const lower = email.toLowerCase();
+  try {
+    const client = await clerkClient();
+    // `query` filters by email/id server-side; single page with a generous
+    // limit is plenty for a roster this size.
+    const { data } = await client.invitations.getInvitationList({
+      status: "pending",
+      query: lower,
+      limit: 100,
+    });
+    for (const inv of data) {
+      if (inv.emailAddress.toLowerCase() !== lower) continue;
+      try {
+        await client.invitations.revokeInvitation(inv.id);
+      } catch (err) {
+        console.error(`[${logTag}] revokeInvitation(${inv.id}) failed`, err);
+      }
+    }
+  } catch (err) {
+    console.error(`[${logTag}] listing pending invitations failed`, err);
+  }
+}
+
 function clerkErrorMessage(err: unknown): string {
   const e = err as { errors?: Array<{ longMessage?: string; message?: string }>; message?: string };
   return (
@@ -392,9 +423,17 @@ export async function deactivateEmployee(
         .update(employees)
         .set({ isActive: true })
         .where(eq(employees.id, emp.id))
-        .catch(() => {});
+        .catch((rollbackErr) => {
+          console.error("[deactivateEmployee] rollback failed", rollbackErr);
+        });
       return { ok: false, error: `Clerk: ${clerkErrorMessage(err)}` };
     }
+  }
+
+  // Invited-but-never-joined: revoke any pending Clerk invitation so the
+  // emailed link stops working. Best-effort.
+  if (emp.joinedAt === null) {
+    await revokePendingInvitations(emp.email, "deactivateEmployee");
   }
 
   try {
@@ -441,7 +480,9 @@ export async function reactivateEmployee(
         .update(employees)
         .set({ isActive: false })
         .where(eq(employees.id, emp.id))
-        .catch(() => {});
+        .catch((rollbackErr) => {
+          console.error("[reactivateEmployee] rollback failed", rollbackErr);
+        });
       return { ok: false, error: `Clerk: ${clerkErrorMessage(err)}` };
     }
   }
@@ -681,7 +722,11 @@ export async function deleteEmployee(
 
   // 6. Clerk user. Best-effort — the DB is already consistent, so a
   //    Clerk failure leaves at most an orphan account that can no longer
-  //    link to an employees row.
+  //    link to an employees row. Invited-but-never-joined employees have
+  //    no Clerk user yet, only a pending invitation — revoke it instead.
+  if (emp.joinedAt === null) {
+    await revokePendingInvitations(snapshot.email, "deleteEmployee");
+  }
   if (snapshot.clerkUserId) {
     try {
       const client = await clerkClient();

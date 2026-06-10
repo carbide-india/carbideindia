@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { Route } from "next";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { employees, type Employee } from "@/db/schema";
@@ -26,8 +26,10 @@ export const getCurrentEmployee = cache(async (): Promise<Employee | null> => {
   const email = user?.primaryEmailAddress?.emailAddress?.toLowerCase();
   if (!email) return null;
 
+  // Case-insensitive — historical imports may have mixed-case emails even
+  // though new ones are normalized (same pattern as inviteEmployee's dup check).
   const byEmail = await db.query.employees.findFirst({
-    where: eq(employees.email, email),
+    where: sql`lower(${employees.email}) = ${email}`,
   });
   if (!byEmail || byEmail.clerkUserId) return null; // unknown user or already linked elsewhere
 
