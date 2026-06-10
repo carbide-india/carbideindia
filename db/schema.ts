@@ -48,18 +48,12 @@ export const employees = pgTable("employees", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-  // M2.0 additions:
-  firebaseUid: text("firebase_uid").unique(),
+  // M2.0 additions (Clerk migration: firebase_uid → clerk_user_id):
+  clerkUserId: text("clerk_user_id").unique(),
   isAdmin: boolean("is_admin").notNull().default(false),
   isActive: boolean("is_active").notNull().default(true),
   invitedAt: timestamp("invited_at", { withTimezone: true }),
   joinedAt: timestamp("joined_at", { withTimezone: true }),
-  // Admin password-reset lockout marker (migration 0043). Set when an admin
-  // resets the password (sessions revoked); cleared on next successful login.
-  // Non-null => show the "changed by admin" message on a failed sign-in.
-  passwordResetByAdminAt: timestamp("password_reset_by_admin_at", {
-    withTimezone: true,
-  }),
   // M2.3-lite: inbox last-visit marker — drives unread-badge math.
   lastInboxVisitAt: timestamp("last_inbox_visit_at", { withTimezone: true })
     .notNull()
@@ -174,43 +168,6 @@ export const notificationPreferences = pgTable(
   },
   (t) => [
     index("notification_preferences_employee_idx").on(t.employeeId),
-  ],
-);
-
-/**
- * Profile v2 — auth_sessions (migration 0036).
- * Written by /api/auth/session on cookie mint; updated by a middleware
- * helper on each request (debounced). Powers the Identity tab's
- * "Active sessions" list + "Sign out everywhere" button.
- */
-export const authSessions = pgTable(
-  "auth_sessions",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    employeeId: uuid("employee_id")
-      .notNull()
-      .references(() => employees.id, { onDelete: "cascade" }),
-    firebaseUid: text("firebase_uid").notNull(),
-    sessionHash: text("session_hash").notNull().unique(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    lastSeenAt: timestamp("last_seen_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    userAgent: text("user_agent"),
-    ipHash: text("ip_hash"),
-    country: text("country"),
-    city: text("city"),
-    revokedAt: timestamp("revoked_at", { withTimezone: true }),
-  },
-  (t) => [
-    index("auth_sessions_employee_idx").on(
-      t.employeeId,
-      t.revokedAt,
-      t.lastSeenAt,
-    ),
-    index("auth_sessions_firebase_uid_idx").on(t.firebaseUid),
   ],
 );
 
@@ -930,8 +887,6 @@ export type EmployeeEvent = typeof employeeEvents.$inferSelect;
 export type NewEmployeeEvent = typeof employeeEvents.$inferInsert;
 export type SettingsEvent = typeof settingsEvents.$inferSelect;
 export type NewSettingsEvent = typeof settingsEvents.$inferInsert;
-export type AuthSession = typeof authSessions.$inferSelect;
-export type NewAuthSession = typeof authSessions.$inferInsert;
 export type AuditDataExport = typeof auditDataExports.$inferSelect;
 export type NewAuditDataExport = typeof auditDataExports.$inferInsert;
 export type NotificationPreference = typeof notificationPreferences.$inferSelect;

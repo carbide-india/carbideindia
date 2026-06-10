@@ -1,91 +1,42 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { authMiddleware } from "next-firebase-auth-edge";
+import { NextResponse } from "next/server";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { clientIpFromHeaders, isIpAllowed } from "@/lib/ip-gate";
 
-const PUBLIC_PATHS = [
-  "/login",
-  "/forgot-password",
-  "/set-password",
+const isPublicRoute = createRouteMatcher([
+  "/login(.*)",
+  "/access-denied",
   "/welcome",
   "/terms",
   "/privacy",
-];
-
-const PUBLIC_API = [
-  "/api/auth/session",
-  "/api/auth/signout",
   "/api/health",
-  // Cron routes are authenticated by their own `Authorization: Bearer <CRON_SECRET>`
-  // check inside the route handler (see e.g. app/api/cron/digest/route.ts).
-  // Without this exclusion, the auth middleware redirects them to /login
-  // before the route can verify CRON_SECRET — silently breaking every
-  // Vercel cron invocation.
-  "/api/cron/",
-];
+  "/api/cron/(.*)", // authenticated by CRON_SECRET inside the route
+  "/manifest.json",
+  "/sw.js",
+]);
 
-// PWA assets — must be reachable without auth so the browser can install
-// the app and register the Service Worker before the user signs in.
-const PUBLIC_FILES = ["/manifest.json", "/sw.js"];
-
-function isPublic(pathname: string): boolean {
-  if (PUBLIC_FILES.includes(pathname)) return true;
-  if (PUBLIC_API.some((p) => pathname.startsWith(p))) return true;
-  return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
-}
-
-export function middleware(request: NextRequest) {
-  if (isPublic(request.nextUrl.pathname)) {
-    return NextResponse.next();
+export default clerkMiddleware(async (auth, req) => {
+  // ── IP gate: runs before auth, before everything ──────────────
+  const ip = clientIpFromHeaders(req.headers);
+  if (!isIpAllowed(ip, process.env.ALLOWED_IPS)) {
+    if (req.nextUrl.pathname === "/access-denied") return NextResponse.next();
+    const url = req.nextUrl.clone();
+    url.pathname = "/access-denied";
+    return NextResponse.rewrite(url, { status: 403 });
+  }
+  if (req.nextUrl.pathname === "/access-denied") {
+    // Allowed visitors never see the denial page.
+    const url = req.nextUrl.clone();
+    url.pathname = "/";
+    return NextResponse.redirect(url);
   }
 
-  return authMiddleware(request, {
-    loginPath: "/api/auth/session",
-    logoutPath: "/api/auth/signout",
-    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
-    cookieName: "__session",
-    cookieSignatureKeys: [
-      process.env.COOKIE_SECRET_CURRENT!,
-      process.env.COOKIE_SECRET_PREVIOUS!,
-    ],
-    cookieSerializeOptions: {
-      path: "/",
-      httpOnly: true,
-      // Override with ALLOW_INSECURE_COOKIES=true for HTTP local-server deploys
-      // (LAN-only Windows install on http://<ip>:3000 without TLS).
-      secure: process.env.NODE_ENV === "production" && process.env.ALLOW_INSECURE_COOKIES !== "true",
-      sameSite: "lax" as const,
-      // No maxAge — session cookie. Browser clears on full close.
-      // Paired with browserSessionPersistence in lib/firebase/client.ts.
-    },
-    serviceAccount: {
-      projectId: process.env.FIREBASE_PROJECT_ID!,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL!,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, "\n"),
-    },
-    // Verify token signatures locally using cached Google public keys
-    // instead of calling Firebase per request. `checkRevoked: true` adds a
-    // round-trip to Google on EVERY request (including RSC prefetches),
-    // which on a remote DB region compounds with the DB latency on each
-    // navigation. We trade that for slightly stale revocation: a forced
-    // sign-out propagates on the next token refresh (max 1 hour) rather
-    // than instantly. Signing-key rotation is still picked up live.
-    checkRevoked: false,
-    handleValidToken: async (_tokens, headers) => {
-      return NextResponse.next({ request: { headers } });
-    },
-    handleInvalidToken: async () => {
-      const url = request.nextUrl.clone();
-      url.pathname = "/login";
-      url.searchParams.set("next", request.nextUrl.pathname);
-      return NextResponse.redirect(url);
-    },
-    handleError: async (error) => {
-      console.error("auth middleware error", error);
-      const url = request.nextUrl.clone();
-      url.pathname = "/login";
-      return NextResponse.redirect(url);
-    },
-  });
-}
+  // ── Clerk auth ─────────────────────────────────────────────────
+  if (!isPublicRoute(req)) {
+    await auth.protect({
+      unauthenticatedUrl: new URL("/login", req.url).toString(),
+    });
+  }
+});
 
 export const config = {
   matcher: [

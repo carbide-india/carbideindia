@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { Roboto, Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
@@ -69,6 +70,7 @@ export default async function RootLayout({
   const htmlStyle = accentVars(resolveAccent(me?.accent)) as React.CSSProperties;
 
   return (
+    <ClerkProvider>
     <html
       lang="en"
       className={`${roboto.variable} ${bricolage.variable} ${jetbrainsMono.variable}`}
@@ -105,5 +107,6 @@ export default async function RootLayout({
         <SpeedInsights />
       </body>
     </html>
+    </ClerkProvider>
   );
 }
