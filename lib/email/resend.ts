@@ -5,10 +5,6 @@ import { Resend } from "resend";
 import { db } from "@/lib/db";
 import { employees, notifications, tasks } from "@/db/schema";
 import type { NotificationKind } from "@/db/schema";
-import { InviteEmail } from "@/emails/invite";
-import { ResetPasswordEmail } from "@/emails/reset-password";
-import { CredentialsInviteEmail } from "@/emails/credentials-invite";
-import { AdminResetPasswordEmail } from "@/emails/admin-reset-password";
 import { TaskAssignedEmail } from "@/emails/notifications/TaskAssigned";
 import { TaskInitiatedEmail } from "@/emails/notifications/TaskInitiated";
 import { StatusChangedEmail } from "@/emails/notifications/StatusChanged";
@@ -49,12 +45,10 @@ let cached: Resend | null = null;
 /**
  * Returns the Resend client when `RESEND_API_KEY` is set, else `null`.
  *
- * The original auth-flow senders (invite, reset-password) used to throw
- * on a missing key.  M2.3 broadens the contract: notification senders
- * must be safe to call in dev environments without Resend credentials,
- * so we never throw — callers check the `error`/`id` fields (or just
- * the `void` return for `sendNotificationEmail`) to know whether an
- * email actually went out.
+ * Notification senders must be safe to call in dev environments without
+ * Resend credentials, so we never throw — callers check the `error`/`id`
+ * fields (or just the `void` return for `sendNotificationEmail`) to know
+ * whether an email actually went out.
  */
 function getResend(): Resend | null {
   if (cached) return cached;
@@ -109,109 +103,6 @@ function parseMeta(body: string | null): NotificationMeta {
     // not JSON — treat the whole body as a note string
   }
   return { note: trimmed };
-}
-
-/* ------------------------------------------------------------------ */
-/* Auth-flow senders (M2.0) — unchanged contract                       */
-/* ------------------------------------------------------------------ */
-
-export async function sendInviteEmail(args: {
-  email: string;
-  inviteeName: string;
-  inviterName: string;
-  inviteLink: string;
-}): Promise<{ id: string | null; error: string | null }> {
-  try {
-    const resend = getResend();
-    if (!resend) return { id: null, error: "RESEND_API_KEY not set" };
-    const { data, error } = await resend.emails.send({
-      from: FROM,
-      to: args.email,
-      subject: `You've been invited to Altus Corp Dashboard`,
-      react: InviteEmail({
-        inviteeName: args.inviteeName,
-        inviterName: args.inviterName,
-        link:        args.inviteLink,
-      }),
-    });
-    if (error) return { id: null, error: error.message };
-    return { id: data?.id ?? null, error: null };
-  } catch (err) {
-    return { id: null, error: errorMessage(err) };
-  }
-}
-
-export async function sendResetPasswordEmail(args: {
-  email: string;
-  resetLink: string;
-  recipientName?: string;
-}): Promise<{ id: string | null; error: string | null }> {
-  try {
-    const resend = getResend();
-    if (!resend) return { id: null, error: "RESEND_API_KEY not set" };
-    const { data, error } = await resend.emails.send({
-      from: FROM,
-      to: args.email,
-      subject: `Reset your Altus Corp password`,
-      react: ResetPasswordEmail({
-        link: args.resetLink,
-        recipientName: args.recipientName,
-      }),
-    });
-    if (error) return { id: null, error: error.message };
-    return { id: data?.id ?? null, error: null };
-  } catch (err) {
-    return { id: null, error: errorMessage(err) };
-  }
-}
-
-export async function sendCredentialsEmail(args: {
-  email: string;
-  inviteeName: string;
-  inviterName: string;
-  password: string;
-  loginUrl: string;
-}): Promise<{ id: string | null; error: string | null }> {
-  try {
-    const resend = getResend();
-    if (!resend) return { id: null, error: "RESEND_API_KEY not set" };
-    const { data, error } = await resend.emails.send({
-      from: FROM,
-      to: args.email,
-      subject: `Your Altus Corp Dashboard login details`,
-      react: CredentialsInviteEmail({
-        inviteeName: args.inviteeName,
-        inviterName: args.inviterName,
-        email: args.email,
-        password: args.password,
-        loginUrl: args.loginUrl,
-      }),
-    });
-    if (error) return { id: null, error: error.message };
-    return { id: data?.id ?? null, error: null };
-  } catch (err) {
-    return { id: null, error: errorMessage(err) };
-  }
-}
-
-export async function sendPasswordChangedByAdminEmail(args: {
-  email: string;
-  recipientName?: string;
-}): Promise<{ id: string | null; error: string | null }> {
-  try {
-    const resend = getResend();
-    if (!resend) return { id: null, error: "RESEND_API_KEY not set" };
-    const { data, error } = await resend.emails.send({
-      from: FROM,
-      to: args.email,
-      subject: `Your Altus Corp password was reset by an administrator`,
-      react: AdminResetPasswordEmail({ recipientName: args.recipientName }),
-    });
-    if (error) return { id: null, error: error.message };
-    return { id: data?.id ?? null, error: null };
-  } catch (err) {
-    return { id: null, error: errorMessage(err) };
-  }
 }
 
 /* ------------------------------------------------------------------ */

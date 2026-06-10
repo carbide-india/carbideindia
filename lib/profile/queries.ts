@@ -1,9 +1,8 @@
 import "server-only";
-import { and, desc, eq, gte, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import {
-  authSessions,
   auditDataExports,
   employees,
   tasks,
@@ -92,39 +91,6 @@ export async function getQuickStats(employeeId: string) {
       revalidate: 60,
       tags: [PROFILE_CACHE_TAGS.quickStats(employeeId)],
     },
-  )();
-}
-
-/**
- * Active sessions list for the Identity tab. Excludes revoked rows.
- * Cached per user via PROFILE_CACHE_TAGS.authSessions(employeeId);
- * invalidated by revokeSession / revokeAllSessions / new mints.
- */
-export async function getActiveSessions(employeeId: string) {
-  return unstable_cache(
-    async () => {
-      return db
-        .select({
-          id: authSessions.id,
-          createdAt: authSessions.createdAt,
-          lastSeenAt: authSessions.lastSeenAt,
-          userAgent: authSessions.userAgent,
-          country: authSessions.country,
-          city: authSessions.city,
-          sessionHash: authSessions.sessionHash,
-        })
-        .from(authSessions)
-        .where(
-          and(
-            eq(authSessions.employeeId, employeeId),
-            isNull(authSessions.revokedAt),
-          ),
-        )
-        .orderBy(desc(authSessions.lastSeenAt))
-        .limit(20);
-    },
-    [PROFILE_CACHE_TAGS.authSessions(employeeId)],
-    { tags: [PROFILE_CACHE_TAGS.authSessions(employeeId)] },
   )();
 }
 

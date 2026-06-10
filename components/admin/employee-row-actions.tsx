@@ -10,8 +10,6 @@ import {
   Pencil,
   Trash2,
   AlertTriangle,
-  Link2,
-  KeyRound,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -27,14 +25,12 @@ import {
   reactivateEmployee,
   deleteEmployee,
   getEmployeeDeletionImpact,
-  getInviteLink,
   type EmployeeDeletionImpact,
 } from "@/app/(admin)/admin/employees/actions";
 import {
   EditEmployeeDialog,
   type EmployeeDepartmentMembership,
 } from "@/components/admin/edit-employee-dialog";
-import { ResetPasswordDialog } from "@/components/admin/reset-password-dialog";
 import type { DepartmentOption } from "@/components/admin/department-multi-select";
 
 type Role = "doer" | "initiator" | "both";
@@ -69,7 +65,6 @@ export function EmployeeRowActions({
   const [pending, startTransition] = useTransition();
   const [confirm, setConfirm] = useState<ConfirmKind>(null);
   const [editOpen, setEditOpen] = useState(false);
-  const [resetOpen, setResetOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteImpact, setDeleteImpact] = useState<EmployeeDeletionImpact | null>(null);
   const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
@@ -129,29 +124,6 @@ export function EmployeeRowActions({
     });
   }
 
-  function handleCopyInviteLink() {
-    startTransition(async () => {
-      const res = await getInviteLink(employee.id);
-      if (!res.ok || !res.link) {
-        fireToast({ message: res.error ?? "Could not generate invite link." });
-        return;
-      }
-      try {
-        await navigator.clipboard.writeText(res.link);
-        fireToast({
-          message: `Invite link for ${employee.name} copied — paste anywhere to share. Expires in 1h.`,
-        });
-      } catch {
-        // Clipboard write blocked (no permissions / insecure context).
-        // Fall back to a window.prompt so admin can still grab the link.
-        window.prompt(
-          `Copy this invite link for ${employee.name} (expires in 1 hour):`,
-          res.link,
-        );
-      }
-    });
-  }
-
   function handleConfirm() {
     if (confirm === null) return;
     const action = confirm;
@@ -180,12 +152,10 @@ export function EmployeeRowActions({
     });
   }
 
-  // Edit + Copy link are always available, so we always render the trigger.
-  // The "link" group (resend + copy) only makes sense while the account is
-  // active — deactivated users can't sign in regardless.
-  const canShareLink = employee.isActive;
-  const canResetPassword = employee.isActive && !isSelf;
-  const showSeparator = canShareLink || canDeactivate || canReactivate;
+  // Resend only makes sense while the account is active and the invitee
+  // hasn't signed in yet — passwords + resets are Clerk-managed now.
+  const canResend = employee.isActive && isInvited;
+  const showSeparator = canResend || canDeactivate || canReactivate;
   const showDeleteSeparator = canDelete;
 
   return (
@@ -207,22 +177,10 @@ export function EmployeeRowActions({
             Edit employee
           </DropdownMenuItem>
           {showSeparator && <DropdownMenuSeparator />}
-          {isInvited && (
+          {canResend && (
             <DropdownMenuItem onClick={handleResend}>
               <MailPlus size={14} />
               Resend invite
-            </DropdownMenuItem>
-          )}
-          {canShareLink && (
-            <DropdownMenuItem onClick={handleCopyInviteLink}>
-              <Link2 size={14} />
-              {isInvited ? "Copy invite link" : "Copy password-reset link"}
-            </DropdownMenuItem>
-          )}
-          {canResetPassword && (
-            <DropdownMenuItem onClick={() => setResetOpen(true)}>
-              <KeyRound size={14} />
-              Reset password
             </DropdownMenuItem>
           )}
           {canDeactivate && (
@@ -264,12 +222,6 @@ export function EmployeeRowActions({
         managerOptions={managerOptions}
       />
 
-      <ResetPasswordDialog
-        open={resetOpen}
-        onOpenChange={setResetOpen}
-        employee={{ id: employee.id, name: employee.name }}
-      />
-
       {/* Hard-delete dialog — typed-email gate prevents accidental clicks. */}
       <Dialog.Root open={deleteOpen} onOpenChange={setDeleteOpen}>
         <Dialog.Portal>
@@ -291,7 +243,7 @@ export function EmployeeRowActions({
                   Delete {employee.name} permanently?
                 </Dialog.Title>
                 <Dialog.Description className="text-[13.5px] text-[#64748B] mt-1" style={{ lineHeight: 1.5 }}>
-                  This destroys their Firebase login AND every task,
+                  This destroys their login AND every task,
                   comment, and audit event tied to them. Other employees
                   who were initiators on those tasks will lose the work
                   too. <strong>Irreversible.</strong>

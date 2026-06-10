@@ -8,19 +8,15 @@
  *                        --tasks-csv=_reference/tasks.csv --commit
  *
  * Without --commit, the script runs in dry-run mode (default).
- * Pass --send-invites to actually email legacy employees their invite
- * link.  Default is OFF — the demo import creates the Firebase user +
- * employees row, but the admin hand-invites later via /admin/employees.
+ * The import only creates employees rows — auth identities live in Clerk
+ * and link automatically (by email) on each employee's first sign-in.
+ * The admin invites people later via /admin/employees.
  */
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { parseArgs } from "node:util";
 import { eq, sql } from "drizzle-orm";
-import { getApps, initializeApp, cert } from "firebase-admin/app";
-import { getAuth, type Auth } from "firebase-admin/auth";
-import { Resend } from "resend";
 import { db } from "@/lib/db";
-import { siteUrl } from "@/lib/site-url";
 import {
   departments,
   employees,
@@ -38,7 +34,6 @@ interface Args {
   employeesCsv: string;
   tasksCsv: string;
   commit: boolean;
-  sendInvites: boolean;
 }
 
 function parseFlags(): Args {
@@ -48,7 +43,6 @@ function parseFlags(): Args {
       "employees-csv": { type: "string", default: "_reference/employees.csv" },
       "tasks-csv":     { type: "string", default: "_reference/tasks.csv" },
       commit:          { type: "boolean", default: false },
-      "send-invites":  { type: "boolean", default: false },
     },
     allowPositionals: true,
   });
@@ -61,7 +55,6 @@ function parseFlags(): Args {
     employeesCsv: values["employees-csv"] as string,
     tasksCsv:     values["tasks-csv"] as string,
     commit:       Boolean(values.commit),
-    sendInvites:  Boolean(values["send-invites"]),
   };
 }
 
@@ -101,52 +94,6 @@ async function resolveDepartmentByName(
   return row ?? null;
 }
 
-/**
- * Lazily initialise the Firebase Admin SDK from env.  We don't use the
- * lib/firebase/admin.ts wrapper because that file is marked
- * `server-only` and trips on tsx-run scripts.  This is the same pattern
- * scripts/bootstrap-admin.ts uses.
- */
-let cachedAuth: Auth | null = null;
-function getAuthClient(): Auth {
-  if (cachedAuth) return cachedAuth;
-  const projectId   = process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const rawKey      = process.env.FIREBASE_PRIVATE_KEY;
-  if (!projectId || !clientEmail || !rawKey) {
-    throw new Error(
-      "Missing Firebase Admin env vars (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY)",
-    );
-  }
-  const privateKey = rawKey.replace(/\\n/g, "\n");
-  if (!getApps().length) {
-    initializeApp({ credential: cert({ projectId, clientEmail, privateKey }), projectId });
-  }
-  cachedAuth = getAuth();
-  return cachedAuth;
-}
-
-async function sendInviteEmailLite(args: {
-  email: string;
-  resetLink: string;
-}): Promise<{ ok: boolean; error?: string }> {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) return { ok: false, error: "RESEND_API_KEY not set" };
-  const from = process.env.RESEND_FROM_EMAIL || "Altus Corp Dashboard <onboarding@resend.dev>";
-  try {
-    const { error } = await new Resend(key).emails.send({
-      from,
-      to: args.email,
-      subject: "You've been invited to Altus Corp Dashboard",
-      html: `<p>Welcome to Altus Corp Dashboard.  Set your password here:</p><p><a href="${args.resetLink}">${args.resetLink}</a></p>`,
-    });
-    if (error) return { ok: false, error: error.message };
-    return { ok: true };
-  } catch (err: any) {
-    return { ok: false, error: err?.message ?? String(err) };
-  }
-}
-
 async function runEmployeesPhase(csv: string, args: Args, report: Report) {
   const { rows, errors } = parseLegacyEmployees(csv);
   for (const e of errors) {
@@ -182,29 +129,8 @@ async function runEmployeesPhase(csv: string, args: Args, report: Report) {
         ? row.department.trim()
         : null;
 
-    // 1. Create Firebase user (emailVerified=false, not disabled).
-    const auth = getAuthClient();
-    let fbUid: string;
-    try {
-      const fbUser = await auth.createUser({
-        email: row.email,
-        emailVerified: false,
-        disabled: false,
-      });
-      fbUid = fbUser.uid;
-    } catch (err: any) {
-      report.employees.failed.push({ line, email: row.email, reason: `Firebase: ${err?.message ?? err}` });
-      continue;
-    }
-
-    // 2. Best-effort custom claim (Cloud Function will retry).
-    try {
-      await auth.setCustomUserClaims(fbUid, { role: "authenticated" });
-    } catch {
-      // continue
-    }
-
-    // 3. Insert the employees row.
+    // Insert the employees row. clerk_user_id stays NULL — the row links
+    // to the Clerk user (by email) on the employee's first sign-in.
     let inserted: typeof employees.$inferSelect | undefined;
     try {
       [inserted] = await db.insert(employees).values({
@@ -214,36 +140,15 @@ async function runEmployeesPhase(csv: string, args: Args, report: Report) {
         department:   departmentText,
         departmentId: matchedDept?.id ?? null,
         isAdmin:      row.isAdmin,
-        firebaseUid:  fbUid,
         invitedAt:    new Date(),
       }).returning();
     } catch (err: any) {
-      // Roll back the Firebase user since the DB write failed.
-      await auth.deleteUser(fbUid).catch(() => {});
       report.employees.failed.push({ line, email: row.email, reason: `DB: ${err?.message ?? err}` });
       continue;
     }
     if (!inserted) {
-      await auth.deleteUser(fbUid).catch(() => {});
       report.employees.failed.push({ line, email: row.email, reason: "DB: insert returned no row" });
       continue;
-    }
-
-    // 4. Optionally send the invite email.  Default OFF for bulk imports
-    //    so legacy employees aren't spammed with 30 invite mails — the
-    //    admin will hand-invite via /admin/employees → Resend invite.
-    if (args.sendInvites) {
-      try {
-        const link = await auth.generatePasswordResetLink(row.email, {
-          url: `${siteUrl()}/welcome`,
-        });
-        const sent = await sendInviteEmailLite({ email: row.email, resetLink: link });
-        if (!sent.ok) {
-          console.warn(`  ! Invite email failed for ${row.email}: ${sent.error}`);
-        }
-      } catch (err: any) {
-        console.warn(`  ! Invite link generation failed for ${row.email}: ${err?.message ?? err}`);
-      }
     }
 
     report.employees.created++;
@@ -342,11 +247,8 @@ async function main() {
     tasks:     { created: 0, skipped_already_imported: 0, synthesised_subjects: 0, failed: [] },
   };
   const banner = args.commit ? "COMMIT MODE (writing to DB)" : "DRY RUN (no writes)";
-  const inviteBanner = args.commit
-    ? args.sendInvites ? " · invites: ON" : " · invites: OFF"
-    : "";
   console.log(`\n══════════════════════════════════════════════════════════════`);
-  console.log(`Legacy import — ${report.timestamp}  [${banner}${inviteBanner}]`);
+  console.log(`Legacy import — ${report.timestamp}  [${banner}]`);
   console.log(`══════════════════════════════════════════════════════════════\n`);
   if (args.phase === "employees" || args.phase === "all") {
     console.log(`Phase 1: ${args.employeesCsv}`);

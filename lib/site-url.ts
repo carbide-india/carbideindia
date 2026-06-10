@@ -1,14 +1,13 @@
 /**
  * Canonical public base URL of this deployment, used for email links,
- * invite/password-reset continue URLs, web-push deep links, etc.
+ * invite redirect URLs, web-push deep links, etc.
  *
  * Hardened against the most common misconfiguration: `NEXT_PUBLIC_SITE_URL`
- * set WITHOUT a scheme (e.g. `wms.mananvasa.com`). Firebase's
- * `generatePasswordResetLink` rejects a scheme-less continue URL with
- * "The continue URL must be a valid URL string" (auth/invalid-continue-uri),
- * which silently breaks employee invites. We auto-prepend `https://` and
- * validate the result, falling back to the prod host if it's unusable so a
- * bad env var degrades gracefully instead of bricking the invite flow.
+ * set WITHOUT a scheme (e.g. `wms.example.com`). Auth providers reject a
+ * scheme-less redirect URL, which silently breaks employee invites. We
+ * auto-prepend `https://` and validate the result, falling back to the prod
+ * host if it's unusable so a bad env var degrades gracefully instead of
+ * bricking the invite flow.
  *
  * Returns a URL with no trailing slash.
  */

@@ -66,7 +66,7 @@ export default function TermsPage() {
         </li>
         <li>
           Bypass authentication, the role-based gates (admin / initiator /
-          doer), the rate limiters in Firebase Auth, or the row-level
+          doer), the rate limiters in Clerk, or the row-level
           security on the database.
         </li>
         <li>
@@ -109,7 +109,7 @@ export default function TermsPage() {
       <p>
         The dashboard is provided on a best-effort basis. We use Vercel for
         the application layer, Supabase (Singapore region) for the database,
-        Firebase Auth (US region) for identity, Resend for email, and
+        Clerk (US region) for identity, Resend for email, and
         optionally Web Push for notifications.
         We do not guarantee uninterrupted service — providers occasionally
         have outages, and we may take the dashboard down for maintenance
@@ -120,7 +120,7 @@ export default function TermsPage() {
       <p>
         A Altus Corp administrator may deactivate your account at any time
         — immediately on separation from the organisation, or sooner if
-        these terms are violated. Deactivation revokes your Firebase session
+        these terms are violated. Deactivation revokes your session
         and prevents further sign-in; your historical task contributions
         remain in the database for audit purposes.
       </p>

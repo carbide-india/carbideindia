@@ -7,7 +7,7 @@
  *   tsx --env-file=.env.local scripts/demote-admins.ts            # preview
  *   tsx --env-file=.env.local scripts/demote-admins.ts --commit   # apply
  *
- * Does NOT touch Firebase users, tasks, or any other row. Demoted employees
+ * Does NOT touch Clerk users, tasks, or any other row. Demoted employees
  * keep their login and continue to act as doers/initiators on existing tasks.
  */
 
@@ -38,7 +38,7 @@ async function main() {
       name: e.name,
       email: e.email,
       isActive: e.isActive,
-      firebase_uid: e.firebaseUid ?? "(none)",
+      clerk_user_id: e.clerkUserId ?? "(none)",
     })),
   );
 

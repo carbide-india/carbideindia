@@ -150,7 +150,7 @@ async function main() {
 
   if (COMMIT) {
     for (const e of toCreate) {
-      const [ins] = await db.insert(employees).values({ name: e.name, email: e.email, role: e.role, firebaseUid: null }).onConflictDoNothing().returning({ id: employees.id });
+      const [ins] = await db.insert(employees).values({ name: e.name, email: e.email, role: e.role }).onConflictDoNothing().returning({ id: employees.id });
       let id = ins?.id;
       if (!id) { const [row] = await db.select({ id: employees.id }).from(employees).where(sql`lower(${employees.name}) = ${e.key}`).limit(1); id = row?.id; }
       if (id) resolvedId.set(e.key, id);

@@ -48,7 +48,7 @@ export const employees = pgTable("employees", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-  // M2.0 additions (Clerk migration: firebase_uid → clerk_user_id):
+  // M2.0 additions (auth identity now lives in Clerk):
   clerkUserId: text("clerk_user_id").unique(),
   isAdmin: boolean("is_admin").notNull().default(false),
   isActive: boolean("is_active").notNull().default(true),

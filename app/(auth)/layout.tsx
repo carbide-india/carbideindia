@@ -83,8 +83,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
 
       {/* ── Stage ── */}
       <main className="relative z-10 flex min-h-screen items-center justify-center px-6 py-14 max-md:py-10">
-        {/* The page decides its own width — login/forgot/set-password stay at
-            ~460px; welcome stretches to a wider 720px grid. */}
+        {/* The page decides its own width. */}
         <div className="w-full">{children}</div>
       </main>
 

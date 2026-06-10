@@ -1,9 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { signOut } from "firebase/auth";
-import { getFirebaseAuth } from "@/lib/firebase/client";
+import { useClerk } from "@clerk/nextjs";
 import Link from "next/link";
 import type { Route } from "next";
 import {
@@ -34,16 +32,10 @@ export function UserMenu({
   inboxUnread,
   archivedTasks,
 }: Props) {
-  const router = useRouter();
+  const { signOut } = useClerk();
 
   async function handleSignOut() {
-    try {
-      await signOut(getFirebaseAuth());
-    } catch {
-      // Continue regardless — the server-side revoke below is what matters
-    }
-    await fetch("/api/auth/signout", { method: "POST" });
-    router.replace("/login" as Route);
+    await signOut({ redirectUrl: "/login" });
   }
 
   const initials = name

@@ -6,8 +6,6 @@ import { ProfileShell } from "@/components/profile/profile-shell";
 import { AvatarAndName } from "@/components/profile/identity/avatar-and-name";
 import { BioAndTags } from "@/components/profile/identity/bio-tags";
 import { LockedFieldsCard } from "@/components/profile/identity/locked-fields-card";
-import { ChangePasswordCard } from "@/components/profile/identity/change-password-card";
-import { SessionsCard } from "@/components/profile/identity/sessions-card";
 import { DataExportCard } from "@/components/profile/identity/data-export-card";
 import { EnablePushButton } from "@/components/pwa/enable-push-button";
 import { ChannelMatrix } from "@/components/profile/notifications/channel-matrix";
@@ -24,11 +22,7 @@ import { ShortcutsCheatsheet } from "@/components/profile/appearance/shortcuts-c
 import { getPerfStats } from "@/lib/profile/performance";
 import { getRecentActivity } from "@/lib/profile/activity-feed";
 import { evaluateAchievements } from "@/lib/achievements/evaluate";
-import {
-  getActiveSessions,
-  getQuickStats,
-  getRecentDataExports,
-} from "@/lib/profile/queries";
+import { getQuickStats, getRecentDataExports } from "@/lib/profile/queries";
 import { getNotificationPrefs } from "@/lib/profile/notification-prefs";
 import { getPinnedItems } from "@/lib/profile/pinned-items";
 import { db } from "@/lib/db";
@@ -43,7 +37,6 @@ export default async function ProfilePage() {
 
   const [
     stats,
-    sessions,
     exports,
     prefsMatrix,
     pushCount,
@@ -54,7 +47,6 @@ export default async function ProfilePage() {
     achievements,
   ] = await Promise.all([
     getQuickStats(me.id),
-    getActiveSessions(me.id),
     getRecentDataExports(me.id),
     getNotificationPrefs(me.id),
     db
@@ -84,16 +76,6 @@ export default async function ProfilePage() {
   // always get ISO strings, regardless of which path produced the row.
   const toIso = (v: Date | string): string =>
     typeof v === "string" ? new Date(v).toISOString() : v.toISOString();
-
-  const sessionRows = sessions.map((s, idx) => ({
-    id: s.id,
-    createdAt: toIso(s.createdAt),
-    lastSeenAt: toIso(s.lastSeenAt),
-    userAgent: s.userAgent,
-    country: s.country,
-    city: s.city,
-    isThisDevice: idx === 0,
-  }));
 
   const exportRows = exports.map((r) => ({
     id: r.id,
@@ -129,12 +111,7 @@ export default async function ProfilePage() {
         department={me.department}
         isAdmin={me.isAdmin}
       />
-      <ChangePasswordCard email={me.email} />
       <DataExportCard recent={exportRows} />
-      {/* Sessions table reads best at full width. */}
-      <div style={{ gridColumn: "1 / -1" }}>
-        <SessionsCard sessions={sessionRows} />
-      </div>
     </div>
   );
 

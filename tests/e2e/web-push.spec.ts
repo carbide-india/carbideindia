@@ -12,7 +12,7 @@ import { test, expect } from "@playwright/test";
  * Pre-requisites (NOT yet wired — see "Known limitations" below):
  *   - playwright.config.ts must include this file in `testDir` or be
  *     run with an explicit path (`pnpm test:e2e tests/e2e/web-push.spec.ts`).
- *   - The `webServer` block needs valid `.env.local` with Firebase Auth
+ *   - The `webServer` block needs valid `.env.local` with Clerk
  *     + Supabase + VAPID keys.
  *   - A signed-in employee fixture is assumed by `page.goto("/profile")`.
  *     This test does not perform a login — extend with your own auth

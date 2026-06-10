@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import type { Route } from "next";
+import { SignIn, SignOutButton } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 import { AnimatedBrandBackdrop } from "@/components/auth/animated-brand-backdrop";
-import { LoginFormGlass } from "@/components/auth/login-form-glass";
 import { getCurrentEmployee } from "@/lib/auth/current";
 
 /**
@@ -11,13 +12,11 @@ import { getCurrentEmployee } from "@/lib/auth/current";
  *   1. Warm-dark canvas with a red radial glow in the lower-right
  *   2. Fine dot grid + SVG noise for atmosphere
  *   3. AnimatedBrandBackdrop — the looping logo + wordmark "video"
- *      (logo orbits to the left, "Altus Corp." wordmark to the right)
- *   4. The enlarged glass card carrying the LoginFormGlass
+ *   4. Clerk's <SignIn /> widget inside the glass plate
  *
- * Escapes the shared `(auth)/layout.tsx` shell with `fixed inset-0 z-50`
- * so the parent's drifting radial washes don't bleed through. Sibling
- * auth routes (forgot-password, set-password, welcome) still render on
- * the shared light canvas — untouched.
+ * Auth itself is Clerk-hosted: the embedded <SignIn /> component handles
+ * credentials, forgot-password, and MFA. `routing="hash"` keeps the whole
+ * flow on /login (no catch-all segment needed).
  *
  * Guard: signed-in employees are redirected to the dashboard so a
  * bookmarked /login never serves them a stale form.
@@ -32,20 +31,27 @@ function firstString(v: string | string[] | undefined): string | undefined {
 }
 
 export default async function LoginPage({ searchParams }: PageProps) {
+  const { userId } = await auth();
   const me = await getCurrentEmployee();
   if (me && me.isActive) {
     redirect("/" as Route);
   }
 
+  // Signed into Clerk but no usable employee row (unknown email, or the
+  // account was deactivated). Rendering <SignIn /> here would bounce the
+  // active session straight back to "/" and loop — show a dead-end notice
+  // with a sign-out escape hatch instead.
+  const orphanedSession = Boolean(userId) && (!me || !me.isActive);
+
   const sp = await searchParams;
   const reason = firstString(sp["reason"]);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
+    <div className="fixed inset-0 z-50 overflow-y-auto overflow-x-hidden">
       {/* ── Layer 1 — warm-dark canvas with red radial ── */}
       <div
         aria-hidden
-        className="absolute inset-0"
+        className="fixed inset-0"
         style={{
           background:
             "radial-gradient(ellipse 90% 70% at 75% 95%, rgba(225, 6, 0, 0.55), transparent 55%), radial-gradient(ellipse 60% 60% at 20% 10%, rgba(168, 4, 0, 0.25), transparent 60%), linear-gradient(135deg, #0E0B0A 0%, #1A0F0C 50%, #0B0708 100%)",
@@ -54,7 +60,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
       {/* Layer 2a — fine dot grid */}
       <div
         aria-hidden
-        className="absolute inset-0 opacity-[0.12]"
+        className="fixed inset-0 opacity-[0.12]"
         style={{
           backgroundImage:
             "radial-gradient(circle, rgba(255,255,255,0.4) 1px, transparent 1px)",
@@ -64,7 +70,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
       {/* Layer 2b — subtle film grain */}
       <div
         aria-hidden
-        className="absolute inset-0 opacity-[0.06] mix-blend-overlay"
+        className="fixed inset-0 opacity-[0.06] mix-blend-overlay"
         style={{
           backgroundImage:
             "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><filter id='n'><feTurbulence baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")",
@@ -74,61 +80,16 @@ export default async function LoginPage({ searchParams }: PageProps) {
       {/* ── Layer 3 — animated brand backdrop ── */}
       <AnimatedBrandBackdrop />
 
-      {/* Top brand pip — sits above the animation but well clear of the card.
-          Mirrors the dashboard header's red triangle so the visual handshake
-          between login and signed-in state is consistent. */}
-      <div className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between px-8 py-6 max-md:px-5">
-        <div className="flex items-center gap-2.5">
-          <span
-            aria-hidden
-            style={{
-              display: "inline-block",
-              width: 0,
-              height: 0,
-              borderLeft: "6px solid transparent",
-              borderRight: "6px solid transparent",
-              borderBottom: "10px solid #E10600",
-              filter: "drop-shadow(0 0 10px rgba(225, 6, 0, 0.7))",
-            }}
-          />
-          <span
-            style={{
-              fontSize: 11,
-              letterSpacing: "0.24em",
-              color: "rgba(255,255,255,0.85)",
-              fontFamily: "var(--font-mono-display)",
-              fontWeight: 700,
-            }}
-          >
-            ALTUS · CORP
-          </span>
-        </div>
-        <span
-          className="max-md:hidden"
-          style={{
-            fontSize: 10,
-            letterSpacing: "0.22em",
-            color: "rgba(255,255,255,0.40)",
-            fontFamily: "var(--font-mono-display)",
-          }}
-        >
-          OPERATIONS · CLARITY
-        </span>
-      </div>
-
-      {/* ── Layer 4 — the enlarged glass card ── */}
-      <main className="relative z-20 flex h-full w-full items-center justify-center px-6 py-20 max-md:px-4 max-md:py-16">
+      {/* ── Layer 4 — the glass plate carrying Clerk's SignIn ── */}
+      <main className="relative z-20 flex min-h-full w-full items-center justify-center px-6 py-16 max-md:px-4 max-md:py-10">
         <div
-          className="w-full max-w-[660px] p-14 max-md:p-9"
+          className="w-fit max-w-full p-8 max-md:p-4"
           style={{
             background: "rgba(255, 255, 255, 0.06)",
             backdropFilter: "blur(28px) saturate(180%)",
             WebkitBackdropFilter: "blur(28px) saturate(180%)",
             border: "1px solid rgba(255, 255, 255, 0.10)",
             borderRadius: 24,
-            // Layered shadow + inner highlights for the genuine "glass plate"
-            // depth: a deep ambient drop, a subtle white sheen along the top
-            // edge, and a soft red bottom-glow tying the card to the canvas.
             boxShadow:
               "0 40px 100px -20px rgba(0, 0, 0, 0.60), 0 1px 0 rgba(255, 255, 255, 0.10) inset, 0 -28px 80px -40px rgba(225, 6, 0, 0.30) inset",
           }}
@@ -149,14 +110,48 @@ export default async function LoginPage({ searchParams }: PageProps) {
               to continue.
             </div>
           )}
-          <LoginFormGlass />
+          {orphanedSession ? (
+            <div
+              className="max-w-md text-center"
+              style={{ color: "rgba(255,255,255,0.85)", fontSize: 14, lineHeight: 1.6 }}
+            >
+              <h1 className="mb-2 text-lg font-semibold text-white">
+                Account not provisioned
+              </h1>
+              <p className="mb-5" style={{ color: "rgba(255,255,255,0.65)" }}>
+                You're signed in, but this account isn't linked to an active
+                employee. Contact your administrator, or sign out and try a
+                different account.
+              </p>
+              <SignOutButton redirectUrl="/login">
+                <button
+                  type="button"
+                  className="rounded-xl px-5 py-2.5 text-sm font-semibold text-white"
+                  style={{ background: "#3F3F94" }}
+                >
+                  Sign out
+                </button>
+              </SignOutButton>
+            </div>
+          ) : (
+            <SignIn
+              routing="hash"
+              forceRedirectUrl="/"
+              appearance={{
+                variables: {
+                  colorPrimary: "#3F3F94",
+                  borderRadius: "0.75rem",
+                },
+              }}
+            />
+          )}
         </div>
       </main>
 
       {/* Bottom signature */}
       <div
         aria-hidden
-        className="absolute bottom-5 left-0 right-0 z-10 text-center"
+        className="fixed bottom-5 left-0 right-0 z-10 text-center pointer-events-none"
         style={{
           fontSize: 10,
           letterSpacing: "0.24em",
@@ -165,7 +160,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
           fontWeight: 600,
         }}
       >
-        © {new Date().getFullYear()} ALTUS CORP · CONFIDENTIAL
+        © {new Date().getFullYear()} CARBIDE INDIA · CONFIDENTIAL
       </div>
     </div>
   );

@@ -1,9 +1,9 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
-import { signOut } from "firebase/auth";
+import { useClerk } from "@clerk/nextjs";
 import {
   LayoutGrid,
   Activity as ActivityIcon,
@@ -17,7 +17,6 @@ import {
   LogOut,
   type LucideIcon,
 } from "lucide-react";
-import { getFirebaseAuth } from "@/lib/firebase/client";
 
 interface Props {
   adminName: string;
@@ -47,7 +46,7 @@ const NAV: ReadonlyArray<NavItem> = [
 
 export function AdminSidebar({ adminName, adminEmail, avatarUrl }: Props) {
   const pathname = usePathname();
-  const router = useRouter();
+  const { signOut } = useClerk();
 
   function isActive(item: NavItem): boolean {
     if (item.exact) return pathname === item.href;
@@ -55,13 +54,7 @@ export function AdminSidebar({ adminName, adminEmail, avatarUrl }: Props) {
   }
 
   async function handleSignOut() {
-    try {
-      await signOut(getFirebaseAuth());
-    } catch {
-      // Continue regardless — the server-side revoke is what matters.
-    }
-    await fetch("/api/auth/signout", { method: "POST" });
-    router.replace("/login" as Route);
+    await signOut({ redirectUrl: "/login" });
   }
 
   const initials = adminName

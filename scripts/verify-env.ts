@@ -1,26 +1,23 @@
 /**
- * Verifies that .env.local has every value the M2.0 auth stack needs.
+ * Verifies that .env.local has every value the app needs.
  *
  * Usage:  pnpm verify:env
  *
  * Read-only. Does NOT create users, send emails, or write to the DB. Just
- * checks env-var presence + shape and dry-runs the Firebase Admin SDK init.
- * Prints a per-section checklist and exits non-zero if anything is missing
- * or still on a placeholder value from .env.local.example.
+ * checks env-var presence + shape. Prints a per-section checklist and exits
+ * non-zero if anything is missing or still on a placeholder value from
+ * .env.local.example.
  */
-
-import { initializeApp, cert, getApps } from "firebase-admin/app";
 
 type Check = { ok: boolean; label: string; detail?: string };
 
 const PLACEHOLDER_MARKERS = [
   "PASSWORD",
   "PROJECT.supabase.co",
-  "demo-api-key",
-  "1:000000000:web:000000",
-  "firebase-adminsdk-xxxx",
   "replace_with_32_plus_random_chars",
   "re_test_xxxxxxxxxxxxxxxxxxxxxxxx",
+  "pk_test_xxxxxxxx",
+  "sk_test_xxxxxxxx",
 ];
 
 function isPlaceholder(value: string): boolean {
@@ -63,10 +60,10 @@ function print(checks: Check[]): { ok: number; fail: number } {
 }
 
 /**
- * M4 — "optional" section: every var in the map is checked, but missing
- * vars produce a warning (▲) rather than a failure (✗).  Returns the
- * number of WARN entries so the caller can include them in the summary
- * without bumping the non-zero exit code.
+ * "Optional" section: every var in the map is checked, but missing vars
+ * produce a warning (▲) rather than a failure (✗).  Returns the number
+ * of WARN entries so the caller can include them in the summary without
+ * bumping the non-zero exit code.
  */
 function optional(
   sectionName: string,
@@ -100,72 +97,26 @@ function optional(
 }
 
 async function main() {
-  console.log("\nVerifying .env.local for Altus Corp Dashboard (M2.0 auth foundation)...");
+  console.log("\nVerifying .env.local ...");
 
   // ─── Database / Supabase ──────────────────────────────────────────
-  header("Database / Supabase");
+  header("Database / Supabase storage");
   const dbChecks = print([
     check("DATABASE_URL", process.env.DATABASE_URL, (v) =>
       v.startsWith("postgresql://") || v.startsWith("postgres://") ? null : "expected postgresql:// URI"),
     check("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL, (v) =>
       v.startsWith("https://") && v.endsWith(".supabase.co") ? null : "expected https://<ref>.supabase.co"),
-    check("NEXT_PUBLIC_SUPABASE_ANON_KEY", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, (v) =>
-      v.startsWith("eyJ") ? null : "expected JWT (eyJ… prefix)"),
     check("SUPABASE_SERVICE_ROLE_KEY", process.env.SUPABASE_SERVICE_ROLE_KEY, (v) =>
       v.startsWith("eyJ") ? null : "expected JWT (eyJ… prefix)"),
   ]);
 
-  // ─── Firebase client (public) ─────────────────────────────────────
-  header("Firebase Web SDK (NEXT_PUBLIC_*)");
-  const fbClientChecks = print([
-    check("NEXT_PUBLIC_FIREBASE_API_KEY", process.env.NEXT_PUBLIC_FIREBASE_API_KEY),
-    check("NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN", process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, (v) =>
-      v.endsWith(".firebaseapp.com") ? null : "expected <project>.firebaseapp.com"),
-    check("NEXT_PUBLIC_FIREBASE_PROJECT_ID", process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID),
-    check("NEXT_PUBLIC_FIREBASE_APP_ID", process.env.NEXT_PUBLIC_FIREBASE_APP_ID, (v) =>
-      /^1:\d+:web:[a-f0-9]+$/i.test(v) ? null : "expected 1:<sender>:web:<hex>"),
-  ]);
-
-  // ─── Firebase Admin SDK (server) ─────────────────────────────────
-  header("Firebase Admin SDK (server-only)");
-  const fbAdminChecks = print([
-    check("FIREBASE_PROJECT_ID", process.env.FIREBASE_PROJECT_ID),
-    check("FIREBASE_CLIENT_EMAIL", process.env.FIREBASE_CLIENT_EMAIL, (v) =>
-      /iam\.gserviceaccount\.com$/.test(v) ? null : "expected service-account email"),
-    check("FIREBASE_PRIVATE_KEY", process.env.FIREBASE_PRIVATE_KEY, (v) =>
-      v.includes("BEGIN PRIVATE KEY") ? null : "expected PEM with BEGIN/END PRIVATE KEY markers"),
-  ]);
-
-  // Live dry-run: try initializing the Admin SDK. Skipped in emulator mode.
-  const emulator = !!process.env.FIREBASE_AUTH_EMULATOR_HOST;
-  if (fbAdminChecks.fail === 0 && !emulator) {
-    try {
-      if (!getApps().length) {
-        initializeApp({
-          credential: cert({
-            projectId: process.env.FIREBASE_PROJECT_ID!,
-            clientEmail: process.env.FIREBASE_CLIENT_EMAIL!,
-            privateKey: process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, "\n"),
-          }),
-        });
-      }
-      console.log("  ✓ Admin SDK initializes without throwing");
-      fbAdminChecks.ok++;
-    } catch (err: any) {
-      console.log(`  ✗ Admin SDK init threw: ${err?.message ?? err}`);
-      fbAdminChecks.fail++;
-    }
-  } else if (emulator) {
-    console.log("  · skipped Admin SDK init dry-run (emulator mode detected)");
-  }
-
-  // ─── Cookie signing ──────────────────────────────────────────────
-  header("Cookie signing");
-  const cookieChecks = print([
-    check("COOKIE_SECRET_CURRENT", process.env.COOKIE_SECRET_CURRENT, (v) =>
-      v.length >= 32 ? null : `must be ≥32 chars (got ${v.length})`),
-    check("COOKIE_SECRET_PREVIOUS", process.env.COOKIE_SECRET_PREVIOUS, (v) =>
-      v.length >= 32 ? null : `must be ≥32 chars (got ${v.length})`),
+  // ─── Clerk ────────────────────────────────────────────────────────
+  header("Clerk (auth)");
+  const clerkChecks = print([
+    check("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, (v) =>
+      v.startsWith("pk_") ? null : "expected pk_ prefix"),
+    check("CLERK_SECRET_KEY", process.env.CLERK_SECRET_KEY, (v) =>
+      v.startsWith("sk_") ? null : "expected sk_ prefix"),
   ]);
 
   // ─── Resend ──────────────────────────────────────────────────────
@@ -184,45 +135,39 @@ async function main() {
       v.startsWith("http://") || v.startsWith("https://") ? null : "expected http(s):// prefix"),
   ]);
 
-  // ─── Cron (M2.3) ─────────────────────────────────────────────────
+  // ─── Cron ────────────────────────────────────────────────────────
   header("Cron (daily digest)");
   const cronChecks = print([
     check("CRON_SECRET", process.env.CRON_SECRET, (v) =>
       v.length >= 16 ? null : `must be ≥16 chars (got ${v.length})`),
   ]);
 
-  // ─── Emulator (optional) ─────────────────────────────────────────
-  header("Firebase emulator (optional, dev-only)");
-  if (process.env.FIREBASE_AUTH_EMULATOR_HOST) {
-    console.log(`  · FIREBASE_AUTH_EMULATOR_HOST = ${process.env.FIREBASE_AUTH_EMULATOR_HOST}`);
-    console.log(`  · NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST = ${process.env.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST ?? "(unset)"}`);
-    console.log("  · Auth will hit the local emulator. Unset both vars for production.");
-  } else {
-    console.log("  · No emulator vars set — Auth will hit live Firebase.");
-  }
-
-  // ─── M4: optional multi-channel sections ─────────────────────────
-  // None of these are required for the app to boot.  Missing vars
-  // disable the matching channel at runtime — the dispatcher's
-  // Promise.allSettled simply records "skip" for that arm.
-  const webPushOptional = optional("Web Push (M4)", {
+  // ─── Optional sections ───────────────────────────────────────────
+  // Missing vars disable the matching feature at runtime.
+  const webPushOptional = optional("Web Push", {
     NEXT_PUBLIC_VAPID_PUBLIC_KEY: (v) => v.length > 80 || "VAPID public key",
     VAPID_PRIVATE_KEY:            (v) => v.length > 40 || "VAPID private key",
     VAPID_SUBJECT:                (v) => /^mailto:/.test(v) || "must start with mailto:",
   });
 
+  const ipGateOptional = optional("IP allowlist gate", {
+    ALLOWED_IPS: (v) =>
+      v.split(",").every((s) => s.trim().length > 0) ||
+      "comma-separated IPs (empty entries found)",
+  });
+
   // ─── Summary ─────────────────────────────────────────────────────
   const totalOk =
     dbChecks.ok +
-    fbClientChecks.ok +
-    fbAdminChecks.ok +
-    cookieChecks.ok +
+    clerkChecks.ok +
     resendChecks.ok +
     siteChecks.ok +
     cronChecks.ok +
-    webPushOptional.ok;
-  const totalFail = dbChecks.fail + fbClientChecks.fail + fbAdminChecks.fail + cookieChecks.fail + resendChecks.fail + siteChecks.fail + cronChecks.fail;
-  const totalWarn = webPushOptional.warn;
+    webPushOptional.ok +
+    ipGateOptional.ok;
+  const totalFail =
+    dbChecks.fail + clerkChecks.fail + resendChecks.fail + siteChecks.fail + cronChecks.fail;
+  const totalWarn = webPushOptional.warn + ipGateOptional.warn;
 
   console.log(
     `\nSummary: ${totalOk} OK · ${totalFail} failed · ${totalWarn} optional warnings`,
@@ -233,7 +178,7 @@ async function main() {
   }
   console.log("\n✓ Environment ready. Next steps:");
   console.log("    pnpm db:migrate            # apply schema migrations");
-  console.log("    pnpm bootstrap-admin -- --email <you> --name \"<You>\"");
+  console.log("    pnpm bootstrap-admin --email <you> --name \"<You>\"");
   process.exit(0);
 }
 
@@ -241,3 +186,7 @@ main().catch((err) => {
   console.error("\nverify-env crashed:", err);
   process.exit(2);
 });
+
+// Make this file a module so its top-level names don't collide with other
+// import-free scripts in the same tsc program.
+export {};

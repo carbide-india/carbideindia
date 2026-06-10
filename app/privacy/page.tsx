@@ -19,7 +19,7 @@ export default function PrivacyPage() {
       <p>
         The dashboard collects your name, work email, role, department, and a
         record of the tasks you create, edit, or work on. Data sits in Supabase
-        (Singapore) and Firebase Auth (US). We send you email notifications via
+        (Singapore) and Clerk (US). We send you email notifications via
         Resend and — if you enable it — Web Push notifications. We do not
         sell, rent, or share your data
         with anyone outside Altus Corp's narrow list of operational
@@ -45,7 +45,7 @@ export default function PrivacyPage() {
         <li>Role on the team (doer, initiator, or both)</li>
         <li>Department (free-text legacy column + canonical FK; admin-managed)</li>
         <li>Whether you're an administrator (boolean flag, admin-toggled)</li>
-        <li>Firebase UID (issued automatically by Firebase Authentication)</li>
+        <li>Clerk user ID (issued automatically by Clerk, our authentication provider)</li>
         <li>Avatar URL, if you have one (optional)</li>
         <li>Account state — invited at, joined at, active / deactivated</li>
       </ul>
@@ -62,13 +62,13 @@ export default function PrivacyPage() {
       </ul>
       <h3>Technical metadata</h3>
       <ul>
-        <li>Authentication session cookie (the magic <code>__session</code> cookie, signed with our cookie secrets)</li>
+        <li>Authentication session cookies (set and signed by Clerk)</li>
         <li>Server logs (request paths, status codes, error stacks) retained for debugging — never enriched with operational content</li>
       </ul>
 
       <h2>4 · Why we collect it</h2>
       <ul>
-        <li><strong>To let you sign in.</strong> Email + Firebase UID; nothing more.</li>
+        <li><strong>To let you sign in.</strong> Email + Clerk user ID; nothing more.</li>
         <li><strong>To run the operations workflow.</strong> Tasks, assignments, status transitions, approvals — the dashboard's core purpose.</li>
         <li><strong>To notify the right people at the right time.</strong> The fan-out matrix is locked in code; you don't get notifications for events you aren't a participant in.</li>
         <li><strong>To audit who did what, when.</strong> Every task event is logged for Altus Corp's internal compliance.</li>
@@ -87,11 +87,10 @@ export default function PrivacyPage() {
           gate every read and write to the signed-in employee or admin.
         </li>
         <li>
-          <strong>Firebase Authentication</strong> (US region) — stores your
-          email, password hash, and session metadata. Note: Firebase Auth
-          cannot currently be hosted in <code>asia-south1</code>; this is a
-          compliance flag we are tracking against India's DPDP Act 2027
-          deadline.
+          <strong>Clerk</strong> (US region) — stores your email, password
+          hash, and session metadata. Note: Clerk data residency is US-based;
+          this is a compliance flag we are tracking against India's DPDP Act
+          2027 deadline.
         </li>
         <li>
           <strong>Vercel</strong> — application hosting + edge-runtime
@@ -166,21 +165,19 @@ export default function PrivacyPage() {
 
       <h2>9 · Cookies</h2>
       <p>
-        We set exactly one cookie: <code>__session</code>, an HTTP-only,
-        sameSite=lax, signed JWT cookie that represents your Firebase session.
-        It expires after 5 days of inactivity and is revoked the moment an
-        admin deactivates your account. No analytics cookies, no advertising
-        cookies, no third-party trackers.
+        We set only the authentication cookies Clerk needs to keep you
+        signed in — HTTP-only, signed session cookies that are revoked the
+        moment an admin deactivates your account. No analytics cookies, no
+        advertising cookies, no third-party trackers.
       </p>
 
       <h2>10 · Security</h2>
       <p>
-        Authentication is gated by Firebase Authentication's standard
-        protections (password hashing, rate-limited sign-in, revocable
-        sessions). Every database read and write passes through Supabase's
-        row-level security policies. Service-role credentials are server-only,
-        never exposed to the browser. The session cookie is signed with two
-        rotating secrets to allow key rotation without forcing global sign-out.
+        Authentication is gated by Clerk's standard protections (password
+        hashing, rate-limited sign-in, revocable sessions). Every database
+        read and write passes through Supabase's row-level security policies.
+        Service-role credentials are server-only, never exposed to the
+        browser.
       </p>
       <p>
         If you spot a security issue, please write to{" "}

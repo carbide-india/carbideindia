@@ -2,10 +2,10 @@
 
 import * as React from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
-import { signOut } from "firebase/auth";
+import { useClerk } from "@clerk/nextjs";
 import {
   Menu,
   X,
@@ -21,7 +21,6 @@ import {
   LogOut,
   type LucideIcon,
 } from "lucide-react";
-import { getFirebaseAuth } from "@/lib/firebase/client";
 
 interface Props {
   adminName: string;
@@ -54,7 +53,7 @@ const NAV: ReadonlyArray<NavItem> = [
  */
 export function AdminMobileBar({ adminName, adminEmail }: Props) {
   const pathname = usePathname();
-  const router = useRouter();
+  const { signOut } = useClerk();
   const [open, setOpen] = React.useState(false);
 
   function isActive(item: NavItem): boolean {
@@ -63,13 +62,7 @@ export function AdminMobileBar({ adminName, adminEmail }: Props) {
   }
 
   async function handleSignOut() {
-    try {
-      await signOut(getFirebaseAuth());
-    } catch {
-      // proceed — server revoke is what matters
-    }
-    await fetch("/api/auth/signout", { method: "POST" });
-    router.replace("/login" as Route);
+    await signOut({ redirectUrl: "/login" });
   }
 
   const initials = adminName

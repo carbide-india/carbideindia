@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import type { Route } from "next";
-import { readSession } from "@/lib/auth/session";
+import { auth } from "@clerk/nextjs/server";
 
 interface PageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -21,13 +21,13 @@ function sanitizeNext(v: string | string[] | undefined): string {
 /**
  * The post-login welcome/celebration screen was removed (2026-06-09) — every
  * sign-in now lands the user straight on their destination. This route is kept
- * only as a transparent redirect so any in-flight invite / Firebase-continue
- * links that still point at /welcome don't 404: signed-in users go to their
- * `next` (default the dashboard), signed-out users go to /login.
+ * only as a transparent redirect so any in-flight invite links that still
+ * point at /welcome don't 404: signed-in users go to their `next` (default
+ * the dashboard), signed-out users go to /login.
  */
 export default async function WelcomePage({ searchParams }: PageProps) {
-  const claims = await readSession();
-  if (!claims) redirect("/login" as Route);
+  const { userId } = await auth();
+  if (!userId) redirect("/login" as Route);
   const sp = await searchParams;
   redirect(sanitizeNext(sp["next"]) as Route);
 }

@@ -56,3 +56,6 @@ main().catch((err) => {
   console.error("[smoke] unexpected failure:", err);
   process.exit(1);
 });
+
+// Make this file a module so its top-level names do not collide.
+export {};

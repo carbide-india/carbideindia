@@ -29,7 +29,6 @@ export type CacheTag = (typeof CACHE_TAGS)[keyof typeof CACHE_TAGS];
 export const PROFILE_CACHE_TAGS = {
   profile: (employeeId: string) => `profile:${employeeId}`,
   quickStats: (employeeId: string) => `profile:quick-stats:${employeeId}`,
-  authSessions: (employeeId: string) => `profile:sessions:${employeeId}`,
   dataExports: (employeeId: string) => `profile:exports:${employeeId}`,
   notificationPrefs: (employeeId: string) =>
     `profile:notification-prefs:${employeeId}`,

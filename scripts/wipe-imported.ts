@@ -1,8 +1,8 @@
 #!/usr/bin/env tsx
 /**
  * Wipe only tasks that came from the legacy importer (legacy_import_key
- * is NOT NULL).  Cascades to task_events.  Leaves employees + Firebase
- * users in place so we don't re-do the auth-side work.
+ * is NOT NULL).  Cascades to task_events.  Leaves employees (and their
+ * Clerk identities) in place so we don't re-do the auth-side work.
  *
  * Usage: pnpm tsx scripts/wipe-imported.ts --commit
  */

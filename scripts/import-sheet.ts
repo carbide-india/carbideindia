@@ -7,8 +7,8 @@
  *   pnpm tsx --env-file=.env.local scripts/import-sheet.ts --commit   # write
  *
  * Source sheet: "Website Report" (consolidated master — every person +
- * full status set).  No Firebase users are created; employees get a
- * clearly-placeholder email (slug@import.altuscorp.local) and firebase_uid
+ * full status set).  No auth identities are created; employees get a
+ * clearly-placeholder email (slug@import.altuscorp.local) and clerk_user_id
  * stays null until an admin invites them via /admin/employees.
  *
  * Idempotent: tasks dedupe on legacy_import_key, employees match on
@@ -263,7 +263,7 @@ async function main() {
     for (const e of toCreate) {
       const [ins] = await db
         .insert(employees)
-        .values({ name: e.name, email: e.email, role: e.role, firebaseUid: null })
+        .values({ name: e.name, email: e.email, role: e.role })
         .onConflictDoNothing()
         .returning({ id: employees.id });
       let id = ins?.id;

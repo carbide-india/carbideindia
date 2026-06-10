@@ -2,13 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { updateTag } from "next/cache";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { authSessions, auditDataExports, employees } from "@/db/schema";
+import { auditDataExports, employees } from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
 import { CACHE_TAGS, PROFILE_CACHE_TAGS } from "@/lib/cache-tags";
-import { getFirebaseAdminAuth } from "@/lib/firebase/admin";
 import { rateLimitOrError } from "@/lib/rate-limit";
 import { isAcceptableAvatarUrl } from "@/lib/avatar-url";
 import { revokeToken } from "@/lib/google/calendar";
@@ -207,78 +206,6 @@ export async function patchIdentity(
   if (parsed.data.availability !== undefined || parsed.data.accent !== undefined) {
     updateTag(CACHE_TAGS.employees);
   }
-  return { ok: true };
-}
-
-/**
- * Revoke a single auth_sessions row. The user can only revoke their
- * own sessions — the WHERE clause double-gates on employee_id.
- */
-const SessionIdSchema = z.string().uuid("Invalid session id");
-
-export async function revokeSession(
-  sessionId: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const me = await requireUser();
-  const limited = rateLimitOrError(me.id, "write");
-  if (limited) return limited;
-
-  const parsed = SessionIdSchema.safeParse(sessionId);
-  if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid" };
-  }
-
-  try {
-    await db
-      .update(authSessions)
-      .set({ revokedAt: new Date() })
-      .where(
-        and(
-          eq(authSessions.id, parsed.data),
-          eq(authSessions.employeeId, me.id),
-          isNull(authSessions.revokedAt),
-        ),
-      );
-  } catch (err) {
-    return { ok: false, error: `DB: ${(err as Error).message}` };
-  }
-
-  updateTag(PROFILE_CACHE_TAGS.authSessions(me.id));
-  return { ok: true };
-}
-
-/**
- * Sign out everywhere: mark all of my sessions revoked AND ask Firebase
- * to invalidate refresh tokens for my UID. Existing __session cookies
- * survive until they re-verify, which middleware does each request —
- * so within ~seconds, every device drops to /login.
- */
-export async function revokeAllSessions(): Promise<
-  { ok: true } | { ok: false; error: string }
-> {
-  const me = await requireUser();
-  const limited = rateLimitOrError(me.id, "write");
-  if (limited) return limited;
-
-  try {
-    await db
-      .update(authSessions)
-      .set({ revokedAt: new Date() })
-      .where(
-        and(
-          eq(authSessions.employeeId, me.id),
-          isNull(authSessions.revokedAt),
-        ),
-      );
-
-    if (me.firebaseUid) {
-      await getFirebaseAdminAuth().revokeRefreshTokens(me.firebaseUid);
-    }
-  } catch (err) {
-    return { ok: false, error: `Auth: ${(err as Error).message}` };
-  }
-
-  updateTag(PROFILE_CACHE_TAGS.authSessions(me.id));
   return { ok: true };
 }
 

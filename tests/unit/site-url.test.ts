@@ -45,11 +45,11 @@ describe("siteUrl", () => {
     expect(siteUrl()).toBe(FALLBACK);
   });
 
-  it("always returns a value Firebase accepts as a continue URL", () => {
+  it("always returns a value usable as an absolute redirect URL", () => {
     for (const v of ["wms.mananvasa.com", "https://x.com/", "  ", "garbage url"]) {
       process.env.NEXT_PUBLIC_SITE_URL = v;
       const url = `${siteUrl()}/welcome?intent=invite`;
-      // Mirror firebase-admin's accept criteria: parseable, http(s) scheme.
+      // Accept criteria: parseable, http(s) scheme.
       const parsed = new URL(url);
       expect(["http:", "https:"]).toContain(parsed.protocol);
     }

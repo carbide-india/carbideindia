@@ -3,9 +3,9 @@
 import { revalidatePath, updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 import { eq, inArray, or, sql } from "drizzle-orm";
+import { clerkClient } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import {
-  authSessions,
   departments,
   employeeDepartments,
   employeeEvents,
@@ -20,60 +20,38 @@ import {
   InviteEmployeeSchema,
   EditEmployeeSchema,
   EmployeeIdSchema,
-  ResetPasswordSchema,
   type InviteEmployeeInput,
   type EditEmployeeInput,
 } from "@/lib/validators/employee";
-import { getFirebaseAdminAuth } from "@/lib/firebase/admin";
-import {
-  sendInviteEmail,
-  sendPasswordChangedByAdminEmail,
-  sendCredentialsEmail,
-} from "@/lib/email/resend";
 import { siteUrl } from "@/lib/site-url";
-import { DEFAULT_INVITE_PASSWORD } from "@/lib/auth/default-password";
 
-/** Run an async function up to `tries` times with linear backoff. Throws
- *  the last error if all attempts fail. */
-async function retry<T>(
-  fn: () => Promise<T>,
-  { tries, delayMs }: { tries: number; delayMs: number },
-): Promise<T> {
-  let lastErr: unknown;
-  for (let i = 0; i < tries; i++) {
-    try {
-      return await fn();
-    } catch (err) {
-      lastErr = err;
-      if (i < tries - 1) {
-        await new Promise((r) => setTimeout(r, delayMs * (i + 1)));
-      }
-    }
-  }
-  throw lastErr;
+/**
+ * Sends a Clerk email invitation. The invitee follows the emailed link,
+ * sets a password with Clerk, and lands on /login; on their first
+ * sign-in getCurrentEmployee() links the Clerk user to the employees
+ * row by email and backfills clerk_user_id.
+ *
+ * `ignoreExisting` keeps re-invites idempotent — Clerk would otherwise
+ * reject a second invitation for the same email while one is pending.
+ */
+async function sendClerkInvitation(email: string): Promise<void> {
+  const client = await clerkClient();
+  await client.invitations.createInvitation({
+    emailAddress: email,
+    redirectUrl: `${siteUrl()}/login`,
+    notify: true,
+    ignoreExisting: true,
+  });
 }
 
-/** Map common firebase-admin auth errors to admin-friendly copy. Returns
- *  null when the error code is unrecognised so the caller can fall back
- *  to the raw message. */
-function translateFirebaseAdminError(err: unknown): string | null {
-  const code = (err as { code?: string })?.code;
-  switch (code) {
-    case "auth/email-already-exists":
-      return "An account already exists with this email in Firebase. Reach out so I can clean up the orphan and retry.";
-    case "auth/invalid-email":
-      return "That email isn't in a format Firebase accepts.";
-    case "auth/user-disabled":
-      return "This Firebase account is disabled — reactivate it before inviting again.";
-    case "auth/user-not-found":
-      return "Firebase doesn't have an account for this email yet.";
-    case "auth/insufficient-permission":
-      return "The Firebase service account is missing the permissions needed to create users. Check FIREBASE_CLIENT_EMAIL's IAM role.";
-    case "auth/internal-error":
-      return "Firebase had an internal error. Retry in a few seconds.";
-    default:
-      return null;
-  }
+function clerkErrorMessage(err: unknown): string {
+  const e = err as { errors?: Array<{ longMessage?: string; message?: string }>; message?: string };
+  return (
+    e?.errors?.[0]?.longMessage ??
+    e?.errors?.[0]?.message ??
+    e?.message ??
+    String(err)
+  );
 }
 
 /**
@@ -135,7 +113,7 @@ async function writeMemberships(
 export async function inviteEmployee(input: InviteEmployeeInput): Promise<{
   ok: boolean;
   id?: string;
-  /** Set when the row + Firebase user were created OK but the invite email
+  /** Set when the row was created OK but the Clerk invitation email
    *  failed to send. The admin can re-send from the row's overflow menu. */
   warning?: string;
   error?: string;
@@ -153,41 +131,6 @@ export async function inviteEmployee(input: InviteEmployeeInput): Promise<{
     return { ok: false, error: "An employee with this email already exists." };
   }
 
-  // 1. Create Firebase user
-  const auth = getFirebaseAdminAuth();
-  let fbUid: string;
-  try {
-    const fbUser = await auth.createUser({
-      email: parsed.email,
-      password: DEFAULT_INVITE_PASSWORD,
-      emailVerified: true,
-      disabled: false,
-    });
-    fbUid = fbUser.uid;
-  } catch (err: any) {
-    return {
-      ok: false,
-      error: translateFirebaseAdminError(err) ?? `Firebase: ${err.message ?? err}`,
-    };
-  }
-
-  // 2. Set the custom claim required by Supabase Third-Party Auth. Retry
-  //    a few times with backoff before giving up — the original "the
-  //    Cloud Function will retry" assumption was wrong (no such function
-  //    exists in this repo) and a silent failure here locks the user out
-  //    of RLS-protected reads.
-  try {
-    await retry(
-      () => auth.setCustomUserClaims(fbUid, { role: "authenticated" }),
-      { tries: 3, delayMs: 250 },
-    );
-  } catch (err) {
-    console.error(
-      `[inviteEmployee] setCustomUserClaims failed for ${fbUid} — continuing without role claim`,
-      err,
-    );
-  }
-
   // Resolve the chosen departments + primary so the legacy single-department
   // columns stay in lock-step with the membership join table.
   const selection = await resolveDepartmentSelection(
@@ -195,16 +138,15 @@ export async function inviteEmployee(input: InviteEmployeeInput): Promise<{
     parsed.primaryDepartmentId,
   );
 
-  // 3. Insert employees row.
+  // 1. Insert employees row. clerk_user_id stays NULL until first sign-in:
+  // getCurrentEmployee() links the Clerk user to this row by email.
   //
-  // The pre-check above (line 150) is not race-safe — two admins
-  // inviting the same email at the same time both see "no existing
-  // row" and both reach this point. The DB-side UNIQUE constraint on
-  // `employees.email` is the real arbiter; we catch the violation
-  // here and translate Postgres error 23505 into a friendly message
-  // instead of leaking "DB: duplicate key value violates …" to the
-  // admin. The Firebase user we just created gets rolled back in
-  // both cases, so no orphans.
+  // The pre-check above is not race-safe — two admins inviting the same
+  // email at the same time both see "no existing row" and both reach this
+  // point. The DB-side UNIQUE constraint on `employees.email` is the real
+  // arbiter; we catch the violation here and translate Postgres error
+  // 23505 into a friendly message instead of leaking "DB: duplicate key
+  // value violates …" to the admin.
   let inserted;
   try {
     [inserted] = await db.insert(employees).values({
@@ -214,30 +156,20 @@ export async function inviteEmployee(input: InviteEmployeeInput): Promise<{
       department:   selection.primaryName,
       departmentId: selection.primaryId,
       isAdmin:      parsed.isAdmin,
-      firebaseUid:  fbUid,
       invitedAt:    new Date(),
     }).returning();
   } catch (err: unknown) {
-    await auth.deleteUser(fbUid).catch(() => {});
-    const e = err as { code?: string; constraint?: string; message?: string };
+    const e = err as { code?: string; message?: string };
     if (e?.code === "23505") {
-      // Could be the email unique-index or (less likely) firebase_uid.
-      return {
-        ok: false,
-        error:
-          e.constraint?.includes("firebase_uid")
-            ? "An employee is already linked to that Firebase user."
-            : "An employee with this email already exists.",
-      };
+      return { ok: false, error: "An employee with this email already exists." };
     }
     return { ok: false, error: `DB: ${e?.message ?? String(err)}` };
   }
   if (!inserted) {
-    await auth.deleteUser(fbUid).catch(() => {});
     return { ok: false, error: "DB: insert returned no row" };
   }
 
-  // 3b. Record department memberships (many-to-many). Non-fatal: the
+  // 1b. Record department memberships (many-to-many). Non-fatal: the
   // primary department is already on the employees row, so a failure here
   // only loses secondary memberships, which an admin can re-add.
   try {
@@ -246,26 +178,15 @@ export async function inviteEmployee(input: InviteEmployeeInput): Promise<{
     console.error("[inviteEmployee] writeMemberships failed", err);
   }
 
-  // 4. Generate the password-reset (invite) link and email it. We DON'T
-  //    roll back the row + Firebase user if the email fails — the admin
-  //    can re-send from the row's overflow menu. But we DO surface the
-  //    failure to the caller via `warning` so they know to retry.
+  // 2. Send the Clerk invitation email. We DON'T roll back the row if
+  //    this fails — the admin can re-send from the row's overflow menu.
+  //    But we DO surface the failure to the caller via `warning`.
   let emailWarning: string | undefined;
   try {
-    const { error: sendError } = await sendCredentialsEmail({
-      email:       parsed.email,
-      inviteeName: parsed.name,
-      inviterName: me.name,
-      password:    DEFAULT_INVITE_PASSWORD,
-      loginUrl:    `${siteUrl()}/login`,
-    });
-    if (sendError) {
-      emailWarning = `Created the account but the login-details email failed: ${sendError}. Use "Resend invite" to retry.`;
-      console.error("[inviteEmployee] sendCredentialsEmail returned error", sendError);
-    }
-  } catch (err: any) {
-    emailWarning = `Created the account but the login-details email failed: ${err?.message ?? err}. Use "Resend invite" to retry.`;
-    console.error("[inviteEmployee] sendCredentialsEmail threw", err);
+    await sendClerkInvitation(parsed.email);
+  } catch (err) {
+    emailWarning = `Created the employee but the invitation email failed: ${clerkErrorMessage(err)}. Use "Resend invite" to retry.`;
+    console.error("[inviteEmployee] Clerk invitation failed", err);
   }
 
   try {
@@ -377,9 +298,8 @@ export async function editEmployee(
     }
   }
 
-  // NOTE: we deliberately do NOT touch Firebase custom claims when isAdmin
-  // changes. The app derives admin status from the employees row, so the
-  // claim is incidental — set once on user creation, not on role flips.
+  // NOTE: admin status is derived entirely from the employees row — no
+  // Clerk metadata is written when isAdmin changes.
 
   try {
     const fromValue: Record<string, unknown> = {};
@@ -410,57 +330,6 @@ export async function editEmployee(
   return { ok: true };
 }
 
-/**
- * Generate the Firebase password-reset link for an existing employee
- * and return it so the admin can ship it manually (DM /
- * paste-into-an-email-they-control). This is the bypass for when
- * Resend is down or the recipient's domain isn't on Resend's verified
- * sender list yet.
- *
- * Does NOT touch the employees row, does NOT log an audit event — it's
- * a read-only credential-handoff. Admin-only. Returns the link as a
- * raw string so the client can drop it on the clipboard.
- */
-export async function getInviteLink(
-  employeeId: string,
-): Promise<{ ok: boolean; link?: string; error?: string }> {
-  await requireAdmin();
-  const parsedId = EmployeeIdSchema.safeParse(employeeId);
-  if (!parsedId.success) {
-    return {
-      ok: false,
-      error: parsedId.error.issues[0]?.message ?? "Invalid employee id",
-    };
-  }
-  const emp = await db.query.employees.findFirst({
-    where: eq(employees.id, parsedId.data),
-  });
-  if (!emp) return { ok: false, error: "Employee not found." };
-  if (!emp.isActive) {
-    return { ok: false, error: "Employee is deactivated — reactivate first." };
-  }
-  if (!emp.firebaseUid) {
-    return {
-      ok: false,
-      error: "This employee has no Firebase account yet — contact support.",
-    };
-  }
-  try {
-    const link = await getFirebaseAdminAuth().generatePasswordResetLink(
-      emp.email,
-      { url: `${siteUrl()}/welcome?intent=invite` },
-    );
-    return { ok: true, link };
-  } catch (err: any) {
-    return {
-      ok: false,
-      error:
-        translateFirebaseAdminError(err) ??
-        (err?.message ?? String(err)),
-    };
-  }
-}
-
 export async function resendInvite(employeeId: string): Promise<{ ok: boolean; error?: string }> {
   const me = await requireAdmin();
   const parsedId = EmployeeIdSchema.safeParse(employeeId);
@@ -471,16 +340,9 @@ export async function resendInvite(employeeId: string): Promise<{ ok: boolean; e
   if (!emp) return { ok: false, error: "Employee not found" };
   if (emp.joinedAt !== null) return { ok: false, error: "Employee has already joined." };
   try {
-    const { error } = await sendCredentialsEmail({
-      email:       emp.email,
-      inviteeName: emp.name,
-      inviterName: me.name,
-      password:    DEFAULT_INVITE_PASSWORD,
-      loginUrl:    `${siteUrl()}/login`,
-    });
-    if (error) return { ok: false, error };
-  } catch (err: any) {
-    return { ok: false, error: translateFirebaseAdminError(err) ?? (err.message ?? String(err)) };
+    await sendClerkInvitation(emp.email);
+  } catch (err) {
+    return { ok: false, error: clerkErrorMessage(err) };
   }
 
   try {
@@ -496,95 +358,6 @@ export async function resendInvite(employeeId: string): Promise<{ ok: boolean; e
   revalidatePath("/admin/employees");
   updateTag(CACHE_TAGS.employees);
   return { ok: true };
-}
-
-/**
- * Admin-driven password reset. Sets a new Firebase password, revokes the
- * employee's refresh tokens + tracked sessions (signing them out everywhere),
- * stamps `password_reset_by_admin_at` so a stale-password sign-in shows the
- * "changed by admin" message, emails the employee (best-effort), and audits.
- * Never logs the password. Admin-only; cannot target self.
- */
-export async function resetEmployeePassword(
-  employeeId: string,
-  newPassword: string,
-): Promise<{ ok: boolean; error?: string; warning?: string }> {
-  const me = await requireAdmin();
-
-  const parsedId = EmployeeIdSchema.safeParse(employeeId);
-  if (!parsedId.success) {
-    return { ok: false, error: parsedId.error.issues[0]?.message ?? "Invalid employee id" };
-  }
-  const parsedPw = ResetPasswordSchema.safeParse({ password: newPassword });
-  if (!parsedPw.success) {
-    return { ok: false, error: parsedPw.error.issues[0]?.message ?? "Invalid password" };
-  }
-  if (parsedId.data === me.id) {
-    return { ok: false, error: "You can't reset your own password here — use Forgot password." };
-  }
-
-  const emp = await db.query.employees.findFirst({
-    where: eq(employees.id, parsedId.data),
-  });
-  if (!emp) return { ok: false, error: "Employee not found." };
-  if (!emp.isActive) return { ok: false, error: "Employee is deactivated — reactivate first." };
-  if (!emp.firebaseUid) {
-    return { ok: false, error: "This employee has no Firebase account yet — contact support." };
-  }
-
-  // 1-2. Firebase: set password + revoke tokens (sign-out everywhere).
-  try {
-    const auth = getFirebaseAdminAuth();
-    await auth.updateUser(emp.firebaseUid, { password: parsedPw.data.password });
-    await auth.revokeRefreshTokens(emp.firebaseUid);
-  } catch (err: any) {
-    return { ok: false, error: translateFirebaseAdminError(err) ?? (err?.message ?? String(err)) };
-  }
-
-  // 3. Drop tracked sessions so logged-in devices are bounced on next request.
-  try {
-    await db.delete(authSessions).where(eq(authSessions.employeeId, emp.id));
-  } catch (err) {
-    console.error("[resetEmployeePassword] auth_sessions delete failed", err);
-  }
-
-  // 4. Stamp the lockout marker.
-  try {
-    await db
-      .update(employees)
-      .set({ passwordResetByAdminAt: new Date() })
-      .where(eq(employees.id, emp.id));
-  } catch (err: any) {
-    return { ok: false, error: `DB: ${err?.message ?? err}` };
-  }
-
-  // 5. Email the employee (best-effort — never blocks the reset).
-  let warning: string | undefined;
-  try {
-    const { error } = await sendPasswordChangedByAdminEmail({
-      email: emp.email,
-      recipientName: emp.name,
-    });
-    if (error) warning = `Password reset, but the email couldn't be sent: ${error}`;
-  } catch (err) {
-    console.error("[resetEmployeePassword] email send threw", err);
-    warning = "Password reset, but the notification email failed to send.";
-  }
-
-  // 6. Audit (no password). Non-fatal.
-  try {
-    await db.insert(employeeEvents).values({
-      employeeId: emp.id,
-      actorId: me.id,
-      eventType: "password_reset_by_admin",
-    });
-  } catch (err) {
-    console.error("[resetEmployeePassword] audit write failed", err);
-  }
-
-  revalidatePath("/admin/employees");
-  updateTag(CACHE_TAGS.employees);
-  return { ok: true, warning };
 }
 
 export async function deactivateEmployee(
@@ -608,17 +381,19 @@ export async function deactivateEmployee(
     return { ok: false, error: `DB: ${err.message ?? err}` };
   }
 
-  if (emp.firebaseUid) {
+  // Ban the Clerk user (revokes sessions + blocks sign-in). Roll back the
+  // DB flag if Clerk rejects, so the two systems stay in sync.
+  if (emp.clerkUserId) {
     try {
-      await getFirebaseAdminAuth().updateUser(emp.firebaseUid, { disabled: true });
-    } catch (err: any) {
-      // Roll back the DB update so the two systems stay in sync.
+      const client = await clerkClient();
+      await client.users.banUser(emp.clerkUserId);
+    } catch (err) {
       await db
         .update(employees)
         .set({ isActive: true })
         .where(eq(employees.id, emp.id))
         .catch(() => {});
-      return { ok: false, error: `Firebase: ${err.message ?? err}` };
+      return { ok: false, error: `Clerk: ${clerkErrorMessage(err)}` };
     }
   }
 
@@ -657,16 +432,17 @@ export async function reactivateEmployee(
     return { ok: false, error: `DB: ${err.message ?? err}` };
   }
 
-  if (emp.firebaseUid) {
+  if (emp.clerkUserId) {
     try {
-      await getFirebaseAdminAuth().updateUser(emp.firebaseUid, { disabled: false });
-    } catch (err: any) {
+      const client = await clerkClient();
+      await client.users.unbanUser(emp.clerkUserId);
+    } catch (err) {
       await db
         .update(employees)
         .set({ isActive: false })
         .where(eq(employees.id, emp.id))
         .catch(() => {});
-      return { ok: false, error: `Firebase: ${err.message ?? err}` };
+      return { ok: false, error: `Clerk: ${clerkErrorMessage(err)}` };
     }
   }
 
@@ -690,7 +466,7 @@ export async function reactivateEmployee(
 // ---------------------------------------------------------------------------
 // Hard delete (admin power tool)
 //
-// Permanently removes the employees row, the Firebase user, and every row
+// Permanently removes the employees row, the Clerk user, and every row
 // that referenced them as doer/initiator/creator/actor. Audit history about
 // those tasks is destroyed by design — this is the GDPR right-to-erasure
 // shape, NOT the deactivate flow. The deletion itself is logged to
@@ -704,7 +480,7 @@ export async function reactivateEmployee(
 //   4. tasks owned by them       (RESTRICT chain on doer / initiator / created_by)
 //   5. employees row             (cascades notifications, push_subs, their own
 //                                  lifecycle employee_events)
-//   6. Firebase user
+//   6. Clerk user
 // ---------------------------------------------------------------------------
 
 export interface EmployeeDeletionImpact {
@@ -840,7 +616,7 @@ export async function deleteEmployee(
     email: emp.email,
     role: emp.role,
     department: emp.department,
-    firebaseUid: emp.firebaseUid,
+    clerkUserId: emp.clerkUserId,
   };
 
   let counts: {
@@ -903,14 +679,16 @@ export async function deleteEmployee(
     return { ok: false, error: `DB: ${err?.message ?? err}` };
   }
 
-  // 6. Firebase user. Best-effort — the DB is already consistent, so a
-  //    Firebase failure leaves at most an orphan disabled account.
-  if (snapshot.firebaseUid) {
+  // 6. Clerk user. Best-effort — the DB is already consistent, so a
+  //    Clerk failure leaves at most an orphan account that can no longer
+  //    link to an employees row.
+  if (snapshot.clerkUserId) {
     try {
-      await getFirebaseAdminAuth().deleteUser(snapshot.firebaseUid);
+      const client = await clerkClient();
+      await client.users.deleteUser(snapshot.clerkUserId);
     } catch (err) {
       console.warn(
-        `[deleteEmployee] firebase deleteUser(${snapshot.firebaseUid}) failed — clean up manually`,
+        `[deleteEmployee] Clerk deleteUser(${snapshot.clerkUserId}) failed — clean up manually`,
         err,
       );
     }

@@ -63,7 +63,7 @@ export interface RateLimitResult {
 
 /**
  * Records an attempt by `actorId` against the `kind` bucket and decides
- * whether it's allowed. Caller passes the actor id (Firebase UID or
+ * whether it's allowed. Caller passes the actor id (Clerk user id or
  * employee.id is fine — both unique-per-actor). Failure returns the ms
  * until the oldest in-window entry ages out, so the caller can echo a
  * Retry-After header.

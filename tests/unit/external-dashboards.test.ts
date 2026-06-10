@@ -15,7 +15,7 @@ function fakeEmployee(over: Partial<Employee>): Employee {
     department: null,
     departmentId: null,
     createdAt: new Date(),
-    firebaseUid: null,
+    clerkUserId: null,
     isAdmin: false,
     isActive: true,
     invitedAt: null,

@@ -1,18 +1,18 @@
 "use client";
-import { useRouter } from "next/navigation";
 import { useCallback } from "react";
+import { useClerk } from "@clerk/nextjs";
 import { IdleTimer } from "@/components/auth/idle-timer";
 
 export function IdleTimerClient({ timeoutMinutes }: { timeoutMinutes: number }) {
-  const router = useRouter();
+  const { signOut } = useClerk();
   // Stable callback so IdleTimer doesn't tear down listeners every render.
   const onTimeout = useCallback(async () => {
     try {
-      await fetch("/api/auth/signout", { method: "POST" });
+      await signOut({ redirectUrl: "/login?reason=idle" });
     } catch {
-      // Best-effort; navigate regardless so middleware redirects.
+      // Best-effort; middleware bounces unauthenticated requests anyway.
+      window.location.replace("/login?reason=idle");
     }
-    router.replace("/login?reason=idle");
-  }, [router]);
+  }, [signOut]);
   return <IdleTimer timeoutMs={timeoutMinutes * 60_000} onTimeout={onTimeout} />;
 }

@@ -1,5 +1,7 @@
 /**
- * One-off ops script: hard-delete an employee row + their Firebase user.
+ * One-off ops script: hard-delete an employee row. (The Clerk user, if
+ * linked, is NOT touched — remove it from the Clerk dashboard or use the
+ * admin UI's Delete action, which does both.)
  *
  *   tsx --env-file=.env.local scripts/delete-employee.ts --id <uuid>            # dry-run (reports refs)
  *   tsx --env-file=.env.local scripts/delete-employee.ts --id <uuid> --commit   # apply
@@ -21,8 +23,6 @@
 
 import { parseArgs } from "node:util";
 import { eq, or, sql } from "drizzle-orm";
-import { getApps, initializeApp, cert } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
 import { db } from "../lib/db";
 import {
   employees,
@@ -99,7 +99,7 @@ async function main() {
   console.log(`  email:    ${emp.email}`);
   console.log(`  isAdmin:  ${emp.isAdmin}`);
   console.log(`  isActive: ${emp.isActive}`);
-  console.log(`  fb_uid:   ${emp.firebaseUid ?? "(none)"}`);
+  console.log(`  clerk_user_id: ${emp.clerkUserId ?? "(none)"}`);
 
   const refs = await countRefs(id);
   console.log(`\nBlocking references (would prevent delete):`);
@@ -123,30 +123,14 @@ async function main() {
     return;
   }
 
-  // 1. DB delete (cascades clear notifications + push_subscriptions +
-  //    employee_events about-them).
+  // DB delete (cascades clear notifications + push_subscriptions +
+  // employee_events about-them).
   await db.delete(employees).where(eq(employees.id, id));
   console.log("\n✓ Employees row deleted (cascaded child rows cleared).");
-
-  // 2. Firebase user delete
-  if (emp.firebaseUid) {
-    const projectId   = process.env.FIREBASE_PROJECT_ID!;
-    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL!;
-    const privateKey  = process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, "\n");
-    if (!getApps().length) {
-      initializeApp({ credential: cert({ projectId, clientEmail, privateKey }) });
-    }
-    try {
-      await getAuth().deleteUser(emp.firebaseUid);
-      console.log(`✓ Firebase user ${emp.firebaseUid} deleted.`);
-    } catch (err: any) {
-      console.warn(
-        `Firebase delete failed (uid=${emp.firebaseUid}): ${err?.message ?? err}`,
-      );
-      console.warn("Employees row is already gone — clean up Firebase manually.");
-    }
-  } else {
-    console.log("(No firebase_uid on this row — nothing to delete in Firebase.)");
+  if (emp.clerkUserId) {
+    console.log(
+      `Reminder: remove Clerk user ${emp.clerkUserId} from the Clerk dashboard.`,
+    );
   }
 }
 
