@@ -199,27 +199,12 @@ export const AGE_BUCKETS = [
 
 export type AgeBucketId = (typeof AGE_BUCKETS)[number]["id"];
 
-// ── Attendance / Outstanding (migration 0053) ──────────────────────────────
+// ── Attendance (migration 0053) ─────────────────────────────────────────────
 // Ported from the Altus Ecosystem static forms (2026-06-10). The DB columns
 // are `text` (not pgEnums) so these unions are the canonical source of truth.
 
 export const ATTENDANCE_KINDS = ["in", "out"] as const;
 export type AttendanceKind = (typeof ATTENDANCE_KINDS)[number];
-
-export const OUTSTANDING_STATUSES = [
-  "open",
-  "partial",
-  "paid",
-  "written_off",
-] as const;
-export type OutstandingStatus = (typeof OUTSTANDING_STATUSES)[number];
-
-export const OUTSTANDING_STATUS_LABELS: Record<OutstandingStatus, string> = {
-  open:        "Open",
-  partial:     "Partially Paid",
-  paid:        "Paid",
-  written_off: "Written Off",
-};
 
 // M5.1 — palette tokens used by status_settings.color_token and accepted by the
 // admin ColorPicker. The 6 names map to canonical pill backgrounds; admins can
