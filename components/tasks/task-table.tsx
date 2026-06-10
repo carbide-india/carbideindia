@@ -146,6 +146,8 @@ import { TaskRowActions } from "./task-row-actions";
 import { BulkActionBar } from "./bulk-action-bar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
+import { LateBadge } from "@/components/ui/late-badge";
+import { isDoneLate } from "@/lib/task-late";
 import { InlineStatusCell } from "./inline-status-cell";
 import {
   InlineDoerCell,
@@ -303,14 +305,19 @@ function buildColumns(
       cell: (info) => {
         const row = info.row.original;
         return (
-          <InlineStatusCell
-            taskId={row.id}
-            status={row.status}
-            updatedAt={row.updatedAt}
-            labels={statusLabels}
-            tones={statusTones}
-            isAdmin={me.isAdmin}
-          />
+          <span className="inline-flex items-center gap-1.5">
+            <InlineStatusCell
+              taskId={row.id}
+              status={row.status}
+              updatedAt={row.updatedAt}
+              labels={statusLabels}
+              tones={statusTones}
+              isAdmin={me.isAdmin}
+            />
+            {isDoneLate({ status: row.status, completedAt: row.completedAt, dueAt: row.dueAt }) && (
+              <LateBadge />
+            )}
+          </span>
         );
       },
     },
@@ -1300,6 +1307,9 @@ function TaskCard({
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
+          {isDoneLate({ status: row.status, completedAt: row.completedAt, dueAt: row.dueAt }) && (
+            <LateBadge />
+          )}
           <InlineStatusCell
             taskId={row.id}
             status={row.status}
