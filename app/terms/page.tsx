@@ -108,7 +108,7 @@ export default function TermsPage() {
       <h2>7 · Service availability</h2>
       <p>
         The dashboard is provided on a best-effort basis. We use Vercel for
-        the application layer, Supabase (Singapore region) for the database,
+        the application layer and file storage, Neon for the database,
         Clerk (US region) for identity, Resend for email, and
         optionally Web Push for notifications.
         We do not guarantee uninterrupted service — providers occasionally

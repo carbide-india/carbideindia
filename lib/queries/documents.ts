@@ -2,7 +2,7 @@ import "server-only";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { documents, employees } from "@/db/schema";
-import { getSupabaseAdmin, DOCUMENTS_BUCKET } from "@/lib/supabase/admin";
+import { getDocumentDownloadUrls } from "@/lib/storage/blob";
 
 export interface DocumentRow {
   id: string;
@@ -12,11 +12,11 @@ export interface DocumentRow {
   sizeBytes: number | null;
   uploadedByName: string | null;
   createdAt: Date;
-  /** Short-lived signed download URL (null if signing failed). */
+  /** Short-lived presigned download URL (null if presigning failed). */
   url: string | null;
 }
 
-/** Document library, newest first, each with a fresh signed download URL. */
+/** Document library, newest first, each with a fresh presigned download URL. */
 export async function listDocuments(): Promise<DocumentRow[]> {
   const rows = await db
     .select({
@@ -34,24 +34,15 @@ export async function listDocuments(): Promise<DocumentRow[]> {
     .orderBy(desc(documents.createdAt))
     .limit(500);
 
-  // createSignedUrl is a network call to Supabase Storage; serial
-  // awaits inside a `for` loop turn 500 docs into 500 sequential HTTP
-  // round-trips. createSignedUrls (plural) takes a path array and
-  // returns the same signed URLs in one call.
-  const admin = getSupabaseAdmin();
-  const paths = rows.map((r) => r.storagePath);
-  const signedByPath = new Map<string, string>();
-  if (paths.length > 0) {
-    const { data, error } = await admin.storage
-      .from(DOCUMENTS_BUCKET)
-      .createSignedUrls(paths, 3600);
-    if (!error && data) {
-      for (const entry of data) {
-        if (entry.signedUrl && entry.path) {
-          signedByPath.set(entry.path, entry.signedUrl);
-        }
-      }
-    }
+  // Documents live in private Vercel Blob storage. One read-scoped token
+  // issuance (single network call), then every row's download URL is
+  // presigned locally — so 500 docs never become 500 HTTP round-trips.
+  // Failure degrades to url:null (the UI hides the download button).
+  let urlByPath = new Map<string, string>();
+  try {
+    urlByPath = await getDocumentDownloadUrls(rows.map((r) => r.storagePath));
+  } catch {
+    // presigning unavailable (e.g. missing BLOB_READ_WRITE_TOKEN) — degrade.
   }
   return rows.map((r) => ({
     id: r.id,
@@ -61,6 +52,6 @@ export async function listDocuments(): Promise<DocumentRow[]> {
     sizeBytes: r.sizeBytes,
     uploadedByName: r.uploadedByName ?? null,
     createdAt: r.createdAt,
-    url: signedByPath.get(r.storagePath) ?? null,
+    url: urlByPath.get(r.storagePath) ?? null,
   }));
 }

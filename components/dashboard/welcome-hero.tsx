@@ -1,6 +1,3 @@
-const STUDIO_URL =
-  "https://supabase.com/dashboard/project/dnppyirclhviagprclet/editor";
-
 export function WelcomeHero() {
   return (
     <section
@@ -39,22 +36,6 @@ export function WelcomeHero() {
           the single source of truth for the team — replacing the old
           Sheets-based system.
         </p>
-
-        <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-          <a
-            href={STUDIO_URL}
-            target="_blank"
-            rel="noreferrer"
-            className="text-cta text-white px-6 py-3 rounded-chip inline-flex items-center gap-2"
-            style={{
-              background:
-                "linear-gradient(135deg, var(--color-altus-red), var(--color-altus-red-deep))",
-              boxShadow: "0 4px 12px rgba(225, 6, 0, 0.25)",
-            }}
-          >
-            Open Supabase Studio →
-          </a>
-        </div>
 
         <p className="text-ink-subtle text-[15px] mt-8">
           Read-only in M1.5. Task entry, transfers, and admin live in M2.

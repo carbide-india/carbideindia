@@ -7,7 +7,10 @@ import { db } from "@/lib/db";
 import { documents, documentEvents, type Document, type Employee } from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
 import { rateLimitOrError } from "@/lib/rate-limit";
-import { getSupabaseAdmin, DOCUMENTS_BUCKET } from "@/lib/supabase/admin";
+import {
+  uploadDocument as uploadDocumentBlob,
+  deleteBlob,
+} from "@/lib/storage/blob";
 
 type Result<T = unknown> = ({ ok: true } & T) | { ok: false; error: string };
 
@@ -123,13 +126,17 @@ export async function uploadDocument(form: FormData): Promise<Result<{ id: strin
   const shape = validateUploadShape(file);
   if (!shape.ok) return shape;
 
-  const path = `${crypto.randomUUID()}/${safeName(file.name)}`;
-  const admin = getSupabaseAdmin();
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const { error: upErr } = await admin.storage
-    .from(DOCUMENTS_BUCKET)
-    .upload(path, buffer, { contentType: file.type || "application/octet-stream", upsert: false });
-  if (upErr) return { ok: false, error: `Upload failed: ${upErr.message}` };
+  // Private Vercel Blob; `path` is the blob pathname stored in storage_path.
+  let path: string;
+  try {
+    path = await uploadDocumentBlob(
+      `${crypto.randomUUID()}/${safeName(file.name)}`,
+      file,
+      file.type || "application/octet-stream",
+    );
+  } catch (err) {
+    return { ok: false, error: `Upload failed: ${err instanceof Error ? err.message : String(err)}` };
+  }
 
   let inserted;
   try {
@@ -145,7 +152,7 @@ export async function uploadDocument(form: FormData): Promise<Result<{ id: strin
       })
       .returning({ id: documents.id });
   } catch (err) {
-    await admin.storage.from(DOCUMENTS_BUCKET).remove([path]).catch(() => {});
+    await deleteBlob(path).catch(() => {});
     return { ok: false, error: `DB: ${err instanceof Error ? err.message : String(err)}` };
   }
   if (!inserted) return { ok: false, error: "Insert returned no row" };
@@ -233,13 +240,16 @@ export async function replaceDocumentFile(id: string, form: FormData): Promise<R
   const shape = validateUploadShape(file);
   if (!shape.ok) return shape;
 
-  const admin = getSupabaseAdmin();
-  const path = `${crypto.randomUUID()}/${safeName(file.name)}`;
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const { error: upErr } = await admin.storage
-    .from(DOCUMENTS_BUCKET)
-    .upload(path, buffer, { contentType: file.type || "application/octet-stream" });
-  if (upErr) return { ok: false, error: `Upload failed: ${upErr.message}` };
+  let path: string;
+  try {
+    path = await uploadDocumentBlob(
+      `${crypto.randomUUID()}/${safeName(file.name)}`,
+      file,
+      file.type || "application/octet-stream",
+    );
+  } catch (err) {
+    return { ok: false, error: `Upload failed: ${err instanceof Error ? err.message : String(err)}` };
+  }
 
   await db
     .update(documents)
@@ -257,8 +267,8 @@ export async function replaceDocumentFile(id: string, form: FormData): Promise<R
     fromValue: { storagePath: auth.doc.storagePath, mimeType: auth.doc.mimeType, sizeBytes: auth.doc.sizeBytes },
     toValue: { storagePath: path, mimeType: file.type || null, sizeBytes: file.size },
   });
-  // Best-effort cleanup of the old object.
-  await admin.storage.from(DOCUMENTS_BUCKET).remove([auth.doc.storagePath]).catch(() => {});
+  // Best-effort cleanup of the old blob.
+  await deleteBlob(auth.doc.storagePath).catch(() => {});
   revalidatePath("/documents");
   return { ok: true };
 }
@@ -273,8 +283,8 @@ export async function deleteDocument(id: string): Promise<Result> {
   // which silently masked permission denials.
   if (!auth.ok) return auth;
 
-  const admin = getSupabaseAdmin();
-  await admin.storage.from(DOCUMENTS_BUCKET).remove([auth.doc.storagePath]).catch(() => {});
+  // Best-effort blob cleanup — the DB row is the source of truth.
+  await deleteBlob(auth.doc.storagePath).catch(() => {});
   await db
     .delete(documents)
     .where(

@@ -26,9 +26,6 @@ test.describe("dashboard", () => {
       await expect(welcome).toBeAttached();
       await expect(page.locator("text=No data yet.")).toBeAttached();
       await expect(
-        page.locator("text=Open Supabase Studio").first(),
-      ).toBeAttached();
-      await expect(
         page.locator("text=Read-only in M1.5.").first(),
       ).toBeAttached();
     } else {

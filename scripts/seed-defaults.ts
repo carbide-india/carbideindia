@@ -1,5 +1,5 @@
 // Seed the reference/label defaults that used to live inside the old
-// Supabase-era migration chain (squashed away in the Neon move).
+// pre-Neon migration chain (squashed away in the Neon move).
 //
 // Run AFTER `pnpm db:migrate` on a fresh database:
 //   pnpm seed:defaults

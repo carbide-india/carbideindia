@@ -18,8 +18,9 @@ export default function PrivacyPage() {
       <h2>1 · The short version</h2>
       <p>
         The dashboard collects your name, work email, role, department, and a
-        record of the tasks you create, edit, or work on. Data sits in Supabase
-        (Singapore) and Clerk (US). We send you email notifications via
+        record of the tasks you create, edit, or work on. Data sits in Neon
+        Postgres and Clerk (US); uploaded files sit in Vercel Blob storage.
+        We send you email notifications via
         Resend and — if you enable it — Web Push notifications. We do not
         sell, rent, or share your data
         with anyone outside Altus Corp's narrow list of operational
@@ -82,9 +83,9 @@ export default function PrivacyPage() {
       </p>
       <ul>
         <li>
-          <strong>Supabase</strong> (Postgres database, Singapore region) —
-          stores all operational data behind row-level security policies that
-          gate every read and write to the signed-in employee or admin.
+          <strong>Neon</strong> (Postgres database) — stores all operational
+          data. Every read and write is gated in the application layer to the
+          signed-in employee or admin.
         </li>
         <li>
           <strong>Clerk</strong> (US region) — stores your email, password
@@ -175,9 +176,9 @@ export default function PrivacyPage() {
       <p>
         Authentication is gated by Clerk's standard protections (password
         hashing, rate-limited sign-in, revocable sessions). Every database
-        read and write passes through Supabase's row-level security policies.
-        Service-role credentials are server-only, never exposed to the
-        browser.
+        read and write passes through server-side permission checks tied to
+        the signed-in employee. Database and storage credentials are
+        server-only, never exposed to the browser.
       </p>
       <p>
         If you spot a security issue, please write to{" "}

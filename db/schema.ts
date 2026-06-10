@@ -27,7 +27,7 @@ import {
 
 /**
  * Friendly sequential task number (#1042). Originally created by migration
- * 0048 (Supabase era); declared here so the squashed Neon init migration
+ * 0048 (pre-Neon era); declared here so the squashed Neon init migration
  * recreates it. Starts at 1000 so every task reads as a tidy 4-digit number.
  * `tasks.task_no` defaults to nextval() of this sequence — the DB assigns
  * the number; app inserts never supply it.

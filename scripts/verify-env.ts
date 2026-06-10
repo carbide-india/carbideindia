@@ -13,7 +13,6 @@ type Check = { ok: boolean; label: string; detail?: string };
 
 const PLACEHOLDER_MARKERS = [
   "PASSWORD",
-  "PROJECT.supabase.co",
   "replace_with_32_plus_random_chars",
   "re_test_xxxxxxxxxxxxxxxxxxxxxxxx",
   "pk_test_xxxxxxxx",
@@ -99,16 +98,32 @@ function optional(
 async function main() {
   console.log("\nVerifying .env.local ...");
 
-  // ─── Database / Supabase ──────────────────────────────────────────
-  header("Database / Supabase storage");
+  // ─── Database ─────────────────────────────────────────────────────
+  header("Database");
   const dbChecks = print([
     check("DATABASE_URL", process.env.DATABASE_URL, (v) =>
       v.startsWith("postgresql://") || v.startsWith("postgres://") ? null : "expected postgresql:// URI"),
-    check("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL, (v) =>
-      v.startsWith("https://") && v.endsWith(".supabase.co") ? null : "expected https://<ref>.supabase.co"),
-    check("SUPABASE_SERVICE_ROLE_KEY", process.env.SUPABASE_SERVICE_ROLE_KEY, (v) =>
-      v.startsWith("eyJ") ? null : "expected JWT (eyJ… prefix)"),
   ]);
+
+  // ─── Vercel Blob ──────────────────────────────────────────────────
+  // Required in production (avatars + documents storage); optional locally,
+  // where uploads/downloads just fail gracefully until the store exists.
+  const isProduction =
+    process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production";
+  const blobValidate = (v: string) =>
+    v.startsWith("vercel_blob_rw_") ? null : "expected vercel_blob_rw_ prefix";
+  let blobChecks = { ok: 0, fail: 0 };
+  let blobOptional = { ok: 0, warn: 0 };
+  if (isProduction) {
+    header("Vercel Blob (storage)");
+    blobChecks = print([
+      check("BLOB_READ_WRITE_TOKEN", process.env.BLOB_READ_WRITE_TOKEN, blobValidate),
+    ]);
+  } else {
+    blobOptional = optional("Vercel Blob (storage)", {
+      BLOB_READ_WRITE_TOKEN: (v) => blobValidate(v) === null || "expected vercel_blob_rw_ prefix",
+    });
+  }
 
   // ─── Clerk ────────────────────────────────────────────────────────
   header("Clerk (auth)");
@@ -159,6 +174,8 @@ async function main() {
   // ─── Summary ─────────────────────────────────────────────────────
   const totalOk =
     dbChecks.ok +
+    blobChecks.ok +
+    blobOptional.ok +
     clerkChecks.ok +
     resendChecks.ok +
     siteChecks.ok +
@@ -166,8 +183,13 @@ async function main() {
     webPushOptional.ok +
     ipGateOptional.ok;
   const totalFail =
-    dbChecks.fail + clerkChecks.fail + resendChecks.fail + siteChecks.fail + cronChecks.fail;
-  const totalWarn = webPushOptional.warn + ipGateOptional.warn;
+    dbChecks.fail +
+    blobChecks.fail +
+    clerkChecks.fail +
+    resendChecks.fail +
+    siteChecks.fail +
+    cronChecks.fail;
+  const totalWarn = blobOptional.warn + webPushOptional.warn + ipGateOptional.warn;
 
   console.log(
     `\nSummary: ${totalOk} OK · ${totalFail} failed · ${totalWarn} optional warnings`,

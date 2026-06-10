@@ -6,7 +6,7 @@ test("tasks page renders the table", async ({ page }) => {
   await expect(page.locator("table tbody tr").first()).toBeVisible();
   // Take a viewport screenshot (not fullPage) to avoid sticky-element duplication
   // artifacts from Playwright's scroll-stitch approach. Mask the dynamic header
-  // elements (live-indicator state, auto-updating timestamp) for stability.
+  // elements (auto-updating timestamp) for stability.
   await expect(page).toHaveScreenshot("tasks-page.png", {
     animations: "disabled",
     mask: [page.locator("header"), page.locator("text=Updated")],

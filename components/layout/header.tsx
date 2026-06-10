@@ -1,4 +1,3 @@
-import { LiveIndicator } from "./live-indicator";
 import { MainNavServer } from "./main-nav-server";
 import { NavHistoryButtons } from "./nav-history-buttons";
 import { MobileMenuServer } from "./mobile-menu-server";
@@ -65,15 +64,12 @@ export async function DashboardHeader({
             </div>
           </div>
 
-          {/* RIGHT: search + live indicator + actions + avatar. Every item is
-              shrink-0; secondary chrome (Live / Admin pill) hides below 2xl and
-              the search collapses to an icon there too, so the nav always has
-              room and nothing ever overlaps. */}
+          {/* RIGHT: search + actions + avatar. Every item is shrink-0;
+              secondary chrome (Admin pill) hides below 2xl and the search
+              collapses to an icon there too, so the nav always has room and
+              nothing ever overlaps. */}
           <div className="flex items-center gap-2.5 2xl:gap-3 shrink-0 max-xl:ml-auto max-md:gap-1.5">
             <GlobalSearch />
-            <span className="max-2xl:hidden">
-              <LiveIndicator />
-            </span>
             <NewTaskTrigger />
             {isAdmin && (
               <span className="max-2xl:hidden">

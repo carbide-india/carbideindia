@@ -6,9 +6,9 @@ Internal work-management dashboard for the Altus Corp team. Tracks tasks, status
 
 ```bash
 pnpm install
-cp .env.local.example .env.local   # fill in Supabase / Firebase / Resend values
+cp .env.local.example .env.local   # fill in Neon / Clerk / Resend values
 pnpm db:generate                    # generate first migration
-pnpm db:migrate                     # apply schema to your dev Supabase
+pnpm db:migrate                     # apply schema to your dev database
 pnpm seed                           # populate fake data (~20 emp, ~1200 tasks)
 pnpm dev                            # http://localhost:3000
 ```
@@ -34,7 +34,7 @@ The dashboard renders an empty-state welcome hero until at least one task or emp
 
 ## Stack
 
-Next.js 16 · React 19 · TypeScript strict · Tailwind v4 + custom CSS · Supabase Postgres · Drizzle ORM · TanStack Table · Recharts · Motion · Radix primitives · Vercel.
+Next.js 16 · React 19 · TypeScript strict · Tailwind v4 + custom CSS · Neon Postgres · Drizzle ORM · Vercel Blob · TanStack Table · Recharts · Motion · Radix primitives · Vercel.
 
 ## Authentication & Environments
 
@@ -45,13 +45,14 @@ Auth is **invite-only**. New employees are created by an admin from `/admin/empl
 - **Firebase Auth** issues identity (email + password, password-reset emails).
 - A 5-day `__session` cookie carries the verified session, created by `admin.auth().createSessionCookie()` after the client signs in.
 - **`next-firebase-auth-edge`** middleware verifies the cookie on every request with `checkRevoked: true`, so deactivated employees lose access immediately.
-- **Supabase Postgres** is the data store. Firebase ID tokens are passed to `supabase-js` via its `accessToken` callback so RLS policies (using Third-Party Auth) evaluate `auth.jwt() ->> 'sub'` against Firebase UIDs.
+- **Neon Postgres** is the data store (Drizzle ORM); access control is enforced server-side in the application layer.
+- **Vercel Blob** stores uploaded files — public avatars and private documents (presigned download URLs).
 
 ### Environments
 
-| Env | Supabase | Firebase | Notes |
+| Env | Database | Firebase | Notes |
 |---|---|---|---|
-| Local dev | `supabase start` | Firebase Auth Emulator (port 9099) | Run `pnpm dev:full` to start both + Next. Seed users have password `dev1234`. |
+| Local dev | Neon dev branch | Firebase Auth Emulator (port 9099) | Run `pnpm dev:full` to start both + Next. Seed users have password `dev1234`. |
 | Preview / Production | (to be created when production Altus Corp Firebase project is set up) | (to be created when production Altus Corp Firebase project is set up) | First admin is created via `pnpm bootstrap-admin` — see `docs/runbooks/bootstrap-first-admin.md`. |
 
 ### Local quick-start
@@ -62,8 +63,8 @@ pnpm dlx firebase login
 pnpm install
 
 # Each session
-pnpm dev:full        # Next + emulator + (start Supabase separately if local)
-pnpm seed            # seed Supabase
+pnpm dev:full        # Next + emulator
+pnpm seed            # seed the database
 pnpm seed:firebase   # mirror seeded users into the emulator
 ```
 
@@ -72,7 +73,7 @@ Then sign in at http://localhost:3000/login with any seeded email + password `de
 ### Bootstrap the first admin
 
 ```bash
-cp .env.local .env.bootstrap     # copy and add SUPABASE_SERVICE_ROLE_KEY
+cp .env.local .env.bootstrap     # copy env for the bootstrap script
 pnpm bootstrap-admin --email heteshvichare927@gmail.com --name "Hetesh Vichare"
 ```
 
