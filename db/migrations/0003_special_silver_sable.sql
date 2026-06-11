@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "clients_name_lower_uidx" ON "clients" USING btree (lower("name"));

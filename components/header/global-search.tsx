@@ -8,6 +8,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Search, Loader2, CornerDownLeft } from "lucide-react";
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { searchTasksAction } from "@/app/(app)/tasks/actions";
+import { searchInquiriesAction } from "@/app/(app)/inquiries/actions";
+import { ENQUIRY_STATUS_COLORS, ENQUIRY_STATUS_LABELS } from "@/db/enums";
 import { STATUS_LABELS_FALLBACK, STATUS_TONES_FALLBACK } from "@/lib/format";
 
 /**
@@ -33,6 +35,15 @@ export function GlobalSearch() {
     placeholderData: (prev) => prev,
   });
 
+  // Inquiries group — SM number or company (sales module, Phase 2).
+  const { data: inquiryResults = [], isFetching: isFetchingInquiries } = useQuery({
+    queryKey: ["inquiry-search", q],
+    queryFn: () => searchInquiriesAction(q),
+    enabled: open && q.length >= 2,
+    staleTime: 30_000,
+    placeholderData: (prev) => prev,
+  });
+
   // ⌘K / Ctrl+K toggles the palette from anywhere.
   React.useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -52,6 +63,11 @@ export function GlobalSearch() {
   function go(id: string) {
     setOpen(false);
     router.push(`/tasks/${id}` as Route);
+  }
+
+  function goInquiry(id: string) {
+    setOpen(false);
+    router.push(`/inquiries/${id}`);
   }
 
   return (
@@ -95,12 +111,63 @@ export function GlobalSearch() {
                 placeholder="Search by #, task, client, subject, or doer…"
                 className="h-14 !border-b-0 !px-0 text-[16px]"
               />
-              {isFetching && <Loader2 size={16} className="shrink-0 animate-spin text-ink-subtle" />}
+              {(isFetching || isFetchingInquiries) && (
+                <Loader2 size={16} className="shrink-0 animate-spin text-ink-subtle" />
+              )}
             </div>
             <CommandList className="max-h-[52vh] overflow-y-auto border-t border-hairline p-2">
               <CommandEmpty className="px-3 py-6 text-center text-[14px] text-ink-subtle">
-                {q.length < 2 ? "Type at least 2 characters to search." : `No tasks match “${q}”.`}
+                {q.length < 2 ? "Type at least 2 characters to search." : `Nothing matches “${q}”.`}
               </CommandEmpty>
+              {inquiryResults.length > 0 && (
+                <div
+                  className="px-3 pt-2 pb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-subtle"
+                  aria-hidden
+                >
+                  Inquiries
+                </div>
+              )}
+              {inquiryResults.map((r) => {
+                const tone = ENQUIRY_STATUS_COLORS[r.enquiryStatus] ?? "slate";
+                return (
+                  <CommandItem
+                    key={r.id}
+                    value={r.id}
+                    onSelect={() => goInquiry(r.id)}
+                    className="flex items-center gap-3 !rounded-chip !py-2.5"
+                  >
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ background: `var(--color-${tone})` }}
+                      title={ENQUIRY_STATUS_LABELS[r.enquiryStatus]}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-2">
+                        <span className="font-mono text-[12.5px] font-bold text-ink-subtle">
+                          {r.smNumber}
+                        </span>
+                        <span className="truncate text-[15px] font-semibold text-ink-strong">
+                          {r.companyName}
+                        </span>
+                      </span>
+                      <span className="mt-0.5 flex items-center gap-1.5 truncate text-[12.5px] text-ink-subtle">
+                        <span className="truncate">{r.productDescription}</span>
+                        <span>·</span>
+                        <span>{ENQUIRY_STATUS_LABELS[r.enquiryStatus]}</span>
+                      </span>
+                    </span>
+                    <CornerDownLeft size={15} strokeWidth={2.2} className="shrink-0 text-ink-subtle" />
+                  </CommandItem>
+                );
+              })}
+              {inquiryResults.length > 0 && results.length > 0 && (
+                <div
+                  className="px-3 pt-2 pb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-subtle"
+                  aria-hidden
+                >
+                  Tasks
+                </div>
+              )}
               {results.map((r) => {
                 const tone = STATUS_TONES_FALLBACK[r.status] ?? "slate";
                 return (

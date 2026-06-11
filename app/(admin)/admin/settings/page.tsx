@@ -5,6 +5,8 @@ import { getIntegrationHealth } from "@/lib/queries/integration-health";
 import { listRecentDispatchFailures, getDispatchLogTotals } from "@/lib/queries/dispatch-log";
 import { listRecurringTemplates } from "@/lib/queries/recurring-templates";
 import { getNotificationMatrix } from "@/lib/queries/notification-matrix";
+import { getNextSmNumber } from "@/lib/queries/inquiries";
+import { SmNumberCard } from "@/components/admin/sm-number-card";
 import { SettingsTabs } from "@/components/admin/settings-tabs";
 import { SettingsTabGeneral } from "@/components/admin/settings-tab-general";
 import { SettingsTabStatuses } from "@/components/admin/settings-tab-statuses";
@@ -23,6 +25,7 @@ export default async function SettingsPage() {
     dispatchFailures,
     dispatchTotals,
     recurringTemplates,
+    smNextNumber,
   ] = await Promise.all([
     getOrgSettings(),
     getStatusDisplayMap(),
@@ -31,6 +34,7 @@ export default async function SettingsPage() {
     listRecentDispatchFailures({ limit: 50 }),
     getDispatchLogTotals(),
     listRecurringTemplates(),
+    getNextSmNumber(),
   ]);
 
   return (
@@ -59,7 +63,12 @@ export default async function SettingsPage() {
       </header>
 
       <SettingsTabs
-        general={<SettingsTabGeneral current={settings} />}
+        general={
+          <div className="flex flex-col gap-6">
+            <SettingsTabGeneral current={settings} />
+            <SmNumberCard nextNumber={smNextNumber} />
+          </div>
+        }
         statuses={<SettingsTabStatuses display={statusDisplay} />}
         integrations={
           <SettingsTabIntegrations

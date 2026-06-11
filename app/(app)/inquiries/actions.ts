@@ -294,3 +294,10 @@ export async function setFeasibilityStatus(
   revalidatePath(`/inquiries/${id}`);
   return { ok: true };
 }
+
+/** Command-palette search (server action — the palette is a client component). */
+export async function searchInquiriesAction(query: string) {
+  await requireUser();
+  const { searchInquiries } = await import("@/lib/queries/inquiries");
+  return searchInquiries(query);
+}

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, ilike, or } from "drizzle-orm";
+import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { inquiries, employees, type Inquiry } from "@/db/schema";
 import type { EnquiryStatus, FeasibilityStatus } from "@/db/enums";
@@ -72,4 +72,49 @@ export async function getInquiryById(id: string): Promise<Inquiry | null> {
     .where(eq(inquiries.id, id))
     .limit(1);
   return row ?? null;
+}
+
+/** One row of the command-palette "Inquiries" group. */
+export interface InquirySearchResult {
+  id: string;
+  smNumber: string;
+  companyName: string;
+  enquiryStatus: EnquiryStatus;
+  productDescription: string;
+}
+
+/**
+ * Command-palette inquiry search — SM number or company, capped small for a
+ * snappy palette (same contract as searchTasks in lib/queries/task-search.ts).
+ */
+export async function searchInquiries(rawQuery: string): Promise<InquirySearchResult[]> {
+  const q = rawQuery.trim();
+  if (q.length < 2) return [];
+  const like = `%${q.replace(/[%_]/g, (m) => `\\${m}`)}%`;
+  return db
+    .select({
+      id: inquiries.id,
+      smNumber: inquiries.smNumber,
+      companyName: inquiries.companyName,
+      enquiryStatus: inquiries.enquiryStatus,
+      productDescription: inquiries.productDescription,
+    })
+    .from(inquiries)
+    .where(or(ilike(inquiries.smNumber, like), ilike(inquiries.companyName, like)))
+    .orderBy(desc(inquiries.enquiryDate))
+    .limit(5);
+}
+
+/**
+ * The SM number the sequence will assign next (admin settings "Sales Module"
+ * card). `is_called` false means last_value itself is still unconsumed.
+ */
+export async function getNextSmNumber(): Promise<number> {
+  const rows = (await db.execute(
+    sql`SELECT last_value, is_called FROM inquiries_sm_number_seq`,
+  )) as unknown as Array<{ last_value: string | number; is_called: boolean }>;
+  const row = rows[0];
+  if (!row) return 9579;
+  const last = Number(row.last_value);
+  return row.is_called ? last + 1 : last;
 }

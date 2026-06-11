@@ -11,6 +11,9 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/app/(app)/tasks/actions", () => ({
   searchTasksAction: vi.fn(async () => []),
 }));
+vi.mock("@/app/(app)/inquiries/actions", () => ({
+  searchInquiriesAction: vi.fn(async () => []),
+}));
 
 import { GlobalSearch } from "@/components/header/global-search";
 

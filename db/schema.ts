@@ -314,7 +314,13 @@ export const clients = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (t) => [index("clients_active_name_idx").on(t.isActive, t.name)],
+  (t) => [
+    index("clients_active_name_idx").on(t.isActive, t.name),
+    // Case-insensitive uniqueness: the inquiry-form upsert looks clients up
+    // by lower(name); without this, a concurrent "Acme"/"ACME" race could
+    // create two case-variant clients past the case-sensitive name unique.
+    uniqueIndex("clients_name_lower_uidx").on(sql`lower(${t.name})`),
+  ],
 );
 
 /**

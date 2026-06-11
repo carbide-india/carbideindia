@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { revalidatePath, updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/lib/cache-tags";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { orgSettings, settingsEvents, statusSettings } from "@/db/schema";
 import { TASK_STATUSES } from "@/db/enums";
@@ -264,6 +264,42 @@ export async function updateNotificationMatrixAction(input: {
     });
   } catch (err) {
     console.error("[updateNotificationMatrixAction] audit write failed", err);
+  }
+
+  revalidatePath("/admin/settings");
+  return { ok: true };
+}
+
+/**
+ * Re-base the SM number sequence (Sales Module card). `setval(..., n, false)`
+ * means n itself is the NEXT number assigned — matches what the card shows.
+ */
+export async function setSmNextNumber(next: number): Promise<ActionResult> {
+  const me = await requireAdmin();
+  if (!Number.isInteger(next) || next < 1 || next > 10_000_000) {
+    return { ok: false, error: "Invalid number" };
+  }
+  try {
+    await db.execute(
+      sql`SELECT setval('inquiries_sm_number_seq', ${next}, false)`,
+    );
+  } catch (err) {
+    console.error("[setSmNextNumber] failed", err);
+    return { ok: false, error: "Could not update the SM counter." };
+  }
+
+  // Audit row — non-fatal, same contract as updateOrgSettings.
+  try {
+    await db.insert(settingsEvents).values({
+      scope: "org_settings",
+      targetId: "1",
+      actorId: me.id,
+      eventType: "updated",
+      fromValue: { smNextNumber: null },
+      toValue: { smNextNumber: next },
+    });
+  } catch (err) {
+    console.error("[setSmNextNumber] audit write failed", err);
   }
 
   revalidatePath("/admin/settings");
