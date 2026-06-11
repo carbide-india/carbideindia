@@ -1,6 +1,6 @@
 "use client";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ListTodo, CalendarDays, FolderKanban, SquareKanban, Target, CalendarCheck, FileSearch } from "lucide-react";
+import { LayoutDashboard, ListTodo, CalendarDays, FolderKanban, SquareKanban, CalendarCheck, FileSearch } from "lucide-react";
 import type { Route } from "next";
 import { MainNavPill } from "./main-nav-pill";
 
@@ -72,14 +72,7 @@ export function MainNav({ activeTasks, isAdmin, variant }: Props) {
         Icon={FolderKanban}
         active={isActive("/projects")}
         variant={variant}      />
-      {/* Weekly Goals (coming soon) · Attendance.
-          Documents / Archived / Inbox moved into the user menu. */}
-      <MainNavPill
-        href={"/weekly-goals" as Route}
-        label="Weekly Goals"
-        Icon={Target}
-        active={isActive("/weekly-goals")}
-        variant={variant}      />
+      {/* Documents / Archived / Inbox live in the user menu. */}
       <MainNavPill
         href={"/attendance" as Route}
         label="Attendance"
