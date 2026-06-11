@@ -1,32 +1,55 @@
 import { redirect } from "next/navigation";
 import type { Route } from "next";
 import Image from "next/image";
-import { SignIn, SignOutButton } from "@clerk/nextjs";
+import { SignOutButton } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
 import { getCurrentEmployee } from "@/lib/auth/current";
+import { SignInCard } from "@/components/auth/sign-in-card";
+import { DiamondCascade } from "@/components/auth/diamond-cascade";
 
 /**
- * /login — precision-drawing minimalism, one viewport, no scroll.
+ * /login — "drawing sheet DWG-002", exaggerated-minimal drafting style.
  *
- * Carbide India machines tungsten carbide to micron tolerances; the sign-in
- * sheet borrows the language of the engineering drawings their shop floor
- * runs on: warm paper white, a faint millimetre grid, one indigo spine down
- * the left edge (the "I" block of the logo), their actual product spread as
- * "FIG. 01", and a drafting title-block as the footer.
- *
- * Auth is Clerk's embedded <SignIn /> (hash routing keeps the whole flow on
- * /login). Social buttons are hidden here AND should be disabled in the
- * Clerk dashboard (email + password only). Guard: signed-in employees never
- * see this page; a Clerk session without an active employee row gets a
- * dead-end notice with sign-out.
+ * Two columns of one engineering drawing sheet: the brand statement (huge
+ * Bricolage 800 headline, spec strip, a dimensioned-circle motif) and the
+ * sign-in card framed by red registration marks. Mono DWG labels head each
+ * column; SCALE / SHEET close the sheet. Custom Clerk form — email +
+ * password only (disable socials in the Clerk dashboard too).
  */
 interface PageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
+const NAVY = "#1E2447";
+const RED = "#D32F2F";
+const MONO = "var(--font-mono-display, ui-monospace, monospace)";
+
 function firstString(v: string | string[] | undefined): string | undefined {
   if (Array.isArray(v)) return v[0];
   return v;
+}
+
+function MonoLabel({
+  children,
+  color = "#A8A29E",
+}: {
+  children: React.ReactNode;
+  color?: string;
+}) {
+  return (
+    <span
+      style={{
+        fontFamily: MONO,
+        fontSize: 10.5,
+        letterSpacing: "0.28em",
+        textTransform: "uppercase",
+        fontWeight: 700,
+        color,
+      }}
+    >
+      {children}
+    </span>
+  );
 }
 
 export default async function LoginPage({ searchParams }: PageProps) {
@@ -42,8 +65,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
   const year = new Date().getFullYear();
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto lg:overflow-hidden" style={{ background: "#FBFAF7" }}>
-      {/* Staggered reveal — one orchestrated load, nothing after. */}
+    <div className="fixed inset-0 z-50 overflow-y-auto lg:overflow-hidden" style={{ background: "#F4F0E8" }}>
       <style>{`
         @keyframes loginRise {
           from { opacity: 0; transform: translateY(10px); }
@@ -55,260 +77,218 @@ export default async function LoginPage({ searchParams }: PageProps) {
         }
       `}</style>
 
-      {/* Millimetre drafting grid — barely there. */}
+      {/* Drafting grid */}
       <div
         aria-hidden
         className="pointer-events-none fixed inset-0"
         style={{
           backgroundImage:
-            "linear-gradient(rgba(63,63,148,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(63,63,148,0.045) 1px, transparent 1px), linear-gradient(rgba(63,63,148,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(63,63,148,0.025) 1px, transparent 1px)",
-          backgroundSize: "80px 80px, 80px 80px, 16px 16px, 16px 16px",
+            "linear-gradient(rgba(30,36,71,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(30,36,71,0.05) 1px, transparent 1px), linear-gradient(rgba(30,36,71,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(30,36,71,0.025) 1px, transparent 1px)",
+          backgroundSize: "96px 96px, 96px 96px, 24px 24px, 24px 24px",
         }}
       />
 
-      {/* Indigo spine — the "I" of the logo, holding the left edge. */}
-      <div
-        aria-hidden
-        className="fixed left-0 top-0 bottom-0 w-[10px] max-md:h-[10px] max-md:w-full max-md:bottom-auto"
-        style={{ background: "#3F3F94" }}
-      />
-      <div
-        aria-hidden
-        className="fixed left-[32px] top-1/2 max-xl:hidden select-none"
-        style={{
-          writingMode: "vertical-rl",
-          transform: "translateY(-50%) rotate(180deg)",
-          fontSize: 10.5,
-          letterSpacing: "0.42em",
-          fontWeight: 600,
-          color: "rgba(63,63,148,0.38)",
-          textTransform: "uppercase",
-          fontFamily: "var(--font-mono-display, ui-monospace, monospace)",
-        }}
-      >
-        Your Tungsten Carbide &amp; Tungsten Copper Partners
+      {/* The business-card diamond cascade, anchored to the top-left corner
+          like the print collateral. Hidden on small screens. */}
+      <div className="login-rise pointer-events-none fixed -left-9 -top-10 origin-top-left scale-[0.78] max-lg:hidden">
+        <DiamondCascade />
       </div>
 
-      {/* One-viewport sheet: masthead / body / title-block. */}
-      <main className="relative z-10 mx-auto grid h-full min-h-0 w-full max-w-[1180px] grid-rows-[auto_1fr_auto] px-20 max-lg:px-12 max-md:px-6 max-lg:h-auto max-lg:min-h-full">
-        {/* ── Masthead ─────────────────────────────────────────────── */}
-        <header className="login-rise flex items-end justify-between pt-8 max-md:pt-14" style={{ animationDelay: "0.05s" }}>
-          <Image
-            src="/brand/logo.png"
-            alt="Carbide India"
-            width={210}
-            height={114}
-            priority
-            style={{ height: "auto" }}
-          />
-          <span
-            className="pb-2 max-md:hidden"
-            style={{
-              fontSize: 10.5,
-              letterSpacing: "0.30em",
-              fontWeight: 600,
-              color: "#A8A29E",
-              textTransform: "uppercase",
-              fontFamily: "var(--font-mono-display, ui-monospace, monospace)",
-            }}
-          >
-            Work Management System
-          </span>
-        </header>
+      <main className="relative z-10 mx-auto grid h-full min-h-0 w-full max-w-[1280px] grid-rows-[auto_1fr_auto] px-14 py-7 max-lg:h-auto max-lg:min-h-full max-lg:px-8 max-md:px-5">
+        {/* ── Sheet header row (clears the diamond cascade on lg+) ── */}
+        <div className="login-rise grid grid-cols-[1fr_minmax(380px,440px)] items-center gap-16 max-lg:grid-cols-1 max-lg:gap-3" style={{ animationDelay: "0.05s" }}>
+          <div className="flex items-center gap-4 lg:pl-[340px]">
+            <span aria-hidden style={{ width: 40, height: 2, background: RED, display: "inline-block" }} />
+            <MonoLabel color={RED}>DWG-001 / Brand</MonoLabel>
+            <MonoLabel>· Est. 1998</MonoLabel>
+          </div>
+          <div className="flex items-center justify-between max-lg:hidden">
+            <MonoLabel color={NAVY}>DWG-002 · Sign-in</MonoLabel>
+            <span className="inline-flex items-center gap-2">
+              <span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: RED }} />
+              <MonoLabel color={RED}>Secure</MonoLabel>
+            </span>
+          </div>
+        </div>
 
-        {/* ── Sheet body ───────────────────────────────────────────── */}
-        <section className="flex min-h-0 items-center py-6 max-lg:py-10">
-          <div className="grid w-full grid-cols-[1fr_minmax(360px,420px)] items-center gap-16 max-lg:grid-cols-1 max-lg:gap-10">
-            {/* Statement column */}
-            <div>
-              <p
-                className="login-rise"
-                style={{
-                  animationDelay: "0.15s",
-                  fontSize: 11,
-                  letterSpacing: "0.34em",
-                  fontWeight: 700,
-                  color: "#D32F2F",
-                  textTransform: "uppercase",
-                  fontFamily: "var(--font-mono-display, ui-monospace, monospace)",
-                }}
-              >
-                Yogeshwar Engineering Pvt Ltd
-              </p>
-              <h1
-                className="login-rise mt-4"
-                style={{
-                  animationDelay: "0.25s",
-                  fontFamily: "var(--font-serif)",
-                  fontStyle: "italic",
-                  fontWeight: 500,
-                  fontSize: "clamp(32px, 3.6vw, 46px)",
-                  lineHeight: 1.06,
-                  letterSpacing: "-0.02em",
-                  color: "#1C1917",
-                }}
-              >
-                Precision begins
-                <br />
-                with the first entry.
-              </h1>
-              <p
-                className="login-rise mt-4 max-w-[44ch]"
-                style={{
-                  animationDelay: "0.35s",
-                  fontSize: 14.5,
-                  lineHeight: 1.6,
-                  color: "#78716C",
-                }}
-              >
-                Enquiries, feasibility, costing and quotations — every SM
-                number, tracked from first call to sales order.
-              </p>
+        {/* ── Sheet body ─────────────────────────────────────────── */}
+        <section className="grid min-h-0 grid-cols-[1fr_minmax(380px,440px)] items-center gap-16 py-6 max-lg:grid-cols-1 max-lg:gap-10 max-lg:py-8">
+          {/* Statement column — headline clears the cascade via the body's
+              vertical centring; logo sits between headline and paragraph
+              on small screens, beside the spec strip on large. */}
+          <div className="min-w-0 lg:pt-24">
+            <Image
+              src="/brand/logo.png"
+              alt="Carbide India — Your Tungsten Carbide & Tungsten Copper Partners"
+              width={150}
+              height={81}
+              priority
+              className="login-rise lg:hidden"
+              style={{ height: "auto", animationDelay: "0.10s" }}
+            />
+            <h1
+              className="login-rise mt-5 lg:mt-0"
+              style={{
+                animationDelay: "0.18s",
+                fontFamily: "var(--font-display), var(--font-sans), sans-serif",
+                fontWeight: 800,
+                fontSize: "clamp(40px, 4.8vw, 68px)",
+                lineHeight: 1.02,
+                letterSpacing: "-0.035em",
+                color: NAVY,
+              }}
+            >
+              Precision begins
+              <br />
+              with the <span style={{ color: RED }}>first entry</span>
+              <span style={{ color: NAVY }}>.</span>
+            </h1>
+            <p
+              className="login-rise mt-5 max-w-[52ch]"
+              style={{ animationDelay: "0.28s", fontSize: 15.5, lineHeight: 1.65, color: "#57534E" }}
+            >
+              Enquiries, feasibility, costing and quotations — every SM number,
+              tracked from first call to sales order. Built for the shop floor,
+              engineered like the parts we make.
+            </p>
 
-              {/* FIG. 01 — their actual product spread, framed like a drawing figure */}
-              <figure className="login-rise mt-7 max-lg:hidden" style={{ animationDelay: "0.45s" }}>
-                <Image
-                  src="/brand/slide1.png"
-                  alt="Cemented carbide components manufactured at the Ambad works"
-                  width={460}
-                  height={170}
-                  style={{ height: "auto", maxHeight: 170, width: "auto", mixBlendMode: "multiply" }}
-                />
-                <figcaption
-                  className="mt-1 flex items-center gap-3"
-                  style={{
-                    fontSize: 10,
-                    letterSpacing: "0.20em",
-                    color: "#3F3F94",
-                    fontFamily: "var(--font-mono-display, ui-monospace, monospace)",
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                  }}
-                >
-                  <span aria-hidden className="inline-flex items-center">
-                    <span style={{ width: 1, height: 9, background: "#3F3F94", display: "inline-block" }} />
-                    <span style={{ width: 48, height: 1, background: "#3F3F94", display: "inline-block" }} />
-                    <span style={{ width: 1, height: 9, background: "#3F3F94", display: "inline-block" }} />
-                  </span>
-                  Fig. 01 — Cemented carbide components · 25 MT / yr
-                </figcaption>
-              </figure>
+            {/* Spec strip */}
+            <div
+              className="login-rise mt-8 grid max-w-[560px] grid-cols-3 gap-6 py-3.5"
+              style={{
+                animationDelay: "0.38s",
+                borderTop: "1px solid rgba(30,36,71,0.25)",
+                borderBottom: "1px solid rgba(30,36,71,0.25)",
+              }}
+            >
+              {(
+                [
+                  ["Output", "25 MT / YR", NAVY],
+                  ["Grade", "WC · W-Cu", RED],
+                  ["Loc", "NASHIK · IN", NAVY],
+                ] as const
+              ).map(([k, v, c]) => (
+                <div key={k}>
+                  <MonoLabel>{k}</MonoLabel>
+                  <div
+                    style={{
+                      fontFamily: MONO,
+                      fontSize: 13,
+                      letterSpacing: "0.14em",
+                      fontWeight: 700,
+                      color: c,
+                      marginTop: 4,
+                    }}
+                  >
+                    {v}
+                  </div>
+                </div>
+              ))}
             </div>
 
-            {/* Sign-in column */}
-            <div className="login-rise w-full" style={{ animationDelay: "0.30s" }}>
-              {reason === "idle" && (
-                <div
-                  role="status"
-                  className="mb-4 rounded-lg px-4 py-3"
-                  style={{
-                    background: "rgba(245, 158, 11, 0.08)",
-                    border: "1px solid rgba(180, 120, 10, 0.35)",
-                    color: "#92600A",
-                    fontSize: 13,
-                    lineHeight: 1.5,
-                  }}
+            {/* Dimensioned-circle motif */}
+            <div className="login-rise mt-9 max-w-[560px] max-lg:hidden" style={{ animationDelay: "0.48s" }} aria-hidden>
+              <svg viewBox="0 0 560 110" width="100%" height="auto" fill="none">
+                {/* dimension line with end ticks + arrow stops */}
+                <line x1="8" y1="50" x2="552" y2="50" stroke={NAVY} strokeOpacity="0.45" strokeWidth="1" />
+                <line x1="8" y1="40" x2="8" y2="60" stroke={NAVY} strokeOpacity="0.6" strokeWidth="1.5" />
+                <line x1="552" y1="40" x2="552" y2="60" stroke={NAVY} strokeOpacity="0.6" strokeWidth="1.5" />
+                <line x1="280" y1="40" x2="280" y2="60" stroke={NAVY} strokeOpacity="0.35" strokeWidth="1" />
+                {/* dashed circle + crosshair, centre-left like the mock */}
+                <circle cx="180" cy="50" r="34" stroke={NAVY} strokeOpacity="0.55" strokeWidth="1.2" strokeDasharray="5 4" />
+                <line x1="180" y1="8" x2="180" y2="92" stroke={NAVY} strokeOpacity="0.3" strokeWidth="0.8" strokeDasharray="2 4" />
+                <line x1="134" y1="50" x2="226" y2="50" stroke={NAVY} strokeOpacity="0.3" strokeWidth="0.8" strokeDasharray="2 4" />
+                <circle cx="180" cy="50" r="2.2" fill={RED} />
+                <text
+                  x="180" y="104" textAnchor="middle"
+                  style={{ fontFamily: "ui-monospace, monospace", fontSize: 11, letterSpacing: "0.18em", fontWeight: 700 }}
+                  fill={RED}
                 >
-                  You were signed out after a period of inactivity. Please sign
-                  in to continue.
-                </div>
-              )}
-              {orphanedSession ? (
-                <div
-                  className="rounded-2xl p-8 text-center"
-                  style={{ background: "#FFFFFF", border: "1px solid #E7E2DA", boxShadow: "0 1px 2px rgba(28,25,23,0.04)" }}
-                >
-                  <h2 className="mb-2 text-[17px] font-semibold" style={{ color: "#1C1917" }}>
-                    Account not provisioned
-                  </h2>
-                  <p className="mb-6 text-[14px] leading-relaxed" style={{ color: "#78716C" }}>
-                    You&apos;re signed in, but this account isn&apos;t linked
-                    to an active employee. Contact your administrator, or sign
-                    out and try a different account.
-                  </p>
-                  <SignOutButton redirectUrl="/login">
-                    <button
-                      type="button"
-                      className="rounded-lg px-5 py-2.5 text-sm font-semibold text-white"
-                      style={{ background: "#3F3F94" }}
-                    >
-                      Sign out
-                    </button>
-                  </SignOutButton>
-                </div>
-              ) : (
-                <SignIn
-                  routing="hash"
-                  forceRedirectUrl="/"
-                  appearance={{
-                    variables: {
-                      colorPrimary: "#3F3F94",
-                      colorText: "#1C1917",
-                      colorTextSecondary: "#78716C",
-                      colorBackground: "#FFFFFF",
-                      borderRadius: "0.625rem",
-                    },
-                    elements: {
-                      cardBox: {
-                        boxShadow: "0 1px 2px rgba(28,25,23,0.05)",
-                        border: "1px solid #E7E2DA",
-                        width: "100%",
-                      },
-                      card: { boxShadow: "none" },
-                      // Email + password only — socials are hidden here and
-                      // should also be switched off in the Clerk dashboard.
-                      socialButtons: { display: "none" },
-                      socialButtonsRoot: { display: "none" },
-                      dividerRow: { display: "none" },
-                      formButtonPrimary: {
-                        background: "#3F3F94",
-                        boxShadow: "none",
-                        textTransform: "none",
-                        fontSize: "14px",
-                        "&:hover": { background: "#2F2F6F" },
-                      },
-                    },
-                  }}
-                />
-              )}
+                  Ø 12.00 ±0.01
+                </text>
+              </svg>
             </div>
+          </div>
+
+          {/* Sign-in column */}
+          <div className="login-rise w-full" style={{ animationDelay: "0.25s" }}>
+            <div className="mb-3 hidden items-center justify-between max-lg:flex">
+              <MonoLabel color={NAVY}>DWG-002 · Sign-in</MonoLabel>
+              <span className="inline-flex items-center gap-2">
+                <span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: RED }} />
+                <MonoLabel color={RED}>Secure</MonoLabel>
+              </span>
+            </div>
+
+            {reason === "idle" && (
+              <div
+                role="status"
+                className="mb-4 px-4 py-3"
+                style={{
+                  background: "rgba(245, 158, 11, 0.08)",
+                  border: "1px solid rgba(180, 120, 10, 0.35)",
+                  color: "#92600A",
+                  fontSize: 13,
+                  lineHeight: 1.5,
+                }}
+              >
+                You were signed out after a period of inactivity. Please sign
+                in to continue.
+              </div>
+            )}
+
+            {orphanedSession ? (
+              <div
+                className="p-8 text-center"
+                style={{ background: "#FFFFFF", border: "1px solid #E7E2DA", boxShadow: "0 2px 10px rgba(30,36,71,0.06)" }}
+              >
+                <h2 className="mb-2 text-[17px] font-semibold" style={{ color: NAVY }}>
+                  Account not provisioned
+                </h2>
+                <p className="mb-6 text-[14px] leading-relaxed" style={{ color: "#78716C" }}>
+                  You&apos;re signed in, but this account isn&apos;t linked to
+                  an active employee. Contact your administrator, or sign out
+                  and try a different account.
+                </p>
+                <SignOutButton redirectUrl="/login">
+                  <button
+                    type="button"
+                    className="cursor-pointer rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-opacity duration-200 hover:opacity-90"
+                    style={{ background: NAVY }}
+                  >
+                    Sign out
+                  </button>
+                </SignOutButton>
+              </div>
+            ) : (
+              <SignInCard />
+            )}
           </div>
         </section>
 
-        {/* ── Title block — like the corner of a technical drawing ── */}
-        <footer
-          className="login-rise mb-6 grid grid-cols-3 max-md:mb-8 max-md:grid-cols-1"
-          style={{
-            animationDelay: "0.55s",
-            border: "1px solid #E7E2DA",
-            background: "#FFFFFF",
-            fontFamily: "var(--font-mono-display, ui-monospace, monospace)",
-          }}
-        >
-          {(
-            [
-              ["Company", "Carbide India"],
-              ["Works", "W-150(A) MIDC Ambad, Nashik"],
-              ["Sheet", `WMS · ${year} · Confidential`],
-            ] as const
-          ).map(([k, v], i) => (
-            <div
-              key={k}
-              className="px-5 py-2.5 max-md:border-b max-md:last:border-b-0"
-              style={{
-                borderLeft: i > 0 ? "1px solid #E7E2DA" : undefined,
-                borderColor: "#E7E2DA",
-              }}
-            >
-              <div style={{ fontSize: 9, letterSpacing: "0.26em", color: "#A8A29E", textTransform: "uppercase", fontWeight: 600 }}>
-                {k}
-              </div>
-              <div style={{ fontSize: 12, color: "#44403C", marginTop: 2, fontWeight: 600 }}>
-                {v}
-              </div>
-            </div>
-          ))}
-        </footer>
+        {/* ── Sheet footer row ───────────────────────────────────── */}
+        <div className="login-rise grid grid-cols-[1fr_minmax(380px,440px)] items-center gap-16 max-lg:grid-cols-1 max-lg:gap-2 max-md:pb-6" style={{ animationDelay: "0.55s" }}>
+          {/* Like the card: logo bottom-left beside the works address. */}
+          <div className="flex items-center justify-between gap-6">
+            <span className="flex items-center gap-5 min-w-0">
+              <Image
+                src="/brand/logo.png"
+                alt=""
+                aria-hidden
+                width={96}
+                height={52}
+                className="max-lg:hidden shrink-0"
+                style={{ height: "auto" }}
+              />
+              <MonoLabel>W-150(A) MIDC Ambad, Nashik</MonoLabel>
+            </span>
+            <MonoLabel>Scale 1:1</MonoLabel>
+          </div>
+          <div className="flex items-center justify-between">
+            <MonoLabel>WMS · {year} · Confidential</MonoLabel>
+            <MonoLabel color={NAVY}>Sheet 02 / 02</MonoLabel>
+          </div>
+        </div>
       </main>
     </div>
   );
