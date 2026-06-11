@@ -18,9 +18,7 @@ import { formatDate } from "@/lib/format";
 import type { InquiryListItem } from "@/lib/queries/inquiries";
 import type { EmployeeOption } from "@/lib/queries/employees";
 
-/** The new-inquiry form ships in the next task; typedRoutes can't see the
- *  route yet, so widen to string before the Route cast. */
-export const NEW_INQUIRY_ROUTE = "/inquiries/new" as string as Route;
+export const NEW_INQUIRY_ROUTE: Route = "/inquiries/new";
 
 /** Server-validated filter state — used to distinguish "no inquiries at all"
  *  from "no rows match the current filters" in the empty state. */

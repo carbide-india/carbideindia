@@ -33,6 +33,33 @@ export const listActiveClientNames = unstable_cache(
   { tags: [CACHE_TAGS.clients], revalidate: 600 },
 );
 
+export interface ClientOption {
+  id: string;
+  name: string;
+}
+
+/**
+ * Active clients as id+name pairs — drives the "Old client" picker on the
+ * New Inquiry form (the picker needs the id to call the autofill endpoint,
+ * unlike the task form's name-only roster). Same cache tag + TTL as
+ * `listActiveClientNames`.
+ */
+export const listClientOptions = unstable_cache(
+  async (): Promise<ClientOption[]> => {
+    const rows = await db
+      .select({ id: clients.id, name: clients.name })
+      .from(clients)
+      .where(eq(clients.isActive, true))
+      .orderBy(asc(clients.name));
+    // Locale-aware re-sort — same reasoning as listActiveClientNames.
+    return rows.sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+    );
+  },
+  ["list-client-options"],
+  { tags: [CACHE_TAGS.clients], revalidate: 600 },
+);
+
 export interface ClientWithCount extends Client {
   /** Tasks whose Client Name (tasks.title) matches this client, case-insensitive. */
   taskCount: number;
