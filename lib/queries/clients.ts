@@ -1,8 +1,8 @@
 import "server-only";
-import { asc, eq, getTableColumns, sql } from "drizzle-orm";
+import { and, asc, eq, getTableColumns, sql } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
-import { clients, tasks, type Client } from "@/db/schema";
+import { clientContacts, clients, tasks, type Client } from "@/db/schema";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 
 /**
@@ -55,4 +55,76 @@ export async function listClientsWithCounts(): Promise<ClientWithCount[]> {
   return rows.sort((a, b) =>
     a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
   );
+}
+
+export interface ClientAutofill {
+  id: string;
+  name: string;
+  export: boolean | null;
+  currency: string | null;
+  country: string | null;
+  state: string | null;
+  city: string | null;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  addressLine3: string | null;
+  addressLine4: string | null;
+  pinCode: string | null;
+  contact: {
+    firstName: string;
+    lastName: string | null;
+    contactNo: string | null;
+    email: string | null;
+    ccEmails: string | null;
+  } | null;
+}
+
+/**
+ * Old-client auto-fetch for the inquiry form: the client's KYC block plus
+ * its primary contact (if any). The inquiry snapshots these values at
+ * creation; it never references this table again. Uncached — fetched
+ * per-click when the user picks an existing client.
+ */
+export async function getClientAutofill(
+  clientId: string,
+): Promise<ClientAutofill | null> {
+  const [row] = await db
+    .select()
+    .from(clients)
+    .where(eq(clients.id, clientId))
+    .limit(1);
+  if (!row) return null;
+  const [contact] = await db
+    .select()
+    .from(clientContacts)
+    .where(
+      and(
+        eq(clientContacts.clientId, clientId),
+        eq(clientContacts.isPrimary, true),
+      ),
+    )
+    .limit(1);
+  return {
+    id: row.id,
+    name: row.name,
+    export: row.export,
+    currency: row.currency,
+    country: row.country,
+    state: row.state,
+    city: row.city,
+    addressLine1: row.addressLine1,
+    addressLine2: row.addressLine2,
+    addressLine3: row.addressLine3,
+    addressLine4: row.addressLine4,
+    pinCode: row.pinCode,
+    contact: contact
+      ? {
+          firstName: contact.firstName,
+          lastName: contact.lastName,
+          contactNo: contact.contactNo,
+          email: contact.email,
+          ccEmails: contact.ccEmails,
+        }
+      : null,
+  };
 }
