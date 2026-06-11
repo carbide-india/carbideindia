@@ -100,8 +100,21 @@ export function GlobalSearch() {
         >
           <Dialog.Title className="sr-only">Search tasks</Dialog.Title>
           {/* shouldFilter=false: results come pre-filtered from the server; cmdk
-              just handles keyboard nav + highlighting. */}
-          <Command shouldFilter={false} loop>
+              just handles keyboard nav + highlighting. Tab opens the highlighted
+              result, same as Enter. */}
+          <Command
+            shouldFilter={false}
+            loop
+            onKeyDown={(e) => {
+              if (e.key !== "Tab") return;
+              const active = e.currentTarget.querySelector<HTMLElement>(
+                '[cmdk-item][aria-selected="true"]',
+              );
+              if (!active) return;
+              e.preventDefault();
+              active.click();
+            }}
+          >
             <div className="flex items-center gap-2.5 px-4">
               <Search size={18} strokeWidth={2.2} className="shrink-0 text-ink-subtle" />
               <CommandInput

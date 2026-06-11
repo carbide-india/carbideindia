@@ -11,6 +11,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
+import { focusNextFrom } from "@/lib/focus-next";
 
 interface Props {
   id?: string;
@@ -48,10 +49,24 @@ export function SearchableSelect({
 }: Props) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
 
   React.useEffect(() => {
     if (!open) setQuery("");
   }, [open]);
+
+  // Tab commits the highlighted option (cmdk only commits on Enter / click)
+  // and moves on to the next field — same contract as components/ui/select.
+  function onCommandKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key !== "Tab") return;
+    const active = e.currentTarget.querySelector<HTMLElement>(
+      '[cmdk-item][aria-selected="true"]',
+    );
+    if (!active) return;
+    e.preventDefault();
+    active.click(); // commits via onSelect (which also closes the popover)
+    requestAnimationFrame(() => focusNextFrom(triggerRef.current, e.shiftKey ? -1 : 1));
+  }
 
   const trimmed = query.trim();
   const filtered = trimmed
@@ -78,6 +93,7 @@ export function SearchableSelect({
     >
       <Popover.Trigger asChild>
         <button
+          ref={triggerRef}
           id={id}
           type="button"
           role="combobox"
@@ -110,7 +126,7 @@ export function SearchableSelect({
             (input as HTMLInputElement | null)?.focus();
           }}
         >
-          <Command shouldFilter={false} loop>
+          <Command shouldFilter={false} loop onKeyDown={onCommandKeyDown}>
             <div className="flex items-center gap-2 border-b border-hairline px-3">
               <Search size={14} strokeWidth={2.4} className="shrink-0 text-ink-subtle" />
               <CommandInput
