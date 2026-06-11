@@ -107,7 +107,7 @@ export const employees = pgTable("employees", {
     .default("system")
     .$type<"light" | "dark" | "system">(),
   density: text("density").notNull().default("cozy").$type<"cozy" | "compact">(),
-  accent: text("accent").notNull().default("#D32F2F"),
+  accent: text("accent").notNull().default("#3F3F94"),
   oooStart: date("ooo_start"),
   oooEnd: date("ooo_end"),
   oooDelegateId: uuid("ooo_delegate_id").references((): AnyPgColumn => employees.id, {

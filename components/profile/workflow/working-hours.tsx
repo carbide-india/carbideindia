@@ -167,7 +167,7 @@ export function WorkingHours({ initial }: Props) {
                   fontWeight: 600,
                   color: on ? "white" : "var(--color-ink-soft)",
                   background: on
-                    ? "linear-gradient(135deg, #D32F2F, #B71C1C)"
+                    ? "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))"
                     : "rgba(15, 23, 42, 0.04)",
                   border: `1px solid ${
                     on ? "transparent" : "rgba(15, 23, 42, 0.08)"

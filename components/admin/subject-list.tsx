@@ -250,7 +250,7 @@ function EditSubjectDialog({
                 type="submit"
                 disabled={pending}
                 className="rounded-md py-2.5 px-5 text-[14px] font-medium text-white disabled:opacity-50"
-                style={{ background: "linear-gradient(135deg, #D32F2F, #B71C1C)" }}
+                style={{ background: "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))" }}
               >
                 {pending ? "Saving…" : "Save"}
               </button>

@@ -314,7 +314,7 @@ function btnStyle(kind: "primary" | "ghost"): React.CSSProperties {
       fontSize: 14,
       fontWeight: 600,
       color: "white",
-      background: "linear-gradient(135deg, #D32F2F, #B71C1C)",
+      background: "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
       border: "none",
       borderRadius: 10,
       cursor: "pointer",

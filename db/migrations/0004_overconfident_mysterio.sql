@@ -1,0 +1,1 @@
+ALTER TABLE "employees" ALTER COLUMN "accent" SET DEFAULT '#3F3F94';

@@ -147,7 +147,7 @@ export function EnablePushButton() {
       onClick={enable}
       disabled={pending}
       className="rounded-md py-2 px-4 text-sm font-medium text-white disabled:opacity-70"
-      style={{ background: "linear-gradient(135deg, #D32F2F, #B71C1C)" }}
+      style={{ background: "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))" }}
     >
       {pending ? "Enabling…" : "Enable push notifications"}
     </button>

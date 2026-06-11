@@ -347,7 +347,7 @@ function CommentBody({
               onClick={save}
               disabled={pending || draft.trim() === ""}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-white font-semibold disabled:opacity-50"
-              style={{ background: "linear-gradient(135deg, #D32F2F, #B71C1C)" }}
+              style={{ background: "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))" }}
             >
               {pending ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} strokeWidth={2.6} />}
               Save

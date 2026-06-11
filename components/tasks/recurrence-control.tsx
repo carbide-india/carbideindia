@@ -432,7 +432,7 @@ function CustomDialog({
                 onOpenChange(false);
               }}
               className="rounded-md py-2.5 px-5 text-[14px] font-semibold text-white"
-              style={{ background: "linear-gradient(135deg, #D32F2F, #B71C1C)" }}
+              style={{ background: "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))" }}
             >
               Done
             </button>

@@ -18,7 +18,7 @@ function profileV2Defaults() {
     digestFrequency: "daily" as const,
     theme: "system" as const,
     density: "cozy" as const,
-    accent: "#D32F2F",
+    accent: "#3F3F94",
     oooStart: null as string | null,
     oooEnd: null as string | null,
     oooDelegateId: null as string | null,
