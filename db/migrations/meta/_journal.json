@@ -15,6 +15,13 @@
       "when": 1781161623333,
       "tag": "0001_married_magus",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781163277516,
+      "tag": "0002_cooing_garia",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,5 @@
 import "server-only";
-import { asc, eq, sql } from "drizzle-orm";
+import { asc, eq, getTableColumns, sql } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { clients, tasks, type Client } from "@/db/schema";
@@ -46,12 +46,7 @@ export interface ClientWithCount extends Client {
 export async function listClientsWithCounts(): Promise<ClientWithCount[]> {
   const rows = await db
     .select({
-      id: clients.id,
-      name: clients.name,
-      isActive: clients.isActive,
-      sortOrder: clients.sortOrder,
-      createdAt: clients.createdAt,
-      updatedAt: clients.updatedAt,
+      ...getTableColumns(clients),
       taskCount: sql<number>`count(${tasks.id})::int`,
     })
     .from(clients)

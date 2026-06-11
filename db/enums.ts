@@ -244,3 +244,61 @@ export const MASTER_KIND_LABELS: Record<MasterKind, string> = {
   tolerance: "Tolerance",
   condition: "Condition",
 };
+
+// ── Inquiry module (Phase 2) — option lists from Manan's sheet ──
+export const INQUIRY_PRIORITIES = ["high_profile", "critical", "important", "urgent", "normal"] as const;
+export type InquiryPriority = (typeof INQUIRY_PRIORITIES)[number];
+export const INQUIRY_PRIORITY_LABELS: Record<InquiryPriority, string> = {
+  high_profile: "High Profile", critical: "Critical", important: "Important", urgent: "Urgent", normal: "Normal",
+};
+
+export const INQUIRY_SOURCES = ["whatsapp", "email", "sample", "walk_in", "exhibition", "other"] as const;
+export type InquirySource = (typeof INQUIRY_SOURCES)[number];
+export const INQUIRY_SOURCE_LABELS: Record<InquirySource, string> = {
+  whatsapp: "Whatsapp", email: "Email", sample: "Sample", walk_in: "Walk In", exhibition: "Exhibition", other: "Other",
+};
+
+export const INQUIRY_CURRENCIES = ["INR", "USD", "EURO", "AUD", "AHD", "Ruble", "Others"] as const;
+export const INQUIRY_COUNTRIES = ["India", "USA", "Russia", "Italy", "Poland", "Australia", "UAE", "Spain", "Belgium", "Others"] as const;
+
+export const CHECK_STATES = ["given", "not_given", "assumed"] as const;       // paper checklist V / x / #
+export type CheckState = (typeof CHECK_STATES)[number];
+export const CHECK_STATE_LABELS: Record<CheckState, string> = { given: "Given", not_given: "Not Given", assumed: "Assumed" };
+
+export const QUANTITY_UOMS = ["Nos", "Kg", "Bag", "Set"] as const;
+
+export const DOC_GIVEN_OPTIONS = ["Whatsapp Msg", "Email", "Drawing", "Sample", "Specification", "Products Excel Sheet", "Terms & Conditions"] as const;
+
+export const INQUIRY_SHAPES = ["Cylinder - Reg", "Cylinder - Spl", "Flat - Reg", "Flat - Spl", "H. Cylinder - Reg", "H. Cylinder - Spl", "Special", "Assembly"] as const;
+
+export const ENQUIRY_STATUSES = ["not_started", "initiated", "need_info", "need_help", "proceed"] as const;
+export type EnquiryStatus = (typeof ENQUIRY_STATUSES)[number];
+export const ENQUIRY_STATUS_LABELS: Record<EnquiryStatus, string> = {
+  not_started: "Not Started", initiated: "Initiated", need_info: "Need Info", need_help: "Need Help", proceed: "Proceed",
+};
+export const ENQUIRY_STATUS_COLORS: Record<EnquiryStatus, string> = {
+  not_started: "slate", initiated: "blue", need_info: "amber", need_help: "red", proceed: "green",
+};
+
+export const FEAS_VERDICTS = ["to_check", "available", "not_available"] as const;
+export type FeasVerdict = (typeof FEAS_VERDICTS)[number];
+export const FEAS_VERDICT_LABELS: Record<FeasVerdict, string> = { to_check: "To Check", available: "Available", not_available: "Not Available" };
+
+export const RECHECK_STATES = ["not_done", "yes", "no"] as const;
+export type RecheckState = (typeof RECHECK_STATES)[number];
+export const RECHECK_STATE_LABELS: Record<RecheckState, string> = { not_done: "Not Done", yes: "Yes", no: "No" };
+
+export const FEASIBILITY_STATUSES = ["not_started", "initiated", "need_info", "need_help", "primary_feasibility_done", "proceed_to_costing"] as const;
+export type FeasibilityStatus = (typeof FEASIBILITY_STATUSES)[number];
+export const FEASIBILITY_STATUS_LABELS: Record<FeasibilityStatus, string> = {
+  not_started: "Not Started", initiated: "Initiated", need_info: "Need Info", need_help: "Need Help",
+  primary_feasibility_done: "Primary Feasibility Done", proceed_to_costing: "Proceed to Costing",
+};
+export const FEASIBILITY_STATUS_COLORS: Record<FeasibilityStatus, string> = {
+  not_started: "slate", initiated: "blue", need_info: "amber", need_help: "red",
+  primary_feasibility_done: "purple", proceed_to_costing: "green",
+};
+
+export const FEAS_PRIORITIES = ["p1", "p2", "p3", "p5_high_profile"] as const;     // sheet: 1, 2, 3, 5. High Profile
+export type FeasPriority = (typeof FEAS_PRIORITIES)[number];
+export const FEAS_PRIORITY_LABELS: Record<FeasPriority, string> = { p1: "1", p2: "2", p3: "3", p5_high_profile: "5. High Profile" };

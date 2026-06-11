@@ -24,6 +24,14 @@ import {
   TASK_PRIORITIES,
   APPROVAL_STATUSES,
   MASTER_KINDS,
+  ENQUIRY_STATUSES,
+  FEASIBILITY_STATUSES,
+  CHECK_STATES,
+  FEAS_VERDICTS,
+  RECHECK_STATES,
+  INQUIRY_PRIORITIES,
+  INQUIRY_SOURCES,
+  FEAS_PRIORITIES,
 } from "./enums";
 
 /**
@@ -285,6 +293,20 @@ export const clients = pgTable(
     name: text("name").notNull().unique(),
     isActive: boolean("is_active").notNull().default(true),
     sortOrder: integer("sort_order").notNull().default(100),
+    // ── Carbide KYC (Phase 2) — auto-fetch source for inquiries ──
+    customerTypeId: uuid("customer_type_id").references(() => masterOptions.id, { onDelete: "set null" }),
+    industryTypeId: uuid("industry_type_id").references(() => masterOptions.id, { onDelete: "set null" }),
+    productTypeIds: uuid("product_type_ids").array(),  // multi-select checkboxes
+    export: boolean("export"),
+    currency: text("currency"),
+    country: text("country"),
+    state: text("state"),
+    city: text("city"),
+    addressLine1: text("address_line_1"),
+    addressLine2: text("address_line_2"),
+    addressLine3: text("address_line_3"),
+    addressLine4: text("address_line_4"),
+    pinCode: text("pin_code"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -294,6 +316,29 @@ export const clients = pgTable(
   },
   (t) => [index("clients_active_name_idx").on(t.isActive, t.name)],
 );
+
+/**
+ * Contact persons per client (Phase 2 KYC). The `is_primary` row feeds the
+ * Old-client auto-fetch on the inquiry form; an inquiry snapshots the
+ * contact fields rather than referencing this table.
+ */
+export const clientContacts = pgTable(
+  "client_contacts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clientId: uuid("client_id").notNull().references(() => clients.id, { onDelete: "cascade" }),
+    firstName: text("first_name").notNull(),
+    lastName: text("last_name"),
+    contactNo: text("contact_no"),
+    email: text("email"),
+    ccEmails: text("cc_emails"),
+    isPrimary: boolean("is_primary").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("client_contacts_client_idx").on(t.clientId)],
+);
+export type ClientContact = typeof clientContacts.$inferSelect;
 
 /**
  * Subjects — canonical list backing the "Subject" picker on the task forms.
@@ -356,6 +401,100 @@ export const masterOptions = pgTable(
 );
 export type MasterOption = typeof masterOptions.$inferSelect;
 export type NewMasterOption = typeof masterOptions.$inferInsert;
+
+// ── Inquiry module (Phase 2) ────────────────────────────────────
+export const enquiryStatusEnum = pgEnum("enquiry_status", ENQUIRY_STATUSES);
+export const feasibilityStatusEnum = pgEnum("feasibility_status", FEASIBILITY_STATUSES);
+export const checkStateEnum = pgEnum("check_state", CHECK_STATES);
+export const feasVerdictEnum = pgEnum("feas_verdict", FEAS_VERDICTS);
+export const recheckStateEnum = pgEnum("recheck_state", RECHECK_STATES);
+export const inquiryPriorityEnum = pgEnum("inquiry_priority", INQUIRY_PRIORITIES);
+export const inquirySourceEnum = pgEnum("inquiry_source", INQUIRY_SOURCES);
+export const feasPriorityEnum = pgEnum("feas_priority", FEAS_PRIORITIES);
+
+/** SM numbers: SM9579, SM9580, … (observed last manual number SM9578).
+ *  Admin can re-base via setval through the admin settings action. */
+export const smNumberSeq = pgSequence("inquiries_sm_number_seq", { startWith: 9579 });
+
+export const inquiries = pgTable(
+  "inquiries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    smNumber: text("sm_number").notNull().unique()
+      .default(sql`'SM' || nextval('inquiries_sm_number_seq')`),
+    enquiryDate: timestamp("enquiry_date", { withTimezone: true }).notNull().defaultNow(),
+    priority: inquiryPriorityEnum("priority").notNull().default("normal"),
+    source: inquirySourceEnum("source"),
+
+    // client linkage + snapshot (copied at creation; never re-synced)
+    clientId: uuid("client_id").references(() => clients.id, { onDelete: "set null" }),
+    companyName: text("company_name").notNull(),
+    export: boolean("export"),
+    currency: text("currency").notNull().default("INR"),
+    country: text("country").notNull().default("India"),
+    state: text("state"), city: text("city"),
+    addressLine1: text("address_line_1"), addressLine2: text("address_line_2"),
+    addressLine3: text("address_line_3"), addressLine4: text("address_line_4"),
+    pinCode: text("pin_code"),
+    contactFirstName: text("contact_first_name"), contactLastName: text("contact_last_name"),
+    contactNo: text("contact_no"), contactEmail: text("contact_email"), ccEmails: text("cc_emails"),
+
+    // product + checklist
+    productDescription: text("product_description").notNull(),
+    quantityStatus: checkStateEnum("quantity_status"),
+    quantityNos: numeric("quantity_nos"),
+    quantityUom: text("quantity_uom").notNull().default("Nos"),
+    docsGiven: text("docs_given").array(),                       // values from DOC_GIVEN_OPTIONS
+    shapeDimensionCheck: checkStateEnum("shape_dimension_check"),
+    gradeCheck: checkStateEnum("grade_check"),
+    toleranceCheck: checkStateEnum("tolerance_check"),
+    conditionCheck: checkStateEnum("condition_check"),
+    sampleReceived: boolean("sample_received"),
+    shape: text("shape"),                                        // INQUIRY_SHAPES value
+    outerDia: numeric("outer_dia"), innerDia: numeric("inner_dia"),
+    length: numeric("length"), width: numeric("width"), thickness: numeric("thickness"),
+    dimensionNotes: text("dimension_notes"),
+    gradeId: uuid("grade_id").references(() => masterOptions.id, { onDelete: "set null" }),
+    toleranceId: uuid("tolerance_id").references(() => masterOptions.id, { onDelete: "set null" }),
+    conditionId: uuid("condition_id").references(() => masterOptions.id, { onDelete: "set null" }),
+    smFolderLink: text("sm_folder_link"),
+    enquiryNotes: text("enquiry_notes"),
+    assignedSalesPersonId: uuid("assigned_sales_person_id").references(() => employees.id, { onDelete: "set null" }),
+    enquiryStatus: enquiryStatusEnum("enquiry_status").notNull().default("not_started"),
+
+    // ── Primary Feasibility stage ──
+    feasShapeDimensionVerdict: feasVerdictEnum("feas_shape_dimension_verdict").default("to_check"),
+    feasGradeVerdict: feasVerdictEnum("feas_grade_verdict").default("to_check"),
+    feasToleranceVerdict: feasVerdictEnum("feas_tolerance_verdict").default("to_check"),
+    feasConditionVerdict: feasVerdictEnum("feas_condition_verdict").default("to_check"),
+    feasPriority: feasPriorityEnum("feas_priority"),
+    feasExport: boolean("feas_export"),
+    feasSizeDrawingCheck: recheckStateEnum("feas_size_drawing_check").notNull().default("not_done"),
+    feasSizeDrawingNotes: text("feas_size_drawing_notes"),
+    feasToleranceCheck: recheckStateEnum("feas_tolerance_check").notNull().default("not_done"),
+    feasToleranceNotes: text("feas_tolerance_notes"),
+    feasGradeAppCheck: recheckStateEnum("feas_grade_app_check").notNull().default("not_done"),
+    feasGradeAppNotes: text("feas_grade_app_notes"),
+    feasQuantityCheck: recheckStateEnum("feas_quantity_check").notNull().default("not_done"),
+    feasQuantityNotes: text("feas_quantity_notes"),
+    feasConditionCheck: recheckStateEnum("feas_condition_check").notNull().default("not_done"),
+    feasConditionNotes: text("feas_condition_notes"),
+    feasActionsList: text("feas_actions_list"),
+    feasibilityCheckedById: uuid("feasibility_checked_by_id").references(() => employees.id, { onDelete: "set null" }),
+    feasibilityStatus: feasibilityStatusEnum("feasibility_status").notNull().default("not_started"),
+
+    createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("inquiries_status_idx").on(t.enquiryStatus, t.enquiryDate),
+    index("inquiries_company_idx").on(t.companyName),
+    index("inquiries_sales_person_idx").on(t.assignedSalesPersonId),
+  ],
+);
+export type Inquiry = typeof inquiries.$inferSelect;
+export type NewInquiry = typeof inquiries.$inferInsert;
 
 /**
  * Project Management (Manan #23/#24). A self-referential tree:
