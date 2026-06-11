@@ -23,6 +23,7 @@ import {
   EMPLOYEE_ROLES,
   TASK_PRIORITIES,
   APPROVAL_STATUSES,
+  MASTER_KINDS,
 } from "./enums";
 
 /**
@@ -317,6 +318,44 @@ export const subjects = pgTable(
   },
   (t) => [index("subjects_active_name_idx").on(t.isActive, t.name)],
 );
+
+export const masterKindEnum = pgEnum("master_kind", MASTER_KINDS);
+
+/**
+ * Generic admin-managed option lists ("masters" in Carbide language).
+ * One table, six kinds — Customer Type, Industry Type, Product Types,
+ * Internal Grade, Tolerance, Condition. Admin-only additions (sheet
+ * note: "user cannot add on his own").
+ */
+export const masterOptions = pgTable(
+  "master_options",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    kind: masterKindEnum("kind").notNull(),
+    name: text("name").notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(100),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("master_options_kind_name_uidx").on(
+      t.kind,
+      sql`lower(${t.name})`,
+    ),
+    index("master_options_kind_active_sort_idx").on(
+      t.kind,
+      t.isActive,
+      t.sortOrder,
+    ),
+  ],
+);
+export type MasterOption = typeof masterOptions.$inferSelect;
+export type NewMasterOption = typeof masterOptions.$inferInsert;
 
 /**
  * Project Management (Manan #23/#24). A self-referential tree:

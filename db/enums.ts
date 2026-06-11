@@ -224,3 +224,23 @@ export const STATUS_COLOR_TOKENS = [
   "stone",  // light grey (Dont Know)
 ] as const;
 export type StatusColorToken = (typeof STATUS_COLOR_TOKENS)[number];
+
+// ── Masters (Phase 2 — admin-managed option lists) ─────────────
+export const MASTER_KINDS = [
+  "customer_type",
+  "industry_type",
+  "product_type",
+  "internal_grade",
+  "tolerance",
+  "condition",
+] as const;
+export type MasterKind = (typeof MASTER_KINDS)[number];
+
+export const MASTER_KIND_LABELS: Record<MasterKind, string> = {
+  customer_type: "Customer Type",
+  industry_type: "Industry Type",
+  product_type: "Product Types",
+  internal_grade: "Internal Grade",
+  tolerance: "Tolerance",
+  condition: "Condition",
+};

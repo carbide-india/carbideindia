@@ -25,6 +25,7 @@
 // re-running is safe and never clobbers admin edits.
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { MASTER_KINDS, type MasterKind } from "@/db/enums";
 
 async function seedStatusSettings(): Promise<void> {
   await db.execute(sql`
@@ -75,9 +76,82 @@ async function seedOrgSettings(): Promise<void> {
   console.log("org_settings: singleton row (id = 1) ensured");
 }
 
+// Phase 2 masters (sheet from Manan, 2026-06). Internal Grade and Tolerance
+// ship empty — data pending from Alokbhai; admins add rows via the UI.
+const MASTER_SEEDS: Record<MasterKind, string[]> = {
+  customer_type: ["End User", "Traders", "OEMs", "Contract Manufacturer"],
+  industry_type: [
+    "Mining",
+    "Pharma",
+    "Petrochem",
+    "Wire Ind.",
+    "Tool Manufacturers",
+    "Defence",
+    "Others",
+  ],
+  product_type: [
+    "Mining Inserts General",
+    "Mining Inserts Tricone",
+    "Mining Inserts DTH",
+    "Mining Inserts Crossbit",
+    "VSI Flats",
+    "WDP Wire Drawing Pallets",
+    "Cold Heading Pallets",
+    "Bushes General",
+    "Bushes for Guages",
+    "Flats General",
+    "Flats for Guages",
+    "Roller General",
+    "Roller for Flattening Mill",
+    "Roller for Wire Ind.",
+    "Burr Blanks",
+    "Dies Pharma",
+    "Cones for Petroleum",
+    "Chokebins for Petroleum",
+    "Others",
+  ],
+  condition: [
+    "Finished",
+    "OD & Thickness Clean",
+    "OD Ground",
+    "Semi Finished",
+    "Sintered",
+    "Thickness Clean",
+    "Tumble",
+  ],
+  internal_grade: [], // data pending from Alokbhai — admin adds via UI
+  tolerance: [], // data pending from Alokbhai — admin adds via UI
+};
+
+async function seedMasterOptions(): Promise<void> {
+  for (const kind of MASTER_KINDS) {
+    const names = MASTER_SEEDS[kind];
+    for (const [i, name] of names.entries()) {
+      // Conflict target infers the (kind, lower(name)) expression unique
+      // index `master_options_kind_name_uidx` — re-runs are no-ops.
+      await db.execute(sql`
+        INSERT INTO master_options (kind, name, sort_order)
+        VALUES (${kind}::master_kind, ${name}, ${(i + 1) * 10})
+        ON CONFLICT (kind, lower(name)) DO NOTHING
+      `);
+    }
+  }
+  const rows = (await db.execute(sql`
+    SELECT kind::text AS kind, count(*)::int AS n
+    FROM master_options
+    GROUP BY kind
+    ORDER BY kind
+  `)) as unknown as { kind: string; n: number }[];
+  const byKind = new Map(rows.map((r) => [r.kind, r.n]));
+  for (const kind of MASTER_KINDS) {
+    console.log(`master_options[${kind}]: ${byKind.get(kind) ?? 0} rows present`);
+  }
+}
+
 async function main(): Promise<void> {
   await seedStatusSettings();
   await seedOrgSettings();
+  await seedMasterOptions();
   console.log("seed-defaults: done");
 }
 
