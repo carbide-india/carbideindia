@@ -162,10 +162,11 @@ export function InquiryForm({
         return;
       }
       fireToast({
-        message: `Inquiry ${res.smNumber ?? ""} created`.replace("  ", " "),
+        message: res.smNumber ? `Inquiry ${res.smNumber} created` : "Inquiry created",
         type: "success",
       });
-      if (res.id) router.push(`/inquiries/${res.id}` as Route);
+      // The detail route exists now (typedRoutes verifies the template literal).
+      if (res.id) router.push(`/inquiries/${res.id}`);
       else router.push("/inquiries" as Route);
     });
   });
