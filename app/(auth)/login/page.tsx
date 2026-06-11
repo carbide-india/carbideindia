@@ -1,25 +1,22 @@
 import { redirect } from "next/navigation";
 import type { Route } from "next";
+import Image from "next/image";
 import { SignIn, SignOutButton } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
-import { AnimatedBrandBackdrop } from "@/components/auth/animated-brand-backdrop";
 import { getCurrentEmployee } from "@/lib/auth/current";
 
 /**
- * /login — the founder's first impression.
+ * /login — precision-drawing minimalism.
  *
- * Layer stack (back-to-front):
- *   1. Warm-dark canvas with a red radial glow in the lower-right
- *   2. Fine dot grid + SVG noise for atmosphere
- *   3. AnimatedBrandBackdrop — the looping logo + wordmark "video"
- *   4. Clerk's <SignIn /> widget inside the glass plate
+ * Carbide India machines tungsten carbide to micron tolerances; the sign-in
+ * sheet borrows the language of the engineering drawings their shop floor
+ * runs on: warm paper white, a faint millimetre grid, one indigo spine down
+ * the left edge (the "I" block of the logo), and a drafting title-block as
+ * the footer. No glass, no glow — restraint is the statement.
  *
- * Auth itself is Clerk-hosted: the embedded <SignIn /> component handles
- * credentials, forgot-password, and MFA. `routing="hash"` keeps the whole
- * flow on /login (no catch-all segment needed).
- *
- * Guard: signed-in employees are redirected to the dashboard so a
- * bookmarked /login never serves them a stale form.
+ * Auth is Clerk's embedded <SignIn /> (hash routing keeps the whole flow on
+ * /login). Guard: signed-in employees never see this page; a Clerk session
+ * without an active employee row gets a dead-end notice with sign-out.
  */
 interface PageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -36,132 +33,264 @@ export default async function LoginPage({ searchParams }: PageProps) {
   if (me && me.isActive) {
     redirect("/" as Route);
   }
-
-  // Signed into Clerk but no usable employee row (unknown email, or the
-  // account was deactivated). Rendering <SignIn /> here would bounce the
-  // active session straight back to "/" and loop — show a dead-end notice
-  // with a sign-out escape hatch instead.
   const orphanedSession = Boolean(userId) && (!me || !me.isActive);
 
   const sp = await searchParams;
   const reason = firstString(sp["reason"]);
+  const year = new Date().getFullYear();
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto overflow-x-hidden">
-      {/* ── Layer 1 — warm-dark canvas with indigo radial ── */}
+    <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background: "#FBFAF7" }}>
+      {/* Staggered reveal — one orchestrated load, nothing after. */}
+      <style>{`
+        @keyframes loginRise {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: none; }
+        }
+        .login-rise { opacity: 0; animation: loginRise 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+        @media (prefers-reduced-motion: reduce) {
+          .login-rise { animation: none; opacity: 1; }
+        }
+      `}</style>
+
+      {/* Millimetre drafting grid — barely there. */}
       <div
         aria-hidden
-        className="fixed inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 90% 70% at 75% 95%, rgba(63, 63, 148, 0.55), transparent 55%), radial-gradient(ellipse 60% 60% at 20% 10%, rgba(47, 47, 111, 0.30), transparent 60%), linear-gradient(135deg, #0A0A12 0%, #10102A 50%, #07070E 100%)",
-        }}
-      />
-      {/* Layer 2a — fine dot grid */}
-      <div
-        aria-hidden
-        className="fixed inset-0 opacity-[0.12]"
+        className="pointer-events-none fixed inset-0"
         style={{
           backgroundImage:
-            "radial-gradient(circle, rgba(255,255,255,0.4) 1px, transparent 1px)",
-          backgroundSize: "32px 32px",
-        }}
-      />
-      {/* Layer 2b — subtle film grain */}
-      <div
-        aria-hidden
-        className="fixed inset-0 opacity-[0.06] mix-blend-overlay"
-        style={{
-          backgroundImage:
-            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><filter id='n'><feTurbulence baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")",
+            "linear-gradient(rgba(63,63,148,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(63,63,148,0.045) 1px, transparent 1px), linear-gradient(rgba(63,63,148,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(63,63,148,0.025) 1px, transparent 1px)",
+          backgroundSize: "80px 80px, 80px 80px, 16px 16px, 16px 16px",
         }}
       />
 
-      {/* ── Layer 3 — animated brand backdrop ── */}
-      <AnimatedBrandBackdrop />
-
-      {/* ── Layer 4 — the glass plate carrying Clerk's SignIn ── */}
-      <main className="relative z-20 flex min-h-full w-full items-center justify-center px-6 py-16 max-md:px-4 max-md:py-10">
-        <div
-          className="w-fit max-w-full p-8 max-md:p-4"
-          style={{
-            background: "rgba(255, 255, 255, 0.06)",
-            backdropFilter: "blur(28px) saturate(180%)",
-            WebkitBackdropFilter: "blur(28px) saturate(180%)",
-            border: "1px solid rgba(255, 255, 255, 0.10)",
-            borderRadius: 24,
-            boxShadow:
-              "0 40px 100px -20px rgba(0, 0, 0, 0.60), 0 1px 0 rgba(255, 255, 255, 0.10) inset, 0 -28px 80px -40px rgba(63, 63, 148, 0.40) inset",
-          }}
-        >
-          {reason === "idle" && (
-            <div
-              role="status"
-              className="mb-5 rounded-lg px-4 py-3"
-              style={{
-                background: "rgba(245, 158, 11, 0.10)",
-                border: "1px solid rgba(245, 158, 11, 0.40)",
-                color: "#FDE68A",
-                fontSize: 13,
-                lineHeight: 1.5,
-              }}
-            >
-              You were signed out after a period of inactivity. Please sign in
-              to continue.
-            </div>
-          )}
-          {orphanedSession ? (
-            <div
-              className="max-w-md text-center"
-              style={{ color: "rgba(255,255,255,0.85)", fontSize: 14, lineHeight: 1.6 }}
-            >
-              <h1 className="mb-2 text-lg font-semibold text-white">
-                Account not provisioned
-              </h1>
-              <p className="mb-5" style={{ color: "rgba(255,255,255,0.65)" }}>
-                You're signed in, but this account isn't linked to an active
-                employee. Contact your administrator, or sign out and try a
-                different account.
-              </p>
-              <SignOutButton redirectUrl="/login">
-                <button
-                  type="button"
-                  className="rounded-xl px-5 py-2.5 text-sm font-semibold text-white"
-                  style={{ background: "#3F3F94" }}
-                >
-                  Sign out
-                </button>
-              </SignOutButton>
-            </div>
-          ) : (
-            <SignIn
-              routing="hash"
-              forceRedirectUrl="/"
-              appearance={{
-                variables: {
-                  colorPrimary: "#3F3F94",
-                  borderRadius: "0.75rem",
-                },
-              }}
-            />
-          )}
-        </div>
-      </main>
-
-      {/* Bottom signature */}
+      {/* Indigo spine — the "I" of the logo, holding the left edge. */}
       <div
         aria-hidden
-        className="fixed bottom-5 left-0 right-0 z-10 text-center pointer-events-none"
+        className="fixed left-0 top-0 bottom-0 w-[10px] max-md:h-[10px] max-md:w-full max-md:bottom-auto"
+        style={{ background: "#3F3F94" }}
+      />
+      <div
+        aria-hidden
+        className="fixed left-[34px] top-1/2 -translate-y-1/2 max-lg:hidden select-none"
         style={{
-          fontSize: 10,
-          letterSpacing: "0.24em",
-          color: "rgba(255,255,255,0.30)",
-          fontFamily: "var(--font-mono-display)",
+          writingMode: "vertical-rl",
+          transform: "translateY(-50%) rotate(180deg)",
+          fontSize: 10.5,
+          letterSpacing: "0.42em",
           fontWeight: 600,
+          color: "rgba(63,63,148,0.38)",
+          textTransform: "uppercase",
+          fontFamily: "var(--font-mono-display, ui-monospace, monospace)",
         }}
       >
-        © {new Date().getFullYear()} CARBIDE INDIA · CONFIDENTIAL
+        Your Tungsten Carbide &amp; Tungsten Copper Partners
       </div>
+
+      <main className="relative z-10 mx-auto flex min-h-full w-full max-w-[1100px] flex-col px-20 max-lg:px-12 max-md:px-6">
+        {/* ── Masthead ─────────────────────────────────────────────── */}
+        <header className="login-rise flex items-center justify-between pt-12 max-md:pt-16" style={{ animationDelay: "0.05s" }}>
+          <Image
+            src="/brand/logo.png"
+            alt="Carbide India"
+            width={132}
+            height={72}
+            priority
+            style={{ height: "auto" }}
+          />
+          <span
+            className="max-md:hidden"
+            style={{
+              fontSize: 10.5,
+              letterSpacing: "0.30em",
+              fontWeight: 600,
+              color: "#A8A29E",
+              textTransform: "uppercase",
+              fontFamily: "var(--font-mono-display, ui-monospace, monospace)",
+            }}
+          >
+            Work Management System
+          </span>
+        </header>
+
+        {/* ── Sheet body ───────────────────────────────────────────── */}
+        <section className="flex flex-1 items-center py-14 max-md:py-10">
+          <div className="grid w-full grid-cols-[1fr_minmax(360px,420px)] items-center gap-20 max-lg:grid-cols-1 max-lg:gap-10">
+            {/* Statement column */}
+            <div>
+              <p
+                className="login-rise"
+                style={{
+                  animationDelay: "0.15s",
+                  fontSize: 11,
+                  letterSpacing: "0.34em",
+                  fontWeight: 700,
+                  color: "#D32F2F",
+                  textTransform: "uppercase",
+                  fontFamily: "var(--font-mono-display, ui-monospace, monospace)",
+                }}
+              >
+                Yogeshwar Engineering Pvt Ltd
+              </p>
+              <h1
+                className="login-rise mt-5 text-ink-strong"
+                style={{
+                  animationDelay: "0.25s",
+                  fontFamily: "var(--font-serif)",
+                  fontStyle: "italic",
+                  fontWeight: 500,
+                  fontSize: "clamp(34px, 4.5vw, 56px)",
+                  lineHeight: 1.06,
+                  letterSpacing: "-0.02em",
+                  color: "#1C1917",
+                }}
+              >
+                Precision begins
+                <br />
+                with the first entry.
+              </h1>
+              <p
+                className="login-rise mt-6 max-w-[44ch]"
+                style={{
+                  animationDelay: "0.35s",
+                  fontSize: 15,
+                  lineHeight: 1.65,
+                  color: "#78716C",
+                }}
+              >
+                Enquiries, feasibility, costing and quotations — every SM
+                number, tracked from first call to sales order.
+              </p>
+              {/* Drawing-style dimension rule */}
+              <div className="login-rise mt-10 flex items-center gap-0" style={{ animationDelay: "0.45s" }} aria-hidden>
+                <span style={{ width: 1, height: 9, background: "#3F3F94" }} />
+                <span style={{ width: 64, height: 1, background: "#3F3F94" }} />
+                <span style={{ width: 1, height: 9, background: "#3F3F94" }} />
+                <span
+                  style={{
+                    marginLeft: 12,
+                    fontSize: 10,
+                    letterSpacing: "0.18em",
+                    color: "#3F3F94",
+                    fontFamily: "var(--font-mono-display, ui-monospace, monospace)",
+                    fontWeight: 600,
+                  }}
+                >
+                  EST. NASHIK · 25 MT / YR
+                </span>
+              </div>
+            </div>
+
+            {/* Sign-in column */}
+            <div className="login-rise w-full" style={{ animationDelay: "0.30s" }}>
+              {reason === "idle" && (
+                <div
+                  role="status"
+                  className="mb-4 rounded-lg px-4 py-3"
+                  style={{
+                    background: "rgba(245, 158, 11, 0.08)",
+                    border: "1px solid rgba(180, 120, 10, 0.35)",
+                    color: "#92600A",
+                    fontSize: 13,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  You were signed out after a period of inactivity. Please sign
+                  in to continue.
+                </div>
+              )}
+              {orphanedSession ? (
+                <div
+                  className="rounded-2xl p-8 text-center"
+                  style={{ background: "#FFFFFF", border: "1px solid #E7E2DA", boxShadow: "0 1px 2px rgba(28,25,23,0.04)" }}
+                >
+                  <h2 className="mb-2 text-[17px] font-semibold" style={{ color: "#1C1917" }}>
+                    Account not provisioned
+                  </h2>
+                  <p className="mb-6 text-[14px] leading-relaxed" style={{ color: "#78716C" }}>
+                    You&apos;re signed in, but this account isn&apos;t linked
+                    to an active employee. Contact your administrator, or sign
+                    out and try a different account.
+                  </p>
+                  <SignOutButton redirectUrl="/login">
+                    <button
+                      type="button"
+                      className="rounded-lg px-5 py-2.5 text-sm font-semibold text-white"
+                      style={{ background: "#3F3F94" }}
+                    >
+                      Sign out
+                    </button>
+                  </SignOutButton>
+                </div>
+              ) : (
+                <SignIn
+                  routing="hash"
+                  forceRedirectUrl="/"
+                  appearance={{
+                    variables: {
+                      colorPrimary: "#3F3F94",
+                      colorText: "#1C1917",
+                      colorTextSecondary: "#78716C",
+                      colorBackground: "#FFFFFF",
+                      borderRadius: "0.625rem",
+                    },
+                    elements: {
+                      cardBox: {
+                        boxShadow: "0 1px 2px rgba(28,25,23,0.05)",
+                        border: "1px solid #E7E2DA",
+                        width: "100%",
+                      },
+                      card: { boxShadow: "none" },
+                      formButtonPrimary: {
+                        background: "#3F3F94",
+                        boxShadow: "none",
+                        textTransform: "none",
+                        fontSize: "14px",
+                        "&:hover": { background: "#2F2F6F" },
+                      },
+                    },
+                  }}
+                />
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Title block — like the corner of a technical drawing ── */}
+        <footer
+          className="login-rise mb-10 grid grid-cols-3 max-md:grid-cols-1"
+          style={{
+            animationDelay: "0.55s",
+            border: "1px solid #E7E2DA",
+            background: "#FFFFFF",
+            fontFamily: "var(--font-mono-display, ui-monospace, monospace)",
+          }}
+        >
+          {(
+            [
+              ["Company", "Carbide India"],
+              ["Works", "W-150(A) MIDC Ambad, Nashik"],
+              ["Sheet", `WMS · ${year} · Confidential`],
+            ] as const
+          ).map(([k, v], i) => (
+            <div
+              key={k}
+              className="px-5 py-3 max-md:border-b max-md:last:border-b-0"
+              style={{
+                borderLeft: i > 0 ? "1px solid #E7E2DA" : undefined,
+                borderColor: "#E7E2DA",
+              }}
+            >
+              <div style={{ fontSize: 9, letterSpacing: "0.26em", color: "#A8A29E", textTransform: "uppercase", fontWeight: 600 }}>
+                {k}
+              </div>
+              <div style={{ fontSize: 12, color: "#44403C", marginTop: 3, fontWeight: 600 }}>
+                {v}
+              </div>
+            </div>
+          ))}
+        </footer>
+      </main>
     </div>
   );
 }
