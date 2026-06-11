@@ -1,32 +1,32 @@
 const RED = "#D32F2F";
 const INDIGO = "#3F3F94";
-const SILVER = "#C9CBD2";
-const SILVER_LIGHT = "#DDDEE3";
+const SILVER = "#CDD0D6";
+const SILVER_LIGHT = "#DEE0E5";
 
 /**
- * The diamond checker cascade from Carbide India's business card — rotated
- * squares in silver / red / indigo stepping down from the top-left corner,
- * with the tagline running diagonally beside them, exactly like the print
- * collateral. Pure decoration (aria-hidden), deterministic layout.
+ * The diamond checker cascade from Carbide India's business card — a dense
+ * field of rotated squares in silver with red / indigo accents stepping down
+ * from the top-left corner, the tagline running diagonally beside it.
+ * Pure decoration (aria-hidden), deterministic layout.
  *
- * Lattice coordinates: each diamond is a square rotated 45°, centred at
- * (col·S, row·S) where S is half the diagonal — so odd/even col+row parity
- * produces the touching-corners checker of the card.
+ * Lattice: diamonds centred at (col·S, row·S); same-parity col+row produces
+ * the touching-corners checker of the printed card.
  */
-const S = 44; // half-diagonal spacing
-const D = 58; // diamond diagonal (slightly smaller than 2·S → thin gaps)
+const S = 46; // half-diagonal spacing
+const D = 64; // diamond diagonal
 
-// (col, row, color) in lattice units — eyeballed from the card: a dense
-// silver field with red/indigo accents, thinning toward the tail.
+// (col, row, color) — dense upper-left triangle, thinning to a tail,
+// accents placed like the card render: reds at the top-right edge, mid
+// and lower tail; indigos mid-left.
 const DIAMONDS: ReadonlyArray<readonly [number, number, string]> = [
-  [1, 1, RED], [3, 1, SILVER], [5, 1, SILVER_LIGHT], [7, 1, RED],
-  [0, 2, INDIGO], [2, 2, SILVER], [4, 2, SILVER], [6, 2, SILVER_LIGHT],
-  [1, 3, SILVER], [3, 3, SILVER_LIGHT], [5, 3, RED],
-  [2, 4, SILVER_LIGHT], [4, 4, INDIGO], [6, 4, SILVER],
-  [1, 5, INDIGO], [3, 5, SILVER], [5, 5, SILVER_LIGHT], [7, 5, RED],
-  [2, 6, SILVER], [4, 6, SILVER_LIGHT],
-  [3, 7, SILVER], [5, 7, SILVER],
-  [4, 8, SILVER_LIGHT],
+  [1, 0, SILVER_LIGHT], [3, 0, SILVER], [5, 0, RED],
+  [0, 1, SILVER], [2, 1, SILVER_LIGHT], [4, 1, SILVER],
+  [1, 2, SILVER], [3, 2, RED], [5, 2, SILVER_LIGHT],
+  [0, 3, INDIGO], [2, 3, SILVER_LIGHT], [4, 3, SILVER],
+  [1, 4, SILVER_LIGHT], [3, 4, INDIGO], [5, 4, RED],
+  [0, 5, SILVER], [2, 5, SILVER], [4, 5, SILVER_LIGHT],
+  [1, 6, SILVER_LIGHT], [3, 6, SILVER],
+  [2, 7, SILVER],
 ];
 
 export function DiamondCascade({ className }: { className?: string }) {
@@ -34,14 +34,14 @@ export function DiamondCascade({ className }: { className?: string }) {
     <svg
       aria-hidden
       className={className}
-      viewBox="0 0 620 460"
-      width="620"
-      height="460"
+      viewBox="0 0 560 400"
+      width="560"
+      height="400"
       fill="none"
     >
       {DIAMONDS.map(([c, r, color], i) => {
-        const cx = c * S;
-        const cy = r * S;
+        const cx = c * S + 8;
+        const cy = r * S + 8;
         const h = D / 2;
         return (
           <path
@@ -53,18 +53,18 @@ export function DiamondCascade({ className }: { className?: string }) {
       })}
       {/* Diagonal tagline, indigo with red "Partners" — as printed. */}
       <text
-        transform="translate(360 88) rotate(45)"
+        transform="translate(322 56) rotate(45)"
         style={{
           fontFamily: "var(--font-display), var(--font-sans), sans-serif",
-          fontSize: 21,
+          fontSize: 24,
           fontWeight: 700,
-          letterSpacing: "0.01em",
+          letterSpacing: "0.005em",
         }}
       >
         <tspan x="0" dy="0" fill={INDIGO}>Your Tungsten</tspan>
-        <tspan x="0" dy="27" fill={INDIGO}>Carbide &amp;</tspan>
-        <tspan x="0" dy="27" fill={INDIGO}>Tungsten Copper</tspan>
-        <tspan x="0" dy="27" fill={RED}>Partners</tspan>
+        <tspan x="0" dy="30" fill={INDIGO}>Carbide &amp;</tspan>
+        <tspan x="0" dy="30" fill={INDIGO}>Tungsten Copper</tspan>
+        <tspan x="0" dy="30" fill={RED}>Partners</tspan>
       </text>
     </svg>
   );

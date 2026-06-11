@@ -277,15 +277,18 @@ export function SignInCard() {
             <button
               type="submit"
               disabled={pending || !signIn}
-              className="group flex h-12 w-full cursor-pointer items-center justify-between rounded-lg px-5 text-[12px] text-white transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60"
+              className="group relative flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-lg px-5 text-[12px] text-white transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60"
               style={{ ...mono, background: NAVY }}
             >
+              {/* Label dead-centre; arrow pinned to the right edge. */}
               <span>{pending ? "Signing in…" : "Sign in"}</span>
-              {pending ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <ArrowRight size={16} className="transition-transform duration-200 group-hover:translate-x-1" />
-              )}
+              <span className="absolute right-5 top-1/2 -translate-y-1/2 inline-flex">
+                {pending ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <ArrowRight size={16} className="transition-transform duration-200 group-hover:translate-x-1" />
+                )}
+              </span>
             </button>
 
             <p className="text-center text-[10.5px]" style={{ ...mono, color: "#78716C" }}>
@@ -327,7 +330,7 @@ export function SignInCard() {
             <button
               type="submit"
               disabled={pending || !signIn}
-              className="flex h-12 w-full cursor-pointer items-center justify-between rounded-lg px-5 text-[12px] text-white transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-lg px-5 text-[12px] text-white transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60"
               style={{ ...mono, background: NAVY }}
             >
               <span>{pending ? "Sending…" : "Send reset code"}</span>
@@ -388,7 +391,7 @@ export function SignInCard() {
             <button
               type="submit"
               disabled={pending || !signIn}
-              className="flex h-12 w-full cursor-pointer items-center justify-between rounded-lg px-5 text-[12px] text-white transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-lg px-5 text-[12px] text-white transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60"
               style={{ ...mono, background: NAVY }}
             >
               <span>{pending ? "Resetting…" : "Reset & sign in"}</span>

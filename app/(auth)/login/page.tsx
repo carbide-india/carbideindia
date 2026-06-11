@@ -90,7 +90,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
 
       {/* The business-card diamond cascade, anchored to the top-left corner
           like the print collateral. Hidden on small screens. */}
-      <div className="login-rise pointer-events-none fixed -left-9 -top-10 origin-top-left scale-[0.78] max-lg:hidden">
+      <div className="login-rise pointer-events-none fixed -left-8 -top-8 max-lg:hidden">
         <DiamondCascade />
       </div>
 
@@ -113,10 +113,10 @@ export default async function LoginPage({ searchParams }: PageProps) {
 
         {/* ── Sheet body ─────────────────────────────────────────── */}
         <section className="grid min-h-0 grid-cols-[1fr_minmax(380px,440px)] items-center gap-16 py-6 max-lg:grid-cols-1 max-lg:gap-10 max-lg:py-8">
-          {/* Statement column — headline clears the cascade via the body's
-              vertical centring; logo sits between headline and paragraph
-              on small screens, beside the spec strip on large. */}
-          <div className="min-w-0 lg:pt-24">
+          {/* Statement column — the headline tucks in just under the diamond
+              field, exactly like the reference render. Logo shows here only
+              on small screens (it sits above the card on lg+). */}
+          <div className="min-w-0 lg:pt-44">
             <Image
               src="/brand/logo.png"
               alt="Carbide India — Your Tungsten Carbide & Tungsten Copper Partners"
@@ -132,7 +132,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
                 animationDelay: "0.18s",
                 fontFamily: "var(--font-display), var(--font-sans), sans-serif",
                 fontWeight: 800,
-                fontSize: "clamp(40px, 4.8vw, 68px)",
+                fontSize: "clamp(38px, 4.4vw, 60px)",
                 lineHeight: 1.02,
                 letterSpacing: "-0.035em",
                 color: NAVY,
@@ -144,8 +144,8 @@ export default async function LoginPage({ searchParams }: PageProps) {
               <span style={{ color: NAVY }}>.</span>
             </h1>
             <p
-              className="login-rise mt-5 max-w-[52ch]"
-              style={{ animationDelay: "0.28s", fontSize: 15.5, lineHeight: 1.65, color: "#57534E" }}
+              className="login-rise mt-4 max-w-[52ch]"
+              style={{ animationDelay: "0.28s", fontSize: 15.5, lineHeight: 1.6, color: "#57534E" }}
             >
               Enquiries, feasibility, costing and quotations — every SM number,
               tracked from first call to sales order. Built for the shop floor,
@@ -154,7 +154,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
 
             {/* Spec strip */}
             <div
-              className="login-rise mt-8 grid max-w-[560px] grid-cols-3 gap-6 py-3.5"
+              className="login-rise mt-6 grid max-w-[540px] grid-cols-3 gap-6 py-3"
               style={{
                 animationDelay: "0.38s",
                 borderTop: "1px solid rgba(30,36,71,0.25)",
@@ -186,8 +186,9 @@ export default async function LoginPage({ searchParams }: PageProps) {
               ))}
             </div>
 
-            {/* Dimensioned-circle motif */}
-            <div className="login-rise mt-9 max-w-[560px] max-lg:hidden" style={{ animationDelay: "0.48s" }} aria-hidden>
+            {/* Dimensioned-circle motif — hidden when the viewport is short
+                so it can never crowd the title block. */}
+            <div className="login-rise mt-6 hidden max-w-[540px] [@media(min-width:1024px)_and_(min-height:820px)]:block" style={{ animationDelay: "0.48s" }} aria-hidden>
               <svg viewBox="0 0 560 110" width="100%" height="auto" fill="none">
                 {/* dimension line with end ticks + arrow stops */}
                 <line x1="8" y1="50" x2="552" y2="50" stroke={NAVY} strokeOpacity="0.45" strokeWidth="1" />
@@ -210,8 +211,18 @@ export default async function LoginPage({ searchParams }: PageProps) {
             </div>
           </div>
 
-          {/* Sign-in column */}
+          {/* Sign-in column — logo sits above the card, clearly visible. */}
           <div className="login-rise w-full" style={{ animationDelay: "0.25s" }}>
+            <div className="mb-5 flex justify-center max-lg:hidden">
+              <Image
+                src="/brand/logo.png"
+                alt="Carbide India"
+                width={168}
+                height={91}
+                priority
+                style={{ height: "auto" }}
+              />
+            </div>
             <div className="mb-3 hidden items-center justify-between max-lg:flex">
               <MonoLabel color={NAVY}>DWG-002 · Sign-in</MonoLabel>
               <span className="inline-flex items-center gap-2">
@@ -268,20 +279,8 @@ export default async function LoginPage({ searchParams }: PageProps) {
 
         {/* ── Sheet footer row ───────────────────────────────────── */}
         <div className="login-rise grid grid-cols-[1fr_minmax(380px,440px)] items-center gap-16 max-lg:grid-cols-1 max-lg:gap-2 max-md:pb-6" style={{ animationDelay: "0.55s" }}>
-          {/* Like the card: logo bottom-left beside the works address. */}
           <div className="flex items-center justify-between gap-6">
-            <span className="flex items-center gap-5 min-w-0">
-              <Image
-                src="/brand/logo.png"
-                alt=""
-                aria-hidden
-                width={96}
-                height={52}
-                className="max-lg:hidden shrink-0"
-                style={{ height: "auto" }}
-              />
-              <MonoLabel>W-150(A) MIDC Ambad, Nashik</MonoLabel>
-            </span>
+            <MonoLabel>W-150(A) MIDC Ambad, Nashik</MonoLabel>
             <MonoLabel>Scale 1:1</MonoLabel>
           </div>
           <div className="flex items-center justify-between">
