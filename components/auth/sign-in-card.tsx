@@ -60,16 +60,16 @@ export function SignInCard() {
         setError(clerkErrorMessage(pwError));
         return;
       }
-      if (signIn.status === "complete") {
-        const { error: finError } = await signIn.finalize();
-        if (finError) {
-          setError(clerkErrorMessage(finError));
-          return;
-        }
-        router.push("/");
+      // password() succeeded — activate the session. (Don't gate on
+      // signIn.status: the signal snapshot can lag the await.) If the
+      // instance genuinely needs another factor, finalize() reports it.
+      const { error: finError } = await signIn.finalize();
+      if (finError) {
+        setError(clerkErrorMessage(finError));
         return;
       }
-      setError("Additional verification is required — contact your administrator.");
+      router.push("/");
+      router.refresh();
     } catch (err) {
       setError(clerkErrorMessage(err));
     } finally {
