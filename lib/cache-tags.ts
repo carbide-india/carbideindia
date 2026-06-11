@@ -17,6 +17,8 @@ export const CACHE_TAGS = {
   clients: "clients",
   /** Project tree nodes (Project / Milestone / Result / Action / Sub-Action). */
   projectNodes: "project-nodes",
+  /** Admin-managed master options (customer/industry/product types, grades, …). */
+  masters: "masters",
 } as const;
 
 export type CacheTag = (typeof CACHE_TAGS)[keyof typeof CACHE_TAGS];
