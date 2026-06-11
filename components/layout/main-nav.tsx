@@ -1,6 +1,6 @@
 "use client";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ListTodo, CalendarDays, FolderKanban, SquareKanban, Target, CalendarCheck } from "lucide-react";
+import { LayoutDashboard, ListTodo, CalendarDays, FolderKanban, SquareKanban, Target, CalendarCheck, FileSearch } from "lucide-react";
 import type { Route } from "next";
 import { MainNavPill } from "./main-nav-pill";
 
@@ -49,6 +49,12 @@ export function MainNav({ activeTasks, isAdmin, variant }: Props) {
           !pathname.startsWith("/tasks/kanban")
         }
         count={activeTasks}
+        variant={variant}      />
+      <MainNavPill
+        href={"/inquiries" as Route}
+        label="Inquiries"
+        Icon={FileSearch}
+        active={isActive("/inquiries")}
         variant={variant}      />
       {/* Kanban is an admin-only board — hidden from doers. */}
       {isAdmin && (
