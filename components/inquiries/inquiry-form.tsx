@@ -18,6 +18,8 @@ import { CreateInquirySchema } from "@/lib/validators/inquiry";
 import { createInquiry } from "@/app/(app)/inquiries/actions";
 import { fireToast } from "@/lib/toast";
 import { Select } from "@/components/ui/select";
+import { INDIA_STATES, citiesForState } from "@/lib/data/india-states-cities";
+import { SearchableSelect } from "./searchable-select";
 import { Field, SectionCard } from "./form-field";
 import { ClientAutofillSection } from "./client-autofill";
 import { ChecklistSection } from "./checklist-section";
@@ -72,6 +74,8 @@ export function InquiryForm({
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
   const [serverError, setServerError] = React.useState<string | null>(null);
+  // "Select a state first" guard for the dependent City dropdown.
+  const [cityGateError, setCityGateError] = React.useState(false);
 
   const {
     register,
@@ -162,7 +166,7 @@ export function InquiryForm({
         return;
       }
       fireToast({
-        message: res.smNumber ? `Inquiry ${res.smNumber} created` : "Inquiry created",
+        message: res.smNumber ? `Enquiry ${res.smNumber} created` : "Enquiry created",
         type: "success",
       });
       // The detail route exists now (typedRoutes verifies the template literal).
@@ -266,22 +270,87 @@ export function InquiryForm({
         </div>
 
         <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-          <Field id="inq-state" label="State">
-            <input
-              id="inq-state"
-              type="text"
-              className="nt-input"
-              {...register("state")}
-            />
-          </Field>
-          <Field id="inq-city" label="City">
-            <input
-              id="inq-city"
-              type="text"
-              className="nt-input"
-              {...register("city")}
-            />
-          </Field>
+          {watch("country") === "India" ? (
+            <>
+              <Field id="inq-state" label="State">
+                <Controller
+                  control={control}
+                  name="state"
+                  render={({ field }) => (
+                    <SearchableSelect
+                      id="inq-state"
+                      value={field.value || undefined}
+                      onChange={(v) => {
+                        field.onChange(v ?? "");
+                        // State changed → the old city no longer applies.
+                        setValue("city", "");
+                        if (v) setCityGateError(false);
+                      }}
+                      options={INDIA_STATES}
+                      placeholder="Select state…"
+                      searchPlaceholder="Search states…"
+                    />
+                  )}
+                />
+              </Field>
+              <Field id="inq-city" label="City">
+                <Controller
+                  control={control}
+                  name="city"
+                  render={({ field }) => {
+                    const selectedState = watch("state") ?? "";
+                    return (
+                      <>
+                        <SearchableSelect
+                          id="inq-city"
+                          value={field.value || undefined}
+                          onChange={(v) => field.onChange(v ?? "")}
+                          options={citiesForState(selectedState)}
+                          placeholder="Select city…"
+                          searchPlaceholder="Search cities…"
+                          emptyText="No cities match."
+                          allowCustom
+                          disabled={!selectedState}
+                          invalid={cityGateError && !selectedState}
+                          onDisabledClick={() => {
+                            setCityGateError(true);
+                            fireToast({
+                              message: "Select a state first — the city list depends on it.",
+                              type: "error",
+                            });
+                          }}
+                        />
+                        {cityGateError && !selectedState && (
+                          <p className="text-[12.5px] font-semibold" style={{ color: "#D32F2F" }}>
+                            Select a state first.
+                          </p>
+                        )}
+                      </>
+                    );
+                  }}
+                />
+              </Field>
+            </>
+          ) : (
+            <>
+              <Field id="inq-state" label="State / Province">
+                <input
+                  id="inq-state"
+                  type="text"
+                  className="nt-input"
+                  {...register("state")}
+                />
+              </Field>
+              <Field id="inq-city" label="City">
+                <input
+                  id="inq-city"
+                  type="text"
+                  className="nt-input"
+                  {...register("city")}
+                />
+              </Field>
+            </>
+          )}
           <Field id="inq-pin" label="Pin Code">
             <input
               id="inq-pin"
@@ -500,7 +569,7 @@ export function InquiryForm({
             letterSpacing: "0.005em",
           }}
         >
-          {pending ? "Creating…" : "Create Inquiry"}
+          {pending ? "Creating…" : "Create Enquiry"}
         </button>
       </div>
     </form>

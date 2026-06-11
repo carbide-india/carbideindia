@@ -17,12 +17,12 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  if (!UUID_RE.test(id)) return { title: "Inquiry — Carbide India" };
+  if (!UUID_RE.test(id)) return { title: "Enquiry — Carbide India" };
   const inquiry = await getInquiryById(id);
   return {
     title: inquiry
       ? `${inquiry.smNumber} · ${inquiry.companyName} — Carbide India`
-      : "Inquiry — Carbide India",
+      : "Enquiry — Carbide India",
   };
 }
 

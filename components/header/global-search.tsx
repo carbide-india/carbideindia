@@ -124,7 +124,7 @@ export function GlobalSearch() {
                   className="px-3 pt-2 pb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-subtle"
                   aria-hidden
                 >
-                  Inquiries
+                  Enquiries
                 </div>
               )}
               {inquiryResults.map((r) => {

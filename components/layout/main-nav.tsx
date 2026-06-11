@@ -52,7 +52,7 @@ export function MainNav({ activeTasks, isAdmin, variant }: Props) {
         variant={variant}      />
       <MainNavPill
         href={"/inquiries" as Route}
-        label="Inquiries"
+        label="Enquiries"
         Icon={FileSearch}
         active={isActive("/inquiries")}
         variant={variant}      />

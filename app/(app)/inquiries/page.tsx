@@ -52,7 +52,7 @@ export default async function InquiriesPage({ searchParams }: PageProps) {
         <header className="mb-8 flex items-end justify-between gap-6 flex-wrap">
           <div>
             <div className="text-[10px] uppercase tracking-[0.18em] text-ink-subtle font-bold">
-              Sales · Inquiry Register
+              Sales · Enquiry Register
             </div>
             <h1
               className="mt-1 text-ink-strong"
@@ -65,7 +65,7 @@ export default async function InquiriesPage({ searchParams }: PageProps) {
                 letterSpacing: "-0.02em",
               }}
             >
-              Inquiries
+              Enquiries
             </h1>
             <p className="text-body-lg text-ink-subtle mt-2 tabular-nums">
               {rows.length} {rows.length === 1 ? "inquiry" : "inquiries"} — one
@@ -82,7 +82,7 @@ export default async function InquiriesPage({ searchParams }: PageProps) {
             }}
           >
             <Plus size={16} strokeWidth={2.4} />
-            New Inquiry
+            New Enquiry
           </Link>
         </header>
         <InquiryTable

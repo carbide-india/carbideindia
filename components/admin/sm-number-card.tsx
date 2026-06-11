@@ -30,7 +30,7 @@ export function SmNumberCard({ nextNumber }: Props) {
     startTransition(async () => {
       const res = await setSmNextNumber(parsed);
       if (res.ok) {
-        fireToast({ message: `Next inquiry will be SM${parsed}.` });
+        fireToast({ message: `Next enquiry will be SM${parsed}.` });
         router.refresh();
       } else {
         fireToast({ message: res.error, type: "error" });
@@ -50,8 +50,8 @@ export function SmNumberCard({ nextNumber }: Props) {
         </h2>
       </div>
       <p className="text-[14px] text-ink-muted mb-4">
-        Every inquiry is assigned the next SM number automatically. The next
-        inquiry will be{" "}
+        Every enquiry is assigned the next SM number automatically. The next
+        enquiry will be{" "}
         <span className="font-mono font-bold text-ink-strong">SM{nextNumber}</span>.
       </p>
       <div className="flex items-end gap-3">

@@ -84,7 +84,7 @@ export function InquiryTable({ rows, employees, activeFilters }: Props) {
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Search company or SM number…"
-            aria-label="Search inquiries"
+            aria-label="Search enquiries"
             className="w-full rounded-chip border border-hairline bg-surface-card pl-9 pr-3.5 py-2 text-[14px] text-ink-strong placeholder:text-ink-subtle"
             style={{ boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)" }}
           />
@@ -232,8 +232,8 @@ function EmptyState({
         style={{ fontStyle: "italic", fontSize: 22, letterSpacing: "-0.015em" }}
       >
         {filtered
-          ? "No inquiries match these filters."
-          : "No inquiries yet — create the first one."}
+          ? "No enquiries match these filters."
+          : "No enquiries yet — create the first one."}
       </p>
       <p
         className="text-[14px] text-ink-subtle mt-2 max-w-sm mx-auto"
@@ -252,7 +252,7 @@ function EmptyState({
             href={NEW_INQUIRY_ROUTE}
             className="font-semibold underline underline-offset-2 hover:text-ink-strong transition-colors"
           >
-            New Inquiry
+            New Enquiry
           </Link>
         )}
       </p>
