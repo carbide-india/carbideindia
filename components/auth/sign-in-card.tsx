@@ -9,7 +9,7 @@ const NAVY = "#1E2447";
 const RED = "#D32F2F";
 const PAPER_LINE = "#E7E2DA";
 
-type Mode = "signin" | "forgot" | "reset";
+type Mode = "signin" | "forgot" | "reset" | "trust";
 
 function clerkErrorMessage(err: unknown): string {
   const e = err as {
@@ -60,16 +60,34 @@ export function SignInCard() {
         setError(clerkErrorMessage(pwError));
         return;
       }
-      // password() succeeded — activate the session. (Don't gate on
-      // signIn.status: the signal snapshot can lag the await.) If the
-      // instance genuinely needs another factor, finalize() reports it.
-      const { error: finError } = await signIn.finalize();
-      if (finError) {
-        setError(clerkErrorMessage(finError));
-        return;
+      // password() succeeded — try to activate the session. finalize()
+      // THROWS (not a returned error) when no session exists yet, which is
+      // what Client Trust looks like: the password was right but the new
+      // browser must be verified by email code first.
+      let finalizeProblem: string | null = null;
+      try {
+        const { error: finError } = await signIn.finalize();
+        if (!finError) {
+          router.push("/");
+          router.refresh();
+          return;
+        }
+        finalizeProblem = clerkErrorMessage(finError);
+      } catch (err) {
+        finalizeProblem = clerkErrorMessage(err);
       }
-      router.push("/");
-      router.refresh();
+      try {
+        const { error: mfaError } = await signIn.mfa.sendEmailCode();
+        if (!mfaError) {
+          setNotice(`New device — we emailed a verification code to ${email.trim()}.`);
+          setCode("");
+          setMode("trust");
+          return;
+        }
+      } catch {
+        // fall through to the finalize error below
+      }
+      setError(finalizeProblem);
     } catch (err) {
       setError(clerkErrorMessage(err));
     } finally {
@@ -135,6 +153,31 @@ export function SignInCard() {
     }
   }
 
+  async function submitTrust(e: React.FormEvent) {
+    e.preventDefault();
+    if (!signIn || pending) return;
+    setError(null);
+    setPending(true);
+    try {
+      const { error: verifyError } = await signIn.mfa.verifyEmailCode({ code: code.trim() });
+      if (verifyError) {
+        setError(clerkErrorMessage(verifyError));
+        return;
+      }
+      const { error: finError } = await signIn.finalize();
+      if (finError) {
+        setError(clerkErrorMessage(finError));
+        return;
+      }
+      router.push("/");
+      router.refresh();
+    } catch (err) {
+      setError(clerkErrorMessage(err));
+    } finally {
+      setPending(false);
+    }
+  }
+
   const mono: React.CSSProperties = {
     fontFamily: "var(--font-mono-display, ui-monospace, monospace)",
     letterSpacing: "0.22em",
@@ -183,6 +226,8 @@ export function SignInCard() {
             <>Sign in to <span style={{ color: RED }}>WMS</span></>
           ) : mode === "forgot" ? (
             <>Reset <span style={{ color: RED }}>password</span></>
+          ) : mode === "trust" ? (
+            <>Verify this <span style={{ color: RED }}>device</span></>
           ) : (
             <>Check your <span style={{ color: RED }}>email</span></>
           )}
@@ -395,6 +440,49 @@ export function SignInCard() {
               style={{ ...mono, background: NAVY }}
             >
               <span>{pending ? "Resetting…" : "Reset & sign in"}</span>
+              {pending ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMode("signin"); setError(null); setNotice(null); }}
+              className="cursor-pointer text-center text-[10.5px] underline underline-offset-4 transition-opacity duration-200 hover:opacity-70"
+              style={{ ...mono, color: "#78716C" }}
+            >
+              Back to sign in
+            </button>
+          </form>
+        )}
+
+        {/* ── Client Trust: verify a new device by email code ─────── */}
+        {mode === "trust" && (
+          <form onSubmit={submitTrust} className="mt-6 flex flex-col gap-5">
+            <div>
+              <label htmlFor="ct-code" className="block text-[10.5px]" style={mono}>
+                <span style={{ color: RED }}>01 /</span>{" "}
+                <span style={{ color: "#57534E" }}>Verification code</span>
+              </label>
+              <input
+                id="ct-code"
+                inputMode="numeric"
+                required
+                autoFocus
+                autoComplete="one-time-code"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="123456"
+                className="mt-2 h-12 w-full rounded-lg px-4 text-[15px] tracking-[0.3em] outline-none transition-all duration-200"
+                style={{ background: "#F7F5F1", border: `1px solid ${PAPER_LINE}`, color: NAVY }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = "#3F3F94"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(63,63,148,0.15)"; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = PAPER_LINE; e.currentTarget.style.boxShadow = "none"; }}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={pending || !signIn}
+              className="flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-lg px-5 text-[12px] text-white transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60"
+              style={{ ...mono, background: NAVY }}
+            >
+              <span>{pending ? "Verifying…" : "Verify device"}</span>
               {pending ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
             </button>
             <button
