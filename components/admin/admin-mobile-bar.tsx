@@ -16,6 +16,7 @@ import {
   Building2,
   Briefcase,
   Tag,
+  Layers,
   Settings as SettingsIcon,
   ArrowLeft,
   LogOut,
@@ -42,6 +43,7 @@ const NAV: ReadonlyArray<NavItem> = [
   { href: "/admin/departments" as Route, label: "Departments", icon: Building2 },
   { href: "/admin/clients" as Route, label: "Clients", icon: Briefcase },
   { href: "/admin/subjects" as Route, label: "Subjects", icon: Tag },
+  { href: "/admin/masters" as Route, label: "Masters", icon: Layers },
   { href: "/admin/settings" as Route, label: "Settings", icon: SettingsIcon },
 ];
 

@@ -1,0 +1,445 @@
+"use client";
+
+import { useEffect, useState, useTransition } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
+import * as Tabs from "@radix-ui/react-tabs";
+import { useQueryState } from "nuqs";
+import { fireToast } from "@/lib/toast";
+import {
+  createMasterOption,
+  updateMasterOption,
+} from "@/app/(admin)/admin/masters/actions";
+import { MASTER_KINDS, MASTER_KIND_LABELS, type MasterKind } from "@/db/enums";
+import type { MasterOption } from "@/db/schema";
+
+interface Props {
+  items: MasterOption[];
+}
+
+/** Kinds whose data hasn't arrived yet — the empty-state names the source. */
+const PENDING_DATA_KINDS: ReadonlySet<MasterKind> = new Set([
+  "internal_grade",
+  "tolerance",
+]);
+
+export function MasterList({ items }: Props) {
+  const [kind, setKind] = useQueryState("kind", {
+    defaultValue: "customer_type",
+    parse: (v): MasterKind =>
+      (MASTER_KINDS as readonly string[]).includes(v)
+        ? (v as MasterKind)
+        : "customer_type",
+  });
+  const [editing, setEditing] = useState<MasterOption | null>(null);
+
+  return (
+    <>
+      <Tabs.Root value={kind} onValueChange={(v) => setKind(v as MasterKind)}>
+        <Tabs.List
+          className="mb-8 flex gap-1 border-b border-[rgba(15,23,42,0.08)] overflow-x-auto max-md:gap-0"
+          aria-label="Master kinds"
+        >
+          {MASTER_KINDS.map((k) => (
+            <Tabs.Trigger key={k} value={k} className="settings-tab-trigger">
+              {MASTER_KIND_LABELS[k]}
+            </Tabs.Trigger>
+          ))}
+        </Tabs.List>
+        {MASTER_KINDS.map((k) => {
+          const rows = items.filter((o) => o.kind === k);
+          return (
+            <Tabs.Content key={k} value={k} forceMount hidden={kind !== k}>
+              <div className="mb-4 flex items-center justify-between gap-4 flex-wrap">
+                <p className="text-[14px] text-ink-subtle tabular-nums">
+                  {rows.length} {rows.length === 1 ? "option" : "options"} ·{" "}
+                  {rows.filter((o) => o.isActive).length} active
+                </p>
+                <CreateMasterDialog kind={k} />
+              </div>
+              {rows.length === 0 ? (
+                <EmptyState kind={k} />
+              ) : (
+                <div
+                  className="overflow-hidden rounded-section border border-hairline bg-surface-card"
+                  style={{ boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)" }}
+                >
+                  <table className="w-full text-[15px]">
+                    <thead>
+                      <tr
+                        className="text-left text-[12px] uppercase tracking-[0.08em] text-ink-subtle font-bold border-b border-hairline"
+                        style={{ background: "var(--color-surface-soft)" }}
+                      >
+                        <th className="px-5 py-4">Name</th>
+                        <th className="px-5 py-4 tabular-nums">Sort</th>
+                        <th className="px-5 py-4">Status</th>
+                        <th className="px-5 py-4 text-right">
+                          <span className="sr-only">Actions</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((o, i) => (
+                        <MasterRow
+                          key={o.id}
+                          option={o}
+                          rowIndex={i}
+                          onEdit={() => setEditing(o)}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Tabs.Content>
+          );
+        })}
+      </Tabs.Root>
+      <EditMasterDialog option={editing} onClose={() => setEditing(null)} />
+    </>
+  );
+}
+
+function EmptyState({ kind }: { kind: MasterKind }) {
+  return (
+    <div
+      className="rounded-section border border-dashed border-hairline-strong bg-surface-card px-6 py-14 text-center"
+      style={{ boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)" }}
+    >
+      <p
+        className="font-serif text-ink-strong"
+        style={{ fontStyle: "italic", fontSize: 22, letterSpacing: "-0.015em" }}
+      >
+        {PENDING_DATA_KINDS.has(kind)
+          ? "No entries yet — data expected from Alok sir."
+          : `No ${MASTER_KIND_LABELS[kind]} options yet`}
+      </p>
+      <p className="text-[14px] text-ink-subtle mt-2 max-w-sm mx-auto" style={{ lineHeight: 1.5 }}>
+        Add the first one with the button above. It then shows up in the{" "}
+        {MASTER_KIND_LABELS[kind]} dropdown on the KYC / inquiry forms.
+      </p>
+    </div>
+  );
+}
+
+function MasterRow({
+  option,
+  rowIndex,
+  onEdit,
+}: {
+  option: MasterOption;
+  rowIndex: number;
+  onEdit: () => void;
+}) {
+  const [pending, startTransition] = useTransition();
+
+  function toggleActive() {
+    startTransition(async () => {
+      const res = await updateMasterOption(option.id, { isActive: !option.isActive });
+      if (!res.ok) {
+        fireToast({ message: res.error });
+        return;
+      }
+      fireToast({
+        message: option.isActive
+          ? `${option.name} deactivated.`
+          : `${option.name} reactivated.`,
+      });
+    });
+  }
+
+  return (
+    <tr
+      className="border-b border-hairline last:border-b-0 transition-colors hover:bg-surface-soft"
+      style={{ background: rowIndex % 2 === 1 ? "rgba(15, 23, 42, 0.012)" : undefined }}
+    >
+      <td className="px-5 py-4 text-ink-strong font-medium">{option.name}</td>
+      <td className="px-5 py-4 tabular-nums text-ink-soft">{option.sortOrder}</td>
+      <td className="px-5 py-4">
+        {option.isActive ? (
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold"
+            style={{ background: "var(--color-green-bg)", color: "var(--color-green-deep)" }}
+          >
+            <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--color-green)" }} />
+            Active
+          </span>
+        ) : (
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold"
+            style={{ background: "rgba(15, 23, 42, 0.05)", color: "var(--color-ink-subtle)" }}
+          >
+            <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--color-ink-subtle)" }} />
+            Inactive
+          </span>
+        )}
+      </td>
+      <td className="px-5 py-4 text-right">
+        <div className="inline-flex items-center gap-1">
+          <button
+            type="button"
+            onClick={onEdit}
+            className="rounded-md px-3 py-1.5 text-[13px] font-semibold text-ink-soft hover:bg-surface-soft hover:text-ink-strong transition-colors"
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={toggleActive}
+            className="rounded-md px-3 py-1.5 text-[13px] font-semibold text-ink-soft hover:bg-surface-soft hover:text-ink-strong transition-colors disabled:opacity-50"
+          >
+            {option.isActive ? "Deactivate" : "Reactivate"}
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+function CreateMasterDialog({ kind }: { kind: MasterKind }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [sortOrder, setSortOrder] = useState<number>(100);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function reset() {
+    setName("");
+    setSortOrder(100);
+    setError(null);
+  }
+
+  function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    startTransition(async () => {
+      const res = await createMasterOption({ kind, name: name.trim(), sortOrder });
+      if (!res.ok) {
+        setError(res.error ?? "Something went wrong");
+        return;
+      }
+      fireToast({ message: `${name.trim()} created.` });
+      reset();
+      setOpen(false);
+    });
+  }
+
+  return (
+    <Dialog.Root
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (!o) reset();
+      }}
+    >
+      <Dialog.Trigger asChild>
+        <button
+          className="rounded-md py-2.5 px-5 text-[14px] font-medium text-white"
+          style={{ background: "linear-gradient(135deg, #D32F2F, #B71C1C)" }}
+        >
+          + New option
+        </button>
+      </Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 bg-black/30 z-[90]" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-[100] -translate-x-1/2 -translate-y-1/2 w-full max-w-md rounded-xl bg-white border border-[#E2E8F0] p-6 shadow-lg max-h-[calc(100dvh-32px)] overflow-y-auto">
+          <Dialog.Title className="font-serif text-xl text-[#0F172A] mb-1">
+            New option · {MASTER_KIND_LABELS[kind]}
+          </Dialog.Title>
+          <Dialog.Description className="text-[15px] text-[#64748B] mb-4" style={{ lineHeight: 1.5 }}>
+            This appears in the {MASTER_KIND_LABELS[kind]} dropdown on the KYC /
+            inquiry forms.
+          </Dialog.Description>
+          <form onSubmit={onSubmit} className="space-y-4">
+            <Field label="Name">
+              <input
+                required
+                autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={80}
+                className="w-full rounded-md border border-[#CBD5E1] px-3.5 py-2.5 text-[15px]"
+              />
+            </Field>
+            <Field
+              label="Sort order"
+              hint="Lower numbers appear first when sort ties. Default 100."
+            >
+              <input
+                type="number"
+                min={0}
+                max={9999}
+                value={sortOrder}
+                onChange={(e) => setSortOrder(Number(e.target.value))}
+                className="w-28 rounded-md border border-[#CBD5E1] px-3.5 py-2.5 text-[15px] tabular-nums"
+              />
+            </Field>
+            {error && (
+              <div
+                role="alert"
+                className="rounded-md border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-[14px] text-[#B71C1C]"
+              >
+                {error}
+              </div>
+            )}
+            <div className="flex justify-end gap-2 pt-2">
+              <Dialog.Close asChild>
+                <button
+                  type="button"
+                  className="px-4 py-2.5 text-[14px] font-medium text-[#64748B]"
+                  disabled={pending}
+                >
+                  Cancel
+                </button>
+              </Dialog.Close>
+              <button
+                type="submit"
+                disabled={pending}
+                className="rounded-md py-2.5 px-5 text-[14px] font-medium text-white disabled:opacity-50"
+                style={{ background: "linear-gradient(135deg, #D32F2F, #B71C1C)" }}
+              >
+                {pending ? "Creating…" : "Create"}
+              </button>
+            </div>
+          </form>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
+function EditMasterDialog({
+  option,
+  onClose,
+}: {
+  option: MasterOption | null;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState(option?.name ?? "");
+  const [sortOrder, setSortOrder] = useState<number>(option?.sortOrder ?? 100);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setName(option?.name ?? "");
+    setSortOrder(option?.sortOrder ?? 100);
+    setError(null);
+  }, [option?.id, option?.name, option?.sortOrder]);
+
+  function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!option) return;
+    setError(null);
+
+    const patch: { name?: string; sortOrder?: number } = {};
+    const trimmedName = name.trim();
+    if (trimmedName !== option.name) patch.name = trimmedName;
+    if (sortOrder !== option.sortOrder) patch.sortOrder = sortOrder;
+
+    if (Object.keys(patch).length === 0) {
+      setError("No changes to save.");
+      return;
+    }
+
+    startTransition(async () => {
+      const res = await updateMasterOption(option.id, patch);
+      if (!res.ok) {
+        setError(res.error ?? "Something went wrong");
+        return;
+      }
+      fireToast({ message: `${trimmedName} updated.` });
+      onClose();
+    });
+  }
+
+  return (
+    <Dialog.Root open={option !== null} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 bg-black/30 z-[90]" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-[100] -translate-x-1/2 -translate-y-1/2 w-full max-w-md rounded-xl bg-white border border-[#E2E8F0] p-6 shadow-lg max-h-[calc(100dvh-32px)] overflow-y-auto">
+          <Dialog.Title className="font-serif text-xl text-[#0F172A] mb-1">
+            Edit option
+          </Dialog.Title>
+          <Dialog.Description className="text-[15px] text-[#64748B] mb-4">
+            Renaming updates the {option ? MASTER_KIND_LABELS[option.kind] : ""}{" "}
+            value everywhere it is referenced.
+          </Dialog.Description>
+          <form onSubmit={onSubmit} className="space-y-4">
+            <div>
+              <label className="block text-[14px] font-semibold text-[#0F172A] mb-1.5">
+                Name
+              </label>
+              <input
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={80}
+                className="w-full rounded-md border border-[#CBD5E1] px-3.5 py-2.5 text-[15px]"
+              />
+            </div>
+            <div>
+              <label className="block text-[14px] font-semibold text-[#0F172A] mb-1.5">
+                Sort order
+              </label>
+              <input
+                type="number"
+                min={0}
+                max={9999}
+                value={sortOrder}
+                onChange={(e) => setSortOrder(Number(e.target.value))}
+                className="w-28 rounded-md border border-[#CBD5E1] px-3.5 py-2.5 text-[15px] tabular-nums"
+              />
+            </div>
+            {error && (
+              <div
+                role="alert"
+                className="rounded-md border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-[14px] text-[#B71C1C]"
+              >
+                {error}
+              </div>
+            )}
+            <div className="flex justify-end gap-2 pt-2">
+              <Dialog.Close asChild>
+                <button
+                  type="button"
+                  className="px-4 py-2.5 text-[14px] font-medium text-[#64748B]"
+                  disabled={pending}
+                >
+                  Cancel
+                </button>
+              </Dialog.Close>
+              <button
+                type="submit"
+                disabled={pending}
+                className="rounded-md py-2.5 px-5 text-[14px] font-medium text-white disabled:opacity-50"
+                style={{ background: "linear-gradient(135deg, #D32F2F, #B71C1C)" }}
+              >
+                {pending ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </form>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label className="block text-[14px] font-semibold text-[#0F172A] mb-1.5">
+        {label}
+      </label>
+      {children}
+      {hint && <p className="mt-1.5 text-[13px] text-[#94A3B8]">{hint}</p>}
+    </div>
+  );
+}
