@@ -1,0 +1,418 @@
+"use client";
+
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import type { z } from "zod";
+import { CreateSalesOrderSchema } from "@/lib/validators/sales-order";
+import { createSalesOrder } from "@/app/(app)/sales-orders/actions";
+import type {
+  QuoteAutofill,
+  QuotationAutofill,
+  QuotationOption,
+} from "@/lib/queries/quotes";
+import type { InquiryOption } from "@/lib/queries/inquiries";
+import type { EmployeeOption } from "@/lib/queries/employees";
+import { formatDate } from "@/lib/format";
+import { fireToast } from "@/lib/toast";
+import { Select } from "@/components/ui/select";
+import {
+  Field,
+  MiniField,
+  SectionCard,
+  Segmented,
+} from "@/components/inquiries/form-field";
+
+/** RHF holds the schema's *input* shape (pre-transform); zodResolver hands the
+ *  parsed *output* (defaults applied, `""` folded to `undefined`) to the submit
+ *  handler — which is exactly what createSalesOrder takes. */
+export type SoFormValues = z.input<typeof CreateSalesOrderSchema>;
+type SoFormOutput = z.output<typeof CreateSalesOrderSchema>;
+
+interface Props {
+  inquiries: InquiryOption[];
+  quotations: QuotationOption[];
+  /** Unused for now (the SM owns the sales person) — kept for parity with the
+   *  house-style page wiring; reserved for a future "Created by" override. */
+  employees: EmployeeOption[];
+}
+
+const SO_SENT_OPTIONS = [
+  { value: "yes" as const, label: "Yes" },
+  { value: "no" as const, label: "No" },
+];
+
+/** Money <input> → number | undefined (no NaN); 0 is a valid amount. */
+const moneyRegister = { setValueAs: (v: unknown) => moneyValue(v) };
+function moneyValue(v: unknown): number | undefined {
+  if (v === "" || v === null || v === undefined) return undefined;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+/**
+ * New Sales Order form — Linked Enquiry (SM autofetch snapshot + Linked
+ * Quotation prefill) / Quote Summary / Customer PO / Sales Order Docs. The SM
+ * picker fetches getQuoteAutofill on select; the Quotation picker fetches
+ * getQuotationAutofill to prefill price/timeline/validity/link/part. SO No
+ * auto-numbers `<SM>-SO01` server-side.
+ */
+export function SoForm({ inquiries, quotations }: Props) {
+  const router = useRouter();
+  const [pending, startTransition] = React.useTransition();
+  const [serverError, setServerError] = React.useState<string | null>(null);
+  const [snapshot, setSnapshot] = React.useState<QuoteAutofill | null>(null);
+  const [autofetching, setAutofetching] = React.useState(false);
+  const [quoteId, setQuoteId] = React.useState("");
+
+  const {
+    register,
+    control,
+    handleSubmit,
+    setValue,
+    formState: { errors },
+  } = useForm<SoFormValues, unknown, SoFormOutput>({
+    resolver: zodResolver(CreateSalesOrderSchema),
+    defaultValues: {
+      inquiryId: "",
+      quotationId: undefined,
+      soNo: "",
+      partNo: "",
+      quotePrice: undefined,
+      developmentTime: "",
+      deliveryTime: "",
+      validity: "",
+      quotationLink: "",
+      customerPoNo: "",
+      customerPoDate: "",
+      customerPoLink: "",
+      customerSoLink: "",
+      customerSoSent: false,
+      productionSoLink: "",
+    },
+  });
+
+  /** On SM select: fetch the autofill snapshot. Company + enquiry date + sales
+   *  person are shown as read-only captions; product/qty are part of the
+   *  server-side snapshot copied at create. */
+  async function onPickInquiry(id: string | undefined) {
+    setValue("inquiryId", id ?? "", { shouldValidate: true });
+    setSnapshot(null);
+    if (!id) return;
+    setAutofetching(true);
+    try {
+      const res = await fetch(`/api/quotes/autofill?inquiryId=${id}`);
+      if (!res.ok) return;
+      const data = (await res.json()) as QuoteAutofill;
+      setSnapshot(data);
+    } catch {
+      fireToast({
+        message: "Could not auto-fetch the enquiry — fill the fields manually.",
+        type: "error",
+      });
+    } finally {
+      setAutofetching(false);
+    }
+  }
+
+  /** On Quotation select: fetch the quote's price/timeline/validity/link/part
+   *  and prefill the editable inputs (shown read-mostly but kept editable). */
+  async function onPickQuotation(id: string | undefined) {
+    setQuoteId(id ?? "");
+    setValue("quotationId", id ?? undefined, { shouldValidate: true });
+    if (!id) return;
+    try {
+      const res = await fetch(`/api/quotes/quotation-autofill?quotationId=${id}`);
+      if (!res.ok) return;
+      const data = (await res.json()) as QuotationAutofill;
+      if (data.quotePrice != null) setValue("quotePrice", Number(data.quotePrice));
+      if (data.developmentTime) setValue("developmentTime", data.developmentTime);
+      if (data.deliveryTime) setValue("deliveryTime", data.deliveryTime);
+      if (data.validity) setValue("validity", data.validity);
+      if (data.quotationLink) setValue("quotationLink", data.quotationLink);
+      if (data.partNo) setValue("partNo", data.partNo);
+    } catch {
+      fireToast({
+        message: "Could not auto-fetch the quotation — fill the fields manually.",
+        type: "error",
+      });
+    }
+  }
+
+  const submit = handleSubmit((values) => {
+    setServerError(null);
+    startTransition(async () => {
+      const res = await createSalesOrder(values);
+      if (!res.ok) {
+        setServerError(res.error);
+        fireToast({ message: res.error, type: "error" });
+        return;
+      }
+      fireToast({
+        message: `Sales Order ${res.soNo ?? ""} created`.trim(),
+        type: "success",
+      });
+      if (res.id) router.push(`/sales-orders/${res.id}`);
+    });
+  });
+
+  const firstFieldError = Object.values(errors)[0]?.message as
+    | string
+    | undefined;
+
+  return (
+    <form onSubmit={submit} className="flex flex-col gap-6" noValidate>
+      {/* ── 1 · Linked Enquiry ───────────────────────────────────────── */}
+      <SectionCard
+        title="Linked Enquiry"
+        hint="Pick the SM this sales order belongs to — its company, sales person and product are auto-fetched. Link the quotation to pull its pricing."
+      >
+        <Field label="Enquiry (SM)" labelOnly required>
+          <Controller
+            control={control}
+            name="inquiryId"
+            render={({ field }) => (
+              <Select
+                value={field.value ?? ""}
+                onValueChange={(v) => void onPickInquiry(v || undefined)}
+                placeholder="Select an enquiry…"
+                searchPlaceholder="Search SM number or company…"
+                searchable
+                ariaLabel="Linked enquiry"
+                options={inquiries.map((o) => ({
+                  value: o.id,
+                  label: `${o.smNumber} — ${o.companyName}`,
+                }))}
+              />
+            )}
+          />
+        </Field>
+
+        {(snapshot || autofetching) && (
+          <div className="flex flex-wrap items-start gap-x-8 gap-y-2 rounded-xl border border-hairline bg-surface-soft px-4 py-3">
+            <Caption label="Company">
+              {autofetching ? "…" : snapshot?.companyName ?? "—"}
+            </Caption>
+            <Caption label="Enquiry Date">
+              {autofetching
+                ? "…"
+                : snapshot?.enquiryDate
+                  ? formatDate(new Date(snapshot.enquiryDate))
+                  : "—"}
+            </Caption>
+            <Caption label="Sales Person">
+              {autofetching ? "…" : snapshot?.salesPersonName ?? "—"}
+            </Caption>
+            {snapshot?.productDescription && (
+              <Caption label="Product">{snapshot.productDescription}</Caption>
+            )}
+            {snapshot?.quantityNos && (
+              <Caption label="Qty">{snapshot.quantityNos}</Caption>
+            )}
+          </div>
+        )}
+
+        <Field label="Linked Quotation" labelOnly>
+          <Select
+            value={quoteId}
+            onValueChange={(v) => void onPickQuotation(v || undefined)}
+            placeholder="Optional — link a quotation to pull its pricing…"
+            searchPlaceholder="Search quote number or company…"
+            searchable
+            ariaLabel="Linked quotation"
+            options={quotations.map((o) => ({
+              value: o.id,
+              label: `${o.quoteNo} — ${o.companyName ?? "—"}`,
+            }))}
+          />
+        </Field>
+
+        <Field id="so-no" label="SO No">
+          <input
+            id="so-no"
+            type="text"
+            className="nt-input"
+            placeholder="Leave blank to auto-number"
+            style={{ fontFamily: "var(--font-mono)", fontSize: 13.5 }}
+            {...register("soNo")}
+          />
+          <p className="text-[12.5px] text-ink-subtle">
+            SO No auto-numbers as{" "}
+            <span style={{ fontFamily: "var(--font-mono)" }}>&lt;SM&gt;-SO01</span>{" "}
+            — leave blank.
+          </p>
+        </Field>
+      </SectionCard>
+
+      {/* ── 2 · Quote Summary ────────────────────────────────────────── */}
+      <SectionCard
+        title="Quote Summary"
+        hint="Pulled from the linked quotation — editable if anything changed."
+      >
+        <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
+          <MiniField label="Quote Price">
+            <MoneyInput aria-label="Quote price" {...register("quotePrice", moneyRegister)} />
+          </MiniField>
+        </div>
+        <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
+          <Field id="so-dev" label="Development Time">
+            <input id="so-dev" type="text" className="nt-input" {...register("developmentTime")} />
+          </Field>
+          <Field id="so-del" label="Delivery Time">
+            <input id="so-del" type="text" className="nt-input" {...register("deliveryTime")} />
+          </Field>
+          <Field id="so-val" label="Validity">
+            <input id="so-val" type="text" className="nt-input" {...register("validity")} />
+          </Field>
+        </div>
+        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+          <Field id="so-link" label="Quotation Link">
+            <input
+              id="so-link"
+              type="url"
+              className="nt-input"
+              placeholder="https://…"
+              {...register("quotationLink")}
+            />
+          </Field>
+          <Field id="so-part" label="Part No">
+            <input id="so-part" type="text" className="nt-input" {...register("partNo")} />
+          </Field>
+        </div>
+      </SectionCard>
+
+      {/* ── 3 · Customer PO ──────────────────────────────────────────── */}
+      <SectionCard
+        title="Customer PO"
+        hint="The purchase order the customer raised against the quote."
+      >
+        <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
+          <Field id="so-pono" label="Customer PO No">
+            <input id="so-pono" type="text" className="nt-input" {...register("customerPoNo")} />
+          </Field>
+          <Field id="so-podate" label="Customer PO Date">
+            <input id="so-podate" type="date" className="nt-input" {...register("customerPoDate")} />
+          </Field>
+          <Field id="so-polink" label="Customer PO Link">
+            <input
+              id="so-polink"
+              type="url"
+              className="nt-input"
+              placeholder="https://…"
+              {...register("customerPoLink")}
+            />
+          </Field>
+        </div>
+      </SectionCard>
+
+      {/* ── 4 · Sales Order Docs ─────────────────────────────────────── */}
+      <SectionCard
+        title="Sales Order Docs"
+        hint="The customer-facing SO sent back and the internal production SO."
+      >
+        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+          <Field id="so-custlink" label="Customer SO Link">
+            <input
+              id="so-custlink"
+              type="url"
+              className="nt-input"
+              placeholder="https://…"
+              {...register("customerSoLink")}
+            />
+          </Field>
+          <Field id="so-prodlink" label="Production SO Link">
+            <input
+              id="so-prodlink"
+              type="url"
+              className="nt-input"
+              placeholder="https://…"
+              {...register("productionSoLink")}
+            />
+          </Field>
+        </div>
+        <Field label="Customer SO Sent" labelOnly>
+          <Controller
+            control={control}
+            name="customerSoSent"
+            render={({ field }) => (
+              <Segmented
+                options={SO_SENT_OPTIONS}
+                value={field.value ? "yes" : "no"}
+                onChange={(v) => field.onChange(v === "yes")}
+                allowClear={false}
+                ariaLabel="Customer SO sent"
+              />
+            )}
+          />
+        </Field>
+      </SectionCard>
+
+      {(serverError || firstFieldError) && (
+        <p
+          className="font-semibold"
+          style={{ fontSize: 14, color: "var(--color-red-deep)" }}
+        >
+          {serverError ?? firstFieldError}
+        </p>
+      )}
+
+      <div
+        className="flex items-center justify-end gap-3 pt-2"
+        style={{ borderTop: "1px solid var(--color-hairline)" }}
+      >
+        <button
+          type="submit"
+          disabled={pending}
+          className="text-cta text-white px-8 py-4 rounded-chip transition-transform disabled:opacity-50"
+          style={{
+            background:
+              "linear-gradient(135deg, rgb(63, 63, 148), rgb(47, 47, 111))",
+            boxShadow: "0 6px 16px rgba(63, 63, 148, 0.34)",
+            fontWeight: 800,
+            fontSize: 18,
+            letterSpacing: "0.005em",
+          }}
+        >
+          {pending ? "Creating…" : "Create Sales Order"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/** ₹-prefixed number input — the rupee sign sits inside the field so the
+ *  amount always reads as money. */
+const MoneyInput = React.forwardRef<
+  HTMLInputElement,
+  React.InputHTMLAttributes<HTMLInputElement>
+>(function MoneyInput(props, ref) {
+  return (
+    <div className="relative w-[180px]">
+      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[14px] font-semibold text-ink-subtle">
+        ₹
+      </span>
+      <input
+        ref={ref}
+        type="number"
+        inputMode="decimal"
+        min={0}
+        step="any"
+        className="nt-input w-full pl-7 tabular-nums"
+        placeholder="0"
+        {...props}
+      />
+    </div>
+  );
+});
+
+function Caption({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[11px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
+        {label}
+      </span>
+      <span className="text-[14px] font-semibold text-ink-strong">{children}</span>
+    </div>
+  );
+}
