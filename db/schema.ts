@@ -315,6 +315,12 @@ export const clients = pgTable(
     kycMeetingDate: timestamp("kyc_meeting_date", { withTimezone: true }),
     kycMeetingStart: text("kyc_meeting_start"),
     kycMeetingEnd: text("kyc_meeting_end"),
+    kycMeetingNotes: text("kyc_meeting_notes"),
+    // Sales person who ran the KYC meeting (the form's "Sales Person Name").
+    kycSalesPersonId: uuid("kyc_sales_person_id").references(() => employees.id, { onDelete: "set null" }),
+    // Business-card scans (Vercel Blob, optional — never block save).
+    businessCardFrontUrl: text("business_card_front_url"),
+    businessCardBackUrl: text("business_card_back_url"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -343,6 +349,7 @@ export const clientContacts = pgTable(
     clientId: uuid("client_id").notNull().references(() => clients.id, { onDelete: "cascade" }),
     firstName: text("first_name").notNull(),
     lastName: text("last_name"),
+    designation: text("designation"),
     contactNo: text("contact_no"),
     email: text("email"),
     ccEmails: text("cc_emails"),

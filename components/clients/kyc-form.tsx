@@ -6,7 +6,8 @@ import type { Route } from "next";
 import { useForm, Controller, type Control } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
-import { Check } from "lucide-react";
+import { upload } from "@vercel/blob/client";
+import { Check, ImagePlus, Loader2, X } from "lucide-react";
 import { INQUIRY_CURRENCIES, INQUIRY_COUNTRIES } from "@/db/enums";
 import { CreateClientKycSchema } from "@/lib/validators/client-kyc";
 import { createClientKyc } from "@/app/(app)/clients/actions";
@@ -17,6 +18,7 @@ import { INDIA_STATES, citiesForState } from "@/lib/data/india-states-cities";
 import { SearchableSelect } from "@/components/inquiries/searchable-select";
 import { Field, SectionCard } from "@/components/inquiries/form-field";
 import type { MasterOptionItem } from "@/lib/queries/masters";
+import type { EmployeeOption } from "@/lib/queries/employees";
 
 /** RHF holds the schema's *input* shape (pre-transform); zodResolver hands
  *  the parsed *output* (`""` folded to `undefined`, currency/country
@@ -28,12 +30,40 @@ interface Props {
   customerTypes: MasterOptionItem[];
   industryTypes: MasterOptionItem[];
   productTypes: MasterOptionItem[];
+  employees: EmployeeOption[];
 }
 
 const YES_NO_OPTIONS = [
   { value: "yes", label: "Yes" },
   { value: "no", label: "No" },
 ];
+
+/* ── Business-card upload (browser → Vercel Blob, client-direct) ──────── */
+
+const ALLOWED_CARD_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+]);
+const MAX_CARD_BYTES = 25 * 1024 * 1024;
+
+function safeCardName(name: string): string {
+  return name.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 120) || "card";
+}
+
+/** Mirrors sample-form's photo upload, scoped to business-cards/: public
+ *  blobs (rendered via plain <img>), images only, token minted by
+ *  /api/clients/business-card/upload. */
+function uploadCardToBlob(file: File) {
+  const contentType = file.type;
+  return upload(`business-cards/${safeCardName(file.name)}`, file, {
+    access: "public",
+    handleUploadUrl: "/api/clients/business-card/upload",
+    contentType,
+    clientPayload: JSON.stringify({ contentType }),
+  });
+}
 
 /** <input type="time"> yields "" when cleared — the HH:MM regex must never see it. */
 function emptyToUndefined(v: unknown): string | undefined {
@@ -46,7 +76,12 @@ function emptyToUndefined(v: unknown): string | undefined {
  * Type, Industry Type and Product Types are admin-managed masters. No selfie
  * field, no active toggle — both were explicit removals.
  */
-export function KycForm({ customerTypes, industryTypes, productTypes }: Props) {
+export function KycForm({
+  customerTypes,
+  industryTypes,
+  productTypes,
+  employees,
+}: Props) {
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
   const [serverError, setServerError] = React.useState<string | null>(null);
@@ -76,11 +111,55 @@ export function KycForm({ customerTypes, industryTypes, productTypes }: Props) {
       pinCode: "",
       contactFirstName: "",
       contactLastName: "",
+      contactDesignation: "",
       contactNo: "",
       contactEmail: "",
       meetingDate: "",
+      meetingNotes: "",
     },
   });
+
+  // Business-card scans live in form state via the URL fields — uploads run on
+  // file-pick and never block the save. `front`/`back` track in-flight uploads.
+  const cardFront = watch("businessCardFrontUrl");
+  const cardBack = watch("businessCardBackUrl");
+  const [uploading, setUploading] = React.useState<{
+    front: boolean;
+    back: boolean;
+  }>({ front: false, back: false });
+
+  async function onPickCard(file: File | undefined, side: "front" | "back") {
+    if (!file) return;
+    if (!ALLOWED_CARD_TYPES.has(file.type)) {
+      fireToast({
+        message: `${file.name}: only JPEG, PNG, WebP or HEIC images are allowed.`,
+        type: "error",
+      });
+      return;
+    }
+    if (file.size > MAX_CARD_BYTES) {
+      fireToast({ message: `${file.name} exceeds 25 MB.`, type: "error" });
+      return;
+    }
+    setUploading((u) => ({ ...u, [side]: true }));
+    try {
+      const blob = await uploadCardToBlob(file);
+      setValue(
+        side === "front" ? "businessCardFrontUrl" : "businessCardBackUrl",
+        blob.url,
+      );
+    } catch {
+      // Missing BLOB_READ_WRITE_TOKEN (or a Blob outage) lands here — the
+      // card is skipped, the form still saves without it.
+      fireToast({
+        message:
+          "Business card upload unavailable — check storage configuration.",
+        type: "error",
+      });
+    } finally {
+      setUploading((u) => ({ ...u, [side]: false }));
+    }
+  }
 
   const submit = handleSubmit((values) => {
     setServerError(null);
@@ -146,6 +225,29 @@ export function KycForm({ customerTypes, industryTypes, productTypes }: Props) {
             options={industryTypes}
           />
         </div>
+
+        <Field label="Sales Person" labelOnly>
+          <Controller
+            control={control}
+            name="kycSalesPersonId"
+            render={({ field }) => (
+              <Select
+                ariaLabel="Sales Person"
+                value={field.value ?? ""}
+                onValueChange={(v) => field.onChange(v || undefined)}
+                placeholder={
+                  employees.length === 0
+                    ? "No employees yet"
+                    : "Select an employee…"
+                }
+                disabled={employees.length === 0}
+                searchable
+                searchPlaceholder="Search employees…"
+                options={employees.map((e) => ({ value: e.id, label: e.name }))}
+              />
+            )}
+          />
+        </Field>
 
         {/* Product Types — checkbox chip grid over the admin-managed master. */}
         <Field label="Product Types">
@@ -418,6 +520,15 @@ export function KycForm({ customerTypes, industryTypes, productTypes }: Props) {
               {...register("contactLastName")}
             />
           </Field>
+          <Field id="kyc-cdesig" label="Designation">
+            <input
+              id="kyc-cdesig"
+              type="text"
+              className="nt-input"
+              placeholder="e.g. Purchase Manager"
+              {...register("contactDesignation")}
+            />
+          </Field>
           <Field id="kyc-cno" label="Contact No">
             <input
               id="kyc-cno"
@@ -437,7 +548,30 @@ export function KycForm({ customerTypes, industryTypes, productTypes }: Props) {
         </div>
       </SectionCard>
 
-      {/* ── 4 · Meeting ──────────────────────────────────────────────── */}
+      {/* ── 4 · Business Card ────────────────────────────────────────── */}
+      <SectionCard
+        title="Business Card"
+        hint="Optional scans of the contact's card — uploads run immediately; the client saves fine without them."
+      >
+        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+          <CardUpload
+            label="Front"
+            url={cardFront}
+            uploading={uploading.front}
+            onPick={(f) => void onPickCard(f, "front")}
+            onClear={() => setValue("businessCardFrontUrl", undefined)}
+          />
+          <CardUpload
+            label="Back"
+            url={cardBack}
+            uploading={uploading.back}
+            onPick={(f) => void onPickCard(f, "back")}
+            onClear={() => setValue("businessCardBackUrl", undefined)}
+          />
+        </div>
+      </SectionCard>
+
+      {/* ── 5 · Meeting ──────────────────────────────────────────────── */}
       <SectionCard title="Meeting">
         <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
           <Field id="kyc-mdate" label="Meeting Date">
@@ -465,6 +599,16 @@ export function KycForm({ customerTypes, industryTypes, productTypes }: Props) {
             />
           </Field>
         </div>
+        <Field id="kyc-mnotes" label="Meeting Notes">
+          <textarea
+            id="kyc-mnotes"
+            rows={3}
+            className="nt-input resize-y"
+            style={{ fontWeight: 400 }}
+            placeholder="Key points from the meeting…"
+            {...register("meetingNotes")}
+          />
+        </Field>
       </SectionCard>
 
       {(serverError || firstFieldError) && (
@@ -534,6 +678,81 @@ function MasterSelect({
         )}
       />
       <p className="text-[12px] text-ink-subtle">Managed in Admin → Masters</p>
+    </Field>
+  );
+}
+
+/**
+ * One business-card side (Front / Back): a single labelled image upload that
+ * shows a thumbnail + remove × once uploaded. Mirrors the sample-form photo
+ * tile, scaled to a single image per side and never required.
+ */
+function CardUpload({
+  label,
+  url,
+  uploading,
+  onPick,
+  onClear,
+}: {
+  label: string;
+  url: string | undefined;
+  uploading: boolean;
+  onPick: (file: File | undefined) => void;
+  onClear: () => void;
+}) {
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  return (
+    <Field label={`Business Card — ${label}`} labelOnly>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/heic"
+        className="hidden"
+        aria-label={`Business card ${label.toLowerCase()}`}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = ""; // allow re-picking after a remove
+          onPick(file);
+        }}
+      />
+      {url ? (
+        <div className="relative inline-block size-[120px] overflow-hidden rounded-xl border border-hairline bg-surface-soft">
+          {/* Blob URLs are remote + unconfigured for next/image — plain img. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={url}
+            alt={`Business card ${label.toLowerCase()}`}
+            className="size-full object-cover"
+          />
+          <button
+            type="button"
+            aria-label={`Remove business card ${label.toLowerCase()}`}
+            onClick={onClear}
+            className="absolute right-1 top-1 inline-flex size-[22px] items-center justify-center rounded-full bg-white/90 text-ink-strong shadow-sm border border-hairline hover:bg-white transition-colors"
+          >
+            <X size={13} strokeWidth={2.6} />
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          className="inline-flex size-[120px] flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-hairline-strong text-ink-subtle hover:text-ink-strong hover:border-ink-subtle transition-colors disabled:opacity-60"
+        >
+          {uploading ? (
+            <Loader2
+              size={18}
+              style={{ animation: "spinFast 0.8s linear infinite" }}
+            />
+          ) : (
+            <ImagePlus size={18} />
+          )}
+          <span className="text-[11.5px] font-semibold">
+            {uploading ? "Uploading…" : `Add ${label.toLowerCase()}`}
+          </span>
+        </button>
+      )}
     </Field>
   );
 }

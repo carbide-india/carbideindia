@@ -3,16 +3,19 @@ import { DashboardFooter } from "@/components/layout/footer";
 import { KycForm } from "@/components/clients/kyc-form";
 import { requireUser } from "@/lib/auth/current";
 import { listMasterOptions } from "@/lib/queries/masters";
+import { listEmployeeOptions } from "@/lib/queries/employees";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewClientKycPage() {
   await requireUser();
-  const [customerTypes, industryTypes, productTypes] = await Promise.all([
-    listMasterOptions("customer_type"),
-    listMasterOptions("industry_type"),
-    listMasterOptions("product_type"),
-  ]);
+  const [customerTypes, industryTypes, productTypes, employees] =
+    await Promise.all([
+      listMasterOptions("customer_type"),
+      listMasterOptions("industry_type"),
+      listMasterOptions("product_type"),
+      listEmployeeOptions(),
+    ]);
 
   return (
     <>
@@ -31,6 +34,7 @@ export default async function NewClientKycPage() {
           customerTypes={customerTypes}
           industryTypes={industryTypes}
           productTypes={productTypes}
+          employees={employees}
         />
       </main>
       <DashboardFooter />

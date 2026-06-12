@@ -50,6 +50,13 @@
       "when": 1781251206740,
       "tag": "0006_high_annihilus",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1781269283825,
+      "tag": "0007_blue_rage",
+      "breakpoints": true
     }
   ]
 }

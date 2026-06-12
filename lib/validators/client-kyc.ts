@@ -31,10 +31,15 @@ const ClientKycFieldsSchema = z.object({
   addressLine3: OptionalText(240), addressLine4: OptionalText(240),
   pinCode: OptionalText(20),
   contactFirstName: OptionalText(80), contactLastName: OptionalText(80),
+  contactDesignation: OptionalText(120),
   contactNo: OptionalText(40), contactEmail: OptionalText(160),
   meetingDate: z.string().optional(),                 // ISO date
   meetingStart: MeetingTime,
   meetingEnd: MeetingTime,
+  meetingNotes: OptionalText(2000),
+  kycSalesPersonId: z.string().uuid().optional(),
+  businessCardFrontUrl: OptionalText(2000),
+  businessCardBackUrl: OptionalText(2000),
 });
 
 export const CreateClientKycSchema = ClientKycFieldsSchema;

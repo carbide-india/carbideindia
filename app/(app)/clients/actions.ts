@@ -61,6 +61,8 @@ function toClientColumns(v: {
   addressLine1?: string; addressLine2?: string;
   addressLine3?: string; addressLine4?: string; pinCode?: string;
   meetingDate?: string; meetingStart?: string; meetingEnd?: string;
+  meetingNotes?: string; kycSalesPersonId?: string;
+  businessCardFrontUrl?: string; businessCardBackUrl?: string;
 }): ClientPatch {
   const patch: ClientPatch = stripUndefined({
     customerTypeId: v.customerTypeId,
@@ -78,6 +80,10 @@ function toClientColumns(v: {
     pinCode: v.pinCode,
     kycMeetingStart: v.meetingStart,
     kycMeetingEnd: v.meetingEnd,
+    kycMeetingNotes: v.meetingNotes,
+    kycSalesPersonId: v.kycSalesPersonId,
+    businessCardFrontUrl: v.businessCardFrontUrl,
+    businessCardBackUrl: v.businessCardBackUrl,
   });
   if (v.meetingDate !== undefined) patch.kycMeetingDate = new Date(v.meetingDate);
   return patch;
@@ -86,11 +92,13 @@ function toClientColumns(v: {
 /** Validator contact fields → `client_contacts` columns (defined keys only). */
 function toContactColumns(v: {
   contactFirstName?: string; contactLastName?: string;
+  contactDesignation?: string;
   contactNo?: string; contactEmail?: string;
 }): ContactPatch {
   return stripUndefined({
     firstName: v.contactFirstName,
     lastName: v.contactLastName,
+    designation: v.contactDesignation,
     contactNo: v.contactNo,
     email: v.contactEmail,
   });
