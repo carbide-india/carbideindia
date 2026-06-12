@@ -302,3 +302,32 @@ export const FEASIBILITY_STATUS_COLORS: Record<FeasibilityStatus, string> = {
 export const FEAS_PRIORITIES = ["p1", "p2", "p3", "p5_high_profile"] as const;     // sheet: 1, 2, 3, 5. High Profile
 export type FeasPriority = (typeof FEAS_PRIORITIES)[number];
 export const FEAS_PRIORITY_LABELS: Record<FeasPriority, string> = { p1: "1", p2: "2", p3: "3", p5_high_profile: "5. High Profile" };
+
+// ── Sample Register (Phase 3) — option lists from Manan's sheet ──
+export const SAMPLE_LOCATIONS = ["AYK Cabin", "Display", "Jayshree", "Lab", "Other"] as const;
+
+export const SAMPLE_STATUSES = ["received", "to_process", "in_process", "need_info", "need_help", "on_hold", "processed"] as const;
+export type SampleStatus = (typeof SAMPLE_STATUSES)[number];
+export const SAMPLE_STATUS_LABELS: Record<SampleStatus, string> = {
+  received: "Received", to_process: "To Process", in_process: "In Process",
+  need_info: "Need Info", need_help: "Need Help", on_hold: "On Hold", processed: "Processed",
+};
+export const SAMPLE_STATUS_COLORS: Record<SampleStatus, string> = {
+  received: "slate", to_process: "blue", in_process: "amber",
+  need_info: "orange", need_help: "red", on_hold: "stone", processed: "green",
+};
+
+export const STAGE_STATUSES = ["not_started", "in_process", "need_info", "need_help", "on_hold", "done"] as const;
+export type StageStatus = (typeof STAGE_STATUSES)[number];
+export const STAGE_STATUS_LABELS: Record<StageStatus, string> = {
+  not_started: "Not Started", in_process: "In Process", need_info: "Need Info",
+  need_help: "Need Help", on_hold: "On Hold", done: "Done",
+};
+export const STAGE_STATUS_COLORS: Record<StageStatus, string> = {
+  not_started: "slate", in_process: "blue", need_info: "amber",
+  need_help: "red", on_hold: "stone", done: "green",
+};
+
+export const STAGE_LOCATIONS = ["Undecided", "Inhouse", "Lab Testing Company List (to make)", "To Find", "Others"] as const;
+
+export const SAMPLE_REPORT_TYPES = ["Dimension Report", "Chemical Analysis Report", "Drawing Report", "Costing Report"] as const;

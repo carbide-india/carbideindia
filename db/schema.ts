@@ -32,6 +32,8 @@ import {
   INQUIRY_PRIORITIES,
   INQUIRY_SOURCES,
   FEAS_PRIORITIES,
+  SAMPLE_STATUSES,
+  STAGE_STATUSES,
 } from "./enums";
 
 /**
@@ -307,6 +309,10 @@ export const clients = pgTable(
     addressLine3: text("address_line_3"),
     addressLine4: text("address_line_4"),
     pinCode: text("pin_code"),
+    // ── Client KYC meeting (Phase 3) — times as "HH:mm" text, sheet-true ──
+    kycMeetingDate: timestamp("kyc_meeting_date", { withTimezone: true }),
+    kycMeetingStart: text("kyc_meeting_start"),
+    kycMeetingEnd: text("kyc_meeting_end"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -501,6 +507,49 @@ export const inquiries = pgTable(
 );
 export type Inquiry = typeof inquiries.$inferSelect;
 export type NewInquiry = typeof inquiries.$inferInsert;
+
+// ── Sample Register (Phase 3) ───────────────────────────────────
+export const sampleStatusEnum = pgEnum("sample_status", SAMPLE_STATUSES);
+export const stageStatusEnum = pgEnum("stage_status", STAGE_STATUSES);
+
+export const samples = pgTable(
+  "samples",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sampleDate: timestamp("sample_date", { withTimezone: true }).notNull().defaultNow(),
+    inquiryId: uuid("inquiry_id").references(() => inquiries.id, { onDelete: "set null" }),
+    sampleNo: text("sample_no").notNull().unique(),
+    location: text("location").notNull().default("AYK Cabin"),
+    responsiblePersonId: uuid("responsible_person_id").references(() => employees.id, { onDelete: "set null" }),
+    photoUrls: text("photo_urls").array(),
+    sampleNotes: text("sample_notes"),
+    sampleStatus: sampleStatusEnum("sample_status").notNull().default("received"),
+    dimensionStatus: stageStatusEnum("dimension_status").notNull().default("not_started"),
+    dimensionLocation: text("dimension_location").notNull().default("Undecided"),
+    dimensionCompletedOn: timestamp("dimension_completed_on", { withTimezone: true }),
+    chemicalStatus: stageStatusEnum("chemical_status").notNull().default("not_started"),
+    chemicalLocation: text("chemical_location").notNull().default("Undecided"),
+    chemicalCompletedOn: timestamp("chemical_completed_on", { withTimezone: true }),
+    drawingStatus: stageStatusEnum("drawing_status").notNull().default("not_started"),
+    drawingLocation: text("drawing_location").notNull().default("Undecided"),
+    drawingCompletedOn: timestamp("drawing_completed_on", { withTimezone: true }),
+    costingStatus: stageStatusEnum("costing_status").notNull().default("not_started"),
+    costingCompletedOn: timestamp("costing_completed_on", { withTimezone: true }),
+    reportsUploaded: text("reports_uploaded").array(),          // SAMPLE_REPORT_TYPES values
+    reportsInSmFolder: boolean("reports_in_sm_folder").notNull().default(false),
+    processedDate: timestamp("processed_date", { withTimezone: true }),
+    processNotes: text("process_notes"),
+    createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("samples_status_idx").on(t.sampleStatus, t.sampleDate),
+    index("samples_inquiry_idx").on(t.inquiryId),
+  ],
+);
+export type Sample = typeof samples.$inferSelect;
+export type NewSample = typeof samples.$inferInsert;
 
 /**
  * Project Management (Manan #23/#24). A self-referential tree:
