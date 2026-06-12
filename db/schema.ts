@@ -36,6 +36,7 @@ import {
   STAGE_STATUSES,
   COSTING_DONE_STATUSES,
   NEGOTIATION_STATUSES,
+  MEETING_PURPOSES,
 } from "./enums";
 
 /**
@@ -651,6 +652,33 @@ export const salesOrders = pgTable("sales_orders", {
 }, (t) => [index("sales_orders_inquiry_idx").on(t.inquiryId)]);
 export type SalesOrder = typeof salesOrders.$inferSelect;
 export type NewSalesOrder = typeof salesOrders.$inferInsert;
+
+// ── Daily Client Meeting Feedback (Phase 5) ─────────────────────
+export const meetingPurposeEnum = pgEnum("meeting_purpose", MEETING_PURPOSES);
+export const clientMeetingNoSeq = pgSequence("client_meeting_no_seq", { startWith: 1001 });
+
+export const clientMeetings = pgTable("client_meetings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  meetingNo: text("meeting_no").notNull().unique().default(sql`'MTG' || nextval('client_meeting_no_seq')`),
+  salesPersonId: uuid("sales_person_id").references(() => employees.id, { onDelete: "set null" }),
+  clientId: uuid("client_id").references(() => clients.id, { onDelete: "set null" }),
+  companyName: text("company_name").notNull(),
+  contactPersonName: text("contact_person_name").notNull(),
+  contactPersonDesignation: text("contact_person_designation"),
+  meetingDate: timestamp("meeting_date", { withTimezone: true }).notNull().defaultNow(),
+  meetingTime: text("meeting_time"),
+  clientType: text("client_type"),
+  purpose: meetingPurposeEnum("purpose").notNull().default("regular_order"),
+  purposeOther: text("purpose_other"),
+  meetingNotes: text("meeting_notes"),
+  nextFollowUpDate: timestamp("next_follow_up_date", { withTimezone: true }),
+  selfieUrl: text("selfie_url"),
+  createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("client_meetings_date_idx").on(t.meetingDate), index("client_meetings_sales_idx").on(t.salesPersonId)]);
+export type ClientMeeting = typeof clientMeetings.$inferSelect;
+export type NewClientMeeting = typeof clientMeetings.$inferInsert;
 
 /**
  * Project Management (Manan #23/#24). A self-referential tree:

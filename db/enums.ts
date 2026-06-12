@@ -357,3 +357,16 @@ export const NEGOTIATION_STATUS_COLORS: Record<NegotiationStatus, string> = {
   order_won: "green", order_lost: "red", order_abandoned: "stone",
   need_help: "red", on_hold: "stone",
 };
+
+// ── Daily Client Meeting Feedback ──
+export const MEETING_PURPOSES = ["regular_order","new_order","payment_follow_up","upsell","courtesy_meeting","customer_complaints","enquiry_generation","other"] as const;
+export type MeetingPurpose = (typeof MEETING_PURPOSES)[number];
+export const MEETING_PURPOSE_LABELS: Record<MeetingPurpose, string> = {
+  regular_order:"Regular Order", new_order:"New Order", payment_follow_up:"Payment Follow Up",
+  upsell:"Upsell", courtesy_meeting:"Courtesy Meeting", customer_complaints:"Customer Complaints",
+  enquiry_generation:"Enquiry Generation", other:"Other",
+};
+export const MEETING_PURPOSE_COLORS: Record<MeetingPurpose, string> = {
+  regular_order:"green", new_order:"blue", payment_follow_up:"amber", upsell:"purple",
+  courtesy_meeting:"slate", customer_complaints:"red", enquiry_generation:"blue", other:"stone",
+};
