@@ -331,3 +331,29 @@ export const STAGE_STATUS_COLORS: Record<StageStatus, string> = {
 export const STAGE_LOCATIONS = ["Undecided", "Inhouse", "Lab Testing Company List (to make)", "To Find", "Others"] as const;
 
 export const SAMPLE_REPORT_TYPES = ["Dimension Report", "Chemical Analysis Report", "Drawing Report", "Costing Report"] as const;
+
+// ── Quote lifecycle (Phase 4) — from Quote Master / Negotiation / SO sheets ──
+export const COSTING_DONE_STATUSES = ["not_done", "in_process", "done"] as const;
+export type CostingDoneStatus = (typeof COSTING_DONE_STATUSES)[number];
+export const COSTING_DONE_STATUS_LABELS: Record<CostingDoneStatus, string> = {
+  not_done: "Not Done", in_process: "In Process", done: "Done",
+};
+export const COSTING_DONE_STATUS_COLORS: Record<CostingDoneStatus, string> = {
+  not_done: "slate", in_process: "amber", done: "green",
+};
+
+export const NEGOTIATION_STATUSES = [
+  "to_start", "follow_up", "revision", "verbal_yes",
+  "order_won", "order_lost", "order_abandoned", "need_help", "on_hold",
+] as const;
+export type NegotiationStatus = (typeof NEGOTIATION_STATUSES)[number];
+export const NEGOTIATION_STATUS_LABELS: Record<NegotiationStatus, string> = {
+  to_start: "To Start", follow_up: "Follow up", revision: "Revision", verbal_yes: "Verbal Yes",
+  order_won: "Order Won", order_lost: "Order Lost", order_abandoned: "Order Abandoned",
+  need_help: "Need Help", on_hold: "On Hold",
+};
+export const NEGOTIATION_STATUS_COLORS: Record<NegotiationStatus, string> = {
+  to_start: "slate", follow_up: "blue", revision: "amber", verbal_yes: "purple",
+  order_won: "green", order_lost: "red", order_abandoned: "stone",
+  need_help: "red", on_hold: "stone",
+};

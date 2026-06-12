@@ -43,6 +43,13 @@
       "when": 1781244434103,
       "tag": "0005_freezing_toad_men",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1781251206740,
+      "tag": "0006_high_annihilus",
+      "breakpoints": true
     }
   ]
 }

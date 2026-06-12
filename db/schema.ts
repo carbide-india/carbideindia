@@ -34,6 +34,8 @@ import {
   FEAS_PRIORITIES,
   SAMPLE_STATUSES,
   STAGE_STATUSES,
+  COSTING_DONE_STATUSES,
+  NEGOTIATION_STATUSES,
 } from "./enums";
 
 /**
@@ -550,6 +552,98 @@ export const samples = pgTable(
 );
 export type Sample = typeof samples.$inferSelect;
 export type NewSample = typeof samples.$inferInsert;
+
+// ── Quotation / Negotiation / Sales Order (Phase 4) ─────────────
+export const costingDoneStatusEnum = pgEnum("costing_done_status", COSTING_DONE_STATUSES);
+export const negotiationStatusEnum = pgEnum("negotiation_status", NEGOTIATION_STATUSES);
+
+export const quotations = pgTable("quotations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  inquiryId: uuid("inquiry_id").notNull().references(() => inquiries.id, { onDelete: "cascade" }),
+  quoteNo: text("quote_no").notNull().unique(),
+  // snapshots from the SM (display + history)
+  companyName: text("company_name"),
+  enquiryDate: timestamp("enquiry_date", { withTimezone: true }),
+  custProductName: text("cust_product_name"),
+  custDrawingNo: text("cust_drawing_no"),
+  drawingRevisionNo: text("drawing_revision_no"),
+  qty: numeric("qty"),
+  gradeCustomer: text("grade_customer"),
+  gradeNameForCust: text("grade_name_for_cust"),
+  tolerance: text("tolerance"),
+  condition: text("condition"),
+  partNo: text("part_no"),
+  finalCost: numeric("final_cost"),
+  negotiation: numeric("negotiation"),
+  quotePrice: numeric("quote_price"),
+  developmentTime: text("development_time"),
+  deliveryTime: text("delivery_time"),
+  validity: text("validity"),
+  costingDoneStatus: costingDoneStatusEnum("costing_done_status").notNull().default("not_done"),
+  quotationLink: text("quotation_link"),
+  quoteSent: boolean("quote_sent").notNull().default(false),
+  createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("quotations_inquiry_idx").on(t.inquiryId)]);
+export type Quotation = typeof quotations.$inferSelect;
+export type NewQuotation = typeof quotations.$inferInsert;
+
+export const negotiations = pgTable("negotiations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  inquiryId: uuid("inquiry_id").notNull().references(() => inquiries.id, { onDelete: "cascade" }),
+  quotationId: uuid("quotation_id").references(() => quotations.id, { onDelete: "set null" }),
+  negotiationNo: text("negotiation_no").notNull().unique(),
+  companyName: text("company_name"),
+  enquiryDate: timestamp("enquiry_date", { withTimezone: true }),
+  salesPersonId: uuid("sales_person_id").references(() => employees.id, { onDelete: "set null" }),
+  custProductName: text("cust_product_name"),
+  qty: numeric("qty"),
+  partNo: text("part_no"),
+  finalCost: numeric("final_cost"),
+  negotiation: numeric("negotiation"),
+  quotePrice: numeric("quote_price"),
+  developmentTime: text("development_time"),
+  deliveryTime: text("delivery_time"),
+  validity: text("validity"),
+  quotationLink: text("quotation_link"),
+  negotiationStatus: negotiationStatusEnum("negotiation_status").notNull().default("to_start"),
+  negotiationNotes: text("negotiation_notes"),
+  createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("negotiations_inquiry_idx").on(t.inquiryId), index("negotiations_status_idx").on(t.negotiationStatus)]);
+export type Negotiation = typeof negotiations.$inferSelect;
+export type NewNegotiation = typeof negotiations.$inferInsert;
+
+export const salesOrders = pgTable("sales_orders", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  inquiryId: uuid("inquiry_id").notNull().references(() => inquiries.id, { onDelete: "cascade" }),
+  quotationId: uuid("quotation_id").references(() => quotations.id, { onDelete: "set null" }),
+  soNo: text("so_no").notNull().unique(),
+  companyName: text("company_name"),
+  enquiryDate: timestamp("enquiry_date", { withTimezone: true }),
+  salesPersonId: uuid("sales_person_id").references(() => employees.id, { onDelete: "set null" }),
+  custProductName: text("cust_product_name"),
+  qty: numeric("qty"),
+  partNo: text("part_no"),
+  quotePrice: numeric("quote_price"),
+  developmentTime: text("development_time"),
+  deliveryTime: text("delivery_time"),
+  validity: text("validity"),
+  quotationLink: text("quotation_link"),
+  customerPoLink: text("customer_po_link"),
+  customerPoDate: timestamp("customer_po_date", { withTimezone: true }),
+  customerPoNo: text("customer_po_no"),
+  customerSoLink: text("customer_so_link"),
+  customerSoSent: boolean("customer_so_sent").notNull().default(false),
+  productionSoLink: text("production_so_link"),
+  createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("sales_orders_inquiry_idx").on(t.inquiryId)]);
+export type SalesOrder = typeof salesOrders.$inferSelect;
+export type NewSalesOrder = typeof salesOrders.$inferInsert;
 
 /**
  * Project Management (Manan #23/#24). A self-referential tree:
