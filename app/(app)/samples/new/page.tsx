@@ -2,17 +2,13 @@ import { DashboardHeader } from "@/components/layout/header";
 import { DashboardFooter } from "@/components/layout/footer";
 import { SampleForm } from "@/components/samples/sample-form";
 import { requireUser } from "@/lib/auth/current";
-import { listInquiryOptions } from "@/lib/queries/inquiries";
 import { listEmployeeOptions } from "@/lib/queries/employees";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewSamplePage() {
   await requireUser();
-  const [inquiries, employees] = await Promise.all([
-    listInquiryOptions(),
-    listEmployeeOptions(),
-  ]);
+  const employees = await listEmployeeOptions();
 
   return (
     <>
@@ -24,11 +20,11 @@ export default async function NewSamplePage() {
           </div>
           <h1 className="text-display-lg text-ink-strong mt-1">New Sample</h1>
           <p className="text-body-lg text-ink-subtle mt-1">
-            Register a physical sample — link it to an enquiry and the sample
-            number derives from the SM automatically.
+            Register a physical sample — enter the sample number as written on
+            the physical sample / register.
           </p>
         </header>
-        <SampleForm inquiries={inquiries} employees={employees} />
+        <SampleForm employees={employees} />
       </main>
       <DashboardFooter />
     </>

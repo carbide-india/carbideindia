@@ -1,13 +1,17 @@
 import { z } from "zod";
 import {
-  SAMPLE_LOCATIONS,
   SAMPLE_STATUSES,
   STAGE_STATUSES,
-  STAGE_LOCATIONS,
   SAMPLE_REPORT_TYPES,
 } from "@/db/enums";
 
 const Trimmed = (max: number) => z.string().trim().max(max);
+/**
+ * Location fields are free text (DB columns are `text`): the UI offers the
+ * option lists from db/enums plus an "Other(s) → specify" input whose typed
+ * value is stored verbatim — so the validator only enforces non-empty + cap.
+ */
+const LocationText = z.string().trim().min(1, "Location is required.").max(80);
 /**
  * Optional free-text field: trims, caps length, and folds empty strings to
  * `undefined` so half-filled form inputs never persist as `""`.
@@ -25,19 +29,19 @@ const SampleFieldsSchema = z.object({
   sampleDate: z.string().optional(),                  // ISO date; defaults server-side to now
   inquiryId: z.string().uuid().optional(),            // linked enquiry → sampleNo auto-derives
   sampleNo: OptionalText(60),                         // free-text fallback when unlinked
-  location: z.enum(SAMPLE_LOCATIONS).default("AYK Cabin"),
+  location: LocationText.default("AYK Cabin"),
   responsiblePersonId: z.string().uuid().optional(),
   photoUrls: z.array(Trimmed(500).min(1)).optional(), // Blob URLs (Task 4 photo upload)
   sampleNotes: OptionalText(2000),
   sampleStatus: z.enum(SAMPLE_STATUSES).default("received"),
   dimensionStatus: z.enum(STAGE_STATUSES).default("not_started"),
-  dimensionLocation: z.enum(STAGE_LOCATIONS).default("Undecided"),
+  dimensionLocation: LocationText.default("Undecided"),
   dimensionCompletedOn: z.string().optional(),        // ISO date
   chemicalStatus: z.enum(STAGE_STATUSES).default("not_started"),
-  chemicalLocation: z.enum(STAGE_LOCATIONS).default("Undecided"),
+  chemicalLocation: LocationText.default("Undecided"),
   chemicalCompletedOn: z.string().optional(),
   drawingStatus: z.enum(STAGE_STATUSES).default("not_started"),
-  drawingLocation: z.enum(STAGE_LOCATIONS).default("Undecided"),
+  drawingLocation: LocationText.default("Undecided"),
   drawingCompletedOn: z.string().optional(),
   costingStatus: z.enum(STAGE_STATUSES).default("not_started"),
   costingCompletedOn: z.string().optional(),
@@ -59,14 +63,14 @@ export type CreateSampleInput = z.input<typeof CreateSampleSchema>;
  */
 export const UpdateSampleSchema = SampleFieldsSchema
   .extend({
-    location: z.enum(SAMPLE_LOCATIONS),
+    location: LocationText,
     sampleStatus: z.enum(SAMPLE_STATUSES),
     dimensionStatus: z.enum(STAGE_STATUSES),
-    dimensionLocation: z.enum(STAGE_LOCATIONS),
+    dimensionLocation: LocationText,
     chemicalStatus: z.enum(STAGE_STATUSES),
-    chemicalLocation: z.enum(STAGE_LOCATIONS),
+    chemicalLocation: LocationText,
     drawingStatus: z.enum(STAGE_STATUSES),
-    drawingLocation: z.enum(STAGE_LOCATIONS),
+    drawingLocation: LocationText,
     costingStatus: z.enum(STAGE_STATUSES),
     reportsInSmFolder: z.boolean(),
   })

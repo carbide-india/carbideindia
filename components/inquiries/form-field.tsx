@@ -15,17 +15,24 @@ export function Field({
   required,
   children,
   className,
+  labelOnly,
 }: {
   id?: string;
   label: string;
   required?: boolean;
   children: React.ReactNode;
   className?: string;
+  /**
+   * Render the label without `htmlFor`. Use for popover-based selects
+   * (ui Select / SearchableSelect): label-click must not toggle the popover,
+   * so the control carries an `aria-label` instead of a `for` association.
+   */
+  labelOnly?: boolean;
 }) {
   return (
     <div className={cn("flex flex-col gap-2", className)}>
       <label
-        htmlFor={id}
+        htmlFor={labelOnly ? undefined : id}
         className="font-bold"
         style={{
           fontFamily: "var(--font-sans), system-ui, sans-serif",
@@ -37,6 +44,39 @@ export function Field({
         {label}
         {required && <span style={{ color: "#D32F2F" }}> *</span>}
       </label>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Smaller sibling of Field for fields nested inside a titled block (e.g. the
+ * Sample Register's stage rows): same label voice at 12px so the hierarchy
+ * reads stage title > field label > control. Renders a <span>, never a
+ * <label> — the controls carry their own aria-labels.
+ */
+export function MiniField({
+  label,
+  children,
+  className,
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex flex-col gap-1.5", className)}>
+      <span
+        className="font-bold"
+        style={{
+          fontFamily: "var(--font-sans), system-ui, sans-serif",
+          fontSize: 12,
+          letterSpacing: "-0.005em",
+          color: "var(--color-ink-strong)",
+        }}
+      >
+        {label}
+      </span>
       {children}
     </div>
   );

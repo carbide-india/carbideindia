@@ -27,6 +27,9 @@ interface Props {
   /** Offer "Use ‹typed›" for values not in the list (city names off the map). */
   allowCustom?: boolean;
   invalid?: boolean;
+  /** Accessible name for the trigger — use instead of a `htmlFor` label
+   *  association so label-click can't toggle the popover. */
+  ariaLabel?: string;
 }
 
 /**
@@ -46,6 +49,7 @@ export function SearchableSelect({
   onDisabledClick,
   allowCustom = false,
   invalid = false,
+  ariaLabel,
 }: Props) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
@@ -97,6 +101,7 @@ export function SearchableSelect({
           id={id}
           type="button"
           role="combobox"
+          aria-label={ariaLabel}
           aria-expanded={open}
           aria-haspopup="listbox"
           // Keep the trigger in the tab order even when "disabled" so the

@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
-import { Check, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Check, Loader2, Plus } from "lucide-react";
 import {
   SAMPLE_STATUSES,
   SAMPLE_STATUS_LABELS,
@@ -23,8 +23,13 @@ import type { EmployeeOption } from "@/lib/queries/employees";
 import { formatDate } from "@/lib/format";
 import { fireToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
-import { Select } from "@/components/ui/select";
-import { Field, SectionCard, Segmented } from "@/components/inquiries/form-field";
+import { LocationSelect } from "@/components/samples/location-select";
+import {
+  Field,
+  MiniField,
+  SectionCard,
+  Segmented,
+} from "@/components/inquiries/form-field";
 import { StatusPicker } from "@/components/inquiries/status-picker";
 
 /** Slim link block for the header — resolved server-side from inquiryId. */
@@ -45,17 +50,14 @@ const STAGE_STATUS_OPTIONS = STAGE_STATUSES.map((s) => ({
   label: STAGE_STATUS_LABELS[s],
 }));
 
-const STAGE_LOCATION_OPTIONS = STAGE_LOCATIONS.map((l) => ({
-  value: l,
-  label: l,
-}));
-
 const SM_FOLDER_OPTIONS = [
   { value: "not_done" as const, label: "Not Done" },
   { value: "done" as const, label: "Done" },
 ];
 
-const STAGE_ROWS = [
+/** The three location-tracked stages — Costing is its own card with no
+ *  location (it's in-house by definition on Manan's sheet). */
+const TRACKED_STAGES = [
   {
     label: "Dimension",
     status: "dimensionStatus",
@@ -73,12 +75,6 @@ const STAGE_ROWS = [
     status: "drawingStatus",
     location: "drawingLocation",
     completed: "drawingCompletedOn",
-  },
-  {
-    label: "Costing",
-    status: "costingStatus",
-    location: null,
-    completed: "costingCompletedOn",
   },
 ] as const;
 
@@ -159,67 +155,127 @@ export function SampleDetail({ sample, employees, inquiryLink }: Props) {
     formState: { isDirty, dirtyFields, isSubmitting },
   } = useForm<SampleEditValues>({ defaultValues: defaults });
 
-  const onSubmit = handleSubmit(async (values) => {
-    // Dirty-only patch — the action's strip-undefined + no-op short-circuit
-    // handles the rest. Date inputs (YYYY-MM-DD) pin to noon UTC; an emptied
-    // date folds to undefined (dates can't be cleared once set — backend has
-    // no null path yet).
-    const patch = Object.fromEntries(
-      Object.keys(dirtyFields).map((key) => {
-        const k = key as keyof SampleEditValues;
-        const raw = values[k];
-        const value =
-          DATE_KEYS.has(k) && typeof raw === "string"
-            ? raw
-              ? new Date(`${raw}T12:00:00.000Z`).toISOString()
-              : undefined
-            : raw;
-        return [k, value];
-      }),
-    ) as UpdateSampleInput;
-    if (Object.keys(patch).length === 0) return;
-    const res = await updateSample(sample.id, patch);
-    if (res.ok) {
-      fireToast({ message: "Sample saved." });
-      reset(values);
-      router.refresh();
-    } else {
-      fireToast({ message: res.error, type: "error" });
-    }
-  });
+  const onSubmit = handleSubmit(
+    async (values) => {
+      // Dirty-only patch — the action's strip-undefined + no-op short-circuit
+      // handles the rest. Date inputs (YYYY-MM-DD) pin to noon UTC; an emptied
+      // date folds to undefined (dates can't be cleared once set — backend has
+      // no null path yet).
+      const patch = Object.fromEntries(
+        Object.keys(dirtyFields).map((key) => {
+          const k = key as keyof SampleEditValues;
+          const raw = values[k];
+          const value =
+            DATE_KEYS.has(k) && typeof raw === "string"
+              ? raw
+                ? new Date(`${raw}T12:00:00.000Z`).toISOString()
+                : undefined
+              : raw;
+          return [k, value];
+        }),
+      ) as UpdateSampleInput;
+      if (Object.keys(patch).length === 0) return;
+      const res = await updateSample(sample.id, patch);
+      if (res.ok) {
+        fireToast({ message: "Sample saved." });
+        reset(values);
+        router.refresh();
+      } else {
+        fireToast({ message: res.error, type: "error" });
+      }
+    },
+    (errs) => {
+      // No resolver here — Controller `rules` carry the location-required
+      // check; surface the first message instead of failing silently.
+      const first = Object.values(errs)[0]?.message;
+      fireToast({
+        message: typeof first === "string" && first ? first : "Check the highlighted fields.",
+        type: "error",
+      });
+    },
+  );
+
+  const statusTone = SAMPLE_STATUS_COLORS[sample.sampleStatus] ?? "slate";
 
   return (
     <div className="flex flex-col gap-6">
-      {/* ── Header ──────────────────────────────────────────────────── */}
-      <header>
-        <p className="text-[12px] uppercase tracking-[0.18em] font-bold text-ink-subtle">
-          Sales · Sample Register
-        </p>
-        <h1 className="font-mono text-[40px] leading-tight tracking-tight text-ink-strong">
+      {/* ── Breadcrumb ──────────────────────────────────────────────── */}
+      <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-[13px]">
+        <Link
+          href={"/samples" as Route}
+          className="inline-flex items-center gap-1.5 font-semibold text-ink-muted hover:text-ink-strong transition-colors"
+        >
+          <ArrowLeft size={14} strokeWidth={2.4} />
+          Sample Register
+        </Link>
+        <span aria-hidden className="text-ink-subtle">
+          ·
+        </span>
+        <span
+          aria-current="page"
+          className="text-ink-subtle"
+          style={{ fontFamily: "var(--font-mono)", fontSize: 12.5 }}
+        >
           {sample.sampleNo}
-        </h1>
-        <p className="text-[15px] text-ink-muted">
-          {inquiryLink ? (
-            <>
-              {inquiryLink.companyName}
-              <span className="mx-2 text-ink-subtle">·</span>
+        </span>
+      </nav>
+
+      {/* ── Header ──────────────────────────────────────────────────── */}
+      <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4 -mt-2">
+        <div className="min-w-0">
+          <h1 className="font-mono text-[40px] leading-tight tracking-tight text-ink-strong">
+            {sample.sampleNo}
+          </h1>
+          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[14.5px] text-ink-muted">
+            {formatDate(sample.sampleDate)}
+            <span aria-hidden className="text-ink-subtle">
+              ·
+            </span>
+            {sample.location}
+            <span aria-hidden className="text-ink-subtle">
+              ·
+            </span>
+            {inquiryLink ? (
               <Link
                 href={`/inquiries/${inquiryLink.id}` as Route}
-                className="font-semibold text-ink-strong hover:underline"
-                style={{ fontFamily: "var(--font-mono)", fontSize: 13.5 }}
+                className="inline-flex items-center gap-1.5 rounded-pill border border-hairline bg-surface-soft px-2.5 py-1 text-[13px] font-semibold text-ink-strong hover:border-hairline-strong transition-colors"
               >
-                {inquiryLink.smNumber}
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 12.5 }}>
+                  {inquiryLink.smNumber}
+                </span>
+                <span aria-hidden className="text-ink-subtle">
+                  ·
+                </span>
+                <span className="max-w-[260px] truncate">
+                  {inquiryLink.companyName}
+                </span>
+                <ArrowUpRight size={13} strokeWidth={2.4} className="text-ink-subtle" />
               </Link>
-              <span className="mx-2 text-ink-subtle">·</span>
-            </>
-          ) : (
-            <>
-              Not linked to an enquiry
-              <span className="mx-2 text-ink-subtle">·</span>
-            </>
-          )}
-          {formatDate(sample.sampleDate)}
-        </p>
+            ) : (
+              <span className="text-ink-subtle">Not linked to an enquiry</span>
+            )}
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          {/* Read-only status chip — the sidebar StatusPicker is the mutator. */}
+          <span
+            className="inline-flex items-center px-3 py-1.5 rounded-pill text-[13px] font-bold"
+            style={{
+              background: `color-mix(in srgb, var(--color-${statusTone}) 12%, transparent)`,
+              color: `var(--color-${statusTone}-deep)`,
+              border: `1px solid color-mix(in srgb, var(--color-${statusTone}) 30%, transparent)`,
+            }}
+          >
+            {SAMPLE_STATUS_LABELS[sample.sampleStatus] ?? sample.sampleStatus}
+          </span>
+          <Link
+            href={"/samples/new" as Route}
+            className="inline-flex items-center gap-1.5 rounded-pill border border-hairline bg-surface-card px-4 py-2 text-[13.5px] font-bold text-ink-strong hover:border-hairline-strong hover:bg-surface-soft transition-colors"
+          >
+            <Plus size={14} strokeWidth={2.6} />
+            New Sample
+          </Link>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr] items-start">
@@ -257,56 +313,97 @@ export function SampleDetail({ sample, employees, inquiryLink }: Props) {
           {/* One form for the whole editable area: Stages + Reports. */}
           <form onSubmit={onSubmit} className="flex flex-col gap-6" noValidate>
             <SectionCard
-              title="Stages"
+              title="Stage Tracking"
               hint="Status, location and completion per stage — only changed fields are saved."
             >
               <div className="flex flex-col gap-3">
-                {STAGE_ROWS.map((row) => (
+                {TRACKED_STAGES.map((row) => (
                   <div
                     key={row.status}
-                    className="flex flex-col gap-3 rounded-xl border border-hairline p-3"
+                    className="flex flex-col gap-3.5 rounded-xl border border-hairline p-4"
                   >
                     <span className="text-[14px] font-bold text-ink-strong">
                       {row.label}
                     </span>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <Controller
-                        control={control}
-                        name={row.status}
-                        render={({ field }) => (
-                          <Segmented
-                            options={STAGE_STATUS_OPTIONS}
-                            value={field.value}
-                            onChange={field.onChange}
-                            allowClear={false}
-                            ariaLabel={`${row.label} status`}
-                          />
-                        )}
-                      />
-                      {row.location && (
+                    <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
+                      <MiniField label="Status">
                         <Controller
                           control={control}
-                          name={row.location}
+                          name={row.status}
                           render={({ field }) => (
-                            <Select
+                            <Segmented
+                              options={STAGE_STATUS_OPTIONS}
                               value={field.value}
-                              onValueChange={field.onChange}
-                              options={STAGE_LOCATION_OPTIONS}
-                              ariaLabel={`${row.label} location`}
-                              className="min-w-[200px]"
+                              onChange={field.onChange}
+                              allowClear={false}
+                              ariaLabel={`${row.label} status`}
                             />
                           )}
                         />
-                      )}
-                      <input
-                        type="date"
-                        className="nt-input max-w-[180px]"
-                        aria-label={`${row.label} completed on`}
-                        {...register(row.completed)}
-                      />
+                      </MiniField>
+                      <MiniField label="Location" className="min-w-[220px] flex-1">
+                        <Controller
+                          control={control}
+                          name={row.location}
+                          rules={{
+                            validate: (v) =>
+                              (typeof v === "string" && v.trim().length > 0) ||
+                              `Specify the ${row.label} location.`,
+                          }}
+                          render={({ field }) => (
+                            <LocationSelect
+                              value={field.value}
+                              onChange={field.onChange}
+                              options={STAGE_LOCATIONS}
+                              otherOption="Others"
+                              specifyPlaceholder="Specify lab / vendor…"
+                              ariaLabel={`${row.label} location`}
+                            />
+                          )}
+                        />
+                      </MiniField>
+                      <MiniField label="Completed On">
+                        <input
+                          type="date"
+                          className="nt-input w-[180px]"
+                          aria-label={`${row.label} completed on`}
+                          {...register(row.completed)}
+                        />
+                      </MiniField>
                     </div>
                   </div>
                 ))}
+              </div>
+            </SectionCard>
+
+            <SectionCard
+              title="Costing"
+              hint="Costing runs in-house, so it tracks status and completion only — no location."
+            >
+              <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
+                <MiniField label="Status">
+                  <Controller
+                    control={control}
+                    name="costingStatus"
+                    render={({ field }) => (
+                      <Segmented
+                        options={STAGE_STATUS_OPTIONS}
+                        value={field.value}
+                        onChange={field.onChange}
+                        allowClear={false}
+                        ariaLabel="Costing status"
+                      />
+                    )}
+                  />
+                </MiniField>
+                <MiniField label="Completed On">
+                  <input
+                    type="date"
+                    className="nt-input w-[180px]"
+                    aria-label="Costing completed on"
+                    {...register("costingCompletedOn")}
+                  />
+                </MiniField>
               </div>
             </SectionCard>
 
@@ -448,6 +545,13 @@ export function SampleDetail({ sample, employees, inquiryLink }: Props) {
               </span>
             </div>
           )}
+          <Link
+            href={"/samples" as Route}
+            className="mt-1 inline-flex items-center gap-1.5 border-t border-hairline pt-4 text-[13px] font-semibold text-ink-muted hover:text-ink-strong transition-colors"
+          >
+            <ArrowLeft size={13} strokeWidth={2.4} />
+            Open Register
+          </Link>
         </aside>
       </div>
     </div>

@@ -213,13 +213,13 @@ export function KycForm({ customerTypes, industryTypes, productTypes }: Props) {
       {/* ── 2 · Address ──────────────────────────────────────────────── */}
       <SectionCard title="Address">
         <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-          <Field id="kyc-export" label="Export">
+          <Field label="Export" labelOnly>
             <Controller
               control={control}
               name="export"
               render={({ field }) => (
                 <Select
-                  id="kyc-export"
+                  ariaLabel="Export"
                   value={
                     field.value === undefined ? "" : field.value ? "yes" : "no"
                   }
@@ -232,13 +232,13 @@ export function KycForm({ customerTypes, industryTypes, productTypes }: Props) {
               )}
             />
           </Field>
-          <Field id="kyc-currency" label="Currency">
+          <Field label="Currency" labelOnly>
             <Controller
               control={control}
               name="currency"
               render={({ field }) => (
                 <Select
-                  id="kyc-currency"
+                  ariaLabel="Currency"
                   value={field.value ?? "INR"}
                   onValueChange={field.onChange}
                   options={INQUIRY_CURRENCIES.map((c) => ({
@@ -249,13 +249,13 @@ export function KycForm({ customerTypes, industryTypes, productTypes }: Props) {
               )}
             />
           </Field>
-          <Field id="kyc-country" label="Country">
+          <Field label="Country" labelOnly>
             <Controller
               control={control}
               name="country"
               render={({ field }) => (
                 <Select
-                  id="kyc-country"
+                  ariaLabel="Country"
                   value={field.value ?? "India"}
                   onValueChange={field.onChange}
                   options={INQUIRY_COUNTRIES.map((c) => ({
@@ -271,13 +271,13 @@ export function KycForm({ customerTypes, industryTypes, productTypes }: Props) {
         <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
           {watch("country") === "India" ? (
             <>
-              <Field id="kyc-state" label="State">
+              <Field label="State" labelOnly>
                 <Controller
                   control={control}
                   name="state"
                   render={({ field }) => (
                     <SearchableSelect
-                      id="kyc-state"
+                      ariaLabel="State"
                       value={field.value || undefined}
                       onChange={(v) => {
                         field.onChange(v ?? "");
@@ -292,7 +292,7 @@ export function KycForm({ customerTypes, industryTypes, productTypes }: Props) {
                   )}
                 />
               </Field>
-              <Field id="kyc-city" label="City">
+              <Field label="City" labelOnly>
                 <Controller
                   control={control}
                   name="city"
@@ -301,7 +301,7 @@ export function KycForm({ customerTypes, industryTypes, productTypes }: Props) {
                     return (
                       <>
                         <SearchableSelect
-                          id="kyc-city"
+                          ariaLabel="City"
                           value={field.value || undefined}
                           onChange={(v) => field.onChange(v ?? "")}
                           options={citiesForState(selectedState)}
@@ -516,16 +516,15 @@ function MasterSelect({
   label: string;
   options: MasterOptionItem[];
 }) {
-  const id = `kyc-${name}`;
   const empty = options.length === 0;
   return (
-    <Field id={id} label={label}>
+    <Field label={label} labelOnly>
       <Controller
         control={control}
         name={name}
         render={({ field }) => (
           <Select
-            id={id}
+            ariaLabel={label}
             value={field.value ?? ""}
             onValueChange={(v) => field.onChange(v || undefined)}
             placeholder={empty ? "No options yet" : `Select ${label.toLowerCase()}…`}

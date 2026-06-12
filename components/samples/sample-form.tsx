@@ -10,6 +10,8 @@ import { upload } from "@vercel/blob/client";
 import { Check, ImagePlus, Loader2, X } from "lucide-react";
 import {
   SAMPLE_LOCATIONS,
+  SAMPLE_STATUSES,
+  SAMPLE_STATUS_LABELS,
   STAGE_STATUSES,
   STAGE_STATUS_LABELS,
   STAGE_LOCATIONS,
@@ -20,19 +22,35 @@ import { createSample } from "@/app/(app)/samples/actions";
 import { fireToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { Select } from "@/components/ui/select";
-import { SearchableSelect } from "@/components/inquiries/searchable-select";
-import { Field, SectionCard, Segmented } from "@/components/inquiries/form-field";
-import type { InquiryOption } from "@/lib/queries/inquiries";
+import { LocationSelect } from "@/components/samples/location-select";
+import {
+  Field,
+  MiniField,
+  SectionCard,
+  Segmented,
+} from "@/components/inquiries/form-field";
 import type { EmployeeOption } from "@/lib/queries/employees";
+
+/** Form-level schema: the register form always requires a Sample No (the
+ *  linked-enquiry auto-numbering path still exists server-side, it's just no
+ *  longer driven from this form). */
+const SampleFormSchema = CreateSampleSchema.superRefine((v, ctx) => {
+  if (!v.sampleNo && !v.inquiryId) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["sampleNo"],
+      message: "Sample No is required.",
+    });
+  }
+});
 
 /** RHF holds the schema's *input* shape (pre-transform); zodResolver hands
  *  the parsed *output* (defaults applied, `""` folded to `undefined`) to the
  *  submit handler — which is exactly what createSample takes. */
-export type SampleFormValues = z.input<typeof CreateSampleSchema>;
-type SampleFormOutput = z.output<typeof CreateSampleSchema>;
+export type SampleFormValues = z.input<typeof SampleFormSchema>;
+type SampleFormOutput = z.output<typeof SampleFormSchema>;
 
 interface Props {
-  inquiries: InquiryOption[];
   employees: EmployeeOption[];
 }
 
@@ -78,9 +96,9 @@ const STAGE_STATUS_OPTIONS = STAGE_STATUSES.map((s) => ({
   label: STAGE_STATUS_LABELS[s],
 }));
 
-const STAGE_LOCATION_OPTIONS = STAGE_LOCATIONS.map((l) => ({
-  value: l,
-  label: l,
+const SAMPLE_STATUS_OPTIONS = SAMPLE_STATUSES.map((s) => ({
+  value: s,
+  label: SAMPLE_STATUS_LABELS[s],
 }));
 
 const SM_FOLDER_OPTIONS = [
@@ -88,9 +106,9 @@ const SM_FOLDER_OPTIONS = [
   { value: "done" as const, label: "Done" },
 ];
 
-/** The four tracked stages — Costing has no location (it's in-house by
- *  definition on Manan's sheet). */
-const STAGE_ROWS = [
+/** The three location-tracked stages — Costing is its own section with no
+ *  location (it's in-house by definition on Manan's sheet). */
+const TRACKED_STAGES = [
   {
     label: "Dimension",
     status: "dimensionStatus",
@@ -109,22 +127,16 @@ const STAGE_ROWS = [
     location: "drawingLocation",
     completed: "drawingCompletedOn",
   },
-  {
-    label: "Costing",
-    status: "costingStatus",
-    location: null,
-    completed: "costingCompletedOn",
-  },
 ] as const;
 
 /**
- * New Sample form — four card sections (Sample / Photos / Stages / Reports &
- * Processing). The sample number derives server-side from the linked
- * enquiry's SM (`SM9579-01`); the manual input is the fallback for unlinked
- * samples. Every stage field defaults to its first option per Manan's
- * dashboard rule, so untouched stages read as incomplete.
+ * New Sample form — five card sections (Sample / Photos / Stage Tracking /
+ * Costing / Reports & Processing). The Sample No is typed off the physical
+ * sample or register (always required here). Every stage field defaults to
+ * its first option per Manan's dashboard rule, so untouched stages read as
+ * incomplete.
  */
-export function SampleForm({ inquiries, employees }: Props) {
+export function SampleForm({ employees }: Props) {
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
   const [serverError, setServerError] = React.useState<string | null>(null);
@@ -140,13 +152,11 @@ export function SampleForm({ inquiries, employees }: Props) {
     register,
     control,
     handleSubmit,
-    watch,
     formState: { errors },
   } = useForm<SampleFormValues, unknown, SampleFormOutput>({
-    resolver: zodResolver(CreateSampleSchema),
+    resolver: zodResolver(SampleFormSchema),
     defaultValues: {
       sampleDate: todayLocalIso(),
-      inquiryId: undefined,
       sampleNo: "",
       location: "AYK Cabin",
       responsiblePersonId: undefined,
@@ -169,20 +179,6 @@ export function SampleForm({ inquiries, employees }: Props) {
       processNotes: "",
     },
   });
-
-  // SearchableSelect speaks display strings; the form stores the inquiry id.
-  const labelById = React.useMemo(
-    () => new Map(inquiries.map((i) => [i.id, `${i.smNumber} — ${i.companyName}`])),
-    [inquiries],
-  );
-  const idByLabel = React.useMemo(
-    () => new Map(inquiries.map((i) => [`${i.smNumber} — ${i.companyName}`, i.id])),
-    [inquiries],
-  );
-  const inquiryLabels = React.useMemo(
-    () => inquiries.map((i) => `${i.smNumber} — ${i.companyName}`),
-    [inquiries],
-  );
 
   async function onPickFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -248,14 +244,13 @@ export function SampleForm({ inquiries, employees }: Props) {
   const firstFieldError = Object.values(errors)[0]?.message as
     | string
     | undefined;
-  const inquiryId = watch("inquiryId");
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-6" noValidate>
       {/* ── 1 · Sample ───────────────────────────────────────────────── */}
       <SectionCard
         title="Sample"
-        hint="Link an enquiry and the sample number derives from its SM automatically."
+        hint="Sample number as written on the physical sample / register."
       >
         <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
           <Field id="smp-date" label="Date">
@@ -266,69 +261,64 @@ export function SampleForm({ inquiries, employees }: Props) {
               {...register("sampleDate")}
             />
           </Field>
-          <Field id="smp-location" label="Location">
-            <Controller
-              control={control}
-              name="location"
-              render={({ field }) => (
-                <Select
-                  id="smp-location"
-                  value={field.value ?? "AYK Cabin"}
-                  onValueChange={field.onChange}
-                  options={SAMPLE_LOCATIONS.map((l) => ({ value: l, label: l }))}
-                />
-              )}
-            />
-          </Field>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-          <Field id="smp-inquiry" label="Linked Enquiry">
-            <Controller
-              control={control}
-              name="inquiryId"
-              render={({ field }) => (
-                <SearchableSelect
-                  id="smp-inquiry"
-                  value={field.value ? labelById.get(field.value) : undefined}
-                  onChange={(label) =>
-                    field.onChange(label ? idByLabel.get(label) : undefined)
-                  }
-                  options={inquiryLabels}
-                  placeholder="Select an enquiry…"
-                  searchPlaceholder="Search SM number or company…"
-                  emptyText="No enquiries match."
-                />
-              )}
-            />
-            <p className="text-[12.5px] text-ink-subtle">
-              Leave Sample No blank to auto-number from the SM (e.g. SM9579-01).
-            </p>
-          </Field>
-          <Field id="smp-no" label="Sample No" required={!inquiryId}>
+          <Field id="smp-no" label="Sample No" required>
             <input
               id="smp-no"
               type="text"
+              required
               className="nt-input"
-              placeholder={inquiryId ? "Auto from SM…" : "e.g. SMP-001"}
+              placeholder="e.g. SM9657-01"
               style={{ fontFamily: "var(--font-mono)", fontSize: 13.5 }}
               {...register("sampleNo")}
             />
           </Field>
         </div>
 
-        <Field id="smp-resp" label="Responsible Person">
+        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1 items-start">
+          <Field label="Sample Location" labelOnly>
+            <Controller
+              control={control}
+              name="location"
+              render={({ field }) => (
+                <LocationSelect
+                  value={field.value ?? "AYK Cabin"}
+                  onChange={field.onChange}
+                  options={SAMPLE_LOCATIONS}
+                  otherOption="Other"
+                  specifyPlaceholder="Specify location…"
+                  ariaLabel="Sample location"
+                />
+              )}
+            />
+          </Field>
+          <Field label="Sample Status" labelOnly>
+            <Controller
+              control={control}
+              name="sampleStatus"
+              render={({ field }) => (
+                <Select
+                  value={field.value ?? "received"}
+                  onValueChange={field.onChange}
+                  options={SAMPLE_STATUS_OPTIONS}
+                  ariaLabel="Sample status"
+                />
+              )}
+            />
+          </Field>
+        </div>
+
+        <Field label="Responsible Person" labelOnly>
           <Controller
             control={control}
             name="responsiblePersonId"
             render={({ field }) => (
               <Select
-                id="smp-resp"
                 value={field.value ?? ""}
                 onValueChange={(v) => field.onChange(v || undefined)}
                 placeholder="Select an employee…"
                 searchPlaceholder="Search employees…"
                 searchable
+                ariaLabel="Responsible person"
                 options={employees.map((e) => ({ value: e.id, label: e.name }))}
               />
             )}
@@ -405,62 +395,99 @@ export function SampleForm({ inquiries, employees }: Props) {
         </div>
       </SectionCard>
 
-      {/* ── 3 · Stages ───────────────────────────────────────────────── */}
+      {/* ── 3 · Stage Tracking ───────────────────────────────────────── */}
       <SectionCard
-        title="Stages"
-        hint="Dimension, chemical analysis, drawing and costing — first options mean 'not started yet', so dashboards can flag incomplete stages."
+        title="Stage Tracking"
+        hint="Dimension, chemical analysis and drawing — first options mean 'not started yet', so dashboards can flag incomplete stages."
       >
         <div className="flex flex-col gap-3">
-          {STAGE_ROWS.map((row) => (
+          {TRACKED_STAGES.map((row) => (
             <div
               key={row.status}
-              className="flex flex-col gap-3 rounded-xl border border-hairline p-3"
+              className="flex flex-col gap-3.5 rounded-xl border border-hairline p-4"
             >
               <span className="text-[14px] font-bold text-ink-strong">
                 {row.label}
               </span>
-              <div className="flex flex-wrap items-center gap-3">
-                <Controller
-                  control={control}
-                  name={row.status}
-                  render={({ field }) => (
-                    <Segmented
-                      options={STAGE_STATUS_OPTIONS}
-                      value={field.value}
-                      onChange={field.onChange}
-                      allowClear={false}
-                      ariaLabel={`${row.label} status`}
-                    />
-                  )}
-                />
-                {row.location && (
+              <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
+                <MiniField label="Status">
+                  <Controller
+                    control={control}
+                    name={row.status}
+                    render={({ field }) => (
+                      <Segmented
+                        options={STAGE_STATUS_OPTIONS}
+                        value={field.value}
+                        onChange={field.onChange}
+                        allowClear={false}
+                        ariaLabel={`${row.label} status`}
+                      />
+                    )}
+                  />
+                </MiniField>
+                <MiniField label="Location" className="min-w-[220px] flex-1">
                   <Controller
                     control={control}
                     name={row.location}
                     render={({ field }) => (
-                      <Select
+                      <LocationSelect
                         value={field.value ?? "Undecided"}
-                        onValueChange={field.onChange}
-                        options={STAGE_LOCATION_OPTIONS}
+                        onChange={field.onChange}
+                        options={STAGE_LOCATIONS}
+                        otherOption="Others"
+                        specifyPlaceholder="Specify lab / vendor…"
                         ariaLabel={`${row.label} location`}
-                        className="min-w-[200px]"
                       />
                     )}
                   />
-                )}
-                <input
-                  type="date"
-                  className="nt-input max-w-[180px]"
-                  aria-label={`${row.label} completed on`}
-                  {...register(row.completed)}
-                />
+                </MiniField>
+                <MiniField label="Completed On">
+                  <input
+                    type="date"
+                    className="nt-input w-[180px]"
+                    aria-label={`${row.label} completed on`}
+                    {...register(row.completed)}
+                  />
+                </MiniField>
               </div>
             </div>
           ))}
         </div>
       </SectionCard>
 
-      {/* ── 4 · Reports & Processing ─────────────────────────────────── */}
+      {/* ── 4 · Costing ──────────────────────────────────────────────── */}
+      <SectionCard
+        title="Costing"
+        hint="Costing runs in-house, so it tracks status and completion only — no location."
+      >
+        <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
+          <MiniField label="Status">
+            <Controller
+              control={control}
+              name="costingStatus"
+              render={({ field }) => (
+                <Segmented
+                  options={STAGE_STATUS_OPTIONS}
+                  value={field.value}
+                  onChange={field.onChange}
+                  allowClear={false}
+                  ariaLabel="Costing status"
+                />
+              )}
+            />
+          </MiniField>
+          <MiniField label="Completed On">
+            <input
+              type="date"
+              className="nt-input w-[180px]"
+              aria-label="Costing completed on"
+              {...register("costingCompletedOn")}
+            />
+          </MiniField>
+        </div>
+      </SectionCard>
+
+      {/* ── 5 · Reports & Processing ─────────────────────────────────── */}
       <SectionCard title="Reports & Processing">
         <Field label="Sample Reports Uploaded">
           <Controller

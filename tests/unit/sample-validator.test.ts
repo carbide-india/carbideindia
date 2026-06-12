@@ -50,17 +50,27 @@ describe("CreateSampleSchema", () => {
     expect(r.success).toBe(true);
   });
 
-  it("rejects an unknown location", () => {
-    expect(CreateSampleSchema.safeParse({ location: "Warehouse" }).success).toBe(false);
+  it("accepts a free-text location (Other → specify stores typed text)", () => {
+    const r = CreateSampleSchema.safeParse({ location: "Warehouse shelf 3" });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.location).toBe("Warehouse shelf 3");
+  });
+
+  it("rejects a blank or over-long location", () => {
+    expect(CreateSampleSchema.safeParse({ location: "   " }).success).toBe(false);
+    expect(
+      CreateSampleSchema.safeParse({ location: "x".repeat(81) }).success,
+    ).toBe(false);
   });
 
   it("rejects an unknown sample status", () => {
     expect(CreateSampleSchema.safeParse({ sampleStatus: "done" }).success).toBe(false);
   });
 
-  it("rejects an unknown stage status / stage location", () => {
+  it("rejects an unknown stage status but takes free-text stage locations", () => {
     expect(CreateSampleSchema.safeParse({ dimensionStatus: "received" }).success).toBe(false);
-    expect(CreateSampleSchema.safeParse({ chemicalLocation: "Outhouse" }).success).toBe(false);
+    expect(CreateSampleSchema.safeParse({ chemicalLocation: "Acme Labs Pune" }).success).toBe(true);
+    expect(CreateSampleSchema.safeParse({ chemicalLocation: "   " }).success).toBe(false);
   });
 
   it("rejects unknown report types", () => {
@@ -97,8 +107,15 @@ describe("UpdateSampleSchema", () => {
     expect(UpdateSampleSchema.safeParse({ srNo: 4 }).success).toBe(false);
   });
 
-  it("rejects bad enum values in a patch", () => {
-    expect(UpdateSampleSchema.safeParse({ location: "Moonbase" }).success).toBe(false);
+  it("accepts free-text locations but rejects blank ones in a patch", () => {
+    expect(UpdateSampleSchema.safeParse({ location: "Moonbase" }).success).toBe(true);
+    expect(UpdateSampleSchema.safeParse({ location: "  " }).success).toBe(false);
+    expect(UpdateSampleSchema.safeParse({ drawingLocation: "" }).success).toBe(false);
+  });
+
+  it("still rejects bad enum values in a patch", () => {
+    expect(UpdateSampleSchema.safeParse({ sampleStatus: "vibing" }).success).toBe(false);
+    expect(UpdateSampleSchema.safeParse({ costingStatus: "received" }).success).toBe(false);
   });
 });
 
