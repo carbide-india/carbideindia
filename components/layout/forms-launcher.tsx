@@ -12,7 +12,8 @@ import {
   FlaskConical,
   Calculator,
   FileText,
-  ClipboardCheck,
+  Handshake,
+  PackageCheck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -20,11 +21,11 @@ import {
  * FORMS launcher — replaces the Enquiries nav pill (Phase 3, Task 5).
  *
  * A nav-pill-styled BUTTON (visually identical to MainNavPill) that opens a
- * drafting-sheet modal indexing every form in the sales pipeline: three live
- * forms (First Enquiry, Client KYC, Sample Register) and three Phase-4
- * placeholders (Primary Feasibility, Costing, Quotation). Each live card is
- * a real <Link> that closes the dialog on click; registers are reachable via
- * a small secondary link per card.
+ * drafting-sheet modal indexing every form in the sales pipeline: six live
+ * forms (First Enquiry, Client KYC, Sample Register, Quotation, Negotiation,
+ * Sales Order) and one Phase-5 placeholder (Costing). Each live card is a real
+ * <Link> that closes the dialog on click; registers are reachable via a small
+ * secondary link per card.
  */
 
 const RED = "#D32F2F";
@@ -32,7 +33,14 @@ const NAVY = "#1E2447";
 const MONO = "var(--font-mono-display, ui-monospace, monospace)";
 
 /** Pill lights up while the user is anywhere inside a forms surface. */
-const ACTIVE_PREFIXES = ["/inquiries", "/samples", "/clients/new"] as const;
+const ACTIVE_PREFIXES = [
+  "/inquiries",
+  "/samples",
+  "/clients/new",
+  "/quotations",
+  "/negotiations",
+  "/sales-orders",
+] as const;
 
 interface ActiveCard {
   name: string;
@@ -70,23 +78,34 @@ const ACTIVE_CARDS: ActiveCard[] = [
     href: "/samples/new" as Route,
     registerHref: "/samples" as Route,
   },
+  {
+    name: "Quotation",
+    Icon: FileText,
+    desc: "Build a quote from an SM — pricing, timeline, validity.",
+    href: "/quotations/new" as Route,
+    registerHref: "/quotations" as Route,
+  },
+  {
+    name: "Negotiation",
+    Icon: Handshake,
+    desc: "Track price negotiation through to won or lost.",
+    href: "/negotiations/new" as Route,
+    registerHref: "/negotiations" as Route,
+  },
+  {
+    name: "Sales Order",
+    Icon: PackageCheck,
+    desc: "Record the customer PO and the sales-order docs.",
+    href: "/sales-orders/new" as Route,
+    registerHref: "/sales-orders" as Route,
+  },
 ];
 
 const DISABLED_CARDS: DisabledCard[] = [
   {
-    name: "Primary Feasibility",
-    Icon: ClipboardCheck,
-    desc: "Technical go / no-go against the enquiry checklist.",
-  },
-  {
     name: "Costing",
     Icon: Calculator,
     desc: "BU/BO and in-house sheets with auto weight calcs.",
-  },
-  {
-    name: "Quotation",
-    Icon: FileText,
-    desc: "Auto-generated PDF, reviewed before it goes out.",
   },
 ];
 
@@ -254,7 +273,7 @@ export function FormsLauncher({ variant }: { variant?: "drawer" }) {
                     color: "#78716C",
                   }}
                 >
-                  Phase 4
+                  Phase 5
                 </span>
                 <IconSquare Icon={Icon} />
                 <h3 className="mt-3 text-[15px] font-bold leading-snug text-ink-strong">{name}</h3>
