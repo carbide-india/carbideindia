@@ -80,8 +80,8 @@ export async function createSalesOrder(
     companyName: auto.companyName,
     enquiryDate: auto.enquiryDate,
     salesPersonId: auto.salesPersonId,
-    custProductName: auto.productDescription,
-    qty: auto.quantityNos,
+    custProductName: v.custProductName ?? auto.productDescription,
+    qty: v.qty != null ? String(v.qty) : auto.quantityNos,
     partNo: v.partNo ?? quote?.partNo ?? undefined,
     quotePrice: money(v.quotePrice) ?? quote?.quotePrice ?? undefined,
     developmentTime: v.developmentTime ?? quote?.developmentTime ?? undefined,
@@ -140,9 +140,10 @@ export async function updateSalesOrder(
   const v = stripUndefined(parsed.data);
   if (Object.keys(v).length === 0) return { ok: true };
 
-  const { quotePrice, customerPoDate, ...rest } = v;
+  const { quotePrice, qty, customerPoDate, ...rest } = v;
   const patch: Partial<NewSalesOrder> = { ...rest };
   if (quotePrice !== undefined) patch.quotePrice = String(quotePrice);
+  if (qty !== undefined) patch.qty = String(qty);
   if (customerPoDate !== undefined) {
     if (!isParseableDate(customerPoDate)) {
       return { ok: false, error: "Invalid date value" };

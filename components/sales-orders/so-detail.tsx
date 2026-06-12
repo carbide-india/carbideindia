@@ -67,6 +67,8 @@ function dateInputDefault(value: Date | null): string {
 /** The editable slice of the sales order — RHF holds these <input>-shaped
  *  values; the dirty-only patch ships only changed keys. */
 interface SoEditValues {
+  custProductName: string;
+  qty: number | undefined;
   quotePrice: number | undefined;
   developmentTime: string;
   deliveryTime: string;
@@ -80,7 +82,8 @@ interface SoEditValues {
   productionSoLink: string;
 }
 
-const MONEY_KEYS = new Set<keyof SoEditValues>(["quotePrice"]);
+/** Keys whose <input> value must be coerced number→string-numeric on save. */
+const NUMERIC_KEYS = new Set<keyof SoEditValues>(["quotePrice", "qty"]);
 
 /**
  * Sales Order detail — breadcrumb + header (soNo, company · enquiry date ·
@@ -99,6 +102,8 @@ export function SoDetail({ salesOrder, employees, inquiryLink }: Props) {
     employees.find((e) => e.id === salesOrder.createdById)?.name ?? null;
 
   const defaults: SoEditValues = {
+    custProductName: salesOrder.custProductName ?? "",
+    qty: numDefault(salesOrder.qty),
     quotePrice: numDefault(salesOrder.quotePrice),
     developmentTime: salesOrder.developmentTime ?? "",
     deliveryTime: salesOrder.deliveryTime ?? "",
@@ -127,7 +132,7 @@ export function SoDetail({ salesOrder, employees, inquiryLink }: Props) {
       Object.keys(dirtyFields).map((key) => {
         const k = key as keyof SoEditValues;
         const raw = values[k];
-        const value = MONEY_KEYS.has(k) ? moneyValue(raw) : raw;
+        const value = NUMERIC_KEYS.has(k) ? moneyValue(raw) : raw;
         return [k, value];
       }),
     ) as UpdateSalesOrderInput;
@@ -265,8 +270,34 @@ export function SoDetail({ salesOrder, employees, inquiryLink }: Props) {
             </div>
           </SectionCard>
 
-          {/* One form for the editable area: Quote Summary + Customer PO + SO Docs. */}
+          {/* One form for the editable area: Product + Quote Summary + Customer PO + SO Docs. */}
           <form onSubmit={onSubmit} className="flex flex-col gap-6" noValidate>
+            <SectionCard
+              title="Product"
+              hint="Customer product, quantity and part — only changed fields are saved."
+            >
+              <Field id="sod-product" label="Cust Product Name">
+                <input id="sod-product" type="text" className="nt-input" {...register("custProductName")} />
+              </Field>
+              <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+                <Field id="sod-qty" label="Qty">
+                  <input
+                    id="sod-qty"
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    step="any"
+                    className="nt-input tabular-nums"
+                    placeholder="0"
+                    {...register("qty", { setValueAs: moneyValue })}
+                  />
+                </Field>
+                <Field id="sod-part" label="Part No">
+                  <input id="sod-part" type="text" className="nt-input" {...register("partNo")} />
+                </Field>
+              </div>
+            </SectionCard>
+
             <SectionCard
               title="Quote Summary"
               hint="Pulled from the linked quotation — only changed fields are saved."

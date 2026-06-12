@@ -74,7 +74,7 @@ export async function createQuotation(
     custProductName: v.custProductName ?? auto.productDescription,
     custDrawingNo: v.custDrawingNo,
     drawingRevisionNo: v.drawingRevisionNo,
-    qty: auto.quantityNos,
+    qty: v.qty != null ? String(v.qty) : auto.quantityNos,
     gradeCustomer: v.gradeCustomer ?? auto.gradeName,
     gradeNameForCust: v.gradeNameForCust,
     tolerance: v.tolerance ?? auto.toleranceName,
@@ -135,11 +135,12 @@ export async function updateQuotation(
   const v = stripUndefined(parsed.data);
   if (Object.keys(v).length === 0) return { ok: true };
 
-  const { finalCost, negotiation, quotePrice, ...rest } = v;
+  const { finalCost, negotiation, quotePrice, qty, ...rest } = v;
   const patch: Partial<NewQuotation> = { ...rest };
   if (finalCost !== undefined) patch.finalCost = String(finalCost);
   if (negotiation !== undefined) patch.negotiation = String(negotiation);
   if (quotePrice !== undefined) patch.quotePrice = String(quotePrice);
+  if (qty !== undefined) patch.qty = String(qty);
 
   try {
     await db

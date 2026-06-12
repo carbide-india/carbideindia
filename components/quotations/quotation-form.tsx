@@ -47,8 +47,9 @@ const QUOTE_SENT_OPTIONS = [
   { value: "no" as const, label: "No" },
 ];
 
-/** Money <input> → number | undefined (no NaN); 0 is a valid amount. */
+/** Money / number <input> → number | undefined (no NaN); 0 is a valid amount. */
 const moneyRegister = { setValueAs: (v: unknown) => moneyValue(v) };
+const qtyRegister = moneyRegister;
 function moneyValue(v: unknown): number | undefined {
   if (v === "" || v === null || v === undefined) return undefined;
   const n = Number(v);
@@ -80,6 +81,7 @@ export function QuotationForm({ inquiries }: Props) {
       inquiryId: "",
       quoteNo: "",
       custProductName: "",
+      qty: undefined,
       custDrawingNo: "",
       drawingRevisionNo: "",
       gradeCustomer: "",
@@ -113,8 +115,11 @@ export function QuotationForm({ inquiries }: Props) {
       setSnapshot(data);
       if (data.productDescription)
         setValue("custProductName", data.productDescription);
-      // qty/company/enquiry date are snapshotted server-side from the SM —
-      // not form fields here, just shown as read-only captions.
+      setValue(
+        "qty",
+        data.quantityNos != null ? Number(data.quantityNos) : undefined,
+      );
+      // company/enquiry date stay read-only captions.
       if (data.gradeName) setValue("gradeCustomer", data.gradeName);
       if (data.toleranceName) setValue("tolerance", data.toleranceName);
       if (data.conditionName) setValue("condition", data.conditionName);
@@ -217,15 +222,29 @@ export function QuotationForm({ inquiries }: Props) {
         title="Product"
         hint="Customer-facing product, drawing and grade — prefilled from the SM, edit as needed."
       >
-        <Field id="qt-product" label="Customer Product Name">
-          <input
-            id="qt-product"
-            type="text"
-            className="nt-input"
-            placeholder="e.g. Tungsten carbide insert, CNMG…"
-            {...register("custProductName")}
-          />
-        </Field>
+        <div className="grid grid-cols-[1fr_auto] gap-4 max-md:grid-cols-1">
+          <Field id="qt-product" label="Customer Product Name">
+            <input
+              id="qt-product"
+              type="text"
+              className="nt-input"
+              placeholder="e.g. Tungsten carbide insert, CNMG…"
+              {...register("custProductName")}
+            />
+          </Field>
+          <Field id="qt-qty" label="Qty" className="md:w-[180px]">
+            <input
+              id="qt-qty"
+              type="number"
+              inputMode="numeric"
+              min={0}
+              step="any"
+              className="nt-input tabular-nums"
+              placeholder="0"
+              {...register("qty", qtyRegister)}
+            />
+          </Field>
+        </div>
 
         <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
           <Field id="qt-drw" label="Customer Drawing No">

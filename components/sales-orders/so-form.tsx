@@ -43,8 +43,9 @@ const SO_SENT_OPTIONS = [
   { value: "no" as const, label: "No" },
 ];
 
-/** Money <input> → number | undefined (no NaN); 0 is a valid amount. */
+/** Money / number <input> → number | undefined (no NaN); 0 is a valid amount. */
 const moneyRegister = { setValueAs: (v: unknown) => moneyValue(v) };
+const qtyRegister = moneyRegister;
 function moneyValue(v: unknown): number | undefined {
   if (v === "" || v === null || v === undefined) return undefined;
   const n = Number(v);
@@ -78,6 +79,8 @@ export function SoForm({ inquiries, quotations }: Props) {
       inquiryId: "",
       quotationId: undefined,
       soNo: "",
+      custProductName: "",
+      qty: undefined,
       partNo: "",
       quotePrice: undefined,
       developmentTime: "",
@@ -106,6 +109,13 @@ export function SoForm({ inquiries, quotations }: Props) {
       if (!res.ok) return;
       const data = (await res.json()) as QuoteAutofill;
       setSnapshot(data);
+      // Company / enquiry date / sales person stay read-only captions; product
+      // + qty prefill the editable Product fields (overridable before submit).
+      setValue("custProductName", data.productDescription ?? "");
+      setValue(
+        "qty",
+        data.quantityNos != null ? Number(data.quantityNos) : undefined,
+      );
     } catch {
       fireToast({
         message: "Could not auto-fetch the enquiry — fill the fields manually.",
@@ -204,12 +214,6 @@ export function SoForm({ inquiries, quotations }: Props) {
             <Caption label="Sales Person">
               {autofetching ? "…" : snapshot?.salesPersonName ?? "—"}
             </Caption>
-            {snapshot?.productDescription && (
-              <Caption label="Product">{snapshot.productDescription}</Caption>
-            )}
-            {snapshot?.quantityNos && (
-              <Caption label="Qty">{snapshot.quantityNos}</Caption>
-            )}
           </div>
         )}
 
@@ -245,7 +249,40 @@ export function SoForm({ inquiries, quotations }: Props) {
         </Field>
       </SectionCard>
 
-      {/* ── 2 · Quote Summary ────────────────────────────────────────── */}
+      {/* ── 2 · Product ──────────────────────────────────────────────── */}
+      <SectionCard
+        title="Product"
+        hint="Customer product, quantity and part — prefilled from the SM, edit as needed."
+      >
+        <Field id="so-product" label="Cust Product Name">
+          <input
+            id="so-product"
+            type="text"
+            className="nt-input"
+            placeholder="e.g. Tungsten carbide insert, CNMG…"
+            {...register("custProductName")}
+          />
+        </Field>
+        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+          <Field id="so-qty" label="Qty">
+            <input
+              id="so-qty"
+              type="number"
+              inputMode="numeric"
+              min={0}
+              step="any"
+              className="nt-input tabular-nums"
+              placeholder="0"
+              {...register("qty", qtyRegister)}
+            />
+          </Field>
+          <Field id="so-part" label="Part No">
+            <input id="so-part" type="text" className="nt-input" {...register("partNo")} />
+          </Field>
+        </div>
+      </SectionCard>
+
+      {/* ── 3 · Quote Summary ────────────────────────────────────────── */}
       <SectionCard
         title="Quote Summary"
         hint="Pulled from the linked quotation — editable if anything changed."
@@ -266,23 +303,18 @@ export function SoForm({ inquiries, quotations }: Props) {
             <input id="so-val" type="text" className="nt-input" {...register("validity")} />
           </Field>
         </div>
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-          <Field id="so-link" label="Quotation Link">
-            <input
-              id="so-link"
-              type="url"
-              className="nt-input"
-              placeholder="https://…"
-              {...register("quotationLink")}
-            />
-          </Field>
-          <Field id="so-part" label="Part No">
-            <input id="so-part" type="text" className="nt-input" {...register("partNo")} />
-          </Field>
-        </div>
+        <Field id="so-link" label="Quotation Link">
+          <input
+            id="so-link"
+            type="url"
+            className="nt-input"
+            placeholder="https://…"
+            {...register("quotationLink")}
+          />
+        </Field>
       </SectionCard>
 
-      {/* ── 3 · Customer PO ──────────────────────────────────────────── */}
+      {/* ── 4 · Customer PO ──────────────────────────────────────────── */}
       <SectionCard
         title="Customer PO"
         hint="The purchase order the customer raised against the quote."
@@ -306,7 +338,7 @@ export function SoForm({ inquiries, quotations }: Props) {
         </div>
       </SectionCard>
 
-      {/* ── 4 · Sales Order Docs ─────────────────────────────────────── */}
+      {/* ── 5 · Sales Order Docs ─────────────────────────────────────── */}
       <SectionCard
         title="Sales Order Docs"
         hint="The customer-facing SO sent back and the internal production SO."

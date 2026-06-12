@@ -43,8 +43,9 @@ const NEGOTIATION_STATUS_OPTIONS = NEGOTIATION_STATUSES.map((s) => ({
   label: NEGOTIATION_STATUS_LABELS[s],
 }));
 
-/** Money <input> → number | undefined (no NaN); 0 is a valid amount. */
+/** Money / number <input> → number | undefined (no NaN); 0 is a valid amount. */
 const moneyRegister = { setValueAs: (v: unknown) => moneyValue(v) };
+const qtyRegister = moneyRegister;
 function moneyValue(v: unknown): number | undefined {
   if (v === "" || v === null || v === undefined) return undefined;
   const n = Number(v);
@@ -78,6 +79,8 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
       inquiryId: "",
       quotationId: undefined,
       negotiationNo: "",
+      custProductName: "",
+      qty: undefined,
       partNo: "",
       finalCost: undefined,
       negotiation: undefined,
@@ -104,8 +107,13 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
       if (!res.ok) return;
       const data = (await res.json()) as QuoteAutofill;
       setSnapshot(data);
-      // company/enquiry date/sales person/product/qty are snapshotted
-      // server-side from the SM — shown as captions, not form fields here.
+      // Company / enquiry date / sales person stay read-only captions; product
+      // + qty prefill the editable Product fields (overridable before submit).
+      setValue("custProductName", data.productDescription ?? "");
+      setValue(
+        "qty",
+        data.quantityNos != null ? Number(data.quantityNos) : undefined,
+      );
     } catch {
       fireToast({
         message: "Could not auto-fetch the enquiry — fill the fields manually.",
@@ -205,12 +213,6 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
             <Caption label="Sales Person">
               {autofetching ? "…" : snapshot?.salesPersonName ?? "—"}
             </Caption>
-            {snapshot?.productDescription && (
-              <Caption label="Product">{snapshot.productDescription}</Caption>
-            )}
-            {snapshot?.quantityNos && (
-              <Caption label="Qty">{snapshot.quantityNos}</Caption>
-            )}
           </div>
         )}
 
@@ -246,7 +248,40 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
         </Field>
       </SectionCard>
 
-      {/* ── 2 · Pricing ──────────────────────────────────────────────── */}
+      {/* ── 2 · Product ──────────────────────────────────────────────── */}
+      <SectionCard
+        title="Product"
+        hint="Customer product, quantity and part — prefilled from the SM, edit as needed."
+      >
+        <Field id="ng-product" label="Cust Product Name">
+          <input
+            id="ng-product"
+            type="text"
+            className="nt-input"
+            placeholder="e.g. Tungsten carbide insert, CNMG…"
+            {...register("custProductName")}
+          />
+        </Field>
+        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+          <Field id="ng-qty" label="Qty">
+            <input
+              id="ng-qty"
+              type="number"
+              inputMode="numeric"
+              min={0}
+              step="any"
+              className="nt-input tabular-nums"
+              placeholder="0"
+              {...register("qty", qtyRegister)}
+            />
+          </Field>
+          <Field id="ng-part" label="Part No">
+            <input id="ng-part" type="text" className="nt-input" {...register("partNo")} />
+          </Field>
+        </div>
+      </SectionCard>
+
+      {/* ── 3 · Pricing ──────────────────────────────────────────────── */}
       <SectionCard
         title="Pricing"
         hint="All amounts in ₹. Negotiation is the give, Quote Price is what the customer sees."
@@ -264,7 +299,7 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
         </div>
       </SectionCard>
 
-      {/* ── 3 · Timeline & Validity ──────────────────────────────────── */}
+      {/* ── 4 · Timeline & Validity ──────────────────────────────────── */}
       <SectionCard
         title="Timeline & Validity"
         hint="Free-text per Manan's sheet — e.g. “6–8 weeks”, “30 days from PO”."
@@ -282,7 +317,7 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
         </div>
       </SectionCard>
 
-      {/* ── 4 · Status & Notes ───────────────────────────────────────── */}
+      {/* ── 5 · Status & Notes ───────────────────────────────────────── */}
       <SectionCard
         title="Status & Notes"
         hint="The live pipeline state plus the quote document and any negotiation notes."
@@ -305,20 +340,15 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
           </div>
         </Field>
 
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-          <Field id="ng-link" label="Quotation Link">
-            <input
-              id="ng-link"
-              type="url"
-              className="nt-input"
-              placeholder="https://…"
-              {...register("quotationLink")}
-            />
-          </Field>
-          <Field id="ng-part" label="Part No">
-            <input id="ng-part" type="text" className="nt-input" {...register("partNo")} />
-          </Field>
-        </div>
+        <Field id="ng-link" label="Quotation Link">
+          <input
+            id="ng-link"
+            type="url"
+            className="nt-input"
+            placeholder="https://…"
+            {...register("quotationLink")}
+          />
+        </Field>
 
         <Field id="ng-notes" label="Negotiation Notes">
           <textarea

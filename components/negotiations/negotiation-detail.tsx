@@ -60,6 +60,8 @@ function numDefault(value: string | null): number | undefined {
 /** The editable slice of the negotiation — RHF holds these <input>-shaped
  *  values; the dirty-only patch ships only changed keys. */
 interface NegotiationEditValues {
+  custProductName: string;
+  qty: number | undefined;
   finalCost: number | undefined;
   negotiation: number | undefined;
   quotePrice: number | undefined;
@@ -71,10 +73,12 @@ interface NegotiationEditValues {
   partNo: string;
 }
 
-const MONEY_KEYS = new Set<keyof NegotiationEditValues>([
+/** Keys whose <input> value must be coerced number→string-numeric on save. */
+const NUMERIC_KEYS = new Set<keyof NegotiationEditValues>([
   "finalCost",
   "negotiation",
   "quotePrice",
+  "qty",
 ]);
 
 /**
@@ -93,6 +97,8 @@ export function NegotiationDetail({ negotiation, employees, inquiryLink }: Props
     employees.find((e) => e.id === negotiation.createdById)?.name ?? null;
 
   const defaults: NegotiationEditValues = {
+    custProductName: negotiation.custProductName ?? "",
+    qty: numDefault(negotiation.qty),
     finalCost: numDefault(negotiation.finalCost),
     negotiation: numDefault(negotiation.negotiation),
     quotePrice: numDefault(negotiation.quotePrice),
@@ -119,7 +125,7 @@ export function NegotiationDetail({ negotiation, employees, inquiryLink }: Props
       Object.keys(dirtyFields).map((key) => {
         const k = key as keyof NegotiationEditValues;
         const raw = values[k];
-        const value = MONEY_KEYS.has(k) ? moneyValue(raw) : raw;
+        const value = NUMERIC_KEYS.has(k) ? moneyValue(raw) : raw;
         return [k, value];
       }),
     ) as UpdateNegotiationInput;
@@ -243,8 +249,34 @@ export function NegotiationDetail({ negotiation, employees, inquiryLink }: Props
             </p>
           </SectionCard>
 
-          {/* One form for the editable area: Pricing + Timeline + Notes + Link/Part. */}
+          {/* One form for the editable area: Product + Pricing + Timeline + Notes + Link/Part. */}
           <form onSubmit={onSubmit} className="flex flex-col gap-6" noValidate>
+            <SectionCard
+              title="Product"
+              hint="Customer product, quantity and part — only changed fields are saved."
+            >
+              <Field id="nd-product" label="Cust Product Name">
+                <input id="nd-product" type="text" className="nt-input" {...register("custProductName")} />
+              </Field>
+              <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+                <Field id="nd-qty" label="Qty">
+                  <input
+                    id="nd-qty"
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    step="any"
+                    className="nt-input tabular-nums"
+                    placeholder="0"
+                    {...register("qty", { setValueAs: moneyValue })}
+                  />
+                </Field>
+                <Field id="nd-part" label="Part No">
+                  <input id="nd-part" type="text" className="nt-input" {...register("partNo")} />
+                </Field>
+              </div>
+            </SectionCard>
+
             <SectionCard title="Pricing" hint="All amounts in ₹ — only changed fields are saved.">
               <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
                 <MiniField label="Final Cost">
@@ -283,20 +315,15 @@ export function NegotiationDetail({ negotiation, employees, inquiryLink }: Props
             </SectionCard>
 
             <SectionCard title="Quote Document & Notes">
-              <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-                <Field id="nd-link" label="Quotation Link">
-                  <input
-                    id="nd-link"
-                    type="url"
-                    className="nt-input"
-                    placeholder="https://…"
-                    {...register("quotationLink")}
-                  />
-                </Field>
-                <Field id="nd-part" label="Part No">
-                  <input id="nd-part" type="text" className="nt-input" {...register("partNo")} />
-                </Field>
-              </div>
+              <Field id="nd-link" label="Quotation Link">
+                <input
+                  id="nd-link"
+                  type="url"
+                  className="nt-input"
+                  placeholder="https://…"
+                  {...register("quotationLink")}
+                />
+              </Field>
               <Field id="nd-notes" label="Negotiation Notes">
                 <textarea
                   id="nd-notes"

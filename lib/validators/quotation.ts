@@ -12,6 +12,8 @@ const OptionalText = (max = 500) =>
     .optional();
 /** Money: the form sends a number; stored numeric. Non-negative, optional. */
 const Money = z.number().nonnegative().optional();
+/** Quantity: the form sends a number; stored numeric. Non-negative, optional. */
+const Qty = z.number().nonnegative().optional();
 
 /**
  * Base field set shared by Create/Update — same base-object + derive pattern
@@ -24,6 +26,7 @@ const QuotationFieldsSchema = z.object({
   quoteNo: OptionalText(60), // blank → auto-derived `<SM>-Q01`
   // Product / drawing / grade (editable snapshot from the SM)
   custProductName: OptionalText(300),
+  qty: Qty,
   custDrawingNo: OptionalText(120),
   drawingRevisionNo: OptionalText(60),
   gradeCustomer: OptionalText(120),

@@ -76,8 +76,8 @@ export async function createNegotiation(
     companyName: auto.companyName,
     enquiryDate: auto.enquiryDate,
     salesPersonId: auto.salesPersonId,
-    custProductName: auto.productDescription,
-    qty: auto.quantityNos,
+    custProductName: v.custProductName ?? auto.productDescription,
+    qty: v.qty != null ? String(v.qty) : auto.quantityNos,
     partNo: v.partNo ?? quote?.partNo ?? undefined,
     finalCost: money(v.finalCost) ?? quote?.finalCost ?? undefined,
     negotiation: money(v.negotiation),
@@ -138,11 +138,12 @@ export async function updateNegotiation(
   const v = stripUndefined(parsed.data);
   if (Object.keys(v).length === 0) return { ok: true };
 
-  const { finalCost, negotiation, quotePrice, ...rest } = v;
+  const { finalCost, negotiation, quotePrice, qty, ...rest } = v;
   const patch: Partial<NewNegotiation> = { ...rest };
   if (finalCost !== undefined) patch.finalCost = String(finalCost);
   if (negotiation !== undefined) patch.negotiation = String(negotiation);
   if (quotePrice !== undefined) patch.quotePrice = String(quotePrice);
+  if (qty !== undefined) patch.qty = String(qty);
 
   try {
     await db
