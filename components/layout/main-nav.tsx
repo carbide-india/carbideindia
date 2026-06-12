@@ -1,8 +1,9 @@
 "use client";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ListTodo, CalendarDays, FolderKanban, SquareKanban, CalendarCheck, FileSearch } from "lucide-react";
+import { LayoutDashboard, ListTodo, CalendarDays, FolderKanban, SquareKanban, CalendarCheck } from "lucide-react";
 import type { Route } from "next";
 import { MainNavPill } from "./main-nav-pill";
+import { FormsLauncher } from "./forms-launcher";
 
 interface Props {
   activeTasks: number;
@@ -50,12 +51,10 @@ export function MainNav({ activeTasks, isAdmin, variant }: Props) {
         }
         count={activeTasks}
         variant={variant}      />
-      <MainNavPill
-        href={"/inquiries" as Route}
-        label="Enquiries"
-        Icon={FileSearch}
-        active={isActive("/inquiries")}
-        variant={variant}      />
+      {/* Forms — a button-pill opening the launcher modal (Enquiries,
+          KYC, Samples + Phase-4 placeholders). Register list stays at
+          /inquiries, reachable from the modal + ⌘K. */}
+      <FormsLauncher variant={variant} />
       {/* Kanban is an admin-only board — hidden from doers. */}
       {isAdmin && (
         <MainNavPill

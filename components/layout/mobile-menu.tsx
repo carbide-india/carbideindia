@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { usePathname } from "next/navigation";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Menu, X } from "lucide-react";
 
@@ -18,6 +19,15 @@ import { Menu, X } from "lucide-react";
  */
 export function MobileMenu({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = React.useState(false);
+  const pathname = usePathname();
+
+  // The Forms launcher navigates from a portal (its links live outside the
+  // drawer body, so the `closest("a")` pointerdown below never sees them).
+  // Closing on any route change keeps the drawer from lingering over the
+  // destination page.
+  React.useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
