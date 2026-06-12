@@ -14,6 +14,7 @@ import {
   FileText,
   Handshake,
   PackageCheck,
+  UserCheck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -40,6 +41,7 @@ const ACTIVE_PREFIXES = [
   "/quotations",
   "/negotiations",
   "/sales-orders",
+  "/meetings",
 ] as const;
 
 interface ActiveCard {
@@ -98,6 +100,13 @@ const ACTIVE_CARDS: ActiveCard[] = [
     desc: "Record the customer PO and the sales-order docs.",
     href: "/sales-orders/new" as Route,
     registerHref: "/sales-orders" as Route,
+  },
+  {
+    name: "Daily Meeting",
+    Icon: UserCheck,
+    desc: "Log a client visit with a proof selfie.",
+    href: "/meetings/new" as Route,
+    registerHref: "/meetings" as Route,
   },
 ];
 
