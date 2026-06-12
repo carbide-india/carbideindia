@@ -1,0 +1,57 @@
+import { z } from "zod";
+import { INQUIRY_CURRENCIES, INQUIRY_COUNTRIES } from "@/db/enums";
+
+const Trimmed = (max: number) => z.string().trim().max(max);
+/**
+ * Optional free-text field: trims, caps length, and folds empty strings to
+ * `undefined` so half-filled form inputs never persist as `""`.
+ */
+const OptionalText = (max = 500) =>
+  Trimmed(max).transform((s) => (s === "" ? undefined : s)).optional();
+
+/** "HH:MM" wall-clock time, stored as text on clients (sheet-true). */
+const MeetingTime = z.string().regex(/^\d{2}:\d{2}$/, "Use HH:MM").optional();
+
+/**
+ * Base field set shared by Create/Update — same base-object + derive pattern
+ * as lib/validators/inquiry.ts (zod v4 has no `.innerType()` to unwrap).
+ * Address/contact fields mirror the inquiry form's client block; the
+ * customer/industry/product ids point at admin-managed master options.
+ */
+const ClientKycFieldsSchema = z.object({
+  name: Trimmed(160).min(1, "Client name is required"),
+  customerTypeId: z.string().uuid().optional(),
+  industryTypeId: z.string().uuid().optional(),
+  productTypeIds: z.array(z.string().uuid()).optional(),
+  export: z.boolean().optional(),
+  currency: z.enum(INQUIRY_CURRENCIES).default("INR"),
+  country: z.enum(INQUIRY_COUNTRIES).default("India"),
+  state: OptionalText(80), city: OptionalText(80),
+  addressLine1: OptionalText(240), addressLine2: OptionalText(240),
+  addressLine3: OptionalText(240), addressLine4: OptionalText(240),
+  pinCode: OptionalText(20),
+  contactFirstName: OptionalText(80), contactLastName: OptionalText(80),
+  contactNo: OptionalText(40), contactEmail: OptionalText(160),
+  meetingDate: z.string().optional(),                 // ISO date
+  meetingStart: MeetingTime,
+  meetingEnd: MeetingTime,
+});
+
+export const CreateClientKycSchema = ClientKycFieldsSchema;
+export type CreateClientKycInput = z.input<typeof CreateClientKycSchema>;
+
+/**
+ * Patch-shaped schema for edits — every field optional, unknown keys
+ * rejected, empty patches rejected. `currency`/`country` are re-declared
+ * without their defaults: otherwise `.partial()` would inject INR/India into
+ * every patch and an empty `{}` would sail past the nonempty refine.
+ */
+export const UpdateClientKycSchema = ClientKycFieldsSchema
+  .extend({
+    currency: z.enum(INQUIRY_CURRENCIES),
+    country: z.enum(INQUIRY_COUNTRIES),
+  })
+  .partial()
+  .strict()
+  .refine((v) => Object.keys(v).length > 0, { message: "No changes to save." });
+export type UpdateClientKycInput = z.input<typeof UpdateClientKycSchema>;

@@ -105,6 +105,31 @@ export async function searchInquiries(rawQuery: string): Promise<InquirySearchRe
     .limit(5);
 }
 
+/** One option of the sample form's "Linked Enquiry" picker. */
+export interface InquiryOption {
+  id: string;
+  smNumber: string;
+  companyName: string;
+}
+
+/**
+ * Recent enquiries for the sample form's "Linked Enquiry" picker, rendered
+ * as `SM — company`. Intentionally uncached: a sample is typically logged
+ * minutes after its enquiry, so a cached list would routinely miss the one
+ * enquiry the user is looking for. Capped at the 100 most recent.
+ */
+export async function listInquiryOptions(): Promise<InquiryOption[]> {
+  return db
+    .select({
+      id: inquiries.id,
+      smNumber: inquiries.smNumber,
+      companyName: inquiries.companyName,
+    })
+    .from(inquiries)
+    .orderBy(desc(inquiries.enquiryDate), desc(inquiries.createdAt))
+    .limit(100);
+}
+
 /**
  * The SM number the sequence will assign next (admin settings "Sales Module"
  * card). `is_called` false means last_value itself is still unconsumed.
