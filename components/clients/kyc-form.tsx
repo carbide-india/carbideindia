@@ -8,7 +8,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
 import { upload } from "@vercel/blob/client";
 import { Check, ImagePlus, Loader2, X } from "lucide-react";
-import { INQUIRY_CURRENCIES, INQUIRY_COUNTRIES } from "@/db/enums";
 import { CreateClientKycSchema } from "@/lib/validators/client-kyc";
 import { createClientKyc } from "@/app/(app)/clients/actions";
 import { fireToast } from "@/lib/toast";
@@ -32,11 +31,6 @@ interface Props {
   productTypes: MasterOptionItem[];
   employees: EmployeeOption[];
 }
-
-const YES_NO_OPTIONS = [
-  { value: "yes", label: "Yes" },
-  { value: "no", label: "No" },
-];
 
 /* ── Business-card upload (browser → Vercel Blob, client-direct) ──────── */
 
@@ -98,8 +92,6 @@ export function KycForm({
   } = useForm<KycFormValues, unknown, KycFormOutput>({
     resolver: zodResolver(CreateClientKycSchema),
     defaultValues: {
-      currency: "INR",
-      country: "India",
       name: "",
       productTypeIds: [],
       state: "",
@@ -212,13 +204,13 @@ export function KycForm({
         </Field>
 
         <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-          <MasterSelect
+          <MasterChips
             control={control}
             name="customerTypeId"
             label="Customer Type"
             options={customerTypes}
           />
-          <MasterSelect
+          <MasterChips
             control={control}
             name="industryTypeId"
             label="Industry Type"
@@ -315,143 +307,67 @@ export function KycForm({
       {/* ── 2 · Address ──────────────────────────────────────────────── */}
       <SectionCard title="Address">
         <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-          <Field label="Export" labelOnly>
+          {/* State — always shown; allowCustom lets a foreign state be typed. */}
+          <Field label="State" labelOnly>
             <Controller
               control={control}
-              name="export"
+              name="state"
               render={({ field }) => (
-                <Select
-                  ariaLabel="Export"
-                  value={
-                    field.value === undefined ? "" : field.value ? "yes" : "no"
-                  }
-                  onValueChange={(v) =>
-                    field.onChange(v === "" ? undefined : v === "yes")
-                  }
-                  placeholder="Select…"
-                  options={YES_NO_OPTIONS}
-                />
-              )}
-            />
-          </Field>
-          <Field label="Currency" labelOnly>
-            <Controller
-              control={control}
-              name="currency"
-              render={({ field }) => (
-                <Select
-                  ariaLabel="Currency"
-                  value={field.value ?? "INR"}
-                  onValueChange={field.onChange}
-                  options={INQUIRY_CURRENCIES.map((c) => ({
-                    value: c,
-                    label: c,
-                  }))}
-                />
-              )}
-            />
-          </Field>
-          <Field label="Country" labelOnly>
-            <Controller
-              control={control}
-              name="country"
-              render={({ field }) => (
-                <Select
-                  ariaLabel="Country"
-                  value={field.value ?? "India"}
-                  onValueChange={field.onChange}
-                  options={INQUIRY_COUNTRIES.map((c) => ({
-                    value: c,
-                    label: c,
-                  }))}
-                />
-              )}
-            />
-          </Field>
-        </div>
-
-        <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-          {watch("country") === "India" ? (
-            <>
-              <Field label="State" labelOnly>
-                <Controller
-                  control={control}
-                  name="state"
-                  render={({ field }) => (
-                    <SearchableSelect
-                      ariaLabel="State"
-                      value={field.value || undefined}
-                      onChange={(v) => {
-                        field.onChange(v ?? "");
-                        // State changed → the old city no longer applies.
-                        setValue("city", "");
-                        if (v) setCityGateError(false);
-                      }}
-                      options={INDIA_STATES}
-                      placeholder="Select state…"
-                      searchPlaceholder="Search states…"
-                    />
-                  )}
-                />
-              </Field>
-              <Field label="City" labelOnly>
-                <Controller
-                  control={control}
-                  name="city"
-                  render={({ field }) => {
-                    const selectedState = watch("state") ?? "";
-                    return (
-                      <>
-                        <SearchableSelect
-                          ariaLabel="City"
-                          value={field.value || undefined}
-                          onChange={(v) => field.onChange(v ?? "")}
-                          options={citiesForState(selectedState)}
-                          placeholder="Select city…"
-                          searchPlaceholder="Search cities…"
-                          emptyText="No cities match."
-                          allowCustom
-                          disabled={!selectedState}
-                          invalid={cityGateError && !selectedState}
-                          onDisabledClick={() => {
-                            setCityGateError(true);
-                            fireToast({
-                              message: "Select a state first — the city list depends on it.",
-                              type: "error",
-                            });
-                          }}
-                        />
-                        {cityGateError && !selectedState && (
-                          <p className="text-[12.5px] font-semibold" style={{ color: "#D32F2F" }}>
-                            Select a state first.
-                          </p>
-                        )}
-                      </>
-                    );
+                <SearchableSelect
+                  ariaLabel="State"
+                  value={field.value || undefined}
+                  onChange={(v) => {
+                    field.onChange(v ?? "");
+                    // State changed → the old city no longer applies.
+                    setValue("city", "");
+                    if (v) setCityGateError(false);
                   }}
+                  options={INDIA_STATES}
+                  placeholder="Select or type a state…"
+                  searchPlaceholder="Search states…"
+                  emptyText="No states match — type to add."
+                  allowCustom
                 />
-              </Field>
-            </>
-          ) : (
-            <>
-              <Field id="kyc-state" label="State / Province">
-                <input
-                  id="kyc-state"
-                  type="text"
-                  className="nt-input"
-                  {...register("state")}
-                />
-              </Field>
-              <Field id="kyc-city" label="City">
-                <input
-                  id="kyc-city"
-                  type="text"
-                  className="nt-input"
-                  {...register("city")}
-                />
-              </Field>
-            </>
-          )}
+              )}
+            />
+          </Field>
+          <Field label="City" labelOnly>
+            <Controller
+              control={control}
+              name="city"
+              render={({ field }) => {
+                const selectedState = watch("state") ?? "";
+                return (
+                  <>
+                    <SearchableSelect
+                      ariaLabel="City"
+                      value={field.value || undefined}
+                      onChange={(v) => field.onChange(v ?? "")}
+                      options={citiesForState(selectedState)}
+                      placeholder="Select city…"
+                      searchPlaceholder="Search cities…"
+                      emptyText="No cities match."
+                      allowCustom
+                      disabled={!selectedState}
+                      invalid={cityGateError && !selectedState}
+                      onDisabledClick={() => {
+                        setCityGateError(true);
+                        fireToast({
+                          message: "Select a state first — the city list depends on it.",
+                          type: "error",
+                        });
+                      }}
+                    />
+                    {cityGateError && !selectedState && (
+                      <p className="text-[12.5px] font-semibold" style={{ color: "#D32F2F" }}>
+                        Select a state first.
+                      </p>
+                    )}
+                  </>
+                );
+              }}
+            />
+          </Field>
           <Field id="kyc-pin" label="Pin Code">
             <input
               id="kyc-pin"
@@ -645,11 +561,13 @@ export function KycForm({
 }
 
 /**
- * One admin-managed master dropdown — disabled with an explanatory
- * placeholder when the list is empty (same contract as the enquiry form's
- * master selects).
+ * Single-select master picker rendered as a chip/tile group — the same visual
+ * as Product Types' chips, but radio (only one selectable; Manan's "only 1 to
+ * select" rule keeps the stored id a single uuid). Clicking the selected chip
+ * clears it; a11y via role="radiogroup" + role="radio"/aria-checked. Empty
+ * master shows the "add in Admin → Masters" fallback.
  */
-function MasterSelect({
+function MasterChips({
   control,
   name,
   label,
@@ -660,24 +578,52 @@ function MasterSelect({
   label: string;
   options: MasterOptionItem[];
 }) {
-  const empty = options.length === 0;
   return (
     <Field label={label} labelOnly>
       <Controller
         control={control}
         name={name}
         render={({ field }) => (
-          <Select
-            ariaLabel={label}
-            value={field.value ?? ""}
-            onValueChange={(v) => field.onChange(v || undefined)}
-            placeholder={empty ? "No options yet" : `Select ${label.toLowerCase()}…`}
-            disabled={empty}
-            options={options.map((o) => ({ value: o.id, label: o.name }))}
-          />
+          <>
+            {options.length === 0 ? (
+              <p className="text-[13px] text-ink-subtle">
+                No options — add in Admin → Masters.
+              </p>
+            ) : (
+              <div
+                role="radiogroup"
+                aria-label={label}
+                className="flex flex-wrap gap-2"
+              >
+                {options.map((opt) => {
+                  const checked = field.value === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={checked}
+                      onClick={() =>
+                        // Toggle-off the selected chip; otherwise select it.
+                        field.onChange(checked ? undefined : opt.id)
+                      }
+                      className={cn(
+                        "inline-flex items-center rounded-chip border px-3 py-2 text-[13px] font-semibold transition-colors",
+                        checked
+                          ? "border-brand bg-brand/8 text-ink-strong"
+                          : "border-hairline bg-surface-card text-ink-muted hover:border-hairline-strong hover:text-ink-strong",
+                      )}
+                    >
+                      {opt.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <p className="text-[12px] text-ink-subtle">Select one</p>
+          </>
         )}
       />
-      <p className="text-[12px] text-ink-subtle">Managed in Admin → Masters</p>
     </Field>
   );
 }

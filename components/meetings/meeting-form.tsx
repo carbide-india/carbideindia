@@ -22,7 +22,7 @@ import {
   Segmented,
 } from "@/components/inquiries/form-field";
 import type { EmployeeOption } from "@/lib/queries/employees";
-import type { ClientOption } from "@/lib/queries/clients";
+import type { ClientAutofill, ClientOption } from "@/lib/queries/clients";
 import type { MasterOptionItem } from "@/lib/queries/masters";
 
 /** RHF holds the schema's *input* shape (pre-transform); zodResolver hands the
@@ -106,6 +106,8 @@ export function MeetingForm({
   const [selfieUrl, setSelfieUrl] = React.useState<string | null>(null);
   const [uploading, setUploading] = React.useState(false);
   const fileRef = React.useRef<HTMLInputElement>(null);
+  // Guards against an older client-autofill fetch landing after a newer pick.
+  const autofillSeq = React.useRef(0);
 
   const clientNames = React.useMemo(
     () => clients.map((c) => c.name),
@@ -167,6 +169,41 @@ export function MeetingForm({
   function removeSelfie() {
     setSelfieUrl(null);
     setValue("selfieUrl", undefined, { shouldValidate: true });
+  }
+
+  /**
+   * A known client was picked — fetch its KYC snapshot and prefill the
+   * editable Client Type / Contact fields. Custom (unknown) companies skip
+   * this entirely. A fetchSeq ref drops stale responses from rapid re-picks.
+   */
+  async function prefillFromClient(clientId: string) {
+    const seq = ++autofillSeq.current;
+    try {
+      const res = await fetch(`/api/clients/${clientId}/autofill`);
+      if (!res.ok) throw new Error(`autofill ${res.status}`);
+      const data = (await res.json()) as ClientAutofill;
+      if (seq !== autofillSeq.current) return; // stale response
+      if (data.customerTypeName) {
+        setValue("clientType", data.customerTypeName, { shouldValidate: false });
+      }
+      if (data.contact) {
+        const fullName = [data.contact.firstName, data.contact.lastName]
+          .filter(Boolean)
+          .join(" ")
+          .trim();
+        if (fullName) {
+          setValue("contactPersonName", fullName, { shouldValidate: false });
+        }
+        if (data.contact.designation) {
+          setValue("contactPersonDesignation", data.contact.designation, {
+            shouldValidate: false,
+          });
+        }
+      }
+    } catch {
+      // Network/fetch failure — leave the fields for manual entry, no toast
+      // (the company name is already set; prefill is a convenience).
+    }
   }
 
   const submit = handleSubmit((values) => {
@@ -301,6 +338,13 @@ export function MeetingForm({
                     (c) => c.name.toLowerCase() === (next ?? "").toLowerCase(),
                   );
                   setValue("clientId", match?.id, { shouldValidate: false });
+                  // Known client → prefill its KYC type + contact (editable).
+                  if (match) {
+                    void prefillFromClient(match.id);
+                  } else {
+                    // Custom/unknown company: invalidate any in-flight prefill.
+                    autofillSeq.current++;
+                  }
                 }}
                 options={clientNames}
                 allowCustom

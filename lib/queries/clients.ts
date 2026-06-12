@@ -1,8 +1,14 @@
 import "server-only";
-import { and, asc, eq, getTableColumns, sql } from "drizzle-orm";
+import { aliasedTable, and, asc, eq, getTableColumns, sql } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
-import { clientContacts, clients, tasks, type Client } from "@/db/schema";
+import {
+  clientContacts,
+  clients,
+  masterOptions,
+  tasks,
+  type Client,
+} from "@/db/schema";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 
 /**
@@ -97,9 +103,17 @@ export interface ClientAutofill {
   addressLine3: string | null;
   addressLine4: string | null;
   pinCode: string | null;
+  // ── Carbide KYC type/product masters (Phase 2) — ids drive form prefill,
+  //    the resolved names feed name-string fields (e.g. meeting Client Type). ──
+  customerTypeId: string | null;
+  industryTypeId: string | null;
+  productTypeIds: string[] | null;
+  customerTypeName: string | null;
+  industryTypeName: string | null;
   contact: {
     firstName: string;
     lastName: string | null;
+    designation: string | null;
     contactNo: string | null;
     email: string | null;
     ccEmails: string | null;
@@ -115,9 +129,19 @@ export interface ClientAutofill {
 export async function getClientAutofill(
   clientId: string,
 ): Promise<ClientAutofill | null> {
+  // Resolve the two type names via the masters table aliased twice (a client
+  // row may reference the same masterOptions table for both customer + industry).
+  const customerType = aliasedTable(masterOptions, "customer_type");
+  const industryType = aliasedTable(masterOptions, "industry_type");
   const [row] = await db
-    .select()
+    .select({
+      ...getTableColumns(clients),
+      customerTypeName: customerType.name,
+      industryTypeName: industryType.name,
+    })
     .from(clients)
+    .leftJoin(customerType, eq(customerType.id, clients.customerTypeId))
+    .leftJoin(industryType, eq(industryType.id, clients.industryTypeId))
     .where(eq(clients.id, clientId))
     .limit(1);
   if (!row) return null;
@@ -144,10 +168,16 @@ export async function getClientAutofill(
     addressLine3: row.addressLine3,
     addressLine4: row.addressLine4,
     pinCode: row.pinCode,
+    customerTypeId: row.customerTypeId,
+    industryTypeId: row.industryTypeId,
+    productTypeIds: row.productTypeIds,
+    customerTypeName: row.customerTypeName,
+    industryTypeName: row.industryTypeName,
     contact: contact
       ? {
           firstName: contact.firstName,
           lastName: contact.lastName,
+          designation: contact.designation,
           contactNo: contact.contactNo,
           email: contact.email,
           ccEmails: contact.ccEmails,
