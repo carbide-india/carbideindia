@@ -17,6 +17,12 @@ export const CreateMasterSchema = z.object({
 });
 export type CreateMasterInput = z.infer<typeof CreateMasterSchema>;
 
+export const BulkCreateMasterSchema = z.object({
+  kind: MasterKindSchema,
+  names: z.array(NameSchema).min(1, "Paste at least one value").max(2000),
+});
+export type BulkCreateMasterInput = z.infer<typeof BulkCreateMasterSchema>;
+
 export const UpdateMasterSchema = z
   .object({
     name: NameSchema.optional(),

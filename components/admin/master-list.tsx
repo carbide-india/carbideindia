@@ -7,6 +7,7 @@ import { useQueryState } from "nuqs";
 import { fireToast } from "@/lib/toast";
 import {
   createMasterOption,
+  createMasterOptionsBulk,
   updateMasterOption,
 } from "@/app/(admin)/admin/masters/actions";
 import { MASTER_KINDS, MASTER_KIND_LABELS, type MasterKind } from "@/db/enums";
@@ -54,7 +55,10 @@ export function MasterList({ items }: Props) {
                   {rows.length} {rows.length === 1 ? "option" : "options"} ·{" "}
                   {rows.filter((o) => o.isActive).length} active
                 </p>
-                <CreateMasterDialog kind={k} />
+                <div className="flex items-center gap-2">
+                  <BulkCreateMasterDialog kind={k} />
+                  <CreateMasterDialog kind={k} />
+                </div>
               </div>
               {rows.length === 0 ? (
                 <EmptyState kind={k} />
@@ -299,6 +303,135 @@ function CreateMasterDialog({ kind }: { kind: MasterKind }) {
                 style={{ background: "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))" }}
               >
                 {pending ? "Creating…" : "Create"}
+              </button>
+            </div>
+          </form>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
+/** Split raw textarea text into trimmed, deduped (case-insensitive) values. */
+function parseBulkValues(raw: string): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const piece of raw.split(/[\n,]/)) {
+    const value = piece.trim();
+    if (!value) continue;
+    const key = value.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(value);
+  }
+  return out;
+}
+
+function BulkCreateMasterDialog({ kind }: { kind: MasterKind }) {
+  const [open, setOpen] = useState(false);
+  const [raw, setRaw] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function reset() {
+    setRaw("");
+    setError(null);
+  }
+
+  const rawCount = raw.split(/[\n,]/).filter((p) => p.trim().length > 0).length;
+  const parsed = parseBulkValues(raw);
+  const parsedCount = parsed.length;
+
+  function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (parsed.length === 0) return;
+    startTransition(async () => {
+      const res = await createMasterOptionsBulk({ kind, names: parsed });
+      if (!res.ok) {
+        setError(res.error ?? "Something went wrong");
+        return;
+      }
+      fireToast({
+        message: `Added ${res.created}, skipped ${res.skipped} duplicate(s).`,
+      });
+      reset();
+      setOpen(false);
+    });
+  }
+
+  return (
+    <Dialog.Root
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (!o) reset();
+      }}
+    >
+      <Dialog.Trigger asChild>
+        <button
+          className="rounded-md py-2.5 px-5 text-[14px] font-medium text-ink-strong border border-[#CBD5E1] bg-white hover:bg-surface-soft transition-colors"
+        >
+          Bulk add
+        </button>
+      </Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 bg-black/30 z-[90]" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-[100] -translate-x-1/2 -translate-y-1/2 w-full max-w-lg rounded-xl bg-white border border-[#E2E8F0] p-6 shadow-lg max-h-[calc(100dvh-32px)] overflow-y-auto">
+          <Dialog.Title className="font-serif text-xl text-[#0F172A] mb-1">
+            Bulk add · {MASTER_KIND_LABELS[kind]}
+          </Dialog.Title>
+          <Dialog.Description className="text-[15px] text-[#64748B] mb-4" style={{ lineHeight: 1.5 }}>
+            Paste many values at once. Duplicates (existing or repeated) are
+            skipped automatically.
+          </Dialog.Description>
+          <form onSubmit={onSubmit} className="space-y-4">
+            <div>
+              <label className="block text-[14px] font-semibold text-[#0F172A] mb-1.5">
+                Values
+              </label>
+              <textarea
+                autoFocus
+                rows={8}
+                value={raw}
+                onChange={(e) => setRaw(e.target.value)}
+                placeholder={"Paste values — one per line, or comma-separated"}
+                className="w-full rounded-md border border-[#CBD5E1] px-3.5 py-2.5 text-[14px] font-mono resize-y max-h-[40vh]"
+              />
+              <p className="mt-1.5 text-[13px] text-[#94A3B8] tabular-nums">
+                {rawCount} {rawCount === 1 ? "value" : "values"} ·{" "}
+                {parsedCount} after removing blanks/dupes
+              </p>
+            </div>
+            {error && (
+              <div
+                role="alert"
+                className="rounded-md border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-[14px] text-[#B71C1C]"
+              >
+                {error}
+              </div>
+            )}
+            <div className="flex justify-end gap-2 pt-2">
+              <Dialog.Close asChild>
+                <button
+                  type="button"
+                  className="px-4 py-2.5 text-[14px] font-medium text-[#64748B]"
+                  disabled={pending}
+                >
+                  Cancel
+                </button>
+              </Dialog.Close>
+              <button
+                type="submit"
+                disabled={pending || parsedCount === 0}
+                className="rounded-md py-2.5 px-5 text-[14px] font-medium text-white disabled:opacity-50"
+                style={{ background: "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))" }}
+              >
+                {pending
+                  ? "Adding…"
+                  : parsedCount > 0
+                    ? `Add ${parsedCount}`
+                    : "Add"}
               </button>
             </div>
           </form>

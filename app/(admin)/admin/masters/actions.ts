@@ -8,9 +8,11 @@ import { masterOptions, settingsEvents } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth/current";
 import {
   CreateMasterSchema,
+  BulkCreateMasterSchema,
   UpdateMasterSchema,
   MasterIdSchema,
   type CreateMasterInput,
+  type BulkCreateMasterInput,
   type UpdateMasterInput,
 } from "@/lib/validators/master";
 
@@ -94,6 +96,54 @@ export async function createMasterOption(
 
   revalidateMasterSurfaces();
   return { ok: true, id: inserted.id };
+}
+
+export async function createMasterOptionsBulk(
+  input: BulkCreateMasterInput,
+): Promise<ActionResult<{ created: number; skipped: number }>> {
+  await requireAdmin();
+
+  const parsed = BulkCreateMasterSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  // Dedupe case-insensitively (trim already applied by NameSchema), keep first.
+  const seen = new Set<string>();
+  const dedupedNames: string[] = [];
+  for (const name of parsed.data.names) {
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    dedupedNames.push(name);
+  }
+
+  const rows = dedupedNames.map((name, i) => ({
+    kind: parsed.data.kind,
+    name,
+    sortOrder: 1000 + i,
+  }));
+
+  let returned: { id: string }[];
+  try {
+    returned = await db
+      .insert(masterOptions)
+      .values(rows)
+      // onConflictDoNothing with no target lets PG infer any unique violation,
+      // including the (kind, lower(name)) expression index — rows that already
+      // exist are silently skipped.
+      .onConflictDoNothing()
+      .returning({ id: masterOptions.id });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: `DB: ${msg}` };
+  }
+
+  const created = returned.length;
+  const skipped = dedupedNames.length - created;
+
+  revalidateMasterSurfaces();
+  return { ok: true, created, skipped };
 }
 
 export async function updateMasterOption(
