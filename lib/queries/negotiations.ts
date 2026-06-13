@@ -12,6 +12,10 @@ export interface NegotiationListItem {
   salesPersonName: string | null;
   quotePrice: string | null;
   negotiationStatus: NegotiationStatus;
+  /** SM snapshot of the enquiry date; null on legacy rows — date filters fall
+   *  back to createdAt. */
+  enquiryDate: Date | null;
+  createdAt: Date;
 }
 
 export interface NegotiationFilters {
@@ -48,6 +52,8 @@ export async function listNegotiations(
       salesPersonName: employees.name,
       quotePrice: negotiations.quotePrice,
       negotiationStatus: negotiations.negotiationStatus,
+      enquiryDate: negotiations.enquiryDate,
+      createdAt: negotiations.createdAt,
     })
     .from(negotiations)
     .leftJoin(employees, eq(negotiations.salesPersonId, employees.id))

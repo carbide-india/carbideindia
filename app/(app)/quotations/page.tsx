@@ -8,37 +8,15 @@ import {
 } from "@/components/quotations/quotation-table";
 import { requireUser } from "@/lib/auth/current";
 import { listQuotations } from "@/lib/queries/quotations";
-import { COSTING_DONE_STATUSES, type CostingDoneStatus } from "@/db/enums";
 
 export const dynamic = "force-dynamic";
 
-interface PageProps {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}
-
-function firstString(v: string | string[] | undefined): string | undefined {
-  return Array.isArray(v) ? v[0] : v;
-}
-
-export default async function QuotationsPage({ searchParams }: PageProps) {
-  const sp = await searchParams;
+export default async function QuotationsPage() {
   await requireUser();
 
-  // ?cds= — costing-done status filter; anything unknown is ignored. (Kept in
-  // the URL-validated set for the dual empty state; not yet a list query arg.)
-  const rawCds = firstString(sp.cds);
-  const costingDoneStatus =
-    rawCds && (COSTING_DONE_STATUSES as readonly string[]).includes(rawCds)
-      ? (rawCds as CostingDoneStatus)
-      : undefined;
-  // ?q= — free-text quote-number / company search (ilike-escaped in the query).
-  const q = firstString(sp.q)?.trim() || undefined;
-
-  let rows = await listQuotations({ q });
-  // Costing-done is a UI-side narrowing on top of the q-filtered set.
-  if (costingDoneStatus) {
-    rows = rows.filter((r) => r.costingDoneStatus === costingDoneStatus);
-  }
+  // The advanced table owns search / filtering / sorting client-side, so the
+  // page just loads the full register set.
+  const rows = await listQuotations({});
 
   return (
     <>
@@ -81,13 +59,7 @@ export default async function QuotationsPage({ searchParams }: PageProps) {
             New Quotation
           </Link>
         </header>
-        <QuotationTable
-          rows={rows}
-          activeFilters={{
-            costingDoneStatus: costingDoneStatus ?? null,
-            q: q ?? null,
-          }}
-        />
+        <QuotationTable rows={rows} />
       </main>
       <DashboardFooter />
     </>

@@ -1,11 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { count, eq } from "drizzle-orm";
+import { count, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { negotiations, type NewNegotiation } from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
 import { getQuoteAutofill, getQuotationAutofill } from "@/lib/queries/quotes";
+import { NEGOTIATION_STATUSES, type NegotiationStatus } from "@/db/enums";
 import {
   CreateNegotiationSchema,
   UpdateNegotiationSchema,
@@ -178,5 +179,31 @@ export async function setNegotiationStatus(
   }
   revalidatePath("/negotiations");
   revalidatePath(`/negotiations/${id}`);
+  return { ok: true };
+}
+
+/** Bulk-set the negotiation status over the selected rows. */
+export async function setNegotiationStatusBulk(
+  ids: string[],
+  status: string,
+): Promise<ActionResult> {
+  await requireUser();
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { ok: false, error: "No rows selected." };
+  }
+  if (!ids.every(isUuid)) return { ok: false, error: "Invalid negotiation id." };
+  if (!(NEGOTIATION_STATUSES as readonly string[]).includes(status)) {
+    return { ok: false, error: "Invalid status" };
+  }
+  try {
+    await db
+      .update(negotiations)
+      .set({ negotiationStatus: status as NegotiationStatus, updatedAt: new Date() })
+      .where(inArray(negotiations.id, ids));
+  } catch (err) {
+    console.error("[setNegotiationStatusBulk] failed", err);
+    return { ok: false, error: "Could not update the statuses. Please try again." };
+  }
+  revalidatePath("/negotiations");
   return { ok: true };
 }

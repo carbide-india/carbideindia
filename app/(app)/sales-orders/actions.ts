@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { count, eq } from "drizzle-orm";
+import { count, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { salesOrders, type NewSalesOrder } from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
@@ -185,5 +185,32 @@ export async function setSalesOrderSent(
   }
   revalidatePath("/sales-orders");
   revalidatePath(`/sales-orders/${id}`);
+  return { ok: true };
+}
+
+/** Bulk-toggle the Customer SO Sent flag over the selected rows. `value` is
+ *  "yes" / "no" (the register table's only clean bulk target). */
+export async function setSalesOrderSentBulk(
+  ids: string[],
+  value: string,
+): Promise<ActionResult> {
+  await requireUser();
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { ok: false, error: "No rows selected." };
+  }
+  if (!ids.every(isUuid)) return { ok: false, error: "Invalid sales order id." };
+  if (value !== "yes" && value !== "no") {
+    return { ok: false, error: "Invalid value" };
+  }
+  try {
+    await db
+      .update(salesOrders)
+      .set({ customerSoSent: value === "yes", updatedAt: new Date() })
+      .where(inArray(salesOrders.id, ids));
+  } catch (err) {
+    console.error("[setSalesOrderSentBulk] failed", err);
+    return { ok: false, error: "Could not update the sales orders. Please try again." };
+  }
+  revalidatePath("/sales-orders");
   return { ok: true };
 }

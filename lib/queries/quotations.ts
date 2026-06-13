@@ -13,6 +13,10 @@ export interface QuotationListItem {
   quotePrice: string | null;
   costingDoneStatus: CostingDoneStatus;
   quoteSent: boolean;
+  /** SM snapshot of the enquiry date; null on legacy rows — date filters fall
+   *  back to createdAt. */
+  enquiryDate: Date | null;
+  createdAt: Date;
 }
 
 export interface QuotationFilters {
@@ -43,6 +47,8 @@ export async function listQuotations(
       quotePrice: quotations.quotePrice,
       costingDoneStatus: quotations.costingDoneStatus,
       quoteSent: quotations.quoteSent,
+      enquiryDate: quotations.enquiryDate,
+      createdAt: quotations.createdAt,
     })
     .from(quotations)
     .where(conds.length ? and(...conds) : undefined)

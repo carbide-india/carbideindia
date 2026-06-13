@@ -11,28 +11,12 @@ import { listSalesOrders } from "@/lib/queries/sales-orders";
 
 export const dynamic = "force-dynamic";
 
-interface PageProps {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}
-
-function firstString(v: string | string[] | undefined): string | undefined {
-  return Array.isArray(v) ? v[0] : v;
-}
-
-export default async function SalesOrdersPage({ searchParams }: PageProps) {
-  const sp = await searchParams;
+export default async function SalesOrdersPage() {
   await requireUser();
 
-  // ?q= — free-text SO-number / company search (ilike-escaped in the query).
-  const q = firstString(sp.q)?.trim() || undefined;
-  // ?sent= — SO-Sent filter ("yes" / "no"); anything else is ignored. The
-  // list query takes only `q`, so the boolean is applied here.
-  const rawSent = firstString(sp.sent);
-  const sent = rawSent === "yes" || rawSent === "no" ? rawSent : undefined;
-
-  let rows = await listSalesOrders({ q });
-  if (sent === "yes") rows = rows.filter((r) => r.customerSoSent);
-  else if (sent === "no") rows = rows.filter((r) => !r.customerSoSent);
+  // The advanced table owns search / filtering / sorting client-side, so the
+  // page just loads the full register set.
+  const rows = await listSalesOrders({});
 
   return (
     <>
@@ -74,10 +58,7 @@ export default async function SalesOrdersPage({ searchParams }: PageProps) {
             New Sales Order
           </Link>
         </header>
-        <SoTable
-          rows={rows}
-          activeFilters={{ sent: sent ?? null, q: q ?? null }}
-        />
+        <SoTable rows={rows} />
       </main>
       <DashboardFooter />
     </>

@@ -11,6 +11,10 @@ export interface SalesOrderListItem {
   quotePrice: string | null;
   customerPoNo: string | null;
   customerSoSent: boolean;
+  /** SM snapshot of the enquiry date; null on legacy rows — date filters fall
+   *  back to createdAt. */
+  enquiryDate: Date | null;
+  createdAt: Date;
 }
 
 export interface SalesOrderFilters {
@@ -39,6 +43,8 @@ export async function listSalesOrders(
       quotePrice: salesOrders.quotePrice,
       customerPoNo: salesOrders.customerPoNo,
       customerSoSent: salesOrders.customerSoSent,
+      enquiryDate: salesOrders.enquiryDate,
+      createdAt: salesOrders.createdAt,
     })
     .from(salesOrders)
     .where(conds.length ? and(...conds) : undefined)

@@ -8,32 +8,15 @@ import {
 } from "@/components/negotiations/negotiation-table";
 import { requireUser } from "@/lib/auth/current";
 import { listNegotiations } from "@/lib/queries/negotiations";
-import { NEGOTIATION_STATUSES, type NegotiationStatus } from "@/db/enums";
 
 export const dynamic = "force-dynamic";
 
-interface PageProps {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}
-
-function firstString(v: string | string[] | undefined): string | undefined {
-  return Array.isArray(v) ? v[0] : v;
-}
-
-export default async function NegotiationsPage({ searchParams }: PageProps) {
-  const sp = await searchParams;
+export default async function NegotiationsPage() {
   await requireUser();
 
-  // ?ns= — negotiation-status filter; anything unknown is ignored.
-  const rawNs = firstString(sp.ns);
-  const negotiationStatus =
-    rawNs && (NEGOTIATION_STATUSES as readonly string[]).includes(rawNs)
-      ? (rawNs as NegotiationStatus)
-      : undefined;
-  // ?q= — free-text negotiation-number / company search (ilike-escaped).
-  const q = firstString(sp.q)?.trim() || undefined;
-
-  const rows = await listNegotiations({ status: negotiationStatus, q });
+  // The advanced table owns search / filtering / sorting client-side, so the
+  // page just loads the full register set.
+  const rows = await listNegotiations({});
 
   return (
     <>
@@ -75,13 +58,7 @@ export default async function NegotiationsPage({ searchParams }: PageProps) {
             New Negotiation
           </Link>
         </header>
-        <NegotiationTable
-          rows={rows}
-          activeFilters={{
-            negotiationStatus: negotiationStatus ?? null,
-            q: q ?? null,
-          }}
-        />
+        <NegotiationTable rows={rows} />
       </main>
       <DashboardFooter />
     </>

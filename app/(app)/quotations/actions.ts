@@ -1,11 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { count, eq } from "drizzle-orm";
+import { count, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { quotations, type NewQuotation } from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
 import { getQuoteAutofill } from "@/lib/queries/quotes";
+import { COSTING_DONE_STATUSES, type CostingDoneStatus } from "@/db/enums";
 import {
   CreateQuotationSchema,
   UpdateQuotationSchema,
@@ -175,5 +176,31 @@ export async function setQuotationStatus(
   }
   revalidatePath("/quotations");
   revalidatePath(`/quotations/${id}`);
+  return { ok: true };
+}
+
+/** Bulk-set the costing-done status over the selected quotation rows. */
+export async function setQuotationStatusBulk(
+  ids: string[],
+  status: string,
+): Promise<ActionResult> {
+  await requireUser();
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { ok: false, error: "No rows selected." };
+  }
+  if (!ids.every(isUuid)) return { ok: false, error: "Invalid quotation id." };
+  if (!(COSTING_DONE_STATUSES as readonly string[]).includes(status)) {
+    return { ok: false, error: "Invalid status" };
+  }
+  try {
+    await db
+      .update(quotations)
+      .set({ costingDoneStatus: status as CostingDoneStatus, updatedAt: new Date() })
+      .where(inArray(quotations.id, ids));
+  } catch (err) {
+    console.error("[setQuotationStatusBulk] failed", err);
+    return { ok: false, error: "Could not update the statuses. Please try again." };
+  }
+  revalidatePath("/quotations");
   return { ok: true };
 }
