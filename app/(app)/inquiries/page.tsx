@@ -9,39 +9,16 @@ import {
 import { requireUser } from "@/lib/auth/current";
 import { listInquiries } from "@/lib/queries/inquiries";
 import { listEmployeeOptions } from "@/lib/queries/employees";
-import { ENQUIRY_STATUSES, type EnquiryStatus } from "@/db/enums";
 
 export const dynamic = "force-dynamic";
 
-interface PageProps {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}
-
-function firstString(v: string | string[] | undefined): string | undefined {
-  return Array.isArray(v) ? v[0] : v;
-}
-
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-export default async function InquiriesPage({ searchParams }: PageProps) {
-  const sp = await searchParams;
+export default async function InquiriesPage() {
   await requireUser();
 
-  // ?status= — must be a known enquiry status; anything else is ignored.
-  const rawStatus = firstString(sp.status);
-  const status =
-    rawStatus && (ENQUIRY_STATUSES as readonly string[]).includes(rawStatus)
-      ? (rawStatus as EnquiryStatus)
-      : undefined;
-  // ?sp= — sales-person employee id; only accept a UUID-shaped value.
-  const rawSp = firstString(sp.sp)?.trim();
-  const salesPersonId = rawSp && UUID_RE.test(rawSp) ? rawSp : undefined;
-  // ?q= — free-text company / SM-number search (ilike-escaped in the query).
-  const q = firstString(sp.q)?.trim() || undefined;
-
+  // The advanced table owns search / filtering / sorting client-side, so the
+  // page just loads the full register set.
   const [rows, employees] = await Promise.all([
-    listInquiries({ status, salesPersonId, q }),
+    listInquiries({}),
     listEmployeeOptions(),
   ]);
 
@@ -85,15 +62,7 @@ export default async function InquiriesPage({ searchParams }: PageProps) {
             New Enquiry
           </Link>
         </header>
-        <InquiryTable
-          rows={rows}
-          employees={employees}
-          activeFilters={{
-            status: status ?? null,
-            salesPersonId: salesPersonId ?? null,
-            q: q ?? null,
-          }}
-        />
+        <InquiryTable rows={rows} employees={employees} />
       </main>
       <DashboardFooter />
     </>

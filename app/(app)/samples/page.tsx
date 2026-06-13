@@ -9,39 +9,16 @@ import {
 import { requireUser } from "@/lib/auth/current";
 import { listSamples } from "@/lib/queries/samples";
 import { listEmployeeOptions } from "@/lib/queries/employees";
-import { SAMPLE_STATUSES, type SampleStatus } from "@/db/enums";
 
 export const dynamic = "force-dynamic";
 
-interface PageProps {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}
-
-function firstString(v: string | string[] | undefined): string | undefined {
-  return Array.isArray(v) ? v[0] : v;
-}
-
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-export default async function SamplesPage({ searchParams }: PageProps) {
-  const sp = await searchParams;
+export default async function SamplesPage() {
   await requireUser();
 
-  // ?status= — must be a known sample status; anything else is ignored.
-  const rawStatus = firstString(sp.status);
-  const status =
-    rawStatus && (SAMPLE_STATUSES as readonly string[]).includes(rawStatus)
-      ? (rawStatus as SampleStatus)
-      : undefined;
-  // ?resp= — responsible-person employee id; only accept a UUID-shaped value.
-  const rawResp = firstString(sp.resp)?.trim();
-  const responsibleId = rawResp && UUID_RE.test(rawResp) ? rawResp : undefined;
-  // ?q= — free-text sample-number / notes search (ilike-escaped in the query).
-  const q = firstString(sp.q)?.trim() || undefined;
-
+  // The advanced table owns search / filtering / sorting client-side, so the
+  // page just loads the full register set.
   const [rows, employees] = await Promise.all([
-    listSamples({ status, q, responsibleId }),
+    listSamples({}),
     listEmployeeOptions(),
   ]);
 
@@ -86,15 +63,7 @@ export default async function SamplesPage({ searchParams }: PageProps) {
             New Sample
           </Link>
         </header>
-        <SampleTable
-          rows={rows}
-          employees={employees}
-          activeFilters={{
-            status: status ?? null,
-            responsibleId: responsibleId ?? null,
-            q: q ?? null,
-          }}
-        />
+        <SampleTable rows={rows} employees={employees} />
       </main>
       <DashboardFooter />
     </>

@@ -1,10 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { count, eq } from "drizzle-orm";
+import { count, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { samples, inquiries, type NewSample } from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
+import { SAMPLE_STATUSES, type SampleStatus } from "@/db/enums";
 import {
   CreateSampleSchema,
   UpdateSampleSchema,
@@ -225,5 +226,35 @@ export async function setSampleStatus(
   }
   revalidatePath("/samples");
   revalidatePath(`/samples/${id}`);
+  return { ok: true };
+}
+
+/**
+ * Bulk-set the sample status on many samples at once (register table's
+ * "Set status" bulk action). Validates the status against the enum and the ids
+ * are UUID-shaped before a single `inArray` update.
+ */
+export async function setSampleStatusBulk(
+  ids: string[],
+  status: string,
+): Promise<ActionResult> {
+  await requireUser();
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { ok: false, error: "No rows selected." };
+  }
+  if (!ids.every(isUuid)) return { ok: false, error: "Invalid sample id." };
+  if (!(SAMPLE_STATUSES as readonly string[]).includes(status)) {
+    return { ok: false, error: "Invalid status" };
+  }
+  try {
+    await db
+      .update(samples)
+      .set({ sampleStatus: status as SampleStatus, updatedAt: new Date() })
+      .where(inArray(samples.id, ids));
+  } catch (err) {
+    console.error("[setSampleStatusBulk] failed", err);
+    return { ok: false, error: "Could not update the statuses. Please try again." };
+  }
+  revalidatePath("/samples");
   return { ok: true };
 }

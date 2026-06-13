@@ -1,11 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import type { z } from "zod";
 import { db } from "@/lib/db";
 import { inquiries, clients, clientContacts, type NewInquiry } from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
+import { ENQUIRY_STATUSES, type EnquiryStatus } from "@/db/enums";
 import {
   CreateInquirySchema,
   UpdateInquirySchema,
@@ -292,6 +293,36 @@ export async function setFeasibilityStatus(
   }
   revalidatePath("/inquiries");
   revalidatePath(`/inquiries/${id}`);
+  return { ok: true };
+}
+
+/**
+ * Bulk-set the enquiry status on many inquiries at once (register table's
+ * "Set status" bulk action). Validates the status against the enum and the ids
+ * are UUID-shaped before a single `inArray` update.
+ */
+export async function setEnquiryStatusBulk(
+  ids: string[],
+  status: string,
+): Promise<ActionResult> {
+  await requireUser();
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { ok: false, error: "No rows selected." };
+  }
+  if (!ids.every(isUuid)) return { ok: false, error: "Invalid inquiry id." };
+  if (!(ENQUIRY_STATUSES as readonly string[]).includes(status)) {
+    return { ok: false, error: "Invalid status" };
+  }
+  try {
+    await db
+      .update(inquiries)
+      .set({ enquiryStatus: status as EnquiryStatus, updatedAt: new Date() })
+      .where(inArray(inquiries.id, ids));
+  } catch (err) {
+    console.error("[setEnquiryStatusBulk] failed", err);
+    return { ok: false, error: "Could not update the statuses. Please try again." };
+  }
+  revalidatePath("/inquiries");
   return { ok: true };
 }
 
