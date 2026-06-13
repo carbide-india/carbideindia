@@ -1,7 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { ExternalLink } from "lucide-react";
+import Link from "next/link";
+import type { Route } from "next";
+import { ExternalLink, ArrowLeft, Plus } from "lucide-react";
 import {
   CHECK_STATE_LABELS,
   ENQUIRY_STATUSES,
@@ -50,6 +52,19 @@ export function InquiryDetail({ inquiry, employees, masterNames }: Props) {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* ── Breadcrumb ──────────────────────────────────────────────── */}
+      <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-[13px]">
+        <Link
+          href={"/inquiries" as Route}
+          className="inline-flex items-center gap-1.5 font-semibold text-ink-muted hover:text-ink-strong transition-colors"
+        >
+          <ArrowLeft size={14} strokeWidth={2.4} />
+          Enquiries
+        </Link>
+        <span className="text-ink-subtle">/</span>
+        <span className="font-mono text-ink-subtle">{inquiry.smNumber}</span>
+      </nav>
+
       {/* ── Header ──────────────────────────────────────────────────── */}
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -71,10 +86,19 @@ export function InquiryDetail({ inquiry, employees, masterNames }: Props) {
             )}
           </p>
         </div>
-        <Chip
-          label={INQUIRY_PRIORITY_LABELS[inquiry.priority]}
-          tone={PRIORITY_TONES[inquiry.priority]}
-        />
+        <div className="flex items-center gap-3">
+          <Chip
+            label={INQUIRY_PRIORITY_LABELS[inquiry.priority]}
+            tone={PRIORITY_TONES[inquiry.priority]}
+          />
+          <Link
+            href={"/inquiries/new" as Route}
+            className="inline-flex items-center gap-1.5 rounded-pill border border-hairline px-4 py-2 text-[13px] font-bold text-ink-strong hover:bg-surface-soft transition-colors"
+          >
+            <Plus size={14} strokeWidth={2.6} />
+            New Enquiry
+          </Link>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr] items-start">

@@ -171,7 +171,7 @@ export function FormsLauncher({ variant }: { variant?: "drawer" }) {
           style={{ background: "rgba(15,23,42,0.40)", backdropFilter: "blur(3px)" }}
         />
         <Dialog.Content
-          className="fixed left-1/2 top-1/2 z-[100] max-h-[88vh] w-[min(672px,calc(100vw-32px))] max-w-2xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl bg-white p-6 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 max-md:p-5"
+          className="fixed left-1/2 top-1/2 z-[100] max-h-[90vh] w-[min(1120px,calc(100vw-48px))] max-w-[1120px] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl bg-white p-8 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 max-md:p-5"
           style={{
             border: "1px solid #E7E2DA",
             boxShadow: "0 2px 10px rgba(30,36,71,0.08)",
@@ -298,8 +298,8 @@ export function FormsLauncher({ variant }: { variant?: "drawer" }) {
             Every entry lands in its register with an SM-linked trail.
           </Dialog.Description>
 
-          {/* ── Card grid — 3 live, 3 Phase-4 placeholders ── */}
-          <div className="mt-5 grid grid-cols-2 gap-3 max-md:grid-cols-1">
+          {/* ── Card grid — wide, 3 columns ── */}
+          <div className="mt-6 grid grid-cols-3 gap-4 max-lg:grid-cols-2 max-md:grid-cols-1">
             {ACTIVE_CARDS.map(({ name, Icon, desc, href, registerHref }, i) => (
               <div
                 key={name}
