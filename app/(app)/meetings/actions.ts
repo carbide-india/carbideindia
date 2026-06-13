@@ -1,10 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { clientMeetings, type NewClientMeeting } from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
+import { MEETING_PURPOSES, type MeetingPurpose } from "@/db/enums";
 import {
   CreateClientMeetingSchema,
   UpdateClientMeetingSchema,
@@ -146,6 +147,32 @@ export async function updateClientMeeting(
   }
   revalidatePath("/meetings");
   revalidatePath(`/meetings/${id}`);
+  return { ok: true };
+}
+
+/** Bulk-set the meeting purpose over the selected rows. */
+export async function setMeetingPurposeBulk(
+  ids: string[],
+  purpose: string,
+): Promise<ActionResult> {
+  await requireUser();
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { ok: false, error: "No rows selected." };
+  }
+  if (!ids.every(isUuid)) return { ok: false, error: "Invalid meeting id." };
+  if (!(MEETING_PURPOSES as readonly string[]).includes(purpose)) {
+    return { ok: false, error: "Invalid purpose" };
+  }
+  try {
+    await db
+      .update(clientMeetings)
+      .set({ purpose: purpose as MeetingPurpose, updatedAt: new Date() })
+      .where(inArray(clientMeetings.id, ids));
+  } catch (err) {
+    console.error("[setMeetingPurposeBulk] failed", err);
+    return { ok: false, error: "Could not update the purposes. Please try again." };
+  }
+  revalidatePath("/meetings");
   return { ok: true };
 }
 

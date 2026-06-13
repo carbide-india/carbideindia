@@ -3,8 +3,6 @@
 import * as React from "react";
 import Link from "next/link";
 import type { Route } from "next";
-import { useQueryState } from "nuqs";
-import { Search } from "lucide-react";
 import {
   MEETING_PURPOSES,
   MEETING_PURPOSE_LABELS,
@@ -12,23 +10,20 @@ import {
 } from "@/db/enums";
 import { formatDate } from "@/lib/format";
 import { Chip } from "@/components/inquiries/chip";
+import {
+  RegisterDataTable,
+  type RegisterColumn,
+  type FilterConfig,
+} from "@/components/registers/register-data-table";
+import { setMeetingPurposeBulk } from "@/app/(app)/meetings/actions";
 import type { ClientMeetingListItem } from "@/lib/queries/client-meetings";
 import type { EmployeeOption } from "@/lib/queries/employees";
 
 export const NEW_MEETING_ROUTE: Route = "/meetings/new";
 
-/** Server-validated filter state — distinguishes "no meetings at all" from
- *  "no rows match the current filters" in the empty state. */
-export interface MeetingActiveFilters {
-  purpose: string | null;
-  salesPersonId: string | null;
-  q: string | null;
-}
-
 interface Props {
   rows: ClientMeetingListItem[];
   employees: EmployeeOption[];
-  activeFilters: MeetingActiveFilters;
 }
 
 /** Midnight-today, local — a follow-up dated strictly before this reads as
@@ -40,238 +35,156 @@ function isPastDue(d: Date): boolean {
 }
 
 /**
- * Daily-meeting register table — mirrors the sample register (plain table,
- * nuqs filters with `shallow: false` so listClientMeetings re-runs server-side).
- * Next Follow-Up renders in red/semibold when it's already in the past, an
- * at-a-glance "you owe this client a call" cue.
+ * Daily-meeting register table — a thin config wrapper over the shared
+ * RegisterDataTable. Purpose sorts by ENUM ORDER (stable, not label
+ * alphabetical). Next Follow-Up renders in red/semibold when already in the
+ * past, an at-a-glance "you owe this client a call" cue.
  */
-export function MeetingTable({ rows, employees, activeFilters }: Props) {
-  const [purpose, setPurpose] = useQueryState("purpose", {
-    defaultValue: "",
-    shallow: false,
-  });
-  const [sp, setSp] = useQueryState("sp", {
-    defaultValue: "",
-    shallow: false,
-  });
-  const [q, setQ] = useQueryState("q", { defaultValue: "", shallow: false });
-
-  // Debounced search — local echo state, pushed to the URL after 350ms of
-  // quiet so fast typing doesn't fire a server roundtrip per keystroke.
-  const [text, setText] = React.useState(q);
-  React.useEffect(() => {
-    const trimmed = text.trim();
-    if (trimmed === q) return;
-    const t = setTimeout(() => void setQ(trimmed || null), 350);
-    return () => clearTimeout(t);
-  }, [text, q, setQ]);
-
-  const hasActiveFilters = Boolean(
-    activeFilters.purpose || activeFilters.salesPersonId || activeFilters.q,
-  );
-
-  function clearFilters() {
-    setText("");
-    void setPurpose(null);
-    void setSp(null);
-    void setQ(null);
-  }
-
-  return (
-    <div>
-      {/* Filter row */}
-      <div className="mb-4 flex items-center gap-2 flex-wrap">
-        <label className="relative flex-1 min-w-[220px] max-w-md">
-          <Search
-            size={15}
-            strokeWidth={2.2}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle pointer-events-none"
-          />
-          <input
-            type="search"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Search meeting number, company or contact…"
-            aria-label="Search meetings"
-            className="w-full rounded-chip border border-hairline bg-surface-card pl-9 pr-3.5 py-2 text-[14px] text-ink-strong placeholder:text-ink-subtle"
-            style={{ boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)" }}
-          />
-        </label>
-        <select
-          value={purpose}
-          onChange={(e) => void setPurpose(e.target.value || null)}
-          aria-label="Filter by purpose"
-          className="rounded-chip border border-hairline bg-surface-card px-3 py-2 text-[14px] text-ink-strong"
-          style={{ boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)" }}
-        >
-          <option value="">All purposes</option>
-          {MEETING_PURPOSES.map((p) => (
-            <option key={p} value={p}>
-              {MEETING_PURPOSE_LABELS[p]}
-            </option>
-          ))}
-        </select>
-        <select
-          value={sp}
-          onChange={(e) => void setSp(e.target.value || null)}
-          aria-label="Filter by sales person"
-          className="rounded-chip border border-hairline bg-surface-card px-3 py-2 text-[14px] text-ink-strong"
-          style={{ boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)" }}
-        >
-          <option value="">All sales persons</option>
-          {employees.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.name}
-            </option>
-          ))}
-        </select>
-        {hasActiveFilters && (
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="text-[13px] font-semibold text-ink-subtle hover:text-ink-strong transition-colors px-2 py-2"
-          >
-            Clear filters
-          </button>
-        )}
-      </div>
-
-      {rows.length === 0 ? (
-        <EmptyState filtered={hasActiveFilters} onClear={clearFilters} />
-      ) : (
-        <div
-          className="overflow-x-auto rounded-section border border-hairline bg-surface-card"
-          style={{ boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)" }}
-        >
-          <table className="w-full text-[14px]">
-            <thead>
-              <tr
-                className="text-left text-[12px] uppercase tracking-[0.08em] text-ink-subtle font-bold border-b border-hairline"
-                style={{ background: "var(--color-surface-soft)" }}
-              >
-                <th className="px-5 py-4">Meeting No</th>
-                <th className="px-5 py-4">Date</th>
-                <th className="px-5 py-4">Company</th>
-                <th className="px-5 py-4">Contact</th>
-                <th className="px-5 py-4">Sales Person</th>
-                <th className="px-5 py-4">Purpose</th>
-                <th className="px-5 py-4">Next Follow-Up</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, i) => {
-                const overdue =
-                  row.nextFollowUpDate !== null &&
-                  isPastDue(row.nextFollowUpDate);
-                return (
-                  <tr
-                    key={row.id}
-                    className="border-b border-hairline last:border-b-0 transition-colors hover:bg-surface-soft"
-                    style={{
-                      background:
-                        i % 2 === 1 ? "rgba(15, 23, 42, 0.012)" : undefined,
-                    }}
-                  >
-                    <td className="px-5 py-3.5 whitespace-nowrap">
-                      <Link
-                        href={`/meetings/${row.id}` as Route}
-                        className="font-semibold text-ink-strong hover:underline"
-                        style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}
-                      >
-                        {row.meetingNo}
-                      </Link>
-                    </td>
-                    <td className="px-5 py-3.5 whitespace-nowrap tabular-nums text-ink-soft">
-                      {formatDate(row.meetingDate)}
-                    </td>
-                    <td className="px-5 py-3.5 text-ink-strong font-medium">
-                      {row.companyName}
-                    </td>
-                    <td className="px-5 py-3.5 text-ink-soft">
-                      {row.contactPersonName}
-                    </td>
-                    <td className="px-5 py-3.5 whitespace-nowrap text-ink-soft">
-                      {row.salesPersonName ?? "—"}
-                    </td>
-                    <td className="px-5 py-3.5 whitespace-nowrap">
-                      <Chip
-                        label={MEETING_PURPOSE_LABELS[row.purpose]}
-                        tone={MEETING_PURPOSE_COLORS[row.purpose]}
-                      />
-                    </td>
-                    <td className="px-5 py-3.5 whitespace-nowrap tabular-nums">
-                      {row.nextFollowUpDate ? (
-                        <span
-                          className={
-                            overdue
-                              ? "font-semibold"
-                              : "text-ink-soft"
-                          }
-                          style={
-                            overdue
-                              ? { color: "var(--color-red-deep)" }
-                              : undefined
-                          }
-                          title={overdue ? "Follow-up overdue" : undefined}
-                        >
-                          {formatDate(row.nextFollowUpDate)}
-                        </span>
-                      ) : (
-                        <span className="text-ink-subtle">—</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function EmptyState({
-  filtered,
-  onClear,
-}: {
-  filtered: boolean;
-  onClear: () => void;
-}) {
-  return (
-    <div
-      className="rounded-section border border-dashed border-hairline-strong bg-surface-card px-6 py-14 text-center"
-      style={{ boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)" }}
-    >
-      <p
-        className="font-serif text-ink-strong"
-        style={{ fontStyle: "italic", fontSize: 22, letterSpacing: "-0.015em" }}
-      >
-        {filtered
-          ? "No meetings match these filters."
-          : "No meetings logged yet — record the first client visit."}
-      </p>
-      <p
-        className="text-[14px] text-ink-subtle mt-2 max-w-sm mx-auto"
-        style={{ lineHeight: 1.5 }}
-      >
-        {filtered ? (
-          <button
-            type="button"
-            onClick={onClear}
-            className="font-semibold underline underline-offset-2 hover:text-ink-strong transition-colors"
-          >
-            Clear filters
-          </button>
-        ) : (
+export function MeetingTable({ rows, employees }: Props) {
+  const columns = React.useMemo<RegisterColumn<ClientMeetingListItem>[]>(
+    () => [
+      {
+        id: "meetingNo",
+        header: "Meeting No",
+        searchable: true,
+        sortValue: (r) => r.meetingNo,
+        cell: (r) => (
           <Link
-            href={NEW_MEETING_ROUTE}
-            className="font-semibold underline underline-offset-2 hover:text-ink-strong transition-colors"
+            href={`/meetings/${r.id}` as Route}
+            className="font-semibold text-ink-strong hover:underline"
+            style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}
           >
-            New Meeting
+            {r.meetingNo}
           </Link>
-        )}
-      </p>
-    </div>
+        ),
+      },
+      {
+        id: "meetingDate",
+        header: "Date",
+        sortValue: (r) => r.meetingDate,
+        cell: (r) => (
+          <span className="tabular-nums text-ink-soft">
+            {formatDate(r.meetingDate)}
+          </span>
+        ),
+      },
+      {
+        id: "companyName",
+        header: "Company",
+        searchable: true,
+        sortValue: (r) => r.companyName,
+        exportValue: (r) => r.companyName,
+        cell: (r) => (
+          <span className="text-ink-strong font-medium">{r.companyName}</span>
+        ),
+      },
+      {
+        id: "contactPersonName",
+        header: "Contact",
+        searchable: true,
+        sortValue: (r) => r.contactPersonName,
+        exportValue: (r) => r.contactPersonName,
+        cell: (r) => <span className="text-ink-soft">{r.contactPersonName}</span>,
+      },
+      {
+        id: "salesPersonName",
+        header: "Sales Person",
+        searchable: true,
+        sortValue: (r) => r.salesPersonName ?? "",
+        exportValue: (r) => r.salesPersonName ?? "",
+        cell: (r) => (
+          <span className="text-ink-soft">{r.salesPersonName ?? "—"}</span>
+        ),
+      },
+      {
+        id: "purpose",
+        header: "Purpose",
+        // Sort by enum order for a stable, lifecycle-ish ordering.
+        sortValue: (r) => MEETING_PURPOSES.indexOf(r.purpose),
+        exportValue: (r) => MEETING_PURPOSE_LABELS[r.purpose],
+        cell: (r) => (
+          <Chip
+            label={MEETING_PURPOSE_LABELS[r.purpose]}
+            tone={MEETING_PURPOSE_COLORS[r.purpose]}
+          />
+        ),
+      },
+      {
+        id: "nextFollowUpDate",
+        header: "Next Follow-Up",
+        sortValue: (r) => r.nextFollowUpDate ?? new Date(0),
+        exportValue: (r) =>
+          r.nextFollowUpDate ? formatDate(r.nextFollowUpDate) : "",
+        cell: (r) => {
+          if (!r.nextFollowUpDate) {
+            return <span className="text-ink-subtle">—</span>;
+          }
+          const overdue = isPastDue(r.nextFollowUpDate);
+          return (
+            <span
+              className={overdue ? "font-semibold tabular-nums" : "tabular-nums text-ink-soft"}
+              style={overdue ? { color: "var(--color-red-deep)" } : undefined}
+              title={overdue ? "Follow-up overdue" : undefined}
+            >
+              {formatDate(r.nextFollowUpDate)}
+            </span>
+          );
+        },
+      },
+    ],
+    [],
+  );
+
+  const filters = React.useMemo<FilterConfig<ClientMeetingListItem>[]>(
+    () => [
+      {
+        id: "purpose",
+        label: "Purpose",
+        type: "select",
+        // Filter matches the column's string sortValue — the enum index — so
+        // map options to the index string (same trick negotiations used).
+        options: MEETING_PURPOSES.map((p, i) => ({
+          value: String(i),
+          label: MEETING_PURPOSE_LABELS[p],
+        })),
+        accessor: (r) => String(MEETING_PURPOSES.indexOf(r.purpose)),
+      },
+      {
+        id: "salesPersonName",
+        label: "Sales person",
+        type: "select",
+        options: employees.map((e) => ({ value: e.name, label: e.name })),
+        accessor: (r) => r.salesPersonName ?? "",
+      },
+      {
+        id: "meetingDate",
+        label: "Meeting date",
+        type: "dateRange",
+        accessor: (r) => r.meetingDate,
+      },
+    ],
+    [employees],
+  );
+
+  return (
+    <RegisterDataTable<ClientMeetingListItem>
+      tableKey="meetings"
+      rows={rows}
+      getRowId={(r) => r.id}
+      columns={columns}
+      getOpenHref={(r) => `/meetings/${r.id}` as Route}
+      filters={filters}
+      exportFilename="meetings"
+      bulkAction={{
+        label: "Set purpose",
+        options: MEETING_PURPOSES.map((p) => ({
+          value: p,
+          label: MEETING_PURPOSE_LABELS[p],
+        })),
+        onApply: (ids, value) => setMeetingPurposeBulk(ids, value),
+      }}
+      emptyTitle="No meetings logged yet — record the first client visit."
+      emptyHint="Daily client-visit log with sales, contact and outcome details appears here."
+    />
   );
 }
