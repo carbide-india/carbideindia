@@ -37,7 +37,6 @@ import {
 } from "@/app/(app)/meetings/actions";
 
 const MEETING_UUID = "33333333-3333-4333-8333-333333333333";
-const SELFIE = "meeting-selfies/abc123.jpg";
 
 beforeEach(() => {
   insertCalls.length = 0;
@@ -45,20 +44,24 @@ beforeEach(() => {
 });
 
 describe("createClientMeeting", () => {
-  it("defaults salesPersonId to the current user and returns the meetingNo", async () => {
+  it("defaults salesPersonId to the current user, combines the contact name, and returns the meetingNo", async () => {
     const res = await createClientMeeting({
+      salesName: "Priya Nair",
       companyName: "Acme Tools",
-      contactPersonName: "R. Sharma",
-      selfieUrl: SELFIE,
+      contactFirstName: "Rahul",
+      contactLastName: "Sharma",
     });
     expect(res).toEqual({ ok: true, id: "mtg-1", meetingNo: "MTG1001" });
     expect(insertCalls).toHaveLength(1);
     expect(insertCalls[0]).toMatchObject({
       salesPersonId: "emp-1",
+      salesName: "Priya Nair",
       companyName: "Acme Tools",
-      contactPersonName: "R. Sharma",
+      contactFirstName: "Rahul",
+      contactLastName: "Sharma",
+      // Back-compat: the legacy combined column is "first last".
+      contactPersonName: "Rahul Sharma",
       purpose: "regular_order",
-      selfieUrl: SELFIE,
       createdById: "emp-1",
     });
     // DB default supplies the meeting number — never sent in the insert.
@@ -68,23 +71,34 @@ describe("createClientMeeting", () => {
   it("honours an explicit salesPersonId and converts dates", async () => {
     const res = await createClientMeeting({
       salesPersonId: "8f7b2a4e-1c3d-4e5f-9a6b-7c8d9e0f1a2b",
+      salesName: "Priya Nair",
       companyName: "Acme Tools",
-      contactPersonName: "R. Sharma",
+      contactFirstName: "Rahul",
       meetingDate: "2026-06-12",
       nextFollowUpDate: "2026-07-01",
-      selfieUrl: SELFIE,
     });
     expect(res).toEqual({ ok: true, id: "mtg-1", meetingNo: "MTG1001" });
     expect(insertCalls[0]?.salesPersonId).toBe("8f7b2a4e-1c3d-4e5f-9a6b-7c8d9e0f1a2b");
+    // Single-name contact → combined column has no trailing space.
+    expect(insertCalls[0]?.contactPersonName).toBe("Rahul");
     expect(insertCalls[0]?.meetingDate).toBeInstanceOf(Date);
     expect(insertCalls[0]?.nextFollowUpDate).toBeInstanceOf(Date);
   });
 
-  it("rejects a meeting with no selfie and never touches the db", async () => {
+  it("rejects a meeting with no contact first name and never touches the db", async () => {
+    const res = await createClientMeeting({
+      salesName: "Priya Nair",
+      companyName: "Acme Tools",
+    } as never);
+    expect(res.ok).toBe(false);
+    expect(insertCalls).toHaveLength(0);
+  });
+
+  it("rejects a meeting with no sales name and never touches the db", async () => {
     const res = await createClientMeeting({
       companyName: "Acme Tools",
-      contactPersonName: "R. Sharma",
-    });
+      contactFirstName: "Rahul",
+    } as never);
     expect(res.ok).toBe(false);
     expect(insertCalls).toHaveLength(0);
   });

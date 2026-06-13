@@ -661,12 +661,29 @@ export const clientMeetings = pgTable("client_meetings", {
   id: uuid("id").primaryKey().defaultRandom(),
   meetingNo: text("meeting_no").notNull().unique().default(sql`'MTG' || nextval('client_meeting_no_seq')`),
   salesPersonId: uuid("sales_person_id").references(() => employees.id, { onDelete: "set null" }),
+  // Sales Person block — captured free-text (salesPersonId above is the
+  // auto-linked current user, used for the register's filter/column).
+  salesName: text("sales_name"),
+  salesNumber: text("sales_number"),
+  salesDesignation: text("sales_designation"),
+  salesEmail: text("sales_email"),
   clientId: uuid("client_id").references(() => clients.id, { onDelete: "set null" }),
   companyName: text("company_name").notNull(),
+  // Combined contact name — kept for back-compat with the register's existing
+  // column; the action always writes `${first} ${last}`.trim() so the NOT NULL
+  // holds. First/last below are the new captured fields.
   contactPersonName: text("contact_person_name").notNull(),
+  contactFirstName: text("contact_first_name"),
+  contactLastName: text("contact_last_name"),
   contactPersonDesignation: text("contact_person_designation"),
+  contactNumber: text("contact_number"),
+  contactEmail: text("contact_email"),
   meetingDate: timestamp("meeting_date", { withTimezone: true }).notNull().defaultNow(),
+  // Legacy single time — kept nullable/unused; start/end below replace it.
   meetingTime: text("meeting_time"),
+  meetingStartTime: text("meeting_start_time"),
+  meetingEndTime: text("meeting_end_time"),
+  meetingSource: text("meeting_source"),
   clientType: text("client_type"),
   purpose: meetingPurposeEnum("purpose").notNull().default("regular_order"),
   purposeOther: text("purpose_other"),

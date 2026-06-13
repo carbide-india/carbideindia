@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, ilike, or } from "drizzle-orm";
+import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { clientMeetings, employees, type ClientMeeting } from "@/db/schema";
 import type { MeetingPurpose } from "@/db/enums";
@@ -10,7 +10,9 @@ export interface ClientMeetingListItem {
   meetingNo: string;
   meetingDate: Date;
   companyName: string;
+  /** Contact name — first + last, falling back to the legacy combined column. */
   contactPersonName: string;
+  /** Captured sales-person name; falls back to the linked employee's name. */
   salesPersonName: string | null;
   purpose: MeetingPurpose;
   nextFollowUpDate: Date | null;
@@ -47,6 +49,8 @@ export async function listClientMeetings(
         ilike(clientMeetings.meetingNo, like),
         ilike(clientMeetings.companyName, like),
         ilike(clientMeetings.contactPersonName, like),
+        ilike(clientMeetings.contactFirstName, like),
+        ilike(clientMeetings.contactLastName, like),
       ),
     );
   }
@@ -56,8 +60,13 @@ export async function listClientMeetings(
       meetingNo: clientMeetings.meetingNo,
       meetingDate: clientMeetings.meetingDate,
       companyName: clientMeetings.companyName,
-      contactPersonName: clientMeetings.contactPersonName,
-      salesPersonName: employees.name,
+      // Prefer the new first/last pair; fall back to the legacy combined column.
+      contactPersonName: sql<string>`coalesce(
+        nullif(trim(concat_ws(' ', ${clientMeetings.contactFirstName}, ${clientMeetings.contactLastName})), ''),
+        ${clientMeetings.contactPersonName}
+      )`,
+      // Captured sales name first, else the linked employee's name.
+      salesPersonName: sql<string | null>`coalesce(${clientMeetings.salesName}, ${employees.name})`,
       purpose: clientMeetings.purpose,
       nextFollowUpDate: clientMeetings.nextFollowUpDate,
     })

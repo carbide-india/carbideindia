@@ -66,7 +66,7 @@ export default async function MeetingsPage({ searchParams }: PageProps) {
             </h1>
             <p className="text-body-lg text-ink-subtle mt-2 tabular-nums">
               {rows.length} {rows.length === 1 ? "meeting" : "meetings"} —
-              daily client-visit log with a proof-of-visit selfie.
+              daily client-visit log with sales, contact and outcome details.
             </p>
           </div>
           <Link

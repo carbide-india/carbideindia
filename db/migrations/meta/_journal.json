@@ -64,6 +64,13 @@
       "when": 1781270154335,
       "tag": "0008_dashing_vulcan",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1781332285356,
+      "tag": "0009_wide_baron_strucker",
+      "breakpoints": true
     }
   ]
 }

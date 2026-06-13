@@ -27,10 +27,14 @@ interface Props {
 /** The editable slice — RHF holds <input>-shaped values (date as YYYY-MM-DD);
  *  the dirty-only patch converts on save. */
 interface MeetingEditValues {
-  contactPersonName: string;
+  contactFirstName: string;
+  contactLastName: string;
   contactPersonDesignation: string;
+  contactNumber: string;
+  contactEmail: string;
   clientType: string;
-  meetingTime: string;
+  meetingStartTime: string;
+  meetingEndTime: string;
   meetingNotes: string;
   nextFollowUpDate: string;
 }
@@ -54,25 +58,43 @@ const DATE_KEYS = new Set<keyof MeetingEditValues>(["nextFollowUpDate"]);
 
 /**
  * Daily-meeting detail — breadcrumb + header, a sticky sidebar (sales person,
- * client type, next follow-up, created), the proof selfie card, a read-only
- * details card, and one dirty-only edit form for the mutable fields. The selfie
- * is not re-required on edit (the Update schema doesn't enforce it).
+ * client type, next follow-up, created), a read-only details card, and one
+ * dirty-only edit form for the mutable fields. (No proof-of-visit selfie.)
  */
 export function MeetingDetail({ meeting, employees }: Props) {
   const router = useRouter();
 
   const salesPerson =
-    employees.find((e) => e.id === meeting.salesPersonId)?.name ?? null;
+    meeting.salesName ??
+    employees.find((e) => e.id === meeting.salesPersonId)?.name ??
+    null;
   const createdBy =
     employees.find((e) => e.id === meeting.createdById)?.name ?? null;
 
   const purposeTone = MEETING_PURPOSE_COLORS[meeting.purpose] ?? "slate";
 
+  // Prefer the new first/last pair; fall back to the legacy combined column.
+  const contactDisplayName =
+    [meeting.contactFirstName, meeting.contactLastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim() || meeting.contactPersonName;
+
+  // Start–end window for the header; falls back to the legacy single time.
+  const timeLabel =
+    [meeting.meetingStartTime, meeting.meetingEndTime]
+      .filter(Boolean)
+      .join(" – ") || meeting.meetingTime || null;
+
   const defaults: MeetingEditValues = {
-    contactPersonName: meeting.contactPersonName,
+    contactFirstName: meeting.contactFirstName ?? "",
+    contactLastName: meeting.contactLastName ?? "",
     contactPersonDesignation: meeting.contactPersonDesignation ?? "",
+    contactNumber: meeting.contactNumber ?? "",
+    contactEmail: meeting.contactEmail ?? "",
     clientType: meeting.clientType ?? "",
-    meetingTime: meeting.meetingTime ?? "",
+    meetingStartTime: meeting.meetingStartTime ?? "",
+    meetingEndTime: meeting.meetingEndTime ?? "",
     meetingNotes: meeting.meetingNotes ?? "",
     nextFollowUpDate: toDateInput(meeting.nextFollowUpDate),
   };
@@ -155,12 +177,12 @@ export function MeetingDetail({ meeting, employees }: Props) {
               ·
             </span>
             {formatDate(meeting.meetingDate)}
-            {meeting.meetingTime && (
+            {timeLabel && (
               <>
                 <span aria-hidden className="text-ink-subtle">
                   ·
                 </span>
-                <span className="tabular-nums">{meeting.meetingTime}</span>
+                <span className="tabular-nums">{timeLabel}</span>
               </>
             )}
           </p>
@@ -183,44 +205,33 @@ export function MeetingDetail({ meeting, employees }: Props) {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr] items-start">
         {/* ── Main column ───────────────────────────────────────────── */}
         <div className="flex flex-col gap-6 min-w-0">
-          {/* Selfie — the proof of visit. */}
-          <SectionCard title="Client Location Selfie">
-            {meeting.selfieUrl ? (
-              <a
-                href={meeting.selfieUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full max-w-[420px] overflow-hidden rounded-xl border border-hairline bg-surface-soft"
-              >
-                {/* Blob URLs are remote + unconfigured for next/image — plain img. */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={meeting.selfieUrl}
-                  alt={`Client-location selfie for ${meeting.meetingNo}`}
-                  className="w-full object-cover"
-                />
-              </a>
-            ) : (
-              <p className="text-[14px] text-ink-subtle">No selfie on file.</p>
-            )}
-          </SectionCard>
-
           {/* Editable details — one dirty-only form. */}
           <form onSubmit={onSubmit} className="flex flex-col gap-6" noValidate>
             <SectionCard
               title="Details"
-              hint="Contact, purpose and notes — only changed fields are saved."
+              hint="Contact, timing, purpose and notes — only changed fields are saved."
             >
               <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-                <Field id="mtgd-contact" label="Contact Person Name">
+                <Field id="mtgd-cfirst" label="Contact First Name">
                   <input
-                    id="mtgd-contact"
+                    id="mtgd-cfirst"
                     type="text"
                     className="nt-input"
-                    {...register("contactPersonName")}
+                    {...register("contactFirstName")}
                   />
                 </Field>
-                <Field id="mtgd-desig" label="Contact Person Designation">
+                <Field id="mtgd-clast" label="Contact Last Name">
+                  <input
+                    id="mtgd-clast"
+                    type="text"
+                    className="nt-input"
+                    {...register("contactLastName")}
+                  />
+                </Field>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+                <Field id="mtgd-desig" label="Designation">
                   <input
                     id="mtgd-desig"
                     type="text"
@@ -228,9 +239,25 @@ export function MeetingDetail({ meeting, employees }: Props) {
                     {...register("contactPersonDesignation")}
                   />
                 </Field>
+                <Field id="mtgd-cnumber" label="Number">
+                  <input
+                    id="mtgd-cnumber"
+                    type="tel"
+                    className="nt-input"
+                    {...register("contactNumber")}
+                  />
+                </Field>
               </div>
 
               <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+                <Field id="mtgd-cemail" label="Email">
+                  <input
+                    id="mtgd-cemail"
+                    type="email"
+                    className="nt-input"
+                    {...register("contactEmail")}
+                  />
+                </Field>
                 <Field id="mtgd-clienttype" label="Client Type">
                   <input
                     id="mtgd-clienttype"
@@ -239,12 +266,23 @@ export function MeetingDetail({ meeting, employees }: Props) {
                     {...register("clientType")}
                   />
                 </Field>
-                <Field id="mtgd-time" label="Time">
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+                <Field id="mtgd-start" label="Meeting Start Time">
                   <input
-                    id="mtgd-time"
+                    id="mtgd-start"
                     type="time"
                     className="nt-input"
-                    {...register("meetingTime")}
+                    {...register("meetingStartTime")}
+                  />
+                </Field>
+                <Field id="mtgd-end" label="Meeting End Time">
+                  <input
+                    id="mtgd-end"
+                    type="time"
+                    className="nt-input"
+                    {...register("meetingEndTime")}
                   />
                 </Field>
               </div>
@@ -307,6 +345,19 @@ export function MeetingDetail({ meeting, employees }: Props) {
         {/* ── Sticky sidebar ─────────────────────────────────────────── */}
         <aside className="lg:sticky lg:top-24 flex flex-col gap-4 rounded-section border border-hairline bg-surface-card p-5">
           <SidebarRow label="Sales Person" value={salesPerson ?? "Not allocated"} />
+          {meeting.salesDesignation && (
+            <SidebarRow label="Sales Designation" value={meeting.salesDesignation} />
+          )}
+          {meeting.salesNumber && (
+            <SidebarRow label="Sales Number" value={meeting.salesNumber} />
+          )}
+          {meeting.salesEmail && (
+            <SidebarRow label="Sales Email" value={meeting.salesEmail} />
+          )}
+          <SidebarRow label="Contact" value={contactDisplayName} />
+          {meeting.meetingSource && (
+            <SidebarRow label="Meeting Source" value={meeting.meetingSource} />
+          )}
           {meeting.clientType && (
             <SidebarRow label="Client Type" value={meeting.clientType} />
           )}

@@ -370,3 +370,8 @@ export const MEETING_PURPOSE_COLORS: Record<MeetingPurpose, string> = {
   regular_order:"green", new_order:"blue", payment_follow_up:"amber", upsell:"purple",
   courtesy_meeting:"slate", customer_complaints:"red", enquiry_generation:"blue", other:"stone",
 };
+
+/** How the client meeting came about. A plain free-text list (the column is
+ *  `text`, NOT a pgEnum) so it stays flexible — "Other" reveals a specify input
+ *  whose TYPED value is what gets stored (never the literal "Other"). */
+export const MEETING_SOURCES = ["WhatsApp","Call","Email","In-Person Visit","Walk In","Exhibition","Reference","Other"] as const;

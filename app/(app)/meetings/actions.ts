@@ -62,23 +62,36 @@ export async function createClientMeeting(
     }
   }
 
-  // No explicit salesPersonId → log it against the signed-in user. The meeting
-  // number is left unset so the DB default (MTG<seq>) allocates it.
+  // No explicit salesPersonId → log it against the signed-in user (drives the
+  // register's filter/column). The meeting number is left unset so the DB
+  // default (MTG<seq>) allocates it.
   const salesPersonId = v.salesPersonId ?? me.id;
+  // Combined contact name for the register's existing column / back-compat.
+  const contactPersonName =
+    `${v.contactFirstName} ${v.contactLastName ?? ""}`.trim();
   const values: Omit<NewClientMeeting, "meetingNo"> = {
     salesPersonId,
+    salesName: v.salesName,
+    salesNumber: v.salesNumber,
+    salesDesignation: v.salesDesignation,
+    salesEmail: v.salesEmail,
     clientId: v.clientId,
     companyName: v.companyName,
-    contactPersonName: v.contactPersonName,
+    contactPersonName,
+    contactFirstName: v.contactFirstName,
+    contactLastName: v.contactLastName,
     contactPersonDesignation: v.contactPersonDesignation,
+    contactNumber: v.contactNumber,
+    contactEmail: v.contactEmail,
     meetingDate: v.meetingDate ? new Date(v.meetingDate) : undefined,
-    meetingTime: v.meetingTime,
+    meetingStartTime: v.meetingStartTime,
+    meetingEndTime: v.meetingEndTime,
+    meetingSource: v.meetingSource,
     clientType: v.clientType,
     purpose: v.purpose,
     purposeOther: v.purposeOther,
     meetingNotes: v.meetingNotes,
     nextFollowUpDate: v.nextFollowUpDate ? new Date(v.nextFollowUpDate) : undefined,
-    selfieUrl: v.selfieUrl,
     createdById: me.id,
   };
 

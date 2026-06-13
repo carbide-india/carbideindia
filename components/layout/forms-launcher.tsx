@@ -104,7 +104,7 @@ const ACTIVE_CARDS: ActiveCard[] = [
   {
     name: "Daily Meeting",
     Icon: UserCheck,
-    desc: "Log a client visit with a proof selfie.",
+    desc: "Log a client visit — sales, contact and outcome.",
     href: "/meetings/new" as Route,
     registerHref: "/meetings" as Route,
   },

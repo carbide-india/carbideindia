@@ -23,29 +23,38 @@ const MeetingTime = z
 /**
  * Base field set shared by Create/Update — same base-object + derive pattern
  * as lib/validators/sample.ts (zod v4 has no `.innerType()` to unwrap). The
- * selfie-required refinement lives on Create only (a proof-of-visit gate);
- * Update derives from this default-less base so edits don't re-demand it.
+ * purpose-"other"-requires-specify refinement lives on Create only; Update
+ * derives from this default-less base so edits don't re-demand defaults.
  */
 const ClientMeetingFieldsSchema = z.object({
   salesPersonId: z.string().uuid().optional(),       // action defaults to current user
+  // Sales Person block (captured free-text).
+  salesName: Trimmed(120).min(1, "Sales person name is required"),
+  salesNumber: OptionalText(40),
+  salesDesignation: OptionalText(120),
+  salesEmail: OptionalText(160),
   clientId: z.string().uuid().optional(),
   companyName: Trimmed(160).min(1, "Company name is required"),
-  contactPersonName: Trimmed(120).min(1, "Contact person is required"),
+  // Contact Person — first name required; the rest optional.
+  contactFirstName: Trimmed(80).min(1, "Contact first name is required"),
+  contactLastName: OptionalText(80),
   contactPersonDesignation: OptionalText(120),
+  contactNumber: OptionalText(40),
+  contactEmail: OptionalText(160),
   meetingDate: z.string().optional(),                // ISO date; defaults server-side to now
-  meetingTime: MeetingTime,
+  meetingStartTime: MeetingTime,
+  meetingEndTime: MeetingTime,
+  meetingSource: OptionalText(80),
   clientType: OptionalText(80),
   purpose: z.enum(MEETING_PURPOSES),
   purposeOther: OptionalText(200),
   meetingNotes: OptionalText(2000),
   nextFollowUpDate: z.string().optional(),           // ISO date
-  selfieUrl: OptionalText(2000),
 });
 
 /**
- * Create — purpose defaults to its first option, and a client-location selfie
- * is mandatory (the whole point of this form is proof-of-visit). "Other"
- * purpose must carry a typed specify value.
+ * Create — purpose defaults to its first option. "Other" purpose must carry a
+ * typed specify value. (No selfie gate — proof-of-visit selfie was dropped.)
  */
 export const CreateClientMeetingSchema = ClientMeetingFieldsSchema.extend({
   purpose: z.enum(MEETING_PURPOSES).default("regular_order"),
@@ -57,20 +66,13 @@ export const CreateClientMeetingSchema = ClientMeetingFieldsSchema.extend({
       message: "Specify the purpose.",
     });
   }
-  if (!v.selfieUrl) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["selfieUrl"],
-      message: "A client-location selfie is required.",
-    });
-  }
 });
 export type CreateClientMeetingInput = z.input<typeof CreateClientMeetingSchema>;
 
 /**
  * Patch-shaped schema for edits — every field optional, unknown keys rejected,
  * empty patches rejected. Derived from the default-less base object so the
- * selfie-required gate (Create-only) never blocks an edit, and `.partial()`
+ * required base fields never block a single-field edit, and `.partial()`
  * doesn't inject the purpose default into every patch.
  */
 export const UpdateClientMeetingSchema = ClientMeetingFieldsSchema.partial()

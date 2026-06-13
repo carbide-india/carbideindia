@@ -26,12 +26,14 @@ export default async function NewMeetingPage() {
           </div>
           <h1 className="text-display-lg text-ink-strong mt-1">New Meeting</h1>
           <p className="text-body-lg text-ink-subtle mt-1">
-            Log a client visit — a location selfie is required as proof of
-            visit.
+            Log a client visit — sales and contact details, timing, and the
+            meeting outcome.
           </p>
         </header>
         <MeetingForm
           defaultSalesPersonId={me.id}
+          defaultSalesName={me.name}
+          defaultSalesEmail={me.email}
           employees={employees}
           clients={clients}
           customerTypes={customerTypes}

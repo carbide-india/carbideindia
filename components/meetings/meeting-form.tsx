@@ -5,11 +5,10 @@ import { useRouter } from "next/navigation";
 import { useForm, useWatch, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
-import { upload } from "@vercel/blob/client";
-import { Camera, Loader2, X } from "lucide-react";
 import {
   MEETING_PURPOSES,
   MEETING_PURPOSE_LABELS,
+  MEETING_SOURCES,
 } from "@/db/enums";
 import { CreateClientMeetingSchema } from "@/lib/validators/client-meeting";
 import { createClientMeeting } from "@/app/(app)/meetings/actions";
@@ -33,6 +32,8 @@ type MeetingFormOutput = z.output<typeof CreateClientMeetingSchema>;
 
 interface Props {
   defaultSalesPersonId: string;
+  defaultSalesName: string;
+  defaultSalesEmail: string;
   employees: EmployeeOption[];
   clients: ClientOption[];
   customerTypes: MasterOptionItem[];
@@ -58,40 +59,18 @@ const PURPOSE_OPTIONS = MEETING_PURPOSES.map((p) => ({
   label: MEETING_PURPOSE_LABELS[p],
 }));
 
-/* ── Selfie upload (browser → Vercel Blob, client-direct) ────────────── */
-
-const ALLOWED_SELFIE_TYPES = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/heic",
-]);
-const MAX_SELFIE_BYTES = 25 * 1024 * 1024;
-
-function safePhotoName(name: string): string {
-  return name.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 120) || "selfie";
-}
-
-/** Single-image client-direct upload, scoped to meeting-selfies/ — token minted
- *  by /api/meetings/selfie/upload (images only, 25 MB cap, random suffix). */
-function uploadSelfieToBlob(file: File) {
-  const contentType = file.type;
-  return upload(`meeting-selfies/${safePhotoName(file.name)}`, file, {
-    access: "public",
-    handleUploadUrl: "/api/meetings/selfie/upload",
-    contentType,
-    clientPayload: JSON.stringify({ contentType }),
-  });
-}
+const SOURCE_OPTIONS = MEETING_SOURCES.map((s) => ({ value: s, label: s }));
+const OTHER_SOURCE = "Other";
 
 /**
- * New Daily Client Meeting form — four card sections (Meeting / Client /
- * Outcome / Verification). The client-location selfie is required (the whole
- * point of this form is proof-of-visit), so the submit button is disabled
- * until one is uploaded.
+ * New Daily Client Meeting form — four card sections (Sales Person / Meeting /
+ * Client / Outcome). No selfie: the proof-of-visit gate was dropped, so submit
+ * is enabled as soon as the required fields are valid.
  */
 export function MeetingForm({
   defaultSalesPersonId,
+  defaultSalesName,
+  defaultSalesEmail,
   employees,
   clients,
   customerTypes,
@@ -100,12 +79,12 @@ export function MeetingForm({
   const [pending, startTransition] = React.useTransition();
   const [serverError, setServerError] = React.useState<string | null>(null);
 
-  // Selfie lives in local state (source of truth) and is merged into the
-  // payload via setValue on success — the schema requires it, so submit is
-  // gated until it lands.
-  const [selfieUrl, setSelfieUrl] = React.useState<string | null>(null);
-  const [uploading, setUploading] = React.useState(false);
-  const fileRef = React.useRef<HTMLInputElement>(null);
+  // Meeting Source uses the sample-form's Other→specify dance: a local "face"
+  // (which preset is selected) drives whether the specify input shows; the
+  // TYPED text is what we store in meetingSource (never the literal "Other").
+  const [sourceChoice, setSourceChoice] = React.useState<string>("");
+  const sourceSpecifying = sourceChoice === OTHER_SOURCE;
+
   // Guards against an older client-autofill fetch landing after a newer pick.
   const autofillSeq = React.useRef(0);
 
@@ -125,51 +104,18 @@ export function MeetingForm({
     defaultValues: {
       purpose: "regular_order",
       salesPersonId: defaultSalesPersonId,
+      salesName: defaultSalesName,
+      salesEmail: defaultSalesEmail || undefined,
       meetingDate: todayLocalIso(),
       companyName: "",
-      contactPersonName: "",
+      contactFirstName: "",
+      meetingSource: undefined,
     },
   });
 
   // Subscribe to the purpose field so the "Other" specify input reveals/hides.
   const watchedPurpose = useWatch({ control, name: "purpose" });
   const showSpecify = watchedPurpose === "other";
-
-  async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = ""; // allow re-picking the same file after a remove
-    if (!file) return;
-    if (!ALLOWED_SELFIE_TYPES.has(file.type)) {
-      fireToast({
-        message: `${file.name}: only JPEG, PNG, WebP or HEIC images are allowed.`,
-        type: "error",
-      });
-      return;
-    }
-    if (file.size > MAX_SELFIE_BYTES) {
-      fireToast({ message: `${file.name} exceeds 25 MB.`, type: "error" });
-      return;
-    }
-    setUploading(true);
-    try {
-      const blob = await uploadSelfieToBlob(file);
-      setSelfieUrl(blob.url);
-      setValue("selfieUrl", blob.url, { shouldValidate: true });
-    } catch {
-      // Missing BLOB_READ_WRITE_TOKEN (or a Blob outage) lands here.
-      fireToast({
-        message: "Selfie upload needs storage configured (Vercel Blob).",
-        type: "error",
-      });
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  function removeSelfie() {
-    setSelfieUrl(null);
-    setValue("selfieUrl", undefined, { shouldValidate: true });
-  }
 
   /**
    * A known client was picked — fetch its KYC snapshot and prefill the
@@ -187,15 +133,28 @@ export function MeetingForm({
         setValue("clientType", data.customerTypeName, { shouldValidate: false });
       }
       if (data.contact) {
-        const fullName = [data.contact.firstName, data.contact.lastName]
-          .filter(Boolean)
-          .join(" ")
-          .trim();
-        if (fullName) {
-          setValue("contactPersonName", fullName, { shouldValidate: false });
+        if (data.contact.firstName) {
+          setValue("contactFirstName", data.contact.firstName, {
+            shouldValidate: true,
+          });
+        }
+        if (data.contact.lastName) {
+          setValue("contactLastName", data.contact.lastName, {
+            shouldValidate: false,
+          });
         }
         if (data.contact.designation) {
           setValue("contactPersonDesignation", data.contact.designation, {
+            shouldValidate: false,
+          });
+        }
+        if (data.contact.contactNo) {
+          setValue("contactNumber", data.contact.contactNo, {
+            shouldValidate: false,
+          });
+        }
+        if (data.contact.email) {
+          setValue("contactEmail", data.contact.email, {
             shouldValidate: false,
           });
         }
@@ -213,7 +172,6 @@ export function MeetingForm({
         ...values,
         meetingDate: toIsoNoon(values.meetingDate),
         nextFollowUpDate: toIsoNoon(values.nextFollowUpDate),
-        selfieUrl: selfieUrl ?? undefined,
       });
       if (!res.ok) {
         setServerError(res.error);
@@ -239,64 +197,56 @@ export function MeetingForm({
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-6" noValidate>
-      {/* ── 1 · Meeting ──────────────────────────────────────────────── */}
+      {/* ── 1 · Sales Person ─────────────────────────────────────────── */}
       <SectionCard
-        title="Meeting"
-        hint="Who logged the visit, and when."
+        title="Sales Person"
+        hint="Who met the client — prefilled from your profile."
       >
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1 items-start">
-          <Field label="Sales Person" labelOnly>
-            <Controller
-              control={control}
-              name="salesPersonId"
-              render={({ field }) => (
-                <Select
-                  value={field.value ?? ""}
-                  onValueChange={(v) => field.onChange(v || undefined)}
-                  placeholder="Select an employee…"
-                  searchPlaceholder="Search employees…"
-                  searchable
-                  ariaLabel="Sales person"
-                  options={employees.map((e) => ({
-                    value: e.id,
-                    label: e.name,
-                  }))}
-                />
-              )}
+        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+          <Field id="mtg-sales-name" label="Name" required>
+            <input
+              id="mtg-sales-name"
+              type="text"
+              required
+              className="nt-input"
+              placeholder="e.g. Priya Nair"
+              {...register("salesName")}
             />
           </Field>
-          <Field label="Client Type" labelOnly>
-            <Controller
-              control={control}
-              name="clientType"
-              render={({ field }) =>
-                customerTypeNames.length ? (
-                  <Select
-                    value={field.value ?? ""}
-                    onValueChange={(v) => field.onChange(v || undefined)}
-                    placeholder="Select a client type…"
-                    searchPlaceholder="Search types…"
-                    ariaLabel="Client type"
-                    options={customerTypeNames.map((n) => ({
-                      value: n,
-                      label: n,
-                    }))}
-                  />
-                ) : (
-                  <button
-                    type="button"
-                    disabled
-                    aria-label="Client type — no options"
-                    className="nt-input flex w-full items-center text-left text-ink-subtle cursor-not-allowed opacity-60"
-                  >
-                    No options — add in Admin → Masters
-                  </button>
-                )
-              }
+          <Field id="mtg-sales-number" label="Sales Number">
+            <input
+              id="mtg-sales-number"
+              type="tel"
+              className="nt-input"
+              placeholder="e.g. +91 98765 43210"
+              {...register("salesNumber")}
             />
           </Field>
         </div>
+        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+          <Field id="mtg-sales-desig" label="Designation">
+            <input
+              id="mtg-sales-desig"
+              type="text"
+              className="nt-input"
+              placeholder="e.g. Sales Executive"
+              {...register("salesDesignation")}
+            />
+          </Field>
+          <Field id="mtg-sales-email" label="Email">
+            <input
+              id="mtg-sales-email"
+              type="email"
+              className="nt-input"
+              placeholder="e.g. priya@carbideindia.com"
+              {...register("salesEmail")}
+            />
+          </Field>
+        </div>
+      </SectionCard>
 
+      {/* ── 2 · Meeting ──────────────────────────────────────────────── */}
+      <SectionCard title="Meeting" hint="When the visit happened, and how it came about.">
         <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
           <Field id="mtg-date" label="Date" required>
             <input
@@ -307,18 +257,100 @@ export function MeetingForm({
               {...register("meetingDate")}
             />
           </Field>
-          <Field id="mtg-time" label="Time">
+          <Field label="Meeting Source" labelOnly>
+            <div className="flex flex-col gap-2">
+              <Controller
+                control={control}
+                name="meetingSource"
+                render={({ field }) => (
+                  <Select
+                    value={sourceChoice}
+                    onValueChange={(next) => {
+                      setSourceChoice(next);
+                      // Store the preset directly; "Other" defers to the typed
+                      // specify input below (cleared until the user types).
+                      field.onChange(next === OTHER_SOURCE ? undefined : next || undefined);
+                    }}
+                    placeholder="Select a source…"
+                    ariaLabel="Meeting source"
+                    options={SOURCE_OPTIONS}
+                  />
+                )}
+              />
+              {sourceSpecifying && (
+                <Controller
+                  control={control}
+                  name="meetingSource"
+                  render={({ field }) => (
+                    <input
+                      type="text"
+                      required
+                      maxLength={80}
+                      className="nt-input"
+                      placeholder="Specify source…"
+                      aria-label="Meeting source — specify"
+                      value={field.value ?? ""}
+                      onChange={(e) => field.onChange(e.target.value || undefined)}
+                    />
+                  )}
+                />
+              )}
+            </div>
+          </Field>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+          <Field id="mtg-start" label="Meeting Start Time">
             <input
-              id="mtg-time"
+              id="mtg-start"
               type="time"
               className="nt-input"
-              {...register("meetingTime")}
+              {...register("meetingStartTime")}
+            />
+          </Field>
+          <Field id="mtg-end" label="Meeting End Time">
+            <input
+              id="mtg-end"
+              type="time"
+              className="nt-input"
+              {...register("meetingEndTime")}
             />
           </Field>
         </div>
+
+        <Field label="Client Type" labelOnly>
+          <Controller
+            control={control}
+            name="clientType"
+            render={({ field }) =>
+              customerTypeNames.length ? (
+                <Select
+                  value={field.value ?? ""}
+                  onValueChange={(v) => field.onChange(v || undefined)}
+                  placeholder="Select a client type…"
+                  searchPlaceholder="Search types…"
+                  ariaLabel="Client type"
+                  options={customerTypeNames.map((n) => ({
+                    value: n,
+                    label: n,
+                  }))}
+                />
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  aria-label="Client type — no options"
+                  className="nt-input flex w-full items-center text-left text-ink-subtle cursor-not-allowed opacity-60"
+                >
+                  No options — add in Admin → Masters
+                </button>
+              )
+            }
+          />
+        </Field>
       </SectionCard>
 
-      {/* ── 2 · Client ───────────────────────────────────────────────── */}
+      {/* ── 3 · Client ───────────────────────────────────────────────── */}
       <SectionCard
         title="Client"
         hint="Pick a known client to link it, or type a new company name."
@@ -359,29 +391,60 @@ export function MeetingForm({
         </Field>
 
         <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-          <Field id="mtg-contact" label="Contact Person Name" required>
+          <Field id="mtg-cfirst" label="Contact First Name" required>
             <input
-              id="mtg-contact"
+              id="mtg-cfirst"
               type="text"
               required
               className="nt-input"
-              placeholder="e.g. Rahul Sharma"
-              {...register("contactPersonName")}
+              placeholder="e.g. Rahul"
+              {...register("contactFirstName")}
             />
           </Field>
-          <Field id="mtg-desig" label="Contact Person Designation">
+          <Field id="mtg-clast" label="Contact Last Name">
             <input
-              id="mtg-desig"
+              id="mtg-clast"
+              type="text"
+              className="nt-input"
+              placeholder="e.g. Sharma"
+              {...register("contactLastName")}
+            />
+          </Field>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+          <Field id="mtg-cdesig" label="Designation">
+            <input
+              id="mtg-cdesig"
               type="text"
               className="nt-input"
               placeholder="e.g. Purchase Manager"
               {...register("contactPersonDesignation")}
             />
           </Field>
+          <Field id="mtg-cnumber" label="Number">
+            <input
+              id="mtg-cnumber"
+              type="tel"
+              className="nt-input"
+              placeholder="e.g. +91 98765 43210"
+              {...register("contactNumber")}
+            />
+          </Field>
         </div>
+
+        <Field id="mtg-cemail" label="Email">
+          <input
+            id="mtg-cemail"
+            type="email"
+            className="nt-input"
+            placeholder="e.g. rahul@acmetools.com"
+            {...register("contactEmail")}
+          />
+        </Field>
       </SectionCard>
 
-      {/* ── 3 · Outcome ──────────────────────────────────────────────── */}
+      {/* ── 4 · Outcome ──────────────────────────────────────────────── */}
       <SectionCard
         title="Outcome"
         hint="Why you met, what came of it, and when to follow up."
@@ -436,69 +499,6 @@ export function MeetingForm({
         </Field>
       </SectionCard>
 
-      {/* ── 4 · Verification ─────────────────────────────────────────── */}
-      <SectionCard
-        title="Verification"
-        hint="A single client-location selfie — proof you were on site."
-      >
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/heic"
-          className="hidden"
-          aria-label="Add client-location selfie"
-          onChange={(e) => void onPickFile(e)}
-        />
-        <Field label="Client Location Selfie" labelOnly required>
-          <div className="flex flex-wrap items-start gap-3">
-            {selfieUrl ? (
-              <div className="relative size-[140px] overflow-hidden rounded-xl border border-hairline bg-surface-soft">
-                {/* Blob URLs are remote + unconfigured for next/image — plain img. */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={selfieUrl}
-                  alt="Client-location selfie"
-                  className="size-full object-cover"
-                />
-                <button
-                  type="button"
-                  aria-label="Remove selfie"
-                  onClick={removeSelfie}
-                  className="absolute right-1 top-1 inline-flex size-[22px] items-center justify-center rounded-full bg-white/90 text-ink-strong shadow-sm border border-hairline hover:bg-white transition-colors"
-                >
-                  <X size={13} strokeWidth={2.6} />
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                disabled={uploading}
-                className="inline-flex size-[140px] flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-hairline-strong text-ink-subtle hover:text-ink-strong hover:border-ink-subtle transition-colors disabled:opacity-60"
-              >
-                {uploading ? (
-                  <Loader2
-                    size={20}
-                    style={{ animation: "spinFast 0.8s linear infinite" }}
-                  />
-                ) : (
-                  <Camera size={20} />
-                )}
-                <span className="text-[11.5px] font-semibold">
-                  {uploading ? "Uploading…" : "Add selfie"}
-                </span>
-              </button>
-            )}
-          </div>
-          <p
-            className="mt-2 text-[12.5px] font-semibold"
-            style={{ color: "var(--color-red-deep)" }}
-          >
-            Required — proof of visit.
-          </p>
-        </Field>
-      </SectionCard>
-
       {(serverError || firstFieldError) && (
         <p
           className="font-semibold"
@@ -514,7 +514,7 @@ export function MeetingForm({
       >
         <button
           type="submit"
-          disabled={pending || uploading || !selfieUrl}
+          disabled={pending}
           className="text-cta text-white px-8 py-4 rounded-chip transition-transform disabled:opacity-50"
           style={{
             background:
