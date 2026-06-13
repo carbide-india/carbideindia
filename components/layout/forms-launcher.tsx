@@ -15,6 +15,8 @@ import {
   Handshake,
   PackageCheck,
   UserCheck,
+  ArrowRight,
+  LayoutList,
   type LucideIcon,
 } from "lucide-react";
 
@@ -185,18 +187,81 @@ export function FormsLauncher({ variant }: { variant?: "drawer" }) {
               animation: flRise 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
             }
             .fl-card-active {
-              transition: border-color 200ms ease, transform 200ms ease;
-              cursor: pointer;
+              transition: border-color 220ms ease, box-shadow 220ms ease;
             }
             .fl-card-active:hover,
             .fl-card-active:focus-within {
-              border-color: var(--color-brand);
-              transform: translateY(-2px);
+              border-color: color-mix(in srgb, var(--color-brand) 55%, transparent);
+              box-shadow: 0 10px 28px -16px color-mix(in srgb, var(--color-brand) 55%, transparent);
             }
+
+            /* Glossy, animated card buttons */
+            .fl-btn {
+              position: relative;
+              overflow: hidden;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              gap: 6px;
+              height: 38px;
+              padding: 0 14px;
+              border-radius: 10px;
+              font-size: 12.5px;
+              font-weight: 700;
+              letter-spacing: 0.005em;
+              white-space: nowrap;
+              cursor: pointer;
+              transition: transform 200ms cubic-bezier(0.22,1,0.36,1),
+                          box-shadow 200ms ease, background-color 200ms ease,
+                          border-color 200ms ease, color 200ms ease;
+            }
+            .fl-btn:active { transform: translateY(0) scale(0.99); }
+            .fl-arrow { transition: transform 200ms cubic-bezier(0.22,1,0.36,1); }
+            .fl-btn:hover .fl-arrow { transform: translateX(3px); }
+
+            .fl-btn-primary {
+              color: #fff;
+              background: linear-gradient(135deg, var(--color-brand), var(--color-brand-deep));
+              box-shadow: 0 1px 0 rgba(255,255,255,0.28) inset,
+                          0 6px 16px -7px color-mix(in srgb, var(--color-brand) 65%, transparent);
+            }
+            .fl-btn-primary:hover {
+              transform: translateY(-1.5px);
+              box-shadow: 0 1px 0 rgba(255,255,255,0.35) inset,
+                          0 12px 24px -8px color-mix(in srgb, var(--color-brand) 75%, transparent);
+            }
+            /* Diagonal sheen sweep on hover */
+            .fl-btn-primary::before {
+              content: "";
+              position: absolute;
+              inset: 0;
+              background: linear-gradient(120deg, transparent 28%, rgba(255,255,255,0.45) 50%, transparent 72%);
+              transform: translateX(-130%);
+              transition: transform 650ms ease;
+              pointer-events: none;
+            }
+            .fl-btn-primary:hover::before { transform: translateX(130%); }
+
+            .fl-btn-ghost {
+              color: var(--color-brand);
+              background: #fff;
+              border: 1px solid color-mix(in srgb, var(--color-brand) 32%, transparent);
+              box-shadow: 0 1px 2px rgba(30,36,71,0.04);
+            }
+            .fl-btn-ghost:hover {
+              transform: translateY(-1.5px);
+              background: color-mix(in srgb, var(--color-brand) 8%, white);
+              border-color: var(--color-brand);
+              box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--color-brand) 55%, transparent);
+            }
+
             @media (prefers-reduced-motion: reduce) {
               .fl-rise { animation: none; opacity: 1; }
               .fl-card-active:hover,
-              .fl-card-active:focus-within { transform: none; }
+              .fl-card-active:focus-within { box-shadow: none; }
+              .fl-btn, .fl-btn:hover, .fl-btn:active { transform: none; }
+              .fl-btn-primary::before { display: none; }
+              .fl-arrow, .fl-btn:hover .fl-arrow { transition: none; transform: none; }
             }
           `}</style>
 
@@ -238,30 +303,35 @@ export function FormsLauncher({ variant }: { variant?: "drawer" }) {
             {ACTIVE_CARDS.map(({ name, Icon, desc, href, registerHref }, i) => (
               <div
                 key={name}
-                className="fl-rise fl-card-active relative rounded-xl border border-hairline bg-white p-5"
+                className="fl-rise fl-card-active relative flex flex-col rounded-xl border border-hairline bg-white p-5"
                 style={{ animationDelay: `${i * 0.05}s` }}
               >
                 <IconSquare Icon={Icon} />
                 <h3 className="mt-3 text-[15px] font-bold leading-snug text-ink-strong">
-                  {/* Stretched link — the whole card is clickable; the
-                      register link below sits above it on its own layer. */}
+                  {name}
+                </h3>
+                <p className="mt-1 text-[13px] leading-relaxed text-ink-subtle">{desc}</p>
+                {/* Two glossy, animated actions: open the form, or jump to its register. */}
+                <div className="mt-4 flex items-stretch gap-2">
                   <Link
                     href={href}
                     onClick={() => setOpen(false)}
-                    className="outline-none after:absolute after:inset-0 after:rounded-xl"
+                    className="fl-btn fl-btn-primary flex-1"
+                    aria-label={`Open the ${name} form`}
                   >
-                    {name}
+                    Open form
+                    <ArrowRight className="fl-arrow" size={14} strokeWidth={2.6} />
                   </Link>
-                </h3>
-                <p className="mt-1 text-[13px] leading-relaxed text-ink-subtle">{desc}</p>
-                <Link
-                  href={registerHref}
-                  onClick={() => setOpen(false)}
-                  className="relative z-[1] mt-3 inline-flex items-center text-[12.5px] font-semibold hover:underline"
-                  style={{ color: "var(--color-brand)" }}
-                >
-                  View register →
-                </Link>
+                  <Link
+                    href={registerHref}
+                    onClick={() => setOpen(false)}
+                    className="fl-btn fl-btn-ghost"
+                    aria-label={`View the ${name} register`}
+                  >
+                    <LayoutList size={14} strokeWidth={2.3} />
+                    Register
+                  </Link>
+                </div>
               </div>
             ))}
             {DISABLED_CARDS.map(({ name, Icon, desc }, i) => (
