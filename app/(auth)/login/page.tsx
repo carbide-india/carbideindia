@@ -5,6 +5,7 @@ import { SignOutButton } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
 import { getCurrentEmployee } from "@/lib/auth/current";
 import { SignInCard } from "@/components/auth/sign-in-card";
+import { AcceptInviteCard } from "@/components/auth/accept-invite-card";
 import { DiamondCascade } from "@/components/auth/diamond-cascade";
 
 /**
@@ -62,6 +63,9 @@ export default async function LoginPage({ searchParams }: PageProps) {
 
   const sp = await searchParams;
   const reason = firstString(sp["reason"]);
+  // Clerk appends ?__clerk_ticket=… when an invitation email link is clicked.
+  // Its presence flips this sheet into "activate your account" mode.
+  const inviteTicket = firstString(sp["__clerk_ticket"]);
   const year = new Date().getFullYear();
 
   return (
@@ -248,7 +252,9 @@ export default async function LoginPage({ searchParams }: PageProps) {
               </div>
             )}
 
-            {orphanedSession ? (
+            {inviteTicket ? (
+              <AcceptInviteCard ticket={inviteTicket} />
+            ) : orphanedSession ? (
               <div
                 className="p-8 text-center"
                 style={{ background: "#FFFFFF", border: "1px solid #E7E2DA", boxShadow: "0 2px 10px rgba(30,36,71,0.06)" }}
