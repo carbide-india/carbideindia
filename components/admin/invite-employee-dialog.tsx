@@ -21,6 +21,7 @@ export function InviteEmployeeDialog({
   const [name, setName]       = useState("");
   const [email, setEmail]     = useState("");
   const [role, setRole]       = useState<"doer" | "initiator" | "both">("doer");
+  const [designation, setDesignation] = useState("");
   const [deptIds, setDeptIds] = useState<string[]>([]);
   const [primaryId, setPrimaryId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -28,7 +29,7 @@ export function InviteEmployeeDialog({
   const [pending, startTransition] = useTransition();
 
   function reset() {
-    setName(""); setEmail(""); setRole("doer");
+    setName(""); setEmail(""); setRole("doer"); setDesignation("");
     setDeptIds([]); setPrimaryId(null);
     setIsAdmin(false); setError(null);
   }
@@ -41,6 +42,7 @@ export function InviteEmployeeDialog({
         name,
         email,
         role,
+        designation,
         departmentIds: deptIds,
         primaryDepartmentId: primaryId,
         isAdmin,
@@ -111,6 +113,15 @@ export function InviteEmployeeDialog({
                   { value: "initiator", label: "Initiator" },
                   { value: "both", label: "Both" },
                 ]}
+              />
+            </Field>
+            <Field label="Designation (optional)">
+              <input
+                value={designation}
+                onChange={(e) => setDesignation(e.target.value)}
+                maxLength={120}
+                placeholder="e.g. Sales Coordinator"
+                className="w-full rounded-md border border-[#CBD5E1] px-3.5 py-2.5 text-[15px]"
               />
             </Field>
             <Field label="Departments (optional)">

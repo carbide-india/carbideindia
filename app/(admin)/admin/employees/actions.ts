@@ -184,6 +184,7 @@ export async function inviteEmployee(input: InviteEmployeeInput): Promise<{
       name:         parsed.name,
       email:        parsed.email,
       role:         parsed.role,
+      designation:  parsed.designation || null,
       department:   selection.primaryName,
       departmentId: selection.primaryId,
       isAdmin:      parsed.isAdmin,
@@ -277,6 +278,10 @@ export async function editEmployee(
   const patch: Partial<typeof employees.$inferInsert> = {};
   if (parsed.data.name !== undefined) patch.name = parsed.data.name;
   if (parsed.data.role !== undefined) patch.role = parsed.data.role;
+  // Empty string clears the designation back to NULL.
+  if (parsed.data.designation !== undefined) {
+    patch.designation = parsed.data.designation || null;
+  }
 
   // Department membership: when `departmentIds` is supplied we replace the
   // whole set and mirror the primary into the legacy single-department

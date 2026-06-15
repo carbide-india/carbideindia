@@ -40,6 +40,7 @@ type RowEmployee = {
   name: string;
   email: string;
   role: Role;
+  designation: string | null;
   departments: EmployeeDepartmentMembership[];
   isAdmin: boolean;
   isActive: boolean;
@@ -213,6 +214,7 @@ export function EmployeeRowActions({
           name: employee.name,
           email: employee.email,
           role: employee.role,
+          designation: employee.designation,
           departments: employee.departments,
           isAdmin: employee.isAdmin,
           managerId: employee.managerId,

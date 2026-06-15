@@ -27,6 +27,7 @@ export async function GET(): Promise<Response> {
     headers: [
       "name",
       "email",
+      "designation",
       "role",
       "department",
       "is_active",
@@ -37,6 +38,7 @@ export async function GET(): Promise<Response> {
     rows: employees.map((e) => [
       e.name,
       e.email,
+      e.designation ?? "",
       e.role,
       e.department ?? "",
       String(e.isActive),

@@ -72,6 +72,9 @@ export const employees = pgTable("employees", {
   departmentId: uuid("department_id").references(() => departments.id, {
     onDelete: "set null",
   }),
+  // Job title / role designation (e.g. "Sales Coordinator", "Maintenance
+  // Head") — free text, distinct from the doer/initiator task `role`.
+  designation: text("designation"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -312,6 +315,13 @@ export const clients = pgTable(
     addressLine3: text("address_line_3"),
     addressLine4: text("address_line_4"),
     pinCode: text("pin_code"),
+    // ── Commercial / tax (Customer Master import) ──
+    gstin: text("gstin"),
+    panNo: text("pan_no"),
+    billToAddress: text("bill_to_address"),
+    paymentTerms: text("payment_terms"),
+    freightCharges: text("freight_charges"),
+    qtyDeviation: text("qty_deviation"),
     // ── Client KYC meeting (Phase 3) — times as "HH:mm" text, sheet-true ──
     kycMeetingDate: timestamp("kyc_meeting_date", { withTimezone: true }),
     kycMeetingStart: text("kyc_meeting_start"),

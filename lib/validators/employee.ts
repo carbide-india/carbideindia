@@ -30,10 +30,14 @@ const departmentIdsField = z.array(z.string().uuid()).default([]);
  *  legacy single-department columns). Null = no primary / no departments. */
 const primaryDepartmentIdField = z.string().uuid().nullable().optional();
 
+/** Job title / role designation — free text, optional. */
+const designationField = z.string().trim().max(120).optional();
+
 export const InviteEmployeeSchema = z.object({
   name:        nameField,
   email:       z.string().trim().toLowerCase().email("Invalid email"),
   role:        z.enum(["doer", "initiator", "both"]),
+  designation: designationField,
   departmentIds:        departmentIdsField,
   primaryDepartmentId:  primaryDepartmentIdField,
   isAdmin:     z.boolean().default(false),
@@ -57,6 +61,7 @@ export const EditEmployeeSchema = z
       .pipe(z.string().min(1, "Name is required").max(80))
       .optional(),
     role:       z.enum(["doer", "initiator", "both"]).optional(),
+    designation: designationField,
     // Department membership patch: when `departmentIds` is supplied the
     // whole membership set is replaced.  `primaryDepartmentId` marks which
     // one mirrors to the legacy single-department columns.

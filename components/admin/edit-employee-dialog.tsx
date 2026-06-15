@@ -26,6 +26,7 @@ export interface EditEmployeeDialogProps {
     name: string;
     email: string;
     role: Role;
+    designation?: string | null;
     departments: EmployeeDepartmentMembership[];
     isAdmin: boolean;
     managerId?: string | null;
@@ -58,6 +59,7 @@ export function EditEmployeeDialog({
 
   const [name, setName]         = useState(employee.name);
   const [role, setRole]         = useState<Role>(employee.role);
+  const [designation, setDesignation] = useState(employee.designation ?? "");
   const [deptIds, setDeptIds]   = useState<string[]>(initialDeptIds);
   const [primaryId, setPrimaryId] = useState<string | null>(initialPrimaryId);
   const [isAdmin, setIsAdmin]   = useState(employee.isAdmin);
@@ -71,6 +73,7 @@ export function EditEmployeeDialog({
     if (open) {
       setName(employee.name);
       setRole(employee.role);
+      setDesignation(employee.designation ?? "");
       setDeptIds(employee.departments.map((d) => d.id));
       setPrimaryId(
         employee.departments.find((d) => d.isPrimary)?.id ??
@@ -100,15 +103,20 @@ export function EditEmployeeDialog({
     const patch: {
       name?: string;
       role?: Role;
+      designation?: string;
       departmentIds?: string[];
       primaryDepartmentId?: string | null;
       isAdmin?: boolean;
       managerId?: string | null;
     } = {};
     const trimmedName = name.trim();
+    const trimmedDesignation = designation.trim();
 
     if (trimmedName !== employee.name) patch.name = trimmedName;
     if (role !== employee.role) patch.role = role;
+    if (trimmedDesignation !== (employee.designation ?? "")) {
+      patch.designation = trimmedDesignation;
+    }
     if (!sameSet(deptIds, initialDeptIds) || primaryId !== initialPrimaryId) {
       patch.departmentIds = deptIds;
       patch.primaryDepartmentId = primaryId;
@@ -162,6 +170,15 @@ export function EditEmployeeDialog({
                   { value: "initiator", label: "Initiator" },
                   { value: "both", label: "Both" },
                 ]}
+              />
+            </Field>
+            <Field label="Designation">
+              <input
+                value={designation}
+                onChange={(e) => setDesignation(e.target.value)}
+                maxLength={120}
+                placeholder="e.g. Sales Coordinator"
+                className="w-full rounded-md border border-[#CBD5E1] px-3.5 py-2.5 text-[15px]"
               />
             </Field>
             <Field label="Manager">

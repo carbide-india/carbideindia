@@ -233,6 +233,7 @@ export function EmployeeList({
             >
               <th className="px-5 py-4">Name</th>
               <th className="px-5 py-4">Email</th>
+              <th className="px-5 py-4">Designation</th>
               <th className="px-5 py-4">Role</th>
               <th className="px-5 py-4">Department</th>
               <th className="px-5 py-4">Admin</th>
@@ -245,7 +246,7 @@ export function EmployeeList({
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-5 py-10 text-center text-ink-subtle italic">
+                <td colSpan={8} className="px-5 py-10 text-center text-ink-subtle italic">
                   No employees match "{query}".
                 </td>
               </tr>
@@ -263,6 +264,9 @@ export function EmployeeList({
                     {e.name}
                   </td>
                   <td className="px-5 py-4 text-ink-soft max-w-[32ch] truncate" title={e.email}>{e.email}</td>
+                  <td className="px-5 py-4 text-ink-soft max-w-[24ch] truncate" title={e.designation ?? undefined}>
+                    {e.designation ?? <span className="text-ink-subtle">—</span>}
+                  </td>
                   <td className="px-5 py-4">
                     <RoleChip role={e.role} />
                   </td>
@@ -284,6 +288,7 @@ export function EmployeeList({
                         name: e.name,
                         email: e.email,
                         role: e.role,
+                        designation: e.designation,
                         departments: membershipsByEmployee[e.id] ?? [],
                         isAdmin: e.isAdmin,
                         isActive: e.isActive,
