@@ -71,6 +71,20 @@
       "when": 1781332285356,
       "tag": "0009_wide_baron_strucker",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1781532955678,
+      "tag": "0010_add_employee_designation",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1781534355979,
+      "tag": "0011_add_client_commercial_fields",
+      "breakpoints": true
     }
   ]
 }

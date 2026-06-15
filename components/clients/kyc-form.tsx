@@ -10,6 +10,7 @@ import { upload } from "@vercel/blob/client";
 import { Check, ImagePlus, Loader2, X } from "lucide-react";
 import { CreateClientKycSchema } from "@/lib/validators/client-kyc";
 import { createClientKyc } from "@/app/(app)/clients/actions";
+import { adminUpdateClientKyc } from "@/app/(admin)/admin/clients/actions";
 import { fireToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { Select } from "@/components/ui/select";
@@ -30,6 +31,11 @@ interface Props {
   industryTypes: MasterOptionItem[];
   productTypes: MasterOptionItem[];
   employees: EmployeeOption[];
+  /** When set, the form edits this client in place (admin "Edit client")
+   *  instead of onboarding a new one. */
+  editClientId?: string;
+  /** Prefill values for edit mode — shaped like the form's input fields. */
+  initialValues?: Partial<KycFormValues>;
 }
 
 /* ── Business-card upload (browser → Vercel Blob, client-direct) ──────── */
@@ -75,7 +81,10 @@ export function KycForm({
   industryTypes,
   productTypes,
   employees,
+  editClientId,
+  initialValues,
 }: Props) {
+  const isEdit = Boolean(editClientId);
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
   const [serverError, setServerError] = React.useState<string | null>(null);
@@ -101,6 +110,12 @@ export function KycForm({
       addressLine3: "",
       addressLine4: "",
       pinCode: "",
+      gstin: "",
+      panNo: "",
+      billToAddress: "",
+      paymentTerms: "",
+      freightCharges: "",
+      qtyDeviation: "",
       contactFirstName: "",
       contactLastName: "",
       contactDesignation: "",
@@ -108,6 +123,8 @@ export function KycForm({
       contactEmail: "",
       meetingDate: "",
       meetingNotes: "",
+      // Edit mode prefill — overrides the empty defaults field-by-field.
+      ...initialValues,
     },
   });
 
@@ -156,24 +173,31 @@ export function KycForm({
   const submit = handleSubmit((values) => {
     setServerError(null);
     startTransition(async () => {
-      const res = await createClientKyc({
+      const payload = {
         ...values,
         // <input type="date"> gives YYYY-MM-DD; pin to noon UTC so timezone
         // wrap-arounds can't land the meeting on the wrong day.
         meetingDate: values.meetingDate
           ? new Date(`${values.meetingDate}T12:00:00.000Z`).toISOString()
           : undefined,
-      });
+      };
+      const res =
+        isEdit && editClientId
+          ? await adminUpdateClientKyc(editClientId, payload)
+          : await createClientKyc(payload);
       if (!res.ok) {
         setServerError(res.error);
         fireToast({ message: res.error, type: "error" });
         return;
       }
       fireToast({
-        message: `Client ${values.name} onboarded.`,
+        message: isEdit
+          ? `${values.name} updated.`
+          : `Client ${values.name} onboarded.`,
         type: "success",
       });
       router.push("/admin/clients" as Route);
+      router.refresh();
     });
   });
 
@@ -412,6 +436,40 @@ export function KycForm({
             />
           </Field>
         </div>
+        <Field id="kyc-billto" label="Bill-to Address">
+          <textarea
+            id="kyc-billto"
+            rows={2}
+            className="nt-input resize-y"
+            style={{ fontWeight: 400 }}
+            placeholder="Billing address (if different from the address above)"
+            {...register("billToAddress")}
+          />
+        </Field>
+      </SectionCard>
+
+      {/* ── Tax & Commercial ─────────────────────────────────────────── */}
+      <SectionCard
+        title="Tax & Commercial"
+        hint="GST / PAN and the commercial terms for this customer."
+      >
+        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+          <Field id="kyc-gstin" label="GSTIN">
+            <input id="kyc-gstin" type="text" className="nt-input" {...register("gstin")} />
+          </Field>
+          <Field id="kyc-pan" label="PAN / IT No">
+            <input id="kyc-pan" type="text" className="nt-input" {...register("panNo")} />
+          </Field>
+          <Field id="kyc-payterms" label="Payment Terms">
+            <input id="kyc-payterms" type="text" className="nt-input" {...register("paymentTerms")} />
+          </Field>
+          <Field id="kyc-freight" label="Freight Charges">
+            <input id="kyc-freight" type="text" className="nt-input" {...register("freightCharges")} />
+          </Field>
+          <Field id="kyc-qtydev" label="Quantity Deviation">
+            <input id="kyc-qtydev" type="text" className="nt-input" placeholder="e.g. ±10%" {...register("qtyDeviation")} />
+          </Field>
+        </div>
       </SectionCard>
 
       {/* ── 3 · Contact Person ───────────────────────────────────────── */}
@@ -553,7 +611,7 @@ export function KycForm({
             letterSpacing: "0.005em",
           }}
         >
-          {pending ? "Saving…" : "Onboard Client"}
+          {pending ? "Saving…" : isEdit ? "Save changes" : "Onboard Client"}
         </button>
       </div>
     </form>

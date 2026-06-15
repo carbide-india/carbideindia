@@ -25,7 +25,7 @@ import {
  *
  * A nav-pill-styled BUTTON (visually identical to MainNavPill) that opens a
  * drafting-sheet modal indexing every form in the sales pipeline: six live
- * forms (First Enquiry, Client KYC, Sample Register, Quotation, Negotiation,
+ * forms (Enquiry, Client KYC, Sample Register, Quotation, Negotiation,
  * Sales Order) and one Phase-5 placeholder (Costing). Each live card is a real
  * <Link> that closes the dialog on click; registers are reachable via a small
  * secondary link per card.
@@ -62,7 +62,7 @@ interface DisabledCard {
 
 const ACTIVE_CARDS: ActiveCard[] = [
   {
-    name: "First Enquiry",
+    name: "Enquiry",
     Icon: FileSearch,
     desc: "Log a new sales enquiry — SM number auto-assigned.",
     href: "/inquiries/new" as Route,

@@ -60,6 +60,8 @@ function toClientColumns(v: {
   state?: string; city?: string;
   addressLine1?: string; addressLine2?: string;
   addressLine3?: string; addressLine4?: string; pinCode?: string;
+  gstin?: string; panNo?: string; billToAddress?: string;
+  paymentTerms?: string; freightCharges?: string; qtyDeviation?: string;
   meetingDate?: string; meetingStart?: string; meetingEnd?: string;
   meetingNotes?: string; kycSalesPersonId?: string;
   businessCardFrontUrl?: string; businessCardBackUrl?: string;
@@ -78,6 +80,12 @@ function toClientColumns(v: {
     addressLine3: v.addressLine3,
     addressLine4: v.addressLine4,
     pinCode: v.pinCode,
+    gstin: v.gstin,
+    panNo: v.panNo,
+    billToAddress: v.billToAddress,
+    paymentTerms: v.paymentTerms,
+    freightCharges: v.freightCharges,
+    qtyDeviation: v.qtyDeviation,
     kycMeetingStart: v.meetingStart,
     kycMeetingEnd: v.meetingEnd,
     kycMeetingNotes: v.meetingNotes,

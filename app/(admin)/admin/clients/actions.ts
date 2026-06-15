@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath, updateTag } from "next/cache";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { clients, tasks, settingsEvents } from "@/db/schema";
+import { clients, clientContacts, tasks, settingsEvents } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth/current";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 import {
@@ -13,6 +13,10 @@ import {
   type CreateClientInput,
   type UpdateClientInput,
 } from "@/lib/validators/client";
+import {
+  CreateClientKycSchema,
+  type CreateClientKycInput,
+} from "@/lib/validators/client-kyc";
 
 type ActionResult<T = unknown> =
   | ({ ok: true } & T)
@@ -125,6 +129,141 @@ export async function deleteClient(
   }
 
   revalidateClientSurfaces();
+  return { ok: true };
+}
+
+/**
+ * Admin "Edit client" full-form save — overwrites every KYC field the form
+ * shows (Company / types / products / address / contact / meeting / cards),
+ * blanking any field the admin cleared. Currency/country/export are NOT
+ * touched (the form has no inputs for them). A rename propagates to
+ * `tasks.title` exactly like `updateClient`, so the task picker stays
+ * consistent.
+ */
+export async function adminUpdateClientKyc(
+  clientId: string,
+  input: CreateClientKycInput,
+): Promise<ActionResult> {
+  const me = await requireAdmin();
+
+  const parsedId = ClientIdSchema.safeParse(clientId);
+  if (!parsedId.success) {
+    return { ok: false, error: parsedId.error.issues[0]?.message ?? "Invalid client id" };
+  }
+  const parsed = CreateClientKycSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+  const v = parsed.data;
+  if (v.meetingDate && Number.isNaN(new Date(v.meetingDate).getTime())) {
+    return { ok: false, error: "Invalid meeting date" };
+  }
+
+  const client = await db.query.clients.findFirst({ where: eq(clients.id, parsedId.data) });
+  if (!client) return { ok: false, error: "Client not found" };
+
+  // Block a rename that collides (case-insensitive) with another client.
+  if (v.name.toLowerCase() !== client.name.toLowerCase()) {
+    const clash = await db
+      .select({ id: clients.id })
+      .from(clients)
+      .where(sql`lower(${clients.name}) = lower(${v.name})`)
+      .limit(1);
+    if (clash[0] && clash[0].id !== client.id) {
+      return { ok: false, error: "A client with this name already exists." };
+    }
+  }
+
+  // Full overwrite of the form-managed columns — a cleared field becomes NULL.
+  const patch: Partial<typeof clients.$inferInsert> = {
+    name: v.name,
+    customerTypeId: v.customerTypeId ?? null,
+    industryTypeId: v.industryTypeId ?? null,
+    productTypeIds: v.productTypeIds ?? null,
+    state: v.state ?? null,
+    city: v.city ?? null,
+    addressLine1: v.addressLine1 ?? null,
+    addressLine2: v.addressLine2 ?? null,
+    addressLine3: v.addressLine3 ?? null,
+    addressLine4: v.addressLine4 ?? null,
+    pinCode: v.pinCode ?? null,
+    gstin: v.gstin ?? null,
+    panNo: v.panNo ?? null,
+    billToAddress: v.billToAddress ?? null,
+    paymentTerms: v.paymentTerms ?? null,
+    freightCharges: v.freightCharges ?? null,
+    qtyDeviation: v.qtyDeviation ?? null,
+    kycMeetingDate: v.meetingDate ? new Date(v.meetingDate) : null,
+    kycMeetingStart: v.meetingStart ?? null,
+    kycMeetingEnd: v.meetingEnd ?? null,
+    kycMeetingNotes: v.meetingNotes ?? null,
+    kycSalesPersonId: v.kycSalesPersonId ?? null,
+    businessCardFrontUrl: v.businessCardFrontUrl ?? null,
+    businessCardBackUrl: v.businessCardBackUrl ?? null,
+    updatedAt: new Date(),
+  };
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx.update(clients).set(patch).where(eq(clients.id, client.id));
+
+      // A client name IS the task's title — propagate a rename to every task.
+      if (v.name !== client.name) {
+        await tx
+          .update(tasks)
+          .set({ title: v.name })
+          .where(sql`lower(${tasks.title}) = lower(${client.name})`);
+      }
+
+      // Primary contact: firstName is NOT NULL and anchors the row, so we only
+      // upsert when a first name is present. With a name, every other contact
+      // field is overwritten (cleared fields → NULL).
+      if (v.contactFirstName) {
+        const contactVals = {
+          firstName: v.contactFirstName,
+          lastName: v.contactLastName ?? null,
+          designation: v.contactDesignation ?? null,
+          contactNo: v.contactNo ?? null,
+          email: v.contactEmail ?? null,
+        };
+        const [primary] = await tx
+          .select({ id: clientContacts.id })
+          .from(clientContacts)
+          .where(and(eq(clientContacts.clientId, client.id), eq(clientContacts.isPrimary, true)))
+          .limit(1);
+        if (primary) {
+          await tx
+            .update(clientContacts)
+            .set({ ...contactVals, updatedAt: new Date() })
+            .where(eq(clientContacts.id, primary.id));
+        } else {
+          await tx.insert(clientContacts).values({ clientId: client.id, ...contactVals });
+        }
+      }
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("clients_name_unique") || msg.includes("clients_name_lower_uidx")) {
+      return { ok: false, error: "A client with this name already exists." };
+    }
+    return { ok: false, error: `DB: ${msg}` };
+  }
+
+  try {
+    await db.insert(settingsEvents).values({
+      scope: "client",
+      targetId: client.id,
+      actorId: me.id,
+      eventType: "updated",
+      fromValue: { name: client.name },
+      toValue: { name: v.name },
+    });
+  } catch (err) {
+    console.error("[adminUpdateClientKyc] audit write failed", err);
+  }
+
+  revalidateClientSurfaces();
+  revalidatePath(`/admin/clients/${client.id}/edit`);
   return { ok: true };
 }
 

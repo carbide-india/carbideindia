@@ -121,6 +121,94 @@ export interface ClientAutofill {
 }
 
 /**
+ * Full KYC values for the admin "Edit client" form, shaped to match the
+ * KycForm's input fields (nulls folded to "" / undefined / [] so RHF
+ * defaultValues prefill cleanly). Covers only the columns the form edits —
+ * currency/country/export are intentionally absent (the form has no inputs
+ * for them, so the edit must never touch those columns). Admin-only caller.
+ */
+export interface ClientEditValues {
+  name: string;
+  customerTypeId?: string;
+  industryTypeId?: string;
+  productTypeIds: string[];
+  state: string;
+  city: string;
+  addressLine1: string;
+  addressLine2: string;
+  addressLine3: string;
+  addressLine4: string;
+  pinCode: string;
+  gstin: string;
+  panNo: string;
+  billToAddress: string;
+  paymentTerms: string;
+  freightCharges: string;
+  qtyDeviation: string;
+  contactFirstName: string;
+  contactLastName: string;
+  contactDesignation: string;
+  contactNo: string;
+  contactEmail: string;
+  meetingDate: string;
+  meetingStart: string;
+  meetingEnd: string;
+  meetingNotes: string;
+  kycSalesPersonId?: string;
+  businessCardFrontUrl?: string;
+  businessCardBackUrl?: string;
+}
+
+export async function getClientForEdit(
+  clientId: string,
+): Promise<ClientEditValues | null> {
+  const [row] = await db.select().from(clients).where(eq(clients.id, clientId)).limit(1);
+  if (!row) return null;
+  const [contact] = await db
+    .select()
+    .from(clientContacts)
+    .where(
+      and(eq(clientContacts.clientId, clientId), eq(clientContacts.isPrimary, true)),
+    )
+    .limit(1);
+  // Stored at noon UTC, so an ISO slice gives the intended calendar date.
+  const meetingDate = row.kycMeetingDate
+    ? row.kycMeetingDate.toISOString().slice(0, 10)
+    : "";
+  return {
+    name: row.name,
+    customerTypeId: row.customerTypeId ?? undefined,
+    industryTypeId: row.industryTypeId ?? undefined,
+    productTypeIds: row.productTypeIds ?? [],
+    state: row.state ?? "",
+    city: row.city ?? "",
+    addressLine1: row.addressLine1 ?? "",
+    addressLine2: row.addressLine2 ?? "",
+    addressLine3: row.addressLine3 ?? "",
+    addressLine4: row.addressLine4 ?? "",
+    pinCode: row.pinCode ?? "",
+    gstin: row.gstin ?? "",
+    panNo: row.panNo ?? "",
+    billToAddress: row.billToAddress ?? "",
+    paymentTerms: row.paymentTerms ?? "",
+    freightCharges: row.freightCharges ?? "",
+    qtyDeviation: row.qtyDeviation ?? "",
+    contactFirstName: contact?.firstName ?? "",
+    contactLastName: contact?.lastName ?? "",
+    contactDesignation: contact?.designation ?? "",
+    contactNo: contact?.contactNo ?? "",
+    contactEmail: contact?.email ?? "",
+    meetingDate,
+    meetingStart: row.kycMeetingStart ?? "",
+    meetingEnd: row.kycMeetingEnd ?? "",
+    meetingNotes: row.kycMeetingNotes ?? "",
+    kycSalesPersonId: row.kycSalesPersonId ?? undefined,
+    businessCardFrontUrl: row.businessCardFrontUrl ?? undefined,
+    businessCardBackUrl: row.businessCardBackUrl ?? undefined,
+  };
+}
+
+/**
  * Old-client auto-fetch for the inquiry form: the client's KYC block plus
  * its primary contact (if any). The inquiry snapshots these values at
  * creation; it never references this table again. Uncached — fetched

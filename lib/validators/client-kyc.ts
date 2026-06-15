@@ -30,6 +30,11 @@ const ClientKycFieldsSchema = z.object({
   addressLine1: OptionalText(240), addressLine2: OptionalText(240),
   addressLine3: OptionalText(240), addressLine4: OptionalText(240),
   pinCode: OptionalText(20),
+  // ── Commercial / tax (Customer Master) ──
+  gstin: OptionalText(40), panNo: OptionalText(20),
+  billToAddress: OptionalText(1000),
+  paymentTerms: OptionalText(240), freightCharges: OptionalText(240),
+  qtyDeviation: OptionalText(80),
   contactFirstName: OptionalText(80), contactLastName: OptionalText(80),
   contactDesignation: OptionalText(120),
   contactNo: OptionalText(40), contactEmail: OptionalText(160),

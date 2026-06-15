@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import type { Route } from "next";
 import * as Dialog from "@radix-ui/react-dialog";
 import { MoreHorizontal, Pencil, Power, Trash2 } from "lucide-react";
 import { fireToast } from "@/lib/toast";
@@ -19,7 +21,7 @@ interface Props {
 }
 
 export function ClientList({ clients }: Props) {
-  const [editing, setEditing] = useState<ClientWithCount | null>(null);
+  const router = useRouter();
   const [deleting, setDeleting] = useState<ClientWithCount | null>(null);
 
   if (clients.length === 0) {
@@ -69,14 +71,13 @@ export function ClientList({ clients }: Props) {
                 key={c.id}
                 client={c}
                 rowIndex={i}
-                onEdit={() => setEditing(c)}
+                onEdit={() => router.push(`/admin/clients/${c.id}/edit` as Route)}
                 onDelete={() => setDeleting(c)}
               />
             ))}
           </tbody>
         </table>
       </div>
-      <EditClientDialog client={editing} onClose={() => setEditing(null)} />
       <DeleteClientDialog client={deleting} onClose={() => setDeleting(null)} />
     </>
   );
@@ -172,122 +173,6 @@ function ClientRow({
         </DropdownMenu>
       </td>
     </tr>
-  );
-}
-
-function EditClientDialog({
-  client,
-  onClose,
-}: {
-  client: ClientWithCount | null;
-  onClose: () => void;
-}) {
-  const [name, setName] = useState(client?.name ?? "");
-  const [sortOrder, setSortOrder] = useState<number>(client?.sortOrder ?? 100);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
-
-  useEffect(() => {
-    setName(client?.name ?? "");
-    setSortOrder(client?.sortOrder ?? 100);
-    setError(null);
-  }, [client?.id, client?.name, client?.sortOrder]);
-
-  function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!client) return;
-    setError(null);
-
-    const patch: { name?: string; sortOrder?: number } = {};
-    const trimmedName = name.trim();
-    if (trimmedName !== client.name) patch.name = trimmedName;
-    if (sortOrder !== client.sortOrder) patch.sortOrder = sortOrder;
-
-    if (Object.keys(patch).length === 0) {
-      setError("No changes to save.");
-      return;
-    }
-
-    startTransition(async () => {
-      const res = await updateClient(client.id, patch);
-      if (!res.ok) {
-        setError(res.error ?? "Something went wrong");
-        return;
-      }
-      fireToast({ message: `${trimmedName} updated.` });
-      onClose();
-    });
-  }
-
-  return (
-    <Dialog.Root open={client !== null} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/30 z-[90]" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-[100] -translate-x-1/2 -translate-y-1/2 w-full max-w-md rounded-xl bg-white border border-[#E2E8F0] p-6 shadow-lg max-h-[calc(100dvh-32px)] overflow-y-auto">
-          <Dialog.Title className="font-serif text-xl text-[#0F172A] mb-1">
-            Edit client
-          </Dialog.Title>
-          <Dialog.Description className="text-[15px] text-[#64748B] mb-4">
-            Renaming updates the Client Name on every task filed under the old
-            name.
-          </Dialog.Description>
-          <form onSubmit={onSubmit} className="space-y-4">
-            <div>
-              <label className="block text-[14px] font-semibold text-[#0F172A] mb-1.5">
-                Name
-              </label>
-              <input
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                maxLength={120}
-                className="w-full rounded-md border border-[#CBD5E1] px-3.5 py-2.5 text-[15px]"
-              />
-            </div>
-            <div>
-              <label className="block text-[14px] font-semibold text-[#0F172A] mb-1.5">
-                Sort order
-              </label>
-              <input
-                type="number"
-                min={0}
-                max={9999}
-                value={sortOrder}
-                onChange={(e) => setSortOrder(Number(e.target.value))}
-                className="w-28 rounded-md border border-[#CBD5E1] px-3.5 py-2.5 text-[15px] tabular-nums"
-              />
-            </div>
-            {error && (
-              <div
-                role="alert"
-                className="rounded-md border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-[14px] text-[#B71C1C]"
-              >
-                {error}
-              </div>
-            )}
-            <div className="flex justify-end gap-2 pt-2">
-              <Dialog.Close asChild>
-                <button
-                  type="button"
-                  className="px-4 py-2.5 text-[14px] font-medium text-[#64748B]"
-                  disabled={pending}
-                >
-                  Cancel
-                </button>
-              </Dialog.Close>
-              <button
-                type="submit"
-                disabled={pending}
-                className="rounded-md py-2.5 px-5 text-[14px] font-medium text-white disabled:opacity-50"
-                style={{ background: "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))" }}
-              >
-                {pending ? "Saving…" : "Save"}
-              </button>
-            </div>
-          </form>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
   );
 }
 
