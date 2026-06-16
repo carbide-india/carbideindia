@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "tasks_recurrence_occurrence_uidx" ON "tasks" USING btree ("recurrence_parent_id","recurrence_occurrence_date");

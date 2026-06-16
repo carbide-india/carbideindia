@@ -85,6 +85,13 @@
       "when": 1781534355979,
       "tag": "0011_add_client_commercial_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1781602510885,
+      "tag": "0012_add_recurrence_occurrence_uidx",
+      "breakpoints": true
     }
   ]
 }

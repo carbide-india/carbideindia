@@ -931,6 +931,15 @@ export const tasks = pgTable(
       .on(t.shortId)
       .where(sql`${t.shortId} is not null`),
     uniqueIndex("tasks_task_no_uidx").on(t.taskNo),
+    // Dedup arbiter for the recurrence materializer's `ON CONFLICT
+    // (recurrence_parent_id, recurrence_occurrence_date) DO NOTHING`. Without
+    // this, every materialization INSERT errors (42P10) and recurring tasks
+    // never spawn their next occurrence. Template + non-recurring rows hold
+    // (NULL, NULL) and are unconstrained — Postgres treats NULLs as distinct.
+    uniqueIndex("tasks_recurrence_occurrence_uidx").on(
+      t.recurrenceParentId,
+      t.recurrenceOccurrenceDate,
+    ),
   ],
 );
 
