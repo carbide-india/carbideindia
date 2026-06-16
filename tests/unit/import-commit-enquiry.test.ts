@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+// The shared commit engine imports "server-only"; neutralise it under vitest.
+vi.mock("server-only", () => ({}));
+
 const createInquiry = vi.fn();
 const createMasterOptionsBulk = vi.fn(async (_input: unknown) => ({ ok: true as const, created: 1, skipped: 0 }));
 const listMasterOptions = vi.fn(async (_kind: unknown) => [{ id: "gNew", name: "WC99" }]);
