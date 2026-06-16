@@ -5,8 +5,6 @@ import { createInquiry } from "@/app/(app)/inquiries/actions";
 import { runImportCommit, type ImportCommitResult } from "@/lib/import/engine/commit";
 import type { ImportRowPayload } from "@/lib/import/engine/spec";
 
-export type { ImportCommitResult };
-
 /** Admin-only. One inquiry per valid row via the existing createInquiry path
  *  (so SM auto-numbering etc. are identical). Injects the fields the schema
  *  requires but the sheet doesn't carry: clientMode "new" (upsert client by

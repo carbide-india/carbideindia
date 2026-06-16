@@ -1,15 +1,17 @@
 import { DashboardHeader } from "@/components/layout/header";
 import { DashboardFooter } from "@/components/layout/footer";
 import { MeetingForm } from "@/components/meetings/meeting-form";
-import { requireUser } from "@/lib/auth/current";
+import { requireUser, getCurrentEmployee } from "@/lib/auth/current";
 import { listEmployeeOptions } from "@/lib/queries/employees";
 import { listClientOptions } from "@/lib/queries/clients";
 import { listMasterOptions } from "@/lib/queries/masters";
+import { BulkUploadButton } from "@/components/import/bulk-upload-button";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewMeetingPage() {
   const me = await requireUser();
+  const currentEmployee = await getCurrentEmployee();
   const [employees, clients, customerTypes] = await Promise.all([
     listEmployeeOptions(),
     listClientOptions(),
@@ -24,11 +26,16 @@ export default async function NewMeetingPage() {
           <div className="text-[10px] uppercase tracking-[0.18em] text-ink-subtle font-bold">
             Sales · Daily Meetings
           </div>
-          <h1 className="text-display-lg text-ink-strong mt-1">New Meeting</h1>
-          <p className="text-body-lg text-ink-subtle mt-1">
-            Log a client visit — sales and contact details, timing, and the
-            meeting outcome.
-          </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-display-lg text-ink-strong mt-1">New Meeting</h1>
+              <p className="text-body-lg text-ink-subtle mt-1">
+                Log a client visit — sales and contact details, timing, and the
+                meeting outcome.
+              </p>
+            </div>
+            {currentEmployee?.isAdmin && <BulkUploadButton href="/meetings/import" />}
+          </div>
         </header>
         <MeetingForm
           defaultSalesPersonId={me.id}

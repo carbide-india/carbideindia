@@ -1,14 +1,16 @@
 import { DashboardHeader } from "@/components/layout/header";
 import { DashboardFooter } from "@/components/layout/footer";
 import { KycForm } from "@/components/clients/kyc-form";
-import { requireUser } from "@/lib/auth/current";
+import { requireUser, getCurrentEmployee } from "@/lib/auth/current";
 import { listMasterOptions } from "@/lib/queries/masters";
 import { listEmployeeOptions } from "@/lib/queries/employees";
+import { BulkUploadButton } from "@/components/import/bulk-upload-button";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewClientKycPage() {
   await requireUser();
+  const me = await getCurrentEmployee();
   const [customerTypes, industryTypes, productTypes, employees] =
     await Promise.all([
       listMasterOptions("customer_type"),
@@ -25,10 +27,15 @@ export default async function NewClientKycPage() {
           <div className="text-[10px] uppercase tracking-[0.18em] text-ink-subtle font-bold">
             Sales · Client KYC
           </div>
-          <h1 className="text-display-lg text-ink-strong mt-1">Client KYC</h1>
-          <p className="text-body-lg text-ink-subtle mt-1">
-            Onboard a client — option lists are managed in Admin → Masters.
-          </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-display-lg text-ink-strong mt-1">Client KYC</h1>
+              <p className="text-body-lg text-ink-subtle mt-1">
+                Onboard a client — option lists are managed in Admin → Masters.
+              </p>
+            </div>
+            {me?.isAdmin && <BulkUploadButton href="/clients/import" />}
+          </div>
         </header>
         <KycForm
           customerTypes={customerTypes}

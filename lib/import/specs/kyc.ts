@@ -1,0 +1,30 @@
+import type { ImportSpec } from "@/lib/import/engine/spec";
+
+export const kycImportSpec: ImportSpec = {
+  formKey: "kyc", title: "Client", basePath: "/admin/clients",
+  fields: [
+    { key: "name", header: "Company Name", type: "text", required: true, example: "Acme Ltd", maxLen: 160 },
+    { key: "customerTypeId", header: "Customer Type", type: "ref", ref: { kind: "customerType", allowCreate: true }, example: "OEM" },
+    { key: "industryTypeId", header: "Industry Type", type: "ref", ref: { kind: "industryType", allowCreate: true }, example: "Automotive" },
+    { key: "productTypeIds", header: "Product Types", type: "refMulti", ref: { kind: "productType", allowCreate: true }, example: "Inserts, Rods" },
+    { key: "kycSalesPersonId", header: "Sales Person", type: "ref", ref: { kind: "employee" }, example: "Piyush Bagde" },
+    { key: "state", header: "State", type: "text", maxLen: 80 },
+    { key: "city", header: "City", type: "text", maxLen: 80 },
+    { key: "addressLine1", header: "Address 1", type: "text", maxLen: 240 },
+    { key: "addressLine2", header: "Address 2", type: "text", maxLen: 240 },
+    { key: "pinCode", header: "Pin Code", type: "text", maxLen: 20 },
+    { key: "gstin", header: "GSTIN", type: "text", maxLen: 40 },
+    { key: "panNo", header: "PAN", type: "text", maxLen: 20 },
+    { key: "billToAddress", header: "Bill-to Address", type: "text", maxLen: 1000 },
+    { key: "paymentTerms", header: "Payment Terms", type: "text", maxLen: 240 },
+    { key: "freightCharges", header: "Freight Charges", type: "text", maxLen: 240 },
+    { key: "qtyDeviation", header: "Quantity Deviation", type: "text", maxLen: 80 },
+    { key: "contactFirstName", header: "Contact First Name", type: "text", maxLen: 80 },
+    { key: "contactLastName", header: "Contact Last Name", type: "text", maxLen: 80 },
+    { key: "contactDesignation", header: "Contact Designation", type: "text", maxLen: 120 },
+    { key: "contactNo", header: "Contact No", type: "text", maxLen: 40 },
+    { key: "contactEmail", header: "Contact Email", type: "text", maxLen: 160 },
+    { key: "meetingDate", header: "Meeting Date", type: "date" },
+    { key: "meetingNotes", header: "Meeting Notes", type: "text", maxLen: 2000 },
+  ],
+};
