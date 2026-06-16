@@ -1,15 +1,17 @@
 import { DashboardHeader } from "@/components/layout/header";
 import { DashboardFooter } from "@/components/layout/footer";
 import { InquiryForm } from "@/components/inquiries/inquiry-form";
-import { requireUser } from "@/lib/auth/current";
+import { requireUser, getCurrentEmployee } from "@/lib/auth/current";
 import { listClientOptions } from "@/lib/queries/clients";
 import { listEmployeeOptions } from "@/lib/queries/employees";
 import { listMasterOptions } from "@/lib/queries/masters";
+import { BulkUploadButton } from "@/components/import/bulk-upload-button";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewInquiryPage() {
   const me = await requireUser();
+  const currentEmployee = await getCurrentEmployee();
   const [clients, employees, grades, tolerances, conditions] =
     await Promise.all([
       listClientOptions(),
@@ -27,11 +29,18 @@ export default async function NewInquiryPage() {
           <div className="text-[10px] uppercase tracking-[0.18em] text-ink-subtle font-bold">
             Sales · Enquiry Register
           </div>
-          <h1 className="text-display-lg text-ink-strong mt-1">New Enquiry</h1>
-          <p className="text-body-lg text-ink-subtle mt-1">
-            Capture the enquiry exactly as it came in — the SM number is
-            assigned automatically on save.
-          </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-display-lg text-ink-strong mt-1">New Enquiry</h1>
+              <p className="text-body-lg text-ink-subtle mt-1">
+                Capture the enquiry exactly as it came in — the SM number is
+                assigned automatically on save.
+              </p>
+            </div>
+            {currentEmployee?.isAdmin && (
+              <BulkUploadButton href="/inquiries/import" />
+            )}
+          </div>
         </header>
         <InquiryForm
           clients={clients}
