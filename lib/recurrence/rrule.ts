@@ -6,6 +6,7 @@
  *   FREQ=WEEKLY[;BYDAY=MO,WE,FR]        → weekly, optional specific weekdays
  *   FREQ=MONTHLY[;BYDAY=2MO]            → monthly on the nth weekday
  *   FREQ=MONTHLY[;BYMONTHDAY=15]        → monthly on day-of-month
+ *   FREQ=MONTHLY[;BYMONTHDAY=7,8]       → monthly on several days (7th AND 8th)
  *   FREQ=YEARLY                         → same month + day each year
  *   ...;UNTIL=2026-12-31                → end on (inclusive) the given date
  *
@@ -30,7 +31,7 @@ export interface ParsedRule {
   byDay: Weekday[];           // for WEEKLY
   monthlyNth: number | null;  // for MONTHLY (1..5 or -1 = "last"), set when BYDAY="2MO" etc.
   monthlyWeekday: Weekday | null;
-  byMonthDay: number | null;  // for MONTHLY (1..31)
+  byMonthDays: number[];      // for MONTHLY (1..31), e.g. [7, 8]; empty = none
   until: string | null;       // yyyy-mm-dd, inclusive
   count: number | null;       // total occurrences incl. the anchor (Google "After N")
 }
@@ -58,7 +59,7 @@ export function parseRRule(rule: string): ParsedRule | null {
     byDay: [],
     monthlyNth: null,
     monthlyWeekday: null,
-    byMonthDay: null,
+    byMonthDays: [],
     until: null,
     count: null,
   };
@@ -95,8 +96,12 @@ export function parseRRule(rule: string): ParsedRule | null {
         break;
       }
       case "BYMONTHDAY": {
-        const n = Number(val);
-        if (Number.isInteger(n) && n >= 1 && n <= 31) out.byMonthDay = n;
+        // One OR several days, e.g. "8" or "7,8". Dedupe + sort ascending.
+        const days = val
+          .split(",")
+          .map((s) => Number(s.trim()))
+          .filter((n) => Number.isInteger(n) && n >= 1 && n <= 31);
+        out.byMonthDays = [...new Set(days)].sort((a, b) => a - b);
         break;
       }
       case "UNTIL": {
@@ -189,24 +194,24 @@ export function generateOccurrences(
   }
 
   if (rule.freq === "MONTHLY") {
-    // Step through months starting from the anchor's month. Emit the
-    // matching date for each month iff it's STRICTLY after the anchor
-    // and within the window — the anchor itself counts as occurrence #1
-    // and shouldn't be duplicated, but later dates in the same month
-    // (e.g. "last Friday" of an early-month anchor) absolutely qualify.
+    // Step through months starting from the anchor's month. Each month can
+    // yield SEVERAL dates (e.g. BYMONTHDAY=7,8). Emit each that's STRICTLY
+    // after the anchor and within the window — the anchor itself is
+    // occurrence #1 and isn't duplicated, but later dates in the same month
+    // (e.g. the 8th when the anchor was the 7th) absolutely qualify.
     let y = start.getUTCFullYear();
     let m = start.getUTCMonth();
-    for (let safety = 0; safety < 24 * 12 && out.length < limit; safety++) {
+    monthLoop: for (let safety = 0; safety < 24 * 12 && out.length < limit; safety++) {
       // Honour INTERVAL: only months a multiple of `interval` from the anchor.
       const monthsFromAnchor =
         (y - start.getUTCFullYear()) * 12 + (m - start.getUTCMonth());
       if (monthsFromAnchor % interval === 0) {
-        const occ = monthlyOccurrence(y, m, rule, start);
-        if (occ) {
-          if (occ.getTime() > end.getTime()) break;
+        for (const occ of monthlyOccurrences(y, m, rule, start)) {
+          if (occ.getTime() > end.getTime()) break monthLoop;
           if (occ.getTime() > start.getTime()) {
-            if (untilCap && occ.getTime() > untilCap.getTime()) break;
+            if (untilCap && occ.getTime() > untilCap.getTime()) break monthLoop;
             out.push(ymd(occ));
+            if (out.length >= limit) break monthLoop;
           }
         }
       }
@@ -254,16 +259,19 @@ function weekStartUTC(d: Date): Date {
 }
 
 /**
- * Resolve the rule's monthly occurrence for a given year+month. Returns
- * null when the rule can't be honoured for that month (e.g. BYMONTHDAY=31
- * in February, or BYDAY=5MO in a month without 5 Mondays).
+ * Resolve the rule's monthly occurrence date(s) for a given year+month,
+ * sorted ascending. Returns [] when the rule can't be honoured for that
+ * month (e.g. BYMONTHDAY=31 in February, or BYDAY=5MO in a month without
+ * 5 Mondays). BYMONTHDAY may name several days (e.g. 7th AND 8th).
  */
-function monthlyOccurrence(
+function monthlyOccurrences(
   year: number,
   month: number, // 0..11
   rule: ParsedRule,
   anchor: Date,
-): Date | null {
+): Date[] {
+  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+
   // Nth weekday (BYDAY=2MO etc.)
   if (rule.monthlyNth !== null && rule.monthlyWeekday) {
     const targetWd = WD_ORDER.indexOf(rule.monthlyWeekday);
@@ -271,26 +279,25 @@ function monthlyOccurrence(
       // Last <weekday> of month — walk back from the last day.
       const last = new Date(Date.UTC(year, month + 1, 0));
       const diff = (last.getUTCDay() - targetWd + 7) % 7;
-      return new Date(Date.UTC(year, month, last.getUTCDate() - diff));
+      return [new Date(Date.UTC(year, month, last.getUTCDate() - diff))];
     }
     const first = new Date(Date.UTC(year, month, 1));
     const offset = (targetWd - first.getUTCDay() + 7) % 7;
     const day = 1 + offset + (rule.monthlyNth - 1) * 7;
-    const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
-    if (day > daysInMonth) return null; // not enough Nth-weekdays this month
-    return new Date(Date.UTC(year, month, day));
+    if (day > daysInMonth) return []; // not enough Nth-weekdays this month
+    return [new Date(Date.UTC(year, month, day))];
   }
 
-  // Day-of-month (BYMONTHDAY=15)
-  if (rule.byMonthDay !== null) {
-    const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
-    if (rule.byMonthDay > daysInMonth) return null;
-    return new Date(Date.UTC(year, month, rule.byMonthDay));
+  // Day(s)-of-month (BYMONTHDAY=8 or BYMONTHDAY=7,8). Days that don't exist
+  // this month (e.g. the 31st in Feb) are simply skipped.
+  if (rule.byMonthDays.length) {
+    return rule.byMonthDays
+      .filter((d) => d <= daysInMonth)
+      .map((d) => new Date(Date.UTC(year, month, d)));
   }
 
   // No anchoring info — fall back to "same day-of-month as anchor".
   const anchorDay = anchor.getUTCDate();
-  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
-  if (anchorDay > daysInMonth) return null;
-  return new Date(Date.UTC(year, month, anchorDay));
+  if (anchorDay > daysInMonth) return [];
+  return [new Date(Date.UTC(year, month, anchorDay))];
 }

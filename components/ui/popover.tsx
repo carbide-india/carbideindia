@@ -18,11 +18,13 @@ export const PopoverContent = React.forwardRef<
       sideOffset={sideOffset}
       collisionPadding={collisionPadding}
       className={cn(
-        // z-[100] so popovers always sit above the sticky z-50 app header
-        // and any z-50 Dialog content. available-height + overflow-y-auto
-        // keeps tall popovers (DayPicker, MultiSelect with long lists)
-        // inside the viewport instead of clipping off the edge.
-        "z-[100] rounded-chip border border-hairline-strong bg-surface-card p-2",
+        // z-[200] so popovers/Selects always sit above EVERYTHING that can
+        // contain them — the sticky app header (z-50) AND modal dialogs
+        // (which render their content as high as z-[120], e.g. the custom
+        // recurrence dialog). At the old z-[100] a Select opened *behind*
+        // those dialogs and looked broken. available-height + overflow-y-auto
+        // keeps tall popovers (DayPicker, MultiSelect) inside the viewport.
+        "z-[200] rounded-chip border border-hairline-strong bg-surface-card p-2",
         "max-h-[var(--radix-popover-content-available-height)] overflow-y-auto overflow-x-hidden",
         "data-[state=open]:animate-in data-[state=open]:fade-in-0",
         className,

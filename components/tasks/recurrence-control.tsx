@@ -53,6 +53,7 @@ interface Draft {
   interval: number;
   byday: string[]; // weekly list
   monthlyMode: "day" | "weekday";
+  byMonthDays: number[]; // monthly day-of-month list, e.g. [7, 8]
   endsType: EndsType;
   until: string | null;
   count: number | null;
@@ -61,7 +62,7 @@ interface Draft {
 function parseRule(rule: string | null): Draft | null {
   if (!rule) return null;
   const d: Draft = {
-    freq: "DAILY", interval: 1, byday: [], monthlyMode: "day",
+    freq: "DAILY", interval: 1, byday: [], monthlyMode: "day", byMonthDays: [],
     endsType: "never", until: null, count: null,
   };
   let sawFreq = false;
@@ -86,6 +87,11 @@ function parseRule(rule: string | null): Draft | null {
       }
     } else if (key === "BYMONTHDAY") {
       d.monthlyMode = "day";
+      const days = val
+        .split(",")
+        .map((s) => Number(s.trim()))
+        .filter((n) => Number.isInteger(n) && n >= 1 && n <= 31);
+      d.byMonthDays = [...new Set(days)].sort((a, b) => a - b);
     } else if (key === "UNTIL") {
       const m = val.match(/^(\d{4})-?(\d{2})-?(\d{2})/);
       if (m) { d.until = `${m[1]}-${m[2]}-${m[3]}`; d.endsType = "until"; }
@@ -108,7 +114,8 @@ function buildRule(d: Draft, anchor: Date): string {
     if (d.monthlyMode === "weekday") {
       segs.push(`BYDAY=${nthRRuleNum(anchor)}${wdCode(anchor)}`);
     } else {
-      segs.push(`BYMONTHDAY=${anchor.getDate()}`);
+      const days = d.byMonthDays.length ? d.byMonthDays : [anchor.getDate()];
+      segs.push(`BYMONTHDAY=${[...days].sort((a, b) => a - b).join(",")}`);
     }
   }
   if (d.endsType === "until" && d.until) segs.push(`UNTIL=${d.until}`);
@@ -238,9 +245,12 @@ function humanSummary(rule: string | null, anchor: Date): string | null {
     if (days) s += ` on ${days}`;
   }
   if (d.freq === "MONTHLY") {
-    s += d.monthlyMode === "weekday"
-      ? ` on the ${nthLabel(anchor)} ${wdFull(anchor)}`
-      : ` on day ${anchor.getDate()}`;
+    if (d.monthlyMode === "weekday") {
+      s += ` on the ${nthLabel(anchor)} ${wdFull(anchor)}`;
+    } else {
+      const days = d.byMonthDays.length ? d.byMonthDays : [anchor.getDate()];
+      s += ` on day ${[...days].sort((a, b) => a - b).join(", ")}`;
+    }
   }
   if (d.endsType === "until" && d.until) s += `, until ${d.until}`;
   if (d.endsType === "count" && d.count) s += `, ${d.count} times`;
@@ -281,6 +291,15 @@ function CustomDialog({
       const has = d.byday.includes(code);
       const byday = has ? d.byday.filter((c) => c !== code) : [...d.byday, code];
       return { ...d, byday: byday.length ? byday : [wdCode(anchor)] };
+    });
+  }
+  function toggleMonthDay(day: number) {
+    setDraft((d) => {
+      const current = d.byMonthDays.length ? d.byMonthDays : [anchor.getDate()];
+      const has = current.includes(day);
+      const next = has ? current.filter((x) => x !== day) : [...current, day];
+      // Always keep at least one day selected.
+      return { ...d, byMonthDays: (next.length ? next : [anchor.getDate()]).sort((a, b) => a - b) };
     });
   }
 
@@ -342,18 +361,50 @@ function CustomDialog({
             </div>
           )}
 
-          {/* Monthly → day-of-month vs nth weekday */}
+          {/* Monthly → specific day(s)-of-month vs nth weekday */}
           {draft.freq === "MONTHLY" && (
             <div className="mb-5">
               <Select
                 value={draft.monthlyMode}
                 onValueChange={(v) => patch({ monthlyMode: v as "day" | "weekday" })}
                 options={[
-                  { value: "day", label: `Monthly on day ${anchor.getDate()}` },
-                  { value: "weekday", label: `Monthly on the ${nthLabel(anchor)} ${wdFull(anchor)}` },
+                  { value: "day", label: "On specific day(s) of the month" },
+                  { value: "weekday", label: `On the ${nthLabel(anchor)} ${wdFull(anchor)}` },
                 ]}
               />
 
+              {draft.monthlyMode === "day" && (
+                <div className="mt-3">
+                  <p className="text-[13.5px] font-semibold text-ink-soft mb-2">Days of the month</p>
+                  <div className="grid grid-cols-7 gap-1.5">
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
+                      const selectedDays = draft.byMonthDays.length ? draft.byMonthDays : [anchor.getDate()];
+                      const on = selectedDays.includes(day);
+                      return (
+                        <button
+                          key={day}
+                          type="button"
+                          onClick={() => toggleMonthDay(day)}
+                          aria-pressed={on}
+                          aria-label={`Day ${day}`}
+                          className="h-8 rounded-md text-[12.5px] font-bold tabular-nums transition-colors"
+                          style={{
+                            background: on ? "var(--color-brand)" : "var(--color-surface-soft)",
+                            color: on ? "#fff" : "var(--color-ink-soft)",
+                            border: "1px solid var(--color-hairline)",
+                          }}
+                        >
+                          {day}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[12px] text-ink-subtle mt-2" style={{ lineHeight: 1.5 }}>
+                    Pick one or more — e.g. <strong>7</strong> and <strong>8</strong> repeats every 7th &amp; 8th.
+                    Days 29–31 are skipped in months that don&rsquo;t have them.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -448,6 +499,10 @@ function seed(rule: string | null, anchor: Date): Draft {
   if (parsed) {
     // Default weekly selection to the anchor weekday when none stored.
     if (parsed.freq === "WEEKLY" && parsed.byday.length === 0) parsed.byday = [wdCode(anchor)];
+    // Default monthly day-of-month to the anchor's day when none stored.
+    if (parsed.monthlyMode === "day" && parsed.byMonthDays.length === 0) {
+      parsed.byMonthDays = [anchor.getDate()];
+    }
     return parsed;
   }
   return {
@@ -455,6 +510,7 @@ function seed(rule: string | null, anchor: Date): Draft {
     interval: 1,
     byday: [wdCode(anchor)],
     monthlyMode: "day",
+    byMonthDays: [anchor.getDate()],
     endsType: "never",
     until: null,
     count: null,

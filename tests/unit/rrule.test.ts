@@ -42,7 +42,12 @@ describe("parseRRule", () => {
 
   it("parses monthly day-of-month", () => {
     const r = parseRRule("FREQ=MONTHLY;BYMONTHDAY=15")!;
-    expect(r.byMonthDay).toBe(15);
+    expect(r.byMonthDays).toEqual([15]);
+  });
+
+  it("parses several month-days, deduped + sorted", () => {
+    const r = parseRRule("FREQ=MONTHLY;BYMONTHDAY=8,7,8")!;
+    expect(r.byMonthDays).toEqual([7, 8]);
   });
 
   it("parses UNTIL in yyyy-mm-dd form", () => {
@@ -106,6 +111,19 @@ describe("generateOccurrences", () => {
     // and is the next occurrence — emit it.
     const out = generateOccurrences(r, utc(2026, 6, 1), utc(2026, 9, 30));
     expect(out).toEqual(["2026-06-15", "2026-07-15", "2026-08-15", "2026-09-15"]);
+  });
+
+  it("emits every named day each month for MONTHLY BYMONTHDAY=7,8", () => {
+    // The exact case the user wanted: the 7th AND 8th of every month.
+    const r = parseRRule("FREQ=MONTHLY;BYMONTHDAY=7,8")!;
+    // Anchor 2026-06-07 is occurrence #1, so the next is the 8th, then
+    // 7th + 8th of each following month.
+    const out = generateOccurrences(r, utc(2026, 6, 7), utc(2026, 8, 31));
+    expect(out).toEqual([
+      "2026-06-08",
+      "2026-07-07", "2026-07-08",
+      "2026-08-07", "2026-08-08",
+    ]);
   });
 
   it("skips months that can't honour the rule (Feb 30 etc.)", () => {
