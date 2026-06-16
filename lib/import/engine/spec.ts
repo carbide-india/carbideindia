@@ -24,6 +24,9 @@ export interface ImportField {
   ref?: { kind: RefKind; allowCreate?: boolean };
   example?: string;
   maxLen?: number;
+  /** For type "number": minimum allowed value (inclusive). Lets the grid flag
+   *  values the downstream validator would reject (e.g. quantity must be ≥ 1). */
+  min?: number;
 }
 
 export interface ImportSpec {

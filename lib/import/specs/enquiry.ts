@@ -25,7 +25,7 @@ export const enquiryImportSpec: ImportSpec = {
     { key: "contactNo", header: "Contact No", type: "text", maxLen: 40 },
     { key: "contactEmail", header: "Contact Email", type: "text", maxLen: 160 },
     { key: "productDescription", header: "Product Description", type: "text", required: true, example: "Tungsten carbide insert" },
-    { key: "quantityNos", header: "Quantity", type: "number", example: "100" },
+    { key: "quantityNos", header: "Quantity", type: "number", example: "100", min: 1 },
     { key: "gradeId", header: "Grade", type: "ref", ref: { kind: "grade", allowCreate: true }, example: "WC10" },
     { key: "toleranceId", header: "Tolerance", type: "ref", ref: { kind: "tolerance", allowCreate: true }, example: "h6" },
     { key: "conditionId", header: "Condition", type: "ref", ref: { kind: "condition", allowCreate: true }, example: "Sintered" },

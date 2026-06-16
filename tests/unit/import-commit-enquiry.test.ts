@@ -28,6 +28,9 @@ describe("commitEnquiryImport", () => {
     expect(arg.priority).toBe("normal");
     expect(arg.currency).toBe("INR");
     expect(arg.country).toBe("India");
+    // clientMode "new" is REQUIRED by CreateInquirySchema (no default) — without
+    // this every imported row would fail validation and silently import nothing.
+    expect(arg.clientMode).toBe("new");
   });
 
   it("creates a staged master then links its new id", async () => {

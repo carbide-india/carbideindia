@@ -79,6 +79,9 @@ export async function commitEnquiryImport(
       if (rv !== null && rv !== undefined && rv !== "") input[k] = rv;
     }
     // createInquiry requires these — inject defaults when the sheet omitted them.
+    // clientMode "new" makes createInquiry upsert the client by companyName,
+    // which is exactly the right behaviour for a bulk import.
+    if (input.clientMode === undefined) input.clientMode = "new";
     if (input.priority === undefined) input.priority = "normal";
     if (input.currency === undefined) input.currency = "INR";
     if (input.country === undefined) input.country = "India";

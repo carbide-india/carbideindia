@@ -37,9 +37,13 @@ export function resolveCell(field: ImportField, raw: string, lookups: Lookups): 
   switch (field.type) {
     case "number": {
       const n = Number(text);
-      return Number.isFinite(n)
-        ? { ...base, value: n, status: "ok" as const }
-        : { ...base, value: null, status: "error" as const, error: `"${text}" is not a number` };
+      if (!Number.isFinite(n)) {
+        return { ...base, value: null, status: "error" as const, error: `"${text}" is not a number` };
+      }
+      if (field.min !== undefined && n < field.min) {
+        return { ...base, value: null, status: "error" as const, error: `${field.header} must be at least ${field.min}` };
+      }
+      return { ...base, value: n, status: "ok" as const };
     }
     case "boolean": {
       const t = text.toLowerCase();

@@ -34,6 +34,12 @@ describe("resolveCell", () => {
     expect(resolveCell(f, "12", lookups).value).toBe(12);
     expect(resolveCell(f, "abc", lookups).status).toBe("error");
   });
+
+  it("enforces a number min (flags it in the grid, not at commit)", () => {
+    const f: ImportField = { key: "qty", header: "Quantity", type: "number", min: 1 };
+    expect(resolveCell(f, "0", lookups).status).toBe("error");
+    expect(resolveCell(f, "5", lookups).value).toBe(5);
+  });
   it("matches an enum label to its value", () => {
     const f: ImportField = { key: "priority", header: "Priority", type: "enum",
       enumValues: [{ label: "High", value: "high" }, { label: "Normal", value: "normal" }] };
