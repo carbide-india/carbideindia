@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath, updateTag } from "next/cache";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { clients, clientContacts, tasks, settingsEvents } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth/current";
@@ -201,6 +201,7 @@ export async function adminUpdateClientKyc(
     kycSalesPersonId: v.kycSalesPersonId ?? null,
     businessCardFrontUrl: v.businessCardFrontUrl ?? null,
     businessCardBackUrl: v.businessCardBackUrl ?? null,
+    notes: v.notes ?? null,
     updatedAt: new Date(),
   };
 
@@ -226,6 +227,7 @@ export async function adminUpdateClientKyc(
           designation: v.contactDesignation ?? null,
           contactNo: v.contactNo ?? null,
           email: v.contactEmail ?? null,
+          notes: v.contactNotes ?? null,
         };
         const [primary] = await tx
           .select({ id: clientContacts.id })
@@ -239,6 +241,26 @@ export async function adminUpdateClientKyc(
             .where(eq(clientContacts.id, primary.id));
         } else {
           await tx.insert(clientContacts).values({ clientId: client.id, ...contactVals });
+        }
+      }
+
+      // Replace additional (non-primary) contacts: delete old, insert new.
+      await tx
+        .delete(clientContacts)
+        .where(and(eq(clientContacts.clientId, client.id), ne(clientContacts.isPrimary, true)));
+      if (v.additionalContacts && v.additionalContacts.length > 0) {
+        for (const ac of v.additionalContacts) {
+          if (!ac.firstName) continue;
+          await tx.insert(clientContacts).values({
+            clientId: client.id,
+            firstName: ac.firstName,
+            lastName: ac.lastName ?? null,
+            designation: ac.designation ?? null,
+            contactNo: ac.contactNo ?? null,
+            email: ac.email ?? null,
+            notes: ac.notes ?? null,
+            isPrimary: false,
+          });
         }
       }
     });

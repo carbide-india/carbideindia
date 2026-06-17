@@ -40,6 +40,19 @@ const ClientKycFieldsSchema = z.object({
   contactFirstName: OptionalText(80), contactLastName: OptionalText(80),
   contactDesignation: OptionalText(120),
   contactNo: OptionalText(40), contactEmail: OptionalText(160),
+  // Client-level notes.
+  notes: OptionalText(2000),
+  // Primary contact notes.
+  contactNotes: OptionalText(2000),
+  // Additional (non-primary) contacts — optional array.
+  additionalContacts: z.array(z.object({
+    firstName: z.string().trim().max(80),
+    lastName: OptionalText(80),
+    designation: OptionalText(120),
+    contactNo: OptionalText(40),
+    email: OptionalText(160),
+    notes: OptionalText(2000),
+  })).optional(),
   meetingDate: z.string().optional(),                 // ISO date
   meetingStart: MeetingTime,
   meetingEnd: MeetingTime,

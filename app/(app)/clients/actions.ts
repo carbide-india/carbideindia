@@ -63,6 +63,7 @@ function toClientColumns(v: {
   gstin?: string; panNo?: string; billToAddress?: string;
   paymentTerms?: string; freightCharges?: string; qtyDeviation?: string;
   tags?: string[];
+  notes?: string;
   meetingDate?: string; meetingStart?: string; meetingEnd?: string;
   meetingNotes?: string; kycSalesPersonId?: string;
   businessCardFrontUrl?: string; businessCardBackUrl?: string;
@@ -88,6 +89,7 @@ function toClientColumns(v: {
     freightCharges: v.freightCharges,
     qtyDeviation: v.qtyDeviation,
     tags: v.tags,
+    notes: v.notes,
     kycMeetingStart: v.meetingStart,
     kycMeetingEnd: v.meetingEnd,
     kycMeetingNotes: v.meetingNotes,
@@ -104,6 +106,7 @@ function toContactColumns(v: {
   contactFirstName?: string; contactLastName?: string;
   contactDesignation?: string;
   contactNo?: string; contactEmail?: string;
+  contactNotes?: string;
 }): ContactPatch {
   return stripUndefined({
     firstName: v.contactFirstName,
@@ -111,6 +114,7 @@ function toContactColumns(v: {
     designation: v.contactDesignation,
     contactNo: v.contactNo,
     email: v.contactEmail,
+    notes: v.contactNotes,
   });
 }
 
@@ -181,6 +185,24 @@ export async function createClientKyc(
       }
 
       await upsertPrimaryContact(tx, id, toContactColumns(v));
+
+      // Insert additional (non-primary) contacts if provided.
+      if (v.additionalContacts && v.additionalContacts.length > 0) {
+        for (const ac of v.additionalContacts) {
+          if (!ac.firstName) continue;
+          await tx.insert(clientContacts).values({
+            clientId: id,
+            firstName: ac.firstName,
+            lastName: ac.lastName ?? null,
+            designation: ac.designation ?? null,
+            contactNo: ac.contactNo ?? null,
+            email: ac.email ?? null,
+            notes: ac.notes ?? null,
+            isPrimary: false,
+          });
+        }
+      }
+
       return id;
     });
 

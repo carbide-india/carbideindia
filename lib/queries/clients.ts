@@ -146,11 +146,21 @@ export interface ClientEditValues {
   freightCharges: string;
   qtyDeviation: string;
   tags: string[];
+  notes: string;
   contactFirstName: string;
   contactLastName: string;
   contactDesignation: string;
   contactNo: string;
   contactEmail: string;
+  contactNotes: string;
+  additionalContacts: {
+    firstName: string;
+    lastName: string;
+    designation: string;
+    contactNo: string;
+    email: string;
+    notes: string;
+  }[];
   meetingDate: string;
   meetingStart: string;
   meetingEnd: string;
@@ -165,13 +175,13 @@ export async function getClientForEdit(
 ): Promise<ClientEditValues | null> {
   const [row] = await db.select().from(clients).where(eq(clients.id, clientId)).limit(1);
   if (!row) return null;
-  const [contact] = await db
+  // Fetch all contacts for this client in one query; split by isPrimary below.
+  const allContacts = await db
     .select()
     .from(clientContacts)
-    .where(
-      and(eq(clientContacts.clientId, clientId), eq(clientContacts.isPrimary, true)),
-    )
-    .limit(1);
+    .where(eq(clientContacts.clientId, clientId));
+  const primary = allContacts.find((c) => c.isPrimary);
+  const additional = allContacts.filter((c) => !c.isPrimary);
   // Stored at noon UTC, so an ISO slice gives the intended calendar date.
   const meetingDate = row.kycMeetingDate
     ? row.kycMeetingDate.toISOString().slice(0, 10)
@@ -195,11 +205,21 @@ export async function getClientForEdit(
     freightCharges: row.freightCharges ?? "",
     qtyDeviation: row.qtyDeviation ?? "",
     tags: row.tags ?? [],
-    contactFirstName: contact?.firstName ?? "",
-    contactLastName: contact?.lastName ?? "",
-    contactDesignation: contact?.designation ?? "",
-    contactNo: contact?.contactNo ?? "",
-    contactEmail: contact?.email ?? "",
+    notes: row.notes ?? "",
+    contactFirstName: primary?.firstName ?? "",
+    contactLastName: primary?.lastName ?? "",
+    contactDesignation: primary?.designation ?? "",
+    contactNo: primary?.contactNo ?? "",
+    contactEmail: primary?.email ?? "",
+    contactNotes: primary?.notes ?? "",
+    additionalContacts: additional.map((c) => ({
+      firstName: c.firstName,
+      lastName: c.lastName ?? "",
+      designation: c.designation ?? "",
+      contactNo: c.contactNo ?? "",
+      email: c.email ?? "",
+      notes: c.notes ?? "",
+    })),
     meetingDate,
     meetingStart: row.kycMeetingStart ?? "",
     meetingEnd: row.kycMeetingEnd ?? "",

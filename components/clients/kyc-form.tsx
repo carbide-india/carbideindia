@@ -3,11 +3,11 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
-import { useForm, Controller, type Control } from "react-hook-form";
+import { useForm, Controller, useFieldArray, type Control } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
 import { upload } from "@vercel/blob/client";
-import { Check, ImagePlus, Loader2, X } from "lucide-react";
+import { Check, ImagePlus, Loader2, Plus, Trash2, X } from "lucide-react";
 import { CreateClientKycSchema } from "@/lib/validators/client-kyc";
 import { createClientKyc } from "@/app/(app)/clients/actions";
 import { adminUpdateClientKyc } from "@/app/(admin)/admin/clients/actions";
@@ -123,12 +123,18 @@ export function KycForm({
       contactDesignation: "",
       contactNo: "",
       contactEmail: "",
+      contactNotes: "",
+      additionalContacts: [],
+      notes: "",
       meetingDate: "",
       meetingNotes: "",
       // Edit mode prefill — overrides the empty defaults field-by-field.
       ...initialValues,
     },
   });
+
+  const { fields: additionalContactFields, append: appendContact, remove: removeContact } =
+    useFieldArray({ control, name: "additionalContacts" });
 
   // Business-card scans live in form state via the URL fields — uploads run on
   // file-pick and never block the save. `front`/`back` track in-flight uploads.
@@ -519,6 +525,110 @@ export function KycForm({
             />
           </Field>
         </div>
+        <Field id="kyc-cnotes" label="Contact Notes">
+          <textarea
+            id="kyc-cnotes"
+            rows={2}
+            className="nt-input resize-y"
+            style={{ fontWeight: 400 }}
+            placeholder="Notes about this contact person…"
+            {...register("contactNotes")}
+          />
+        </Field>
+
+        {/* Additional contacts */}
+        {additionalContactFields.map((field, idx) => (
+          <div
+            key={field.id}
+            className="rounded-xl border border-hairline bg-surface-soft p-4 flex flex-col gap-4"
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-[13px] font-semibold text-ink-strong">
+                Contact {idx + 2}
+              </p>
+              <button
+                type="button"
+                aria-label={`Remove contact ${idx + 2}`}
+                onClick={() => removeContact(idx)}
+                className="inline-flex items-center gap-1 text-[12px] font-semibold text-ink-muted hover:text-red-600 transition-colors"
+              >
+                <Trash2 size={13} strokeWidth={2.4} />
+                Remove
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+              <Field id={`kyc-ac${idx}-first`} label="First Name" required>
+                <input
+                  id={`kyc-ac${idx}-first`}
+                  type="text"
+                  className="nt-input"
+                  {...register(`additionalContacts.${idx}.firstName`)}
+                />
+              </Field>
+              <Field id={`kyc-ac${idx}-last`} label="Last Name">
+                <input
+                  id={`kyc-ac${idx}-last`}
+                  type="text"
+                  className="nt-input"
+                  {...register(`additionalContacts.${idx}.lastName`)}
+                />
+              </Field>
+              <Field id={`kyc-ac${idx}-desig`} label="Designation">
+                <input
+                  id={`kyc-ac${idx}-desig`}
+                  type="text"
+                  className="nt-input"
+                  placeholder="e.g. Purchase Manager"
+                  {...register(`additionalContacts.${idx}.designation`)}
+                />
+              </Field>
+              <Field id={`kyc-ac${idx}-no`} label="Contact No">
+                <input
+                  id={`kyc-ac${idx}-no`}
+                  type="tel"
+                  className="nt-input"
+                  {...register(`additionalContacts.${idx}.contactNo`)}
+                />
+              </Field>
+              <Field id={`kyc-ac${idx}-email`} label="Email">
+                <input
+                  id={`kyc-ac${idx}-email`}
+                  type="email"
+                  className="nt-input"
+                  {...register(`additionalContacts.${idx}.email`)}
+                />
+              </Field>
+            </div>
+            <Field id={`kyc-ac${idx}-notes`} label="Notes">
+              <textarea
+                id={`kyc-ac${idx}-notes`}
+                rows={2}
+                className="nt-input resize-y"
+                style={{ fontWeight: 400 }}
+                placeholder="Notes about this contact…"
+                {...register(`additionalContacts.${idx}.notes`)}
+              />
+            </Field>
+          </div>
+        ))}
+
+        <button
+          type="button"
+          onClick={() =>
+            appendContact({
+              firstName: "",
+              lastName: "",
+              designation: "",
+              contactNo: "",
+              email: "",
+              notes: "",
+            })
+          }
+          className="inline-flex items-center gap-1.5 self-start rounded-chip border border-hairline-strong bg-surface-card px-4 py-2 text-[13px] font-semibold text-ink-muted hover:text-ink-strong hover:border-ink-subtle transition-colors"
+        >
+          <Plus size={14} strokeWidth={2.6} />
+          Add another contact
+        </button>
       </SectionCard>
 
       {/* ── 4 · Business Card ────────────────────────────────────────── */}
@@ -544,7 +654,21 @@ export function KycForm({
         </div>
       </SectionCard>
 
-      {/* ── 5 · Meeting ──────────────────────────────────────────────── */}
+      {/* ── 5 · Notes ────────────────────────────────────────────────── */}
+      <SectionCard title="Notes" hint="General notes about this client.">
+        <Field id="kyc-notes" label="Client Notes">
+          <textarea
+            id="kyc-notes"
+            rows={3}
+            className="nt-input resize-y"
+            style={{ fontWeight: 400 }}
+            placeholder="Any general notes about this client…"
+            {...register("notes")}
+          />
+        </Field>
+      </SectionCard>
+
+      {/* ── 6 · Meeting ──────────────────────────────────────────────── */}
       <SectionCard title="Meeting">
         <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
           <Field id="kyc-mdate" label="Meeting Date">

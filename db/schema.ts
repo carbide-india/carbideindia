@@ -332,6 +332,8 @@ export const clients = pgTable(
     kycMeetingNotes: text("kyc_meeting_notes"),
     // Sales person who ran the KYC meeting (the form's "Sales Person Name").
     kycSalesPersonId: uuid("kyc_sales_person_id").references(() => employees.id, { onDelete: "set null" }),
+    // General notes about this client (free text, optional).
+    notes: text("notes"),
     // Business-card scans (Vercel Blob, optional — never block save).
     businessCardFrontUrl: text("business_card_front_url"),
     businessCardBackUrl: text("business_card_back_url"),
@@ -367,6 +369,7 @@ export const clientContacts = pgTable(
     contactNo: text("contact_no"),
     email: text("email"),
     ccEmails: text("cc_emails"),
+    notes: text("notes"),
     isPrimary: boolean("is_primary").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
