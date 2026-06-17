@@ -130,24 +130,32 @@ export function ClientAutofillSection({
   );
 }
 
-/** Compact read-only block showing client tags after autofill. */
+/** Compact read-only block showing client tags + notes after autofill. */
 function ClientContextBlock({ data }: { data: ClientAutofill }) {
   const hasTags = Array.isArray(data.tags) && data.tags.length > 0;
-  if (!hasTags) return null;
+  const hasNotes = typeof data.notes === "string" && data.notes.length > 0;
+  if (!hasTags && !hasNotes) return null;
   return (
-    <div className="flex flex-wrap gap-1.5 rounded-xl border border-hairline bg-surface-soft px-4 py-3">
-      {(data.tags ?? []).map((tag) => (
-        <span
-          key={tag}
-          className="inline-flex items-center rounded-chip px-2 py-0.5 text-[12px] font-semibold"
-          style={{
-            background: "rgba(63,63,148,0.1)",
-            color: "var(--color-brand-indigo, #3F3F94)",
-          }}
-        >
-          {tag}
-        </span>
-      ))}
+    <div className="flex flex-col gap-2 rounded-xl border border-hairline bg-surface-soft px-4 py-3">
+      {hasTags && (
+        <div className="flex flex-wrap gap-1.5">
+          {(data.tags ?? []).map((tag) => (
+            <span
+              key={tag}
+              className="inline-flex items-center rounded-chip px-2 py-0.5 text-[12px] font-semibold"
+              style={{
+                background: "rgba(63,63,148,0.1)",
+                color: "var(--color-brand-indigo, #3F3F94)",
+              }}
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+      {hasNotes && (
+        <p className="text-[12px] text-muted-foreground leading-snug">{data.notes}</p>
+      )}
     </div>
   );
 }

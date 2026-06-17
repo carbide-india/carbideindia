@@ -112,6 +112,7 @@ export interface ClientAutofill {
   industryTypeName: string | null;
   // ── Extra context fields (display-only in the inquiry picker) ──
   tags: string[] | null;
+  notes: string | null;
   contact: {
     firstName: string;
     lastName: string | null;
@@ -286,6 +287,7 @@ export async function getClientAutofill(
     customerTypeName: row.customerTypeName,
     industryTypeName: row.industryTypeName,
     tags: row.tags,
+    notes: row.notes ?? null,
     contact: contact
       ? {
           firstName: contact.firstName,
