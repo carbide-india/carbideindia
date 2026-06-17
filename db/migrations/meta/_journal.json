@@ -99,6 +99,13 @@
       "when": 1781696552344,
       "tag": "0013_add_client_tags",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1781706089758,
+      "tag": "0014_client_notes_and_multi_contact",
+      "breakpoints": true
     }
   ]
 }
