@@ -348,6 +348,21 @@ export function KycForm({
 
       {/* ── 2 · Address ──────────────────────────────────────────────── */}
       <SectionCard title="Address">
+        {/* Address lines first, then State / City / Pin (Hetesh 2026-06-17). */}
+        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+          <Field id="kyc-addr1" label="Address Line 1">
+            <input id="kyc-addr1" type="text" className="nt-input" {...register("addressLine1")} />
+          </Field>
+          <Field id="kyc-addr2" label="Address Line 2">
+            <input id="kyc-addr2" type="text" className="nt-input" {...register("addressLine2")} />
+          </Field>
+          <Field id="kyc-addr3" label="Address Line 3">
+            <input id="kyc-addr3" type="text" className="nt-input" {...register("addressLine3")} />
+          </Field>
+          <Field id="kyc-addr4" label="Address Line 4">
+            <input id="kyc-addr4" type="text" className="nt-input" {...register("addressLine4")} />
+          </Field>
+        </div>
         <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
           {/* State — always shown; allowCustom lets a foreign state be typed. */}
           <Field label="State" labelOnly>
@@ -420,40 +435,6 @@ export function KycForm({
           </Field>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-          <Field id="kyc-addr1" label="Address Line 1">
-            <input
-              id="kyc-addr1"
-              type="text"
-              className="nt-input"
-              {...register("addressLine1")}
-            />
-          </Field>
-          <Field id="kyc-addr2" label="Address Line 2">
-            <input
-              id="kyc-addr2"
-              type="text"
-              className="nt-input"
-              {...register("addressLine2")}
-            />
-          </Field>
-          <Field id="kyc-addr3" label="Address Line 3">
-            <input
-              id="kyc-addr3"
-              type="text"
-              className="nt-input"
-              {...register("addressLine3")}
-            />
-          </Field>
-          <Field id="kyc-addr4" label="Address Line 4">
-            <input
-              id="kyc-addr4"
-              type="text"
-              className="nt-input"
-              {...register("addressLine4")}
-            />
-          </Field>
-        </div>
         <Field id="kyc-billto" label="Bill-to Address">
           <textarea
             id="kyc-billto"

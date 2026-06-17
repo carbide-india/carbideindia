@@ -117,7 +117,12 @@ function ClientRow({
       className="border-b border-hairline last:border-b-0 transition-colors hover:bg-surface-soft"
       style={{ background: rowIndex % 2 === 1 ? "rgba(15, 23, 42, 0.012)" : undefined }}
     >
-      <td className="px-5 py-4 text-ink-strong font-medium">{client.name}</td>
+      <td className="px-5 py-4">
+        <span className="text-ink-strong font-medium">{client.name}</span>
+        {client.city && (
+          <span className="text-[13px] text-ink-subtle">{" · "}{client.city}</span>
+        )}
+      </td>
       <td className="px-5 py-4">
         {client.tags && client.tags.length > 0 ? (
           <span className="inline-flex flex-wrap gap-1">
