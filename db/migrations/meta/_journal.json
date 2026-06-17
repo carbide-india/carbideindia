@@ -92,6 +92,13 @@
       "when": 1781602510885,
       "tag": "0012_add_recurrence_occurrence_uidx",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1781696552344,
+      "tag": "0013_add_client_tags",
+      "breakpoints": true
     }
   ]
 }

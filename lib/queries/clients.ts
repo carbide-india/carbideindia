@@ -145,6 +145,7 @@ export interface ClientEditValues {
   paymentTerms: string;
   freightCharges: string;
   qtyDeviation: string;
+  tags: string[];
   contactFirstName: string;
   contactLastName: string;
   contactDesignation: string;
@@ -193,6 +194,7 @@ export async function getClientForEdit(
     paymentTerms: row.paymentTerms ?? "",
     freightCharges: row.freightCharges ?? "",
     qtyDeviation: row.qtyDeviation ?? "",
+    tags: row.tags ?? [],
     contactFirstName: contact?.firstName ?? "",
     contactLastName: contact?.lastName ?? "",
     contactDesignation: contact?.designation ?? "",

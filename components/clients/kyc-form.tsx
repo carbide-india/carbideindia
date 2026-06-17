@@ -14,6 +14,7 @@ import { adminUpdateClientKyc } from "@/app/(admin)/admin/clients/actions";
 import { fireToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { Select } from "@/components/ui/select";
+import { TagsInput } from "@/components/ui/tags-input";
 import { INDIA_STATES, citiesForState } from "@/lib/data/india-states-cities";
 import { SearchableSelect } from "@/components/inquiries/searchable-select";
 import { Field, SectionCard } from "@/components/inquiries/form-field";
@@ -116,6 +117,7 @@ export function KycForm({
       paymentTerms: "",
       freightCharges: "",
       qtyDeviation: "",
+      tags: [],
       contactFirstName: "",
       contactLastName: "",
       contactDesignation: "",
@@ -324,6 +326,22 @@ export function KycForm({
                 </>
               );
             }}
+          />
+        </Field>
+
+        {/* Tags — open, multi, optional categorization (Mining / Defense / …). */}
+        <Field label="Tags">
+          <Controller
+            control={control}
+            name="tags"
+            render={({ field }) => (
+              <TagsInput
+                id="kyc-tags"
+                value={field.value ?? []}
+                onChange={field.onChange}
+                placeholder="e.g. Mining, Defense, Cutting…"
+              />
+            )}
           />
         </Field>
       </SectionCard>

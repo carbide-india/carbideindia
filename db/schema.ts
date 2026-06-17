@@ -322,6 +322,9 @@ export const clients = pgTable(
     paymentTerms: text("payment_terms"),
     freightCharges: text("freight_charges"),
     qtyDeviation: text("qty_deviation"),
+    // ── Customer categorization (Alok 2026-06-17): open, multi-value, optional
+    //    tags — "what kind of customer he is" (Mining / Defense / Cutting …). ──
+    tags: text("tags").array(),
     // ── Client KYC meeting (Phase 3) — times as "HH:mm" text, sheet-true ──
     kycMeetingDate: timestamp("kyc_meeting_date", { withTimezone: true }),
     kycMeetingStart: text("kyc_meeting_start"),

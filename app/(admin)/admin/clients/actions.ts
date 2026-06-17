@@ -193,6 +193,7 @@ export async function adminUpdateClientKyc(
     paymentTerms: v.paymentTerms ?? null,
     freightCharges: v.freightCharges ?? null,
     qtyDeviation: v.qtyDeviation ?? null,
+    tags: v.tags ?? null,
     kycMeetingDate: v.meetingDate ? new Date(v.meetingDate) : null,
     kycMeetingStart: v.meetingStart ?? null,
     kycMeetingEnd: v.meetingEnd ?? null,

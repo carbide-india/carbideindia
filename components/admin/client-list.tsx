@@ -57,6 +57,7 @@ export function ClientList({ clients }: Props) {
               style={{ background: "var(--color-surface-soft)" }}
             >
               <th className="px-5 py-4">Name</th>
+              <th className="px-5 py-4">Tags</th>
               <th className="px-5 py-4 tabular-nums">Sort</th>
               <th className="px-5 py-4 tabular-nums">Tasks</th>
               <th className="px-5 py-4">Status</th>
@@ -117,6 +118,27 @@ function ClientRow({
       style={{ background: rowIndex % 2 === 1 ? "rgba(15, 23, 42, 0.012)" : undefined }}
     >
       <td className="px-5 py-4 text-ink-strong font-medium">{client.name}</td>
+      <td className="px-5 py-4">
+        {client.tags && client.tags.length > 0 ? (
+          <span className="inline-flex flex-wrap gap-1">
+            {client.tags.map((t) => (
+              <span
+                key={t}
+                className="inline-flex items-center rounded-pill px-2 py-0.5 text-[12px] font-semibold"
+                style={{
+                  background: "var(--color-surface-soft)",
+                  color: "var(--color-ink-soft)",
+                  border: "1px solid var(--color-hairline)",
+                }}
+              >
+                {t}
+              </span>
+            ))}
+          </span>
+        ) : (
+          <span className="text-ink-subtle">—</span>
+        )}
+      </td>
       <td className="px-5 py-4 tabular-nums text-ink-soft">{client.sortOrder}</td>
       <td className="px-5 py-4 tabular-nums text-ink-soft">{client.taskCount}</td>
       <td className="px-5 py-4">

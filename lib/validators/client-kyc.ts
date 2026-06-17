@@ -35,6 +35,8 @@ const ClientKycFieldsSchema = z.object({
   billToAddress: OptionalText(1000),
   paymentTerms: OptionalText(240), freightCharges: OptionalText(240),
   qtyDeviation: OptionalText(80),
+  // Open, multi-value, optional categorization tags (Mining / Defense / …).
+  tags: z.array(z.string().trim().min(1).max(40)).optional(),
   contactFirstName: OptionalText(80), contactLastName: OptionalText(80),
   contactDesignation: OptionalText(120),
   contactNo: OptionalText(40), contactEmail: OptionalText(160),
