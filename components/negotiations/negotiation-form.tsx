@@ -199,20 +199,23 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
         </Field>
 
         {(snapshot || autofetching) && (
-          <div className="flex flex-wrap items-start gap-x-8 gap-y-2 rounded-xl border border-hairline bg-surface-soft px-4 py-3">
-            <Caption label="Company">
-              {autofetching ? "…" : snapshot?.companyName ?? "—"}
-            </Caption>
-            <Caption label="Enquiry Date">
-              {autofetching
-                ? "…"
-                : snapshot?.enquiryDate
-                  ? formatDate(new Date(snapshot.enquiryDate))
-                  : "—"}
-            </Caption>
-            <Caption label="Sales Person">
-              {autofetching ? "…" : snapshot?.salesPersonName ?? "—"}
-            </Caption>
+          <div className="flex flex-col gap-3 rounded-xl border border-hairline bg-surface-soft px-4 py-3">
+            <div className="flex flex-wrap items-start gap-x-8 gap-y-2">
+              <Caption label="Company">
+                {autofetching ? "…" : snapshot?.companyName ?? "—"}
+              </Caption>
+              <Caption label="Enquiry Date">
+                {autofetching
+                  ? "…"
+                  : snapshot?.enquiryDate
+                    ? formatDate(new Date(snapshot.enquiryDate))
+                    : "—"}
+              </Caption>
+              <Caption label="Sales Person">
+                {autofetching ? "…" : snapshot?.salesPersonName ?? "—"}
+              </Caption>
+            </div>
+            {!autofetching && snapshot && <SmDetailsRow snapshot={snapshot} />}
           </div>
         )}
 
@@ -426,6 +429,51 @@ function Caption({ label, children }: { label: string; children: React.ReactNode
         {label}
       </span>
       <span className="text-[14px] font-semibold text-ink-strong">{children}</span>
+    </div>
+  );
+}
+
+/** Builds a compact dimension string from non-null values.
+ *  OD is prefixed with "Ø"; parts joined with " × ". */
+function buildDimString(s: QuoteAutofill): string | null {
+  const parts: string[] = [];
+  if (s.outerDia != null) parts.push(`Ø${s.outerDia}`);
+  if (s.innerDia != null) parts.push(s.innerDia);
+  if (s.length != null) parts.push(s.length);
+  if (s.width != null) parts.push(s.width);
+  if (s.thickness != null) parts.push(s.thickness);
+  return parts.length > 0 ? parts.join(" × ") : null;
+}
+
+/** Read-only "SM Details" row — shape, dimensions, contact.
+ *  Renders nothing when all three sections are empty. */
+function SmDetailsRow({ snapshot: s }: { snapshot: QuoteAutofill }) {
+  const dimStr = buildDimString(s);
+  const contactName = [s.contactFirstName, s.contactLastName]
+    .filter(Boolean)
+    .join(" ") || null;
+  const hasShape = s.shape != null;
+  const hasDims = dimStr != null || s.dimensionNotes != null;
+  const hasContact = contactName != null || s.contactNo != null || s.contactEmail != null;
+
+  if (!hasShape && !hasDims && !hasContact) return null;
+
+  return (
+    <div
+      className="flex flex-wrap items-start gap-x-8 gap-y-2 pt-2"
+      style={{ borderTop: "1px solid var(--color-hairline)" }}
+    >
+      {hasShape && <Caption label="Shape">{s.shape}</Caption>}
+      {hasDims && (
+        <Caption label="Dimensions">
+          {[dimStr, s.dimensionNotes].filter(Boolean).join(" — ") || "—"}
+        </Caption>
+      )}
+      {hasContact && (
+        <Caption label="Contact">
+          {[contactName, s.contactNo, s.contactEmail].filter(Boolean).join(" · ") || "—"}
+        </Caption>
+      )}
     </div>
   );
 }

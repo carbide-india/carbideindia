@@ -42,11 +42,14 @@ export function ClientAutofillSection({
   error,
 }: Props) {
   const [loading, setLoading] = React.useState(false);
+  // Stores the last fetched snapshot so we can display tags/notes.
+  const [fetched, setFetched] = React.useState<ClientAutofill | null>(null);
   // Guards against an older fetch landing after a newer pick.
   const fetchSeq = React.useRef(0);
 
   async function pick(id: string) {
     onClientChange(id || undefined);
+    setFetched(null);
     if (!id) return;
     const seq = ++fetchSeq.current;
     setLoading(true);
@@ -55,6 +58,7 @@ export function ClientAutofillSection({
       if (!res.ok) throw new Error(`autofill ${res.status}`);
       const data = (await res.json()) as ClientAutofill;
       if (seq !== fetchSeq.current) return; // stale response
+      setFetched(data);
       onAutofill(data);
     } catch {
       if (seq === fetchSeq.current) {
@@ -68,6 +72,12 @@ export function ClientAutofillSection({
     }
   }
 
+  // Clear snapshot when switching back to "new"
+  const handleModeChange = (m: "new" | "old") => {
+    if (m === "new") setFetched(null);
+    onModeChange(m);
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <Field label="Client Type">
@@ -75,7 +85,7 @@ export function ClientAutofillSection({
           options={MODE_OPTIONS}
           value={mode}
           onChange={(m) => {
-            if (m) onModeChange(m);
+            if (m) handleModeChange(m);
           }}
           allowClear={false}
           ariaLabel="New or old client"
@@ -113,8 +123,31 @@ export function ClientAutofillSection({
               {error}
             </p>
           )}
+          {!loading && fetched && <ClientContextBlock data={fetched} />}
         </Field>
       )}
+    </div>
+  );
+}
+
+/** Compact read-only block showing client tags after autofill. */
+function ClientContextBlock({ data }: { data: ClientAutofill }) {
+  const hasTags = Array.isArray(data.tags) && data.tags.length > 0;
+  if (!hasTags) return null;
+  return (
+    <div className="flex flex-wrap gap-1.5 rounded-xl border border-hairline bg-surface-soft px-4 py-3">
+      {(data.tags ?? []).map((tag) => (
+        <span
+          key={tag}
+          className="inline-flex items-center rounded-chip px-2 py-0.5 text-[12px] font-semibold"
+          style={{
+            background: "rgba(63,63,148,0.1)",
+            color: "var(--color-brand-indigo, #3F3F94)",
+          }}
+        >
+          {tag}
+        </span>
+      ))}
     </div>
   );
 }

@@ -28,6 +28,19 @@ export interface QuoteAutofill {
   gradeName: string | null;
   toleranceName: string | null;
   conditionName: string | null;
+  // ── Dimension / shape fields (display-only in the downstream forms) ──
+  shape: string | null;
+  outerDia: string | null;
+  innerDia: string | null;
+  length: string | null;
+  width: string | null;
+  thickness: string | null;
+  dimensionNotes: string | null;
+  // ── Primary contact snapshot ──
+  contactFirstName: string | null;
+  contactLastName: string | null;
+  contactNo: string | null;
+  contactEmail: string | null;
 }
 
 export async function getQuoteAutofill(
@@ -49,6 +62,17 @@ export async function getQuoteAutofill(
       gradeName: grade.name,
       toleranceName: tolerance.name,
       conditionName: condition.name,
+      shape: inquiries.shape,
+      outerDia: inquiries.outerDia,
+      innerDia: inquiries.innerDia,
+      length: inquiries.length,
+      width: inquiries.width,
+      thickness: inquiries.thickness,
+      dimensionNotes: inquiries.dimensionNotes,
+      contactFirstName: inquiries.contactFirstName,
+      contactLastName: inquiries.contactLastName,
+      contactNo: inquiries.contactNo,
+      contactEmail: inquiries.contactEmail,
     })
     .from(inquiries)
     .leftJoin(employees, eq(inquiries.assignedSalesPersonId, employees.id))
