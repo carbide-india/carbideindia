@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { count, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { quotations, type NewQuotation } from "@/db/schema";
+import { quotations, quotationItems, type NewQuotation } from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
 import { getQuoteAutofill } from "@/lib/queries/quotes";
 import { COSTING_DONE_STATUSES, type CostingDoneStatus } from "@/db/enums";
@@ -14,6 +14,7 @@ import {
   type CreateQuotationInput,
   type UpdateQuotationInput,
 } from "@/lib/validators/quotation";
+import { quoteLineRows } from "@/lib/quotations/line-rows";
 
 /**
  * Quotation (Quote Master) server actions — Phase 4 write path.
@@ -67,26 +68,31 @@ export async function createQuotation(
     }
   }
 
+  // Build per-line rows first so line #1 can mirror into the legacy columns.
+  const lineRows = quoteLineRows(v);
+  const line0 = lineRows[0];
+
   const values: Omit<NewQuotation, "quoteNo"> = {
     inquiryId: v.inquiryId,
-    // snapshot from the SM
+    // snapshot from the SM (header — never per-line)
     companyName: auto.companyName,
     enquiryDate: auto.enquiryDate,
-    custProductName: v.custProductName ?? auto.productDescription,
-    custDrawingNo: v.custDrawingNo,
-    drawingRevisionNo: v.drawingRevisionNo,
-    qty: v.qty != null ? String(v.qty) : auto.quantityNos,
-    gradeCustomer: v.gradeCustomer ?? auto.gradeName,
-    gradeNameForCust: v.gradeNameForCust,
-    tolerance: v.tolerance ?? auto.toleranceName,
-    condition: v.condition ?? auto.conditionName,
-    partNo: v.partNo,
-    finalCost: v.finalCost !== undefined ? String(v.finalCost) : undefined,
-    negotiation: v.negotiation !== undefined ? String(v.negotiation) : undefined,
-    quotePrice: v.quotePrice !== undefined ? String(v.quotePrice) : undefined,
-    developmentTime: v.developmentTime,
-    deliveryTime: v.deliveryTime,
-    validity: v.validity,
+    // per-line legacy mirror — sourced from line #1
+    custProductName: line0?.custProductName ?? auto.productDescription ?? undefined,
+    custDrawingNo: line0?.custDrawingNo ?? undefined,
+    drawingRevisionNo: line0?.drawingRevisionNo ?? undefined,
+    qty: line0?.qty ?? auto.quantityNos ?? undefined,
+    gradeCustomer: line0?.gradeCustomer ?? auto.gradeName ?? undefined,
+    gradeNameForCust: line0?.gradeNameForCust ?? undefined,
+    tolerance: line0?.tolerance ?? auto.toleranceName ?? undefined,
+    condition: line0?.condition ?? auto.conditionName ?? undefined,
+    partNo: line0?.partNo ?? undefined,
+    finalCost: line0?.finalCost ?? undefined,
+    negotiation: line0?.negotiation ?? undefined,
+    quotePrice: line0?.quotePrice ?? undefined,
+    developmentTime: line0?.developmentTime ?? undefined,
+    deliveryTime: line0?.deliveryTime ?? undefined,
+    validity: line0?.validity ?? undefined,
     costingDoneStatus: v.costingDoneStatus,
     quotationLink: v.quotationLink,
     quoteSent: v.quoteSent,
@@ -103,6 +109,9 @@ export async function createQuotation(
         .values({ ...values, quoteNo })
         .returning({ id: quotations.id });
       if (!row) return { ok: false, error: "Insert returned no row" };
+      if (lineRows.length) {
+        await db.insert(quotationItems).values(lineRows.map((r) => ({ quotationId: row.id, ...r })));
+      }
       revalidatePath("/quotations");
       return { ok: true, id: row.id, quoteNo };
     } catch (err: unknown) {

@@ -1,5 +1,5 @@
 import "server-only";
-import { desc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/lib/db";
 import {
@@ -7,6 +7,7 @@ import {
   employees,
   masterOptions,
   quotations,
+  quotationItems,
 } from "@/db/schema";
 
 /**
@@ -140,4 +141,13 @@ export async function listQuotationOptions(): Promise<QuotationOption[]> {
     .from(quotations)
     .orderBy(desc(quotations.createdAt))
     .limit(100);
+}
+
+/** All line items for a quotation, in sort order. */
+export async function getQuotationItems(quotationId: string) {
+  return db
+    .select()
+    .from(quotationItems)
+    .where(eq(quotationItems.quotationId, quotationId))
+    .orderBy(asc(quotationItems.sortOrder));
 }
