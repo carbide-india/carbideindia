@@ -534,6 +534,36 @@ export const inquiries = pgTable(
 export type Inquiry = typeof inquiries.$inferSelect;
 export type NewInquiry = typeof inquiries.$inferInsert;
 
+// ── Inquiry products (Phase A, 2026-06-17): many products per SM ──
+export const inquiryItems = pgTable(
+  "inquiry_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    inquiryId: uuid("inquiry_id").notNull().references(() => inquiries.id, { onDelete: "cascade" }),
+    sortOrder: integer("sort_order").notNull().default(0),
+    custProductName: text("cust_product_name"),
+    custDrawingNo: text("cust_drawing_no"),
+    drawingRevisionNo: text("drawing_revision_no"),
+    shape: text("shape"),                               // INQUIRY_SHAPES value
+    outerDia: numeric("outer_dia"), innerDia: numeric("inner_dia"),
+    length: numeric("length"), width: numeric("width"), thickness: numeric("thickness"),
+    dimensionNotes: text("dimension_notes"),
+    gradeId: uuid("grade_id").references(() => masterOptions.id, { onDelete: "set null" }),
+    gradeCustomer: text("grade_customer"),
+    toleranceId: uuid("tolerance_id").references(() => masterOptions.id, { onDelete: "set null" }),
+    conditionId: uuid("condition_id").references(() => masterOptions.id, { onDelete: "set null" }),
+    quantityNos: numeric("quantity_nos"),
+    quantityUom: text("quantity_uom").notNull().default("Nos"),
+    // FK to items added in Phase B (items table doesn't exist on main yet).
+    itemId: uuid("item_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("inquiry_items_inquiry_idx").on(t.inquiryId, t.sortOrder)],
+);
+export type InquiryItem = typeof inquiryItems.$inferSelect;
+export type NewInquiryItem = typeof inquiryItems.$inferInsert;
+
 // ── Sample Register (Phase 3) ───────────────────────────────────
 export const sampleStatusEnum = pgEnum("sample_status", SAMPLE_STATUSES);
 export const stageStatusEnum = pgEnum("stage_status", STAGE_STATUSES);
