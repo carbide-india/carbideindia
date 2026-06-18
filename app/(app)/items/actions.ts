@@ -1,0 +1,193 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { eq, inArray, sql } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { inquiries, inquiryItems, items, masterOptions } from "@/db/schema";
+import { requireUser } from "@/lib/auth/current";
+import { CreateItemSchema, type CreateItemInput } from "@/lib/validators/item";
+import { itemDedupKey } from "@/lib/item-master/dedup";
+import { buildItemCode, deriveSizeCode } from "@/lib/item-master/item-code";
+
+type Result =
+  | { ok: true; id: string; itemCode: string; reused: boolean }
+  | { ok: false; error: string };
+
+/**
+ * Snapshot of the enquiry fields used to pre-fill the new-item form.
+ * Returned from a server action so the client never fetches raw DB rows.
+ */
+export interface InquirySnapshot {
+  smNumber: string;
+  customerName: string;
+  custProductName: string | null;
+  custDrawingNo: string | null;
+  qty: string | null;
+  outerDia: string | null;
+  innerDia: string | null;
+  length: string | null;
+  width: string | null;
+  thickness: string | null;
+  gradeCustomer: string | null;
+}
+
+/** Returns the per-product enquiry fields that the item form can auto-fill from. */
+export async function getInquiryItemForItem(
+  inquiryItemId: string,
+): Promise<InquirySnapshot | null> {
+  await requireUser();
+  const [row] = await db
+    .select({
+      smNumber: inquiries.smNumber,
+      customerName: inquiries.companyName,
+      custProductName: inquiryItems.custProductName,
+      custDrawingNo: inquiryItems.custDrawingNo,
+      qty: inquiryItems.quantityNos,
+      outerDia: inquiryItems.outerDia,
+      innerDia: inquiryItems.innerDia,
+      length: inquiryItems.length,
+      width: inquiryItems.width,
+      thickness: inquiryItems.thickness,
+      gradeCustomer: inquiryItems.gradeCustomer,
+    })
+    .from(inquiryItems)
+    .innerJoin(inquiries, eq(inquiries.id, inquiryItems.inquiryId))
+    .where(eq(inquiryItems.id, inquiryItemId))
+    .limit(1);
+
+  if (!row) return null;
+  return {
+    smNumber: row.smNumber,
+    customerName: row.customerName,
+    custProductName: row.custProductName,
+    custDrawingNo: row.custDrawingNo,
+    qty: row.qty,
+    outerDia: row.outerDia,
+    innerDia: row.innerDia,
+    length: row.length,
+    width: row.width,
+    thickness: row.thickness,
+    gradeCustomer: row.gradeCustomer,
+  };
+}
+
+const numOrNull = (v: number | undefined): number | null =>
+  typeof v === "number" && Number.isFinite(v) ? v : null;
+
+/**
+ * Create (or reuse) an Item. If an identical product already exists (same
+ * dedup fingerprint) its existing code is returned — no duplicate, no new
+ * serial. Otherwise a serial is drawn, the internal item code is assembled
+ * from the masters' short codes + dimensions, and the row is inserted.
+ * Admin/sales-floor open (requireUser) like the other create forms.
+ */
+export async function createItem(input: CreateItemInput): Promise<Result> {
+  const me = await requireUser();
+  const parsed = CreateItemSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+  const v = parsed.data;
+
+  const dims = {
+    outerDia: numOrNull(v.outerDia), innerDia: numOrNull(v.innerDia),
+    length: numOrNull(v.length), width: numOrNull(v.width), thickness: numOrNull(v.thickness),
+  };
+  const dedupKey = itemDedupKey({
+    shapeId: v.shapeId, internalGradeId: v.internalGradeId,
+    conditionId: v.conditionId, toleranceId: v.toleranceId, ...dims,
+  });
+
+  // Reuse if an identical item already exists.
+  const [existing] = await db
+    .select({ id: items.id, itemCode: items.itemCode })
+    .from(items)
+    .where(eq(items.dedupKey, dedupKey))
+    .limit(1);
+  if (existing) return { ok: true, id: existing.id, itemCode: existing.itemCode, reused: true };
+
+  // Resolve the masters' codes (grade code == its name, e.g. CIF06).
+  const refIds = [v.shapeId, v.internalGradeId, v.conditionId, v.toleranceId].filter(
+    (x): x is string => Boolean(x),
+  );
+  const codeById = new Map<string, { name: string; code: string | null }>();
+  if (refIds.length) {
+    const rows = await db
+      .select({ id: masterOptions.id, name: masterOptions.name, code: masterOptions.code })
+      .from(masterOptions)
+      .where(inArray(masterOptions.id, refIds));
+    for (const r of rows) codeById.set(r.id, { name: r.name, code: r.code });
+  }
+  const codeOf = (id?: string) => (id ? (codeById.get(id)?.code ?? codeById.get(id)?.name ?? "") : "");
+
+  const dimList = [dims.outerDia, dims.innerDia, dims.length, dims.width, dims.thickness]
+    .filter((d): d is number => d !== null);
+  const sizeCode = v.sizeCode || (dimList.length ? deriveSizeCode(dimList) : "");
+
+  // Draw the next serial, then assemble the code.
+  const seqRows = (await db.execute(sql`SELECT nextval('item_seq_seq')::int AS seq`)) as unknown as { seq: number }[];
+  const seq = Number(seqRows[0]?.seq ?? 0);
+  const itemCode = buildItemCode({
+    sizeCode: sizeCode || "X",
+    seq,
+    shapeCode: codeOf(v.shapeId),
+    gradeCode: codeOf(v.internalGradeId),
+    conditionCode: codeOf(v.conditionId),
+    toleranceCode: codeOf(v.toleranceId),
+    dims: dimList,
+  });
+
+  try {
+    const [row] = await db
+      .insert(items)
+      .values({
+        seq, itemCode, dedupKey,
+        inquiryId: v.inquiryId ?? null,
+        smNumber: v.smNumber ?? null,
+        customerName: v.customerName ?? null,
+        custProductName: v.custProductName ?? null,
+        custDrawingNo: v.custDrawingNo ?? null,
+        drawingRevisionNo: v.drawingRevisionNo ?? null,
+        qty: v.qty != null ? String(v.qty) : null,
+        sizeCode: sizeCode || null,
+        shapeId: v.shapeId ?? null,
+        internalGradeId: v.internalGradeId ?? null,
+        toleranceId: v.toleranceId ?? null,
+        conditionId: v.conditionId ?? null,
+        gradeCustomer: v.gradeCustomer ?? null,
+        gradeNameForCust: v.gradeNameForCust ?? null,
+        outerDia: dims.outerDia != null ? String(dims.outerDia) : null,
+        innerDia: dims.innerDia != null ? String(dims.innerDia) : null,
+        length: dims.length != null ? String(dims.length) : null,
+        width: dims.width != null ? String(dims.width) : null,
+        thickness: dims.thickness != null ? String(dims.thickness) : null,
+        dimensionNotes: v.dimensionNotes ?? null,
+        partNo: v.partNo ?? null,
+        partDescription1: v.partDescription1 ?? null,
+        partDescription2: v.partDescription2 ?? null,
+        partDescription3: v.partDescription3 ?? null,
+        partDescription4: v.partDescription4 ?? null,
+        partTag: v.partTag ?? null,
+        costingType: v.costingType ?? null,
+        createdById: me.id,
+      })
+      .onConflictDoNothing({ target: items.dedupKey })
+      .returning({ id: items.id, itemCode: items.itemCode });
+
+    if (!row) {
+      // Lost a race — the identical item now exists; return it.
+      const [winner] = await db
+        .select({ id: items.id, itemCode: items.itemCode })
+        .from(items)
+        .where(eq(items.dedupKey, dedupKey))
+        .limit(1);
+      if (winner) return { ok: true, id: winner.id, itemCode: winner.itemCode, reused: true };
+      return { ok: false, error: "Could not save the item. Please try again." };
+    }
+    revalidatePath("/items");
+    return { ok: true, id: row.id, itemCode: row.itemCode, reused: false };
+  } catch (err) {
+    console.error("[createItem] failed", err);
+    return { ok: false, error: "Could not save the item. Please try again." };
+  }
+}

@@ -1,0 +1,122 @@
+import "server-only";
+import { aliasedTable, desc, eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { items, masterOptions } from "@/db/schema";
+import type { Item } from "@/db/schema";
+
+/** One row for the /items register table. */
+export interface ItemListItem {
+  id: string;
+  itemCode: string;
+  seq: number;
+  customerName: string | null;
+  custProductName: string | null;
+  partNo: string | null;
+  costingType: Item["costingType"];
+  createdAt: Date;
+  shapeName: string | null;
+  gradeName: string | null;
+  conditionName: string | null;
+  toleranceName: string | null;
+}
+
+/**
+ * Item register list — joins the four master FK columns to their names so the
+ * table can show shape/grade/condition/tolerance without round-trips. Ordered
+ * newest-first. No server filter needed; the table does client-side filtering.
+ */
+export async function listItems(): Promise<ItemListItem[]> {
+  const shape = aliasedTable(masterOptions, "mo_shape");
+  const grade = aliasedTable(masterOptions, "mo_grade");
+  const condition = aliasedTable(masterOptions, "mo_condition");
+  const tolerance = aliasedTable(masterOptions, "mo_tolerance");
+
+  return db
+    .select({
+      id: items.id,
+      itemCode: items.itemCode,
+      seq: items.seq,
+      customerName: items.customerName,
+      custProductName: items.custProductName,
+      partNo: items.partNo,
+      costingType: items.costingType,
+      createdAt: items.createdAt,
+      shapeName: shape.name,
+      gradeName: grade.name,
+      conditionName: condition.name,
+      toleranceName: tolerance.name,
+    })
+    .from(items)
+    .leftJoin(shape, eq(items.shapeId, shape.id))
+    .leftJoin(grade, eq(items.internalGradeId, grade.id))
+    .leftJoin(condition, eq(items.conditionId, condition.id))
+    .leftJoin(tolerance, eq(items.toleranceId, tolerance.id))
+    .orderBy(desc(items.createdAt), desc(items.seq));
+}
+
+/** Full item row with resolved master names — for the detail page. */
+export interface ItemDetail extends Item {
+  shapeName: string | null;
+  gradeName: string | null;
+  conditionName: string | null;
+  toleranceName: string | null;
+}
+
+export async function getItemById(id: string): Promise<ItemDetail | null> {
+  const shape = aliasedTable(masterOptions, "mo_shape");
+  const grade = aliasedTable(masterOptions, "mo_grade");
+  const condition = aliasedTable(masterOptions, "mo_condition");
+  const tolerance = aliasedTable(masterOptions, "mo_tolerance");
+
+  const [row] = await db
+    .select({
+      id: items.id,
+      seq: items.seq,
+      itemCode: items.itemCode,
+      dedupKey: items.dedupKey,
+      inquiryId: items.inquiryId,
+      smNumber: items.smNumber,
+      enquiryDate: items.enquiryDate,
+      customerName: items.customerName,
+      custProductName: items.custProductName,
+      custDrawingNo: items.custDrawingNo,
+      drawingRevisionNo: items.drawingRevisionNo,
+      qty: items.qty,
+      sizeCode: items.sizeCode,
+      shapeId: items.shapeId,
+      internalGradeId: items.internalGradeId,
+      toleranceId: items.toleranceId,
+      conditionId: items.conditionId,
+      gradeCustomer: items.gradeCustomer,
+      gradeNameForCust: items.gradeNameForCust,
+      outerDia: items.outerDia,
+      innerDia: items.innerDia,
+      length: items.length,
+      width: items.width,
+      thickness: items.thickness,
+      dimensionNotes: items.dimensionNotes,
+      partNo: items.partNo,
+      partDescription1: items.partDescription1,
+      partDescription2: items.partDescription2,
+      partDescription3: items.partDescription3,
+      partDescription4: items.partDescription4,
+      partTag: items.partTag,
+      costingType: items.costingType,
+      createdById: items.createdById,
+      createdAt: items.createdAt,
+      updatedAt: items.updatedAt,
+      shapeName: shape.name,
+      gradeName: grade.name,
+      conditionName: condition.name,
+      toleranceName: tolerance.name,
+    })
+    .from(items)
+    .leftJoin(shape, eq(items.shapeId, shape.id))
+    .leftJoin(grade, eq(items.internalGradeId, grade.id))
+    .leftJoin(condition, eq(items.conditionId, condition.id))
+    .leftJoin(tolerance, eq(items.toleranceId, tolerance.id))
+    .where(eq(items.id, id))
+    .limit(1);
+
+  return row ?? null;
+}
