@@ -141,7 +141,7 @@ export async function createInquiry(
           contactNo: v.contactNo,
           contactEmail: v.contactEmail,
           ccEmails: v.ccEmails,
-          productDescription: p0?.custProductName ?? v.productDescription,
+          productDescription: v.productDescription,
           quantityStatus: v.quantityStatus,
           quantityNos: p0?.quantityNos ?? undefined,
           quantityUom: p0?.quantityUom ?? v.quantityUom,

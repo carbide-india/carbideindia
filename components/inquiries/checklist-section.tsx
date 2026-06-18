@@ -6,15 +6,11 @@ import { Check } from "lucide-react";
 import {
   CHECK_STATES,
   CHECK_STATE_LABELS,
-  QUANTITY_UOMS,
   DOC_GIVEN_OPTIONS,
-  INQUIRY_SHAPES,
 } from "@/db/enums";
-import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { Field, SectionCard, Segmented } from "./form-field";
 import type { InquiryFormValues } from "./inquiry-form";
-import type { MasterOptionItem } from "@/lib/queries/masters";
 
 const CHECK_OPTIONS = CHECK_STATES.map((s) => ({
   value: s,
@@ -37,27 +33,22 @@ interface Props {
   control: Control<InquiryFormValues>;
   register: UseFormRegister<InquiryFormValues>;
   productDescriptionError?: string;
-  grades: MasterOptionItem[];
-  tolerances: MasterOptionItem[];
-  conditions: MasterOptionItem[];
 }
 
 /**
- * Section 3 of the New Inquiry form — Product & Checklist. The paper enquiry
- * checklist's V / x / # marks become Given / Not Given / Assumed segmented
- * controls; everything is optional except the product description.
+ * Section 4 of the New Inquiry form — Checklist. The paper enquiry checklist's
+ * V / x / # marks become Given / Not Given / Assumed segmented controls;
+ * everything is optional except the product description. Per-product details
+ * (shape, dimensions, masters, quantity) live in the Products section.
  */
 export function ChecklistSection({
   control,
   register,
   productDescriptionError,
-  grades,
-  tolerances,
-  conditions,
 }: Props) {
   return (
     <SectionCard
-      title="Product & Checklist"
+      title="Checklist"
       hint="Mark what the client actually gave (Given), didn't give (Not Given), or what we filled in ourselves (Assumed)."
     >
       <Field id="inq-product" label="Product Description" required>
@@ -76,48 +67,21 @@ export function ChecklistSection({
         )}
       </Field>
 
-      {/* Quantity row — status mark + nos + UOM */}
-      <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-        <Field label="Quantity — Status">
-          <Controller
-            control={control}
-            name="quantityStatus"
-            render={({ field }) => (
-              <Segmented
-                options={CHECK_OPTIONS}
-                value={field.value}
-                onChange={field.onChange}
-                ariaLabel="Quantity status"
-              />
-            )}
-          />
-        </Field>
-        <Field id="inq-qty-nos" label="Quantity (Nos)">
-          <input
-            id="inq-qty-nos"
-            type="number"
-            min={0}
-            step="any"
-            className="nt-input"
-            placeholder="e.g. 500"
-            {...register("quantityNos", { setValueAs: toOptionalNumber })}
-          />
-        </Field>
-        <Field id="inq-qty-uom" label="UOM">
-          <Controller
-            control={control}
-            name="quantityUom"
-            render={({ field }) => (
-              <Select
-                id="inq-qty-uom"
-                value={field.value ?? "Nos"}
-                onValueChange={field.onChange}
-                options={QUANTITY_UOMS.map((u) => ({ value: u, label: u }))}
-              />
-            )}
-          />
-        </Field>
-      </div>
+      {/* Quantity status mark */}
+      <Field label="Quantity — Status">
+        <Controller
+          control={control}
+          name="quantityStatus"
+          render={({ field }) => (
+            <Segmented
+              options={CHECK_OPTIONS}
+              value={field.value}
+              onChange={field.onChange}
+              ariaLabel="Quantity status"
+            />
+          )}
+        />
+      </Field>
 
       {/* Docs given — checkbox chip group */}
       <Field label="Docs Given">
@@ -228,170 +192,28 @@ export function ChecklistSection({
         </Field>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-        <Field label="Sample Received">
-          <Controller
-            control={control}
-            name="sampleReceived"
-            render={({ field }) => (
-              <Segmented
-                options={YES_NO}
-                value={
-                  field.value === undefined
-                    ? undefined
-                    : field.value
-                      ? "yes"
-                      : "no"
-                }
-                onChange={(v) =>
-                  field.onChange(v === undefined ? undefined : v === "yes")
-                }
-                ariaLabel="Sample received"
-              />
-            )}
-          />
-        </Field>
-        <Field id="inq-shape" label="Shape">
-          <Controller
-            control={control}
-            name="shape"
-            render={({ field }) => (
-              <Select
-                id="inq-shape"
-                value={field.value ?? ""}
-                onValueChange={(v) => field.onChange(v || undefined)}
-                placeholder="Select a shape…"
-                options={INQUIRY_SHAPES.map((s) => ({ value: s, label: s }))}
-              />
-            )}
-          />
-        </Field>
-      </div>
-
-      {/* Dimensions — all in mm, all optional */}
-      <div className="grid grid-cols-5 gap-3 max-md:grid-cols-2">
-        <Field id="inq-od" label="Outer Dia">
-          <input
-            id="inq-od"
-            type="number"
-            min={0}
-            step="any"
-            className="nt-input"
-            {...register("outerDia", { setValueAs: toOptionalNumber })}
-          />
-        </Field>
-        <Field id="inq-id" label="Inner Dia">
-          <input
-            id="inq-id"
-            type="number"
-            min={0}
-            step="any"
-            className="nt-input"
-            {...register("innerDia", { setValueAs: toOptionalNumber })}
-          />
-        </Field>
-        <Field id="inq-len" label="Length">
-          <input
-            id="inq-len"
-            type="number"
-            min={0}
-            step="any"
-            className="nt-input"
-            {...register("length", { setValueAs: toOptionalNumber })}
-          />
-        </Field>
-        <Field id="inq-wid" label="Width">
-          <input
-            id="inq-wid"
-            type="number"
-            min={0}
-            step="any"
-            className="nt-input"
-            {...register("width", { setValueAs: toOptionalNumber })}
-          />
-        </Field>
-        <Field id="inq-thk" label="Thickness">
-          <input
-            id="inq-thk"
-            type="number"
-            min={0}
-            step="any"
-            className="nt-input"
-            {...register("thickness", { setValueAs: toOptionalNumber })}
-          />
-        </Field>
-      </div>
-
-      <Field id="inq-dim-notes" label="Dimension Notes">
-        <input
-          id="inq-dim-notes"
-          type="text"
-          className="nt-input"
-          placeholder="e.g. as per drawing rev. B, chamfer both ends…"
-          {...register("dimensionNotes")}
+      <Field label="Sample Received">
+        <Controller
+          control={control}
+          name="sampleReceived"
+          render={({ field }) => (
+            <Segmented
+              options={YES_NO}
+              value={
+                field.value === undefined
+                  ? undefined
+                  : field.value
+                    ? "yes"
+                    : "no"
+              }
+              onChange={(v) =>
+                field.onChange(v === undefined ? undefined : v === "yes")
+              }
+              ariaLabel="Sample received"
+            />
+          )}
         />
       </Field>
-
-      {/* Admin-managed masters */}
-      <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-        <MasterSelect
-          control={control}
-          name="gradeId"
-          label="Grade (Internal)"
-          options={grades}
-        />
-        <MasterSelect
-          control={control}
-          name="toleranceId"
-          label="Tolerance"
-          options={tolerances}
-        />
-        <MasterSelect
-          control={control}
-          name="conditionId"
-          label="Condition"
-          options={conditions}
-        />
-      </div>
     </SectionCard>
-  );
-}
-
-/**
- * One admin-managed master dropdown. When the master list is empty the
- * select is disabled with an explanatory placeholder; either way a muted
- * hint points at where the options are managed.
- */
-function MasterSelect({
-  control,
-  name,
-  label,
-  options,
-}: {
-  control: Control<InquiryFormValues>;
-  name: "gradeId" | "toleranceId" | "conditionId";
-  label: string;
-  options: MasterOptionItem[];
-}) {
-  const id = `inq-${name}`;
-  const empty = options.length === 0;
-  return (
-    <Field id={id} label={label}>
-      <Controller
-        control={control}
-        name={name}
-        render={({ field }) => (
-          <Select
-            id={id}
-            value={field.value ?? ""}
-            onValueChange={(v) => field.onChange(v || undefined)}
-            placeholder={empty ? "No options yet" : `Select ${label.toLowerCase()}…`}
-            disabled={empty}
-            options={options.map((o) => ({ value: o.id, label: o.name }))}
-          />
-        )}
-      />
-      <p className="text-[12px] text-ink-subtle">Managed in Admin → Masters</p>
-    </Field>
   );
 }

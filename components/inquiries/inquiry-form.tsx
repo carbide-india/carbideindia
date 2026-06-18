@@ -22,6 +22,7 @@ import { INDIA_STATES, citiesForState } from "@/lib/data/india-states-cities";
 import { SearchableSelect } from "./searchable-select";
 import { Field, SectionCard } from "./form-field";
 import { ClientAutofillSection } from "./client-autofill";
+import { ProductsSection } from "./products-section";
 import { ChecklistSection } from "./checklist-section";
 import type { ClientAutofill, ClientOption } from "@/lib/queries/clients";
 import type { EmployeeOption } from "@/lib/queries/employees";
@@ -112,6 +113,25 @@ export function InquiryForm({
       smFolderLink: "",
       enquiryNotes: "",
       assignedSalesPersonId: defaultSalesPersonId,
+      products: [
+        {
+          custProductName: "",
+          custDrawingNo: "",
+          drawingRevisionNo: "",
+          shape: undefined,
+          outerDia: undefined,
+          innerDia: undefined,
+          length: undefined,
+          width: undefined,
+          thickness: undefined,
+          dimensionNotes: "",
+          gradeId: undefined,
+          toleranceId: undefined,
+          conditionId: undefined,
+          quantityNos: undefined,
+          quantityUom: "Nos",
+        },
+      ],
     },
   });
 
@@ -493,14 +513,20 @@ export function InquiryForm({
         </div>
       </SectionCard>
 
-      {/* ── 3 · Product & Checklist ──────────────────────────────────── */}
+      {/* ── 3 · Products ─────────────────────────────────────────────── */}
+      <ProductsSection
+        control={control}
+        register={register}
+        grades={grades}
+        tolerances={tolerances}
+        conditions={conditions}
+      />
+
+      {/* ── 4 · Checklist ────────────────────────────────────────────── */}
       <ChecklistSection
         control={control}
         register={register}
         productDescriptionError={errors.productDescription?.message}
-        grades={grades}
-        tolerances={tolerances}
-        conditions={conditions}
       />
 
       {/* ── 4 · Assignment ───────────────────────────────────────────── */}

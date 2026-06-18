@@ -1,0 +1,324 @@
+"use client";
+
+import * as React from "react";
+import {
+  Controller,
+  useFieldArray,
+  type Control,
+  type UseFormRegister,
+} from "react-hook-form";
+import { Trash2 } from "lucide-react";
+import { INQUIRY_SHAPES, QUANTITY_UOMS } from "@/db/enums";
+import { Select } from "@/components/ui/select";
+import { Field, SectionCard } from "./form-field";
+import { toOptionalNumber } from "./checklist-section";
+import type { InquiryFormValues } from "./inquiry-form";
+import type { MasterOptionItem } from "@/lib/queries/masters";
+
+interface Props {
+  control: Control<InquiryFormValues>;
+  register: UseFormRegister<InquiryFormValues>;
+  grades: MasterOptionItem[];
+  tolerances: MasterOptionItem[];
+  conditions: MasterOptionItem[];
+}
+
+/** Shape of one fresh, empty product card. */
+const EMPTY_PRODUCT = {
+  custProductName: "",
+  custDrawingNo: "",
+  drawingRevisionNo: "",
+  shape: undefined,
+  outerDia: undefined,
+  innerDia: undefined,
+  length: undefined,
+  width: undefined,
+  thickness: undefined,
+  dimensionNotes: "",
+  gradeId: undefined,
+  toleranceId: undefined,
+  conditionId: undefined,
+  quantityNos: undefined,
+  quantityUom: "Nos",
+} as const;
+
+/**
+ * Section 3 of the New Inquiry form — Products. A repeatable per-product
+ * editor: one card per product, each holding the product's identity, shape +
+ * dimensions, admin-managed masters and quantity. At least one product card
+ * is always present; product #1 is mirrored into the legacy single-product
+ * columns server-side.
+ */
+export function ProductsSection({
+  control,
+  register,
+  grades,
+  tolerances,
+  conditions,
+}: Props) {
+  const { fields, append, remove } = useFieldArray({ control, name: "products" });
+
+  return (
+    <SectionCard
+      title="Products"
+      hint="Add every product on this enquiry — one card per product."
+    >
+      {fields.map((field, index) => (
+        <div
+          key={field.id}
+          className="flex flex-col gap-5 rounded-section border border-hairline p-5"
+          style={{ background: "var(--color-surface-soft)" }}
+        >
+          <div className="flex items-center justify-between">
+            <h3 className="text-[13px] font-bold text-ink-strong">
+              Product {index + 1}
+            </h3>
+            <button
+              type="button"
+              onClick={() => remove(index)}
+              disabled={fields.length === 1}
+              className="inline-flex items-center gap-1.5 rounded-chip border border-hairline px-3 py-1.5 text-[12.5px] font-semibold text-ink-muted transition-colors hover:border-hairline-strong hover:text-ink-strong disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Trash2 size={13} strokeWidth={2.4} />
+              Remove
+            </button>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
+            <Field
+              id={`products.${index}.custProductName`}
+              label="Customer Product Name"
+            >
+              <input
+                id={`products.${index}.custProductName`}
+                type="text"
+                className="nt-input"
+                placeholder="What the client calls it…"
+                {...register(`products.${index}.custProductName`)}
+              />
+            </Field>
+            <Field id={`products.${index}.custDrawingNo`} label="Drawing No">
+              <input
+                id={`products.${index}.custDrawingNo`}
+                type="text"
+                className="nt-input"
+                {...register(`products.${index}.custDrawingNo`)}
+              />
+            </Field>
+            <Field
+              id={`products.${index}.drawingRevisionNo`}
+              label="Drawing Rev No"
+            >
+              <input
+                id={`products.${index}.drawingRevisionNo`}
+                type="text"
+                className="nt-input"
+                {...register(`products.${index}.drawingRevisionNo`)}
+              />
+            </Field>
+          </div>
+
+          <Field id={`products.${index}.shape`} label="Shape">
+            <Controller
+              control={control}
+              name={`products.${index}.shape`}
+              render={({ field: f }) => (
+                <Select
+                  id={`products.${index}.shape`}
+                  value={f.value ?? ""}
+                  onValueChange={(v) => f.onChange(v || undefined)}
+                  placeholder="Select a shape…"
+                  options={INQUIRY_SHAPES.map((s) => ({ value: s, label: s }))}
+                />
+              )}
+            />
+          </Field>
+
+          {/* Dimensions — all in mm, all optional */}
+          <div className="grid grid-cols-5 gap-3 max-md:grid-cols-2">
+            <Field id={`products.${index}.outerDia`} label="Outer Dia">
+              <input
+                id={`products.${index}.outerDia`}
+                type="number"
+                min={0}
+                step="any"
+                className="nt-input"
+                {...register(`products.${index}.outerDia`, {
+                  setValueAs: toOptionalNumber,
+                })}
+              />
+            </Field>
+            <Field id={`products.${index}.innerDia`} label="Inner Dia">
+              <input
+                id={`products.${index}.innerDia`}
+                type="number"
+                min={0}
+                step="any"
+                className="nt-input"
+                {...register(`products.${index}.innerDia`, {
+                  setValueAs: toOptionalNumber,
+                })}
+              />
+            </Field>
+            <Field id={`products.${index}.length`} label="Length">
+              <input
+                id={`products.${index}.length`}
+                type="number"
+                min={0}
+                step="any"
+                className="nt-input"
+                {...register(`products.${index}.length`, {
+                  setValueAs: toOptionalNumber,
+                })}
+              />
+            </Field>
+            <Field id={`products.${index}.width`} label="Width">
+              <input
+                id={`products.${index}.width`}
+                type="number"
+                min={0}
+                step="any"
+                className="nt-input"
+                {...register(`products.${index}.width`, {
+                  setValueAs: toOptionalNumber,
+                })}
+              />
+            </Field>
+            <Field id={`products.${index}.thickness`} label="Thickness">
+              <input
+                id={`products.${index}.thickness`}
+                type="number"
+                min={0}
+                step="any"
+                className="nt-input"
+                {...register(`products.${index}.thickness`, {
+                  setValueAs: toOptionalNumber,
+                })}
+              />
+            </Field>
+          </div>
+
+          <Field
+            id={`products.${index}.dimensionNotes`}
+            label="Dimension Notes"
+          >
+            <input
+              id={`products.${index}.dimensionNotes`}
+              type="text"
+              className="nt-input"
+              placeholder="e.g. as per drawing rev. B, chamfer both ends…"
+              {...register(`products.${index}.dimensionNotes`)}
+            />
+          </Field>
+
+          {/* Admin-managed masters */}
+          <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
+            <ProductMasterSelect
+              control={control}
+              name={`products.${index}.gradeId`}
+              label="Grade (Internal)"
+              options={grades}
+            />
+            <ProductMasterSelect
+              control={control}
+              name={`products.${index}.toleranceId`}
+              label="Tolerance"
+              options={tolerances}
+            />
+            <ProductMasterSelect
+              control={control}
+              name={`products.${index}.conditionId`}
+              label="Condition"
+              options={conditions}
+            />
+          </div>
+
+          {/* Quantity row */}
+          <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+            <Field id={`products.${index}.quantityNos`} label="Quantity (Nos)">
+              <input
+                id={`products.${index}.quantityNos`}
+                type="number"
+                min={0}
+                step="any"
+                className="nt-input"
+                placeholder="e.g. 500"
+                {...register(`products.${index}.quantityNos`, {
+                  setValueAs: toOptionalNumber,
+                })}
+              />
+            </Field>
+            <Field id={`products.${index}.quantityUom`} label="UOM">
+              <Controller
+                control={control}
+                name={`products.${index}.quantityUom`}
+                render={({ field: f }) => (
+                  <Select
+                    id={`products.${index}.quantityUom`}
+                    value={f.value ?? "Nos"}
+                    onValueChange={f.onChange}
+                    options={QUANTITY_UOMS.map((u) => ({ value: u, label: u }))}
+                  />
+                )}
+              />
+            </Field>
+          </div>
+        </div>
+      ))}
+
+      <div>
+        <button
+          type="button"
+          onClick={() => append({ ...EMPTY_PRODUCT })}
+          className="inline-flex items-center gap-2 rounded-chip border border-brand bg-brand/8 px-4 py-2.5 text-[13px] font-semibold text-brand transition-colors hover:bg-brand/12"
+        >
+          + Add product
+        </button>
+      </div>
+    </SectionCard>
+  );
+}
+
+/**
+ * One admin-managed master dropdown bound to an indexed product field. When
+ * the master list is empty the select is disabled with an explanatory
+ * placeholder; either way a muted hint points at where options are managed.
+ */
+function ProductMasterSelect({
+  control,
+  name,
+  label,
+  options,
+}: {
+  control: Control<InquiryFormValues>;
+  name:
+    | `products.${number}.gradeId`
+    | `products.${number}.toleranceId`
+    | `products.${number}.conditionId`;
+  label: string;
+  options: MasterOptionItem[];
+}) {
+  const id = `${name}`;
+  const empty = options.length === 0;
+  return (
+    <Field id={id} label={label}>
+      <Controller
+        control={control}
+        name={name}
+        render={({ field }) => (
+          <Select
+            id={id}
+            value={field.value ?? ""}
+            onValueChange={(v) => field.onChange(v || undefined)}
+            placeholder={
+              empty ? "No options yet" : `Select ${label.toLowerCase()}…`
+            }
+            disabled={empty}
+            options={options.map((o) => ({ value: o.id, label: o.name }))}
+          />
+        )}
+      />
+      <p className="text-[12px] text-ink-subtle">Managed in Admin → Masters</p>
+    </Field>
+  );
+}
