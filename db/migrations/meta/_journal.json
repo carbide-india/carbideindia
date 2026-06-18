@@ -127,6 +127,13 @@
       "when": 1781770720014,
       "tag": "0017_quotation_items",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1781783768158,
+      "tag": "0018_negotiation_so_items",
+      "breakpoints": true
     }
   ]
 }

@@ -781,6 +781,32 @@ export const negotiations = pgTable("negotiations", {
 export type Negotiation = typeof negotiations.$inferSelect;
 export type NewNegotiation = typeof negotiations.$inferInsert;
 
+export const negotiationItems = pgTable(
+  "negotiation_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    negotiationId: uuid("negotiation_id").notNull().references(() => negotiations.id, { onDelete: "cascade" }),
+    inquiryItemId: uuid("inquiry_item_id").references(() => inquiryItems.id, { onDelete: "set null" }),
+    quotationItemId: uuid("quotation_item_id").references(() => quotationItems.id, { onDelete: "set null" }),
+    itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
+    sortOrder: integer("sort_order").notNull().default(0),
+    custProductName: text("cust_product_name"),
+    qty: numeric("qty"),
+    partNo: text("part_no"),
+    finalCost: numeric("final_cost"),
+    negotiation: numeric("negotiation"),
+    quotePrice: numeric("quote_price"),
+    developmentTime: text("development_time"),
+    deliveryTime: text("delivery_time"),
+    validity: text("validity"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("negotiation_items_negotiation_idx").on(t.negotiationId, t.sortOrder)],
+);
+export type NegotiationItem = typeof negotiationItems.$inferSelect;
+export type NewNegotiationItem = typeof negotiationItems.$inferInsert;
+
 export const salesOrders = pgTable("sales_orders", {
   id: uuid("id").primaryKey().defaultRandom(),
   inquiryId: uuid("inquiry_id").notNull().references(() => inquiries.id, { onDelete: "cascade" }),
@@ -809,6 +835,30 @@ export const salesOrders = pgTable("sales_orders", {
 }, (t) => [index("sales_orders_inquiry_idx").on(t.inquiryId)]);
 export type SalesOrder = typeof salesOrders.$inferSelect;
 export type NewSalesOrder = typeof salesOrders.$inferInsert;
+
+export const salesOrderItems = pgTable(
+  "sales_order_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    salesOrderId: uuid("sales_order_id").notNull().references(() => salesOrders.id, { onDelete: "cascade" }),
+    inquiryItemId: uuid("inquiry_item_id").references(() => inquiryItems.id, { onDelete: "set null" }),
+    quotationItemId: uuid("quotation_item_id").references(() => quotationItems.id, { onDelete: "set null" }),
+    itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
+    sortOrder: integer("sort_order").notNull().default(0),
+    custProductName: text("cust_product_name"),
+    qty: numeric("qty"),
+    partNo: text("part_no"),
+    quotePrice: numeric("quote_price"),
+    developmentTime: text("development_time"),
+    deliveryTime: text("delivery_time"),
+    validity: text("validity"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("sales_order_items_so_idx").on(t.salesOrderId, t.sortOrder)],
+);
+export type SalesOrderItem = typeof salesOrderItems.$inferSelect;
+export type NewSalesOrderItem = typeof salesOrderItems.$inferInsert;
 
 // ── Daily Client Meeting Feedback (Phase 5) ─────────────────────
 export const meetingPurposeEnum = pgEnum("meeting_purpose", MEETING_PURPOSES);
