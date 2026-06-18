@@ -55,6 +55,7 @@ export default async function InquiryDetailPage({ params }: PageProps) {
     gradeName: grades.find((g) => g.id === it.gradeId)?.name ?? null,
     toleranceName: tolerances.find((t) => t.id === it.toleranceId)?.name ?? null,
     conditionName: conditions.find((c) => c.id === it.conditionId)?.name ?? null,
+    itemCode: it.itemCode ?? null,
   }));
 
   return (

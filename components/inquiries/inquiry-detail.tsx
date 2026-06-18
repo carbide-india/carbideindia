@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { Route } from "next";
 import { ExternalLink, ArrowLeft, Plus } from "lucide-react";
 import {
@@ -14,9 +15,10 @@ import {
   type CheckState,
 } from "@/db/enums";
 import type { Inquiry, InquiryItem } from "@/db/schema";
-import { setEnquiryStatus } from "@/app/(app)/inquiries/actions";
+import { setEnquiryStatus, generateItemForInquiryItem } from "@/app/(app)/inquiries/actions";
 import type { EmployeeOption } from "@/lib/queries/employees";
 import { formatDate } from "@/lib/format";
+import { fireToast } from "@/lib/toast";
 import { Chip, PRIORITY_TONES } from "./chip";
 import { StatusPicker } from "./status-picker";
 import { FeasibilityPanel } from "./feasibility-panel";
@@ -33,11 +35,12 @@ interface MasterNames {
   condition: string | null;
 }
 
-/** An inquiry_items row with resolved master names. */
+/** An inquiry_items row with resolved master names and linked item code. */
 export type ProductRow = InquiryItem & {
   gradeName: string | null;
   toleranceName: string | null;
   conditionName: string | null;
+  itemCode: string | null;
 };
 
 interface Props {
@@ -53,10 +56,33 @@ interface Props {
  * the form), Primary Feasibility below.
  */
 export function InquiryDetail({ inquiry, employees, masterNames, products }: Props) {
+  const router = useRouter();
+  const [, startTransition] = React.useTransition();
+  const [generatingId, setGeneratingId] = React.useState<string | null>(null);
+
   const salesPerson =
     employees.find((e) => e.id === inquiry.assignedSalesPersonId)?.name ?? null;
   const createdBy =
     employees.find((e) => e.id === inquiry.createdById)?.name ?? null;
+
+  function handleGenerateItem(productId: string) {
+    setGeneratingId(productId);
+    startTransition(async () => {
+      const res = await generateItemForInquiryItem(productId);
+      setGeneratingId(null);
+      if (res.ok) {
+        fireToast({
+          message: res.reused
+            ? `Linked existing item ${res.itemCode}`
+            : `Item ${res.itemCode} created`,
+          type: "success",
+        });
+        router.refresh();
+      } else {
+        fireToast({ message: res.error, type: "error" });
+      }
+    });
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -211,6 +237,24 @@ export function InquiryDetail({ inquiry, employees, masterNames, products }: Pro
                           ],
                         ]}
                       />
+                      {/* Item Code row */}
+                      <div className="mt-3 flex items-center gap-3">
+                        <span className="text-[12px] font-bold text-ink-subtle">Item Code</span>
+                        {p.itemCode ? (
+                          <span className="font-mono text-[13px] font-semibold text-ink-strong">
+                            {p.itemCode}
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={generatingId === p.id}
+                            onClick={() => handleGenerateItem(p.id)}
+                            className="inline-flex items-center rounded-pill border border-hairline px-3 py-1 text-[12px] font-bold text-ink-muted hover:bg-surface-card hover:text-ink-strong transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {generatingId === p.id ? "Generating…" : "Generate item code"}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

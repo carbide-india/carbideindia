@@ -1,7 +1,7 @@
 import "server-only";
 import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { inquiries, inquiryItems, employees, type Inquiry } from "@/db/schema";
+import { inquiries, inquiryItems, items, employees, type Inquiry } from "@/db/schema";
 import type { EnquiryStatus, FeasibilityStatus } from "@/db/enums";
 
 /** One row of the /inquiries register table. */
@@ -144,11 +144,36 @@ export async function getNextSmNumber(): Promise<number> {
   return row.is_called ? last + 1 : last;
 }
 
-/** All product rows for a given inquiry, ordered by sort_order. */
+/** All product rows for a given inquiry, ordered by sort_order. Includes itemCode from the linked Item (nullable). */
 export async function getInquiryItems(inquiryId: string) {
   return db
-    .select()
+    .select({
+      id: inquiryItems.id,
+      inquiryId: inquiryItems.inquiryId,
+      sortOrder: inquiryItems.sortOrder,
+      custProductName: inquiryItems.custProductName,
+      custDrawingNo: inquiryItems.custDrawingNo,
+      drawingRevisionNo: inquiryItems.drawingRevisionNo,
+      shape: inquiryItems.shape,
+      outerDia: inquiryItems.outerDia,
+      innerDia: inquiryItems.innerDia,
+      length: inquiryItems.length,
+      width: inquiryItems.width,
+      thickness: inquiryItems.thickness,
+      dimensionNotes: inquiryItems.dimensionNotes,
+      gradeId: inquiryItems.gradeId,
+      gradeCustomer: inquiryItems.gradeCustomer,
+      toleranceId: inquiryItems.toleranceId,
+      conditionId: inquiryItems.conditionId,
+      quantityNos: inquiryItems.quantityNos,
+      quantityUom: inquiryItems.quantityUom,
+      itemId: inquiryItems.itemId,
+      createdAt: inquiryItems.createdAt,
+      updatedAt: inquiryItems.updatedAt,
+      itemCode: items.itemCode,
+    })
     .from(inquiryItems)
+    .leftJoin(items, eq(items.id, inquiryItems.itemId))
     .where(eq(inquiryItems.inquiryId, inquiryId))
     .orderBy(asc(inquiryItems.sortOrder));
 }

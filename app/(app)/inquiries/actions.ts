@@ -1,10 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { z } from "zod";
 import { db } from "@/lib/db";
-import { inquiries, inquiryItems, clients, clientContacts, type NewInquiry } from "@/db/schema";
+import { inquiries, inquiryItems, clients, clientContacts, masterOptions, type NewInquiry } from "@/db/schema";
 import { productRowsForInquiry } from "@/lib/inquiries/product-rows";
 import { requireUser } from "@/lib/auth/current";
 import { ENQUIRY_STATUSES, type EnquiryStatus } from "@/db/enums";
@@ -341,4 +341,113 @@ export async function searchInquiriesAction(query: string) {
   await requireUser();
   const { searchInquiries } = await import("@/lib/queries/inquiries");
   return searchInquiries(query);
+}
+
+type GenerateItemResult =
+  | { ok: true; itemCode: string; reused: boolean }
+  | { ok: false; error: string };
+
+/**
+ * Given an inquiry_items row id, resolves all its product-classification fields
+ * and delegates to `createItem` (dedup-safe). On success, writes the returned
+ * item id back to `inquiry_items.item_id` and revalidates the inquiry detail
+ * and items register pages.
+ *
+ * Shape resolution: inquiry_items.shape is a TEXT enum value (e.g. "Cylinder -
+ * Reg"); createItem wants a shapeId (master_options uuid of kind = 'shape').
+ * We look it up here so the caller never needs to supply it.
+ */
+export async function generateItemForInquiryItem(
+  inquiryItemId: string,
+): Promise<GenerateItemResult> {
+  await requireUser();
+  if (!isUuid(inquiryItemId)) return { ok: false, error: "Invalid product id." };
+
+  try {
+    // Load the inquiry_item joined to its parent inquiry for smNumber + companyName.
+    const [row] = await db
+      .select({
+        inquiryId: inquiryItems.inquiryId,
+        smNumber: inquiries.smNumber,
+        companyName: inquiries.companyName,
+        shape: inquiryItems.shape,
+        gradeId: inquiryItems.gradeId,
+        toleranceId: inquiryItems.toleranceId,
+        conditionId: inquiryItems.conditionId,
+        custProductName: inquiryItems.custProductName,
+        custDrawingNo: inquiryItems.custDrawingNo,
+        drawingRevisionNo: inquiryItems.drawingRevisionNo,
+        gradeCustomer: inquiryItems.gradeCustomer,
+        quantityNos: inquiryItems.quantityNos,
+        outerDia: inquiryItems.outerDia,
+        innerDia: inquiryItems.innerDia,
+        length: inquiryItems.length,
+        width: inquiryItems.width,
+        thickness: inquiryItems.thickness,
+        dimensionNotes: inquiryItems.dimensionNotes,
+        itemId: inquiryItems.itemId,
+      })
+      .from(inquiryItems)
+      .innerJoin(inquiries, eq(inquiries.id, inquiryItems.inquiryId))
+      .where(eq(inquiryItems.id, inquiryItemId))
+      .limit(1);
+
+    if (!row) return { ok: false, error: "Product not found." };
+
+    // Resolve shape TEXT → master_options uuid of kind 'shape'.
+    let shapeId: string | undefined;
+    if (row.shape) {
+      const [shapeRow] = await db
+        .select({ id: masterOptions.id })
+        .from(masterOptions)
+        .where(and(eq(masterOptions.kind, "shape"), eq(masterOptions.name, row.shape)))
+        .limit(1);
+      shapeId = shapeRow?.id;
+    }
+
+    // Parse numeric string columns → numbers (null/"" → undefined).
+    const toNum = (v: string | null | undefined): number | undefined => {
+      if (v == null || v === "") return undefined;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : undefined;
+    };
+
+    const { createItem } = await import("@/app/(app)/items/actions");
+    const result = await createItem({
+      inquiryId: row.inquiryId,
+      smNumber: row.smNumber,
+      customerName: row.companyName ?? undefined,
+      custProductName: row.custProductName ?? undefined,
+      custDrawingNo: row.custDrawingNo ?? undefined,
+      drawingRevisionNo: row.drawingRevisionNo ?? undefined,
+      qty: toNum(row.quantityNos),
+      shapeId,
+      internalGradeId: row.gradeId ?? undefined,
+      toleranceId: row.toleranceId ?? undefined,
+      conditionId: row.conditionId ?? undefined,
+      gradeCustomer: row.gradeCustomer ?? undefined,
+      outerDia: toNum(row.outerDia),
+      innerDia: toNum(row.innerDia),
+      length: toNum(row.length),
+      width: toNum(row.width),
+      thickness: toNum(row.thickness),
+      dimensionNotes: row.dimensionNotes ?? undefined,
+    });
+
+    if (!result.ok) return { ok: false, error: result.error };
+
+    // Write item_id back to this inquiry_items row.
+    await db
+      .update(inquiryItems)
+      .set({ itemId: result.id, updatedAt: new Date() })
+      .where(eq(inquiryItems.id, inquiryItemId));
+
+    revalidatePath(`/inquiries/${row.inquiryId}`);
+    revalidatePath("/items");
+
+    return { ok: true, itemCode: result.itemCode, reused: result.reused };
+  } catch (err) {
+    console.error("[generateItemForInquiryItem] failed", err);
+    return { ok: false, error: "Could not generate the item code. Please try again." };
+  }
 }
