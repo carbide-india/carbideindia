@@ -164,8 +164,8 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
   }
 
   /** On Quotation select: fetch the quote's price/timeline/validity/link and
-   *  prefill the editable inputs. Sets the legacy flat fields (action uses them
-   *  as fallback when lines[0] is blank). */
+   *  prefill the editable inputs on line 0 (kept editable). quotationLink is a
+   *  header field and stays on the flat path. */
   async function onPickQuotation(id: string | undefined) {
     setQuoteId(id ?? "");
     setValue("quotationId", id ?? undefined, { shouldValidate: true });
@@ -174,14 +174,15 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
       const res = await fetch(`/api/quotes/quotation-autofill?quotationId=${id}`);
       if (!res.ok) return;
       const data = (await res.json()) as QuotationAutofill;
-      // Mirror onto legacy flat fields (action picks them up if lines[0] is blank)
-      if (data.finalCost != null) setValue("finalCost", Number(data.finalCost));
-      if (data.quotePrice != null) setValue("quotePrice", Number(data.quotePrice));
-      if (data.developmentTime) setValue("developmentTime", data.developmentTime);
-      if (data.deliveryTime) setValue("deliveryTime", data.deliveryTime);
-      if (data.validity) setValue("validity", data.validity);
+      // Seed per-line fields on line 0 so the visible inputs populate and the
+      // negotiation_items child row is kept in sync on submit.
+      if (data.finalCost != null) setValue("lines.0.finalCost", Number(data.finalCost));
+      if (data.quotePrice != null) setValue("lines.0.quotePrice", Number(data.quotePrice));
+      if (data.developmentTime) setValue("lines.0.developmentTime", data.developmentTime);
+      if (data.deliveryTime) setValue("lines.0.deliveryTime", data.deliveryTime);
+      if (data.validity) setValue("lines.0.validity", data.validity);
       if (data.quotationLink) setValue("quotationLink", data.quotationLink);
-      if (data.partNo) setValue("partNo", data.partNo);
+      if (data.partNo) setValue("lines.0.partNo", data.partNo);
     } catch {
       fireToast({
         message: "Could not auto-fetch the quotation -- fill the fields manually.",
