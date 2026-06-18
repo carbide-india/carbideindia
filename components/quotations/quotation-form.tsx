@@ -164,6 +164,8 @@ export function QuotationForm({ inquiries }: Props) {
             condition: s.condition ?? "",
           })),
         );
+      } else {
+        replace([{ ...EMPTY_LINE }]);
       }
     } catch {
       fireToast({
