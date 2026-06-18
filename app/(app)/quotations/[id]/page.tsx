@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth/current";
 import { getQuotationById } from "@/lib/queries/quotations";
 import { getInquiryById } from "@/lib/queries/inquiries";
 import { listEmployeeOptions } from "@/lib/queries/employees";
+import { getQuotationItems } from "@/lib/queries/quotes";
 import {
   QuotationDetail,
   type QuotationInquiryLink,
@@ -38,11 +39,12 @@ export default async function QuotationDetailPage({ params }: PageProps) {
   if (!quotation) notFound();
 
   // The linked enquiry (SM repo) supplies the header SM chip + number.
-  const [employees, inquiry] = await Promise.all([
+  const [employees, inquiry, lines] = await Promise.all([
     listEmployeeOptions(),
     quotation.inquiryId
       ? getInquiryById(quotation.inquiryId)
       : Promise.resolve(null),
+    getQuotationItems(quotation.id),
   ]);
 
   const inquiryLink: QuotationInquiryLink | null = inquiry
@@ -59,6 +61,7 @@ export default async function QuotationDetailPage({ params }: PageProps) {
         quotation={quotation}
         employees={employees}
         inquiryLink={inquiryLink}
+        lines={lines}
       />
     </main>
   );

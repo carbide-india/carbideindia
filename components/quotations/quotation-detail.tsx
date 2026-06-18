@@ -11,7 +11,7 @@ import {
   COSTING_DONE_STATUS_LABELS,
   COSTING_DONE_STATUS_COLORS,
 } from "@/db/enums";
-import type { Quotation } from "@/db/schema";
+import type { Quotation, QuotationItem } from "@/db/schema";
 import {
   setQuotationStatus,
   updateQuotation,
@@ -34,6 +34,7 @@ interface Props {
   quotation: Quotation;
   employees: EmployeeOption[];
   inquiryLink: QuotationInquiryLink | null;
+  lines: QuotationItem[];
 }
 
 const QUOTE_SENT_OPTIONS = [
@@ -95,7 +96,7 @@ const MONEY_KEYS = new Set<keyof QuotationEditValues>([
  * Done StatusPicker, Quote Sent, Created/by, Open Register), and read cards for
  * Pricing + Timeline plus ONE dirty-only edit form (mirrors the sample detail).
  */
-export function QuotationDetail({ quotation, employees, inquiryLink }: Props) {
+export function QuotationDetail({ quotation, employees, inquiryLink, lines }: Props) {
   const router = useRouter();
 
   const createdBy =
@@ -232,6 +233,17 @@ export function QuotationDetail({ quotation, employees, inquiryLink }: Props) {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr] items-start">
         {/* ── Main column ───────────────────────────────────────────── */}
         <div className="flex flex-col gap-6 min-w-0">
+          {/* Quoted Lines (read-only) */}
+          {lines.length > 0 && (
+            <SectionCard title="Quoted Lines">
+              <div className="flex flex-col gap-4">
+                {lines.map((line, idx) => (
+                  <QuotedLineCard key={line.id} line={line} lineNo={idx + 1} />
+                ))}
+              </div>
+            </SectionCard>
+          )}
+
           {/* Pricing (read) */}
           <SectionCard title="Pricing">
             <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
@@ -249,6 +261,13 @@ export function QuotationDetail({ quotation, employees, inquiryLink }: Props) {
               <ReadStat label="Validity" value={quotation.validity ?? "—"} />
             </div>
           </SectionCard>
+
+          {/* Editable form note */}
+          {lines.length > 0 && (
+            <p className="text-[13px] text-ink-muted -mt-2">
+              Editing here updates Line 1. Additional lines are shown read-only — full per-line editing is coming soon.
+            </p>
+          )}
 
           {/* One form for the editable area: Product + Pricing + Timeline + Link/Sent. */}
           <form onSubmit={onSubmit} className="flex flex-col gap-6" noValidate>
@@ -453,6 +472,58 @@ function SidebarRow({ label, value }: { label: string; value: string }) {
         {label}
       </span>
       <span className="text-[14px] font-semibold text-ink-strong">{value}</span>
+    </div>
+  );
+}
+
+function QuotedLineCard({ line, lineNo }: { line: QuotationItem; lineNo: number }) {
+  return (
+    <div className="rounded-xl border border-hairline bg-surface-soft px-4 py-4 flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <span className="text-[11px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
+          Line {lineNo}
+        </span>
+        {line.custProductName && (
+          <span className="text-[13.5px] font-semibold text-ink-strong">
+            {line.custProductName}
+          </span>
+        )}
+      </div>
+      <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
+        <LineStat label="Qty" value={line.qty ?? "—"} />
+        <LineStat label="Part No" value={line.partNo ?? "—"} />
+        <LineStat label="Grade (Cust)" value={line.gradeCustomer ?? "—"} />
+        <LineStat label="Grade Name" value={line.gradeNameForCust ?? "—"} />
+        <LineStat label="Tolerance" value={line.tolerance ?? "—"} />
+        <LineStat label="Condition" value={line.condition ?? "—"} />
+        {line.custDrawingNo && (
+          <LineStat label="Drawing No" value={line.custDrawingNo} />
+        )}
+        {line.drawingRevisionNo && (
+          <LineStat label="Rev" value={line.drawingRevisionNo} />
+        )}
+      </div>
+      <div className="grid grid-cols-3 gap-4 border-t border-hairline pt-3 max-md:grid-cols-1">
+        <ReadStat label="Final Cost" value={money(line.finalCost)} />
+        <ReadStat label="Negotiation" value={money(line.negotiation)} />
+        <ReadStat label="Quote Price" value={money(line.quotePrice)} emphasis />
+      </div>
+      <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
+        <LineStat label="Development Time" value={line.developmentTime ?? "—"} />
+        <LineStat label="Delivery Time" value={line.deliveryTime ?? "—"} />
+        <LineStat label="Validity" value={line.validity ?? "—"} />
+      </div>
+    </div>
+  );
+}
+
+function LineStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[11px] uppercase tracking-[0.10em] font-bold text-ink-subtle">
+        {label}
+      </span>
+      <span className="text-[13.5px] font-semibold text-ink-strong">{value}</span>
     </div>
   );
 }
