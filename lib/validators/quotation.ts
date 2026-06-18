@@ -11,24 +11,29 @@ const OptionalText = (max = 500) =>
     .transform((s) => (s === "" ? undefined : s))
     .optional();
 /** Money: the form sends a number; stored numeric. Non-negative, optional. */
-const Money = z.coerce.number().nonnegative().optional();
+const Money = z.number().nonnegative().optional();
 /** Quantity: the form sends a number; stored numeric. Non-negative, optional. */
-const Qty = z.coerce.number().nonnegative().optional();
+const Qty = z.number().nonnegative().optional();
 
 // ── Per-line quote item schema (used by quotation_items child table) ─────────
+// Coerce locally so string inputs from FormData are accepted for line items
+// without widening the shared Money/Qty helpers used by the flat fields.
+const CoercedMoney = z.coerce.number().nonnegative().optional();
+const CoercedQty = z.coerce.number().nonnegative().optional();
+
 export const QuoteLineSchema = z.object({
   custProductName:   OptionalText(300),
   custDrawingNo:     OptionalText(120),
   drawingRevisionNo: OptionalText(60),
-  qty:               Qty,
+  qty:               CoercedQty,
   gradeCustomer:     OptionalText(120),
   gradeNameForCust:  OptionalText(120),
   tolerance:         OptionalText(120),
   condition:         OptionalText(120),
   partNo:            OptionalText(120),
-  finalCost:         Money,
-  negotiation:       Money,
-  quotePrice:        Money,
+  finalCost:         CoercedMoney,
+  negotiation:       CoercedMoney,
+  quotePrice:        CoercedMoney,
   developmentTime:   OptionalText(120),
   deliveryTime:      OptionalText(120),
   validity:          OptionalText(120),
@@ -81,11 +86,14 @@ export type CreateQuotationInput = z.input<typeof CreateQuotationSchema>;
  * defaults: otherwise `.partial()` would inject the first-option defaults into
  * every patch and an empty `{}` would sail past the nonempty refine.
  */
-export const UpdateQuotationSchema = QuotationFieldsSchema.extend({
-  inquiryId: z.string().uuid().optional(),
-  costingDoneStatus: z.enum(COSTING_DONE_STATUSES),
-  quoteSent: z.boolean(),
-})
+export const UpdateQuotationSchema = QuotationFieldsSchema
+  // line edits are not wired to quotation_items yet (later phase); omit so strict update rejects them
+  .omit({ lines: true })
+  .extend({
+    inquiryId: z.string().uuid().optional(),
+    costingDoneStatus: z.enum(COSTING_DONE_STATUSES),
+    quoteSent: z.boolean(),
+  })
   .partial()
   .strict()
   .refine((v) => Object.keys(v).length > 0, { message: "No changes to save." });
