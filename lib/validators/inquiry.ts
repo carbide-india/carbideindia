@@ -13,6 +13,24 @@ const Trimmed = (max: number) => z.string().trim().max(max);
 const OptionalText = (max = 500) =>
   Trimmed(max).transform((s) => (s === "" ? undefined : s)).optional();
 
+// ── Per-product item schema (used by inquiry_items child table) ──────────────
+const ItemNum = z.coerce.number().nonnegative().optional();
+export const ProductItemSchema = z.object({
+  custProductName:   OptionalText(240),
+  custDrawingNo:     OptionalText(120),
+  drawingRevisionNo: OptionalText(60),
+  shape:             z.enum(INQUIRY_SHAPES).optional(),
+  outerDia: ItemNum, innerDia: ItemNum, length: ItemNum, width: ItemNum, thickness: ItemNum,
+  dimensionNotes: OptionalText(2000),
+  gradeId:     z.string().uuid().optional(),
+  gradeCustomer: OptionalText(120),
+  toleranceId:  z.string().uuid().optional(),
+  conditionId:  z.string().uuid().optional(),
+  quantityNos:  ItemNum,
+  quantityUom:  z.string().trim().max(20).optional(),
+});
+export type ProductItemInput = z.input<typeof ProductItemSchema>;
+
 /**
  * Base field set shared by Create/Update. Kept as a plain `z.object` because
  * zod v4's `.refine()` result has no `.innerType()` — Create adds the
@@ -54,6 +72,7 @@ const InquiryFieldsSchema = z.object({
   smFolderLink: OptionalText(500),
   enquiryNotes: OptionalText(2000),
   assignedSalesPersonId: z.string().uuid().optional(),
+  products: z.array(ProductItemSchema).optional(),
 });
 
 export const CreateInquirySchema = InquiryFieldsSchema.refine(
