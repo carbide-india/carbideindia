@@ -11,9 +11,31 @@ const OptionalText = (max = 500) =>
     .transform((s) => (s === "" ? undefined : s))
     .optional();
 /** Money: the form sends a number; stored numeric. Non-negative, optional. */
-const Money = z.number().nonnegative().optional();
+const Money = z.coerce.number().nonnegative().optional();
 /** Quantity: the form sends a number; stored numeric. Non-negative, optional. */
-const Qty = z.number().nonnegative().optional();
+const Qty = z.coerce.number().nonnegative().optional();
+
+// ── Per-line quote item schema (used by quotation_items child table) ─────────
+export const QuoteLineSchema = z.object({
+  custProductName:   OptionalText(300),
+  custDrawingNo:     OptionalText(120),
+  drawingRevisionNo: OptionalText(60),
+  qty:               Qty,
+  gradeCustomer:     OptionalText(120),
+  gradeNameForCust:  OptionalText(120),
+  tolerance:         OptionalText(120),
+  condition:         OptionalText(120),
+  partNo:            OptionalText(120),
+  finalCost:         Money,
+  negotiation:       Money,
+  quotePrice:        Money,
+  developmentTime:   OptionalText(120),
+  deliveryTime:      OptionalText(120),
+  validity:          OptionalText(120),
+  inquiryItemId:     z.string().uuid().optional(),
+  itemId:            z.string().uuid().optional(),
+});
+export type QuoteLineInput = z.input<typeof QuoteLineSchema>;
 
 /**
  * Base field set shared by Create/Update — same base-object + derive pattern
@@ -46,6 +68,8 @@ const QuotationFieldsSchema = z.object({
   costingDoneStatus: z.enum(COSTING_DONE_STATUSES).default("not_done"),
   quotationLink: OptionalText(2000),
   quoteSent: z.boolean().default(false),
+  // Per-line items (Phase C)
+  lines: z.array(QuoteLineSchema).optional(),
 });
 
 export const CreateQuotationSchema = QuotationFieldsSchema;
