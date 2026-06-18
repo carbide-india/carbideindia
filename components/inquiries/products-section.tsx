@@ -40,7 +40,7 @@ const EMPTY_PRODUCT = {
   conditionId: undefined,
   quantityNos: undefined,
   quantityUom: "Nos",
-} as const;
+};
 
 /**
  * Section 3 of the New Inquiry form — Products. A repeatable per-product

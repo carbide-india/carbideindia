@@ -529,7 +529,7 @@ export function InquiryForm({
         productDescriptionError={errors.productDescription?.message}
       />
 
-      {/* ── 4 · Assignment ───────────────────────────────────────────── */}
+      {/* ── 5 · Assignment ───────────────────────────────────────────── */}
       <SectionCard title="Assignment">
         <Field id="inq-sm-link" label="SM Folder Link">
           <input

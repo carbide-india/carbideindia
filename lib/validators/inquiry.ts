@@ -88,6 +88,9 @@ export type CreateInquiryInput = z.infer<typeof CreateInquirySchema>;
  * an empty `{}` would sail past the nonempty refine.
  */
 export const UpdateInquirySchema = InquiryFieldsSchema
+  // Product edits are not yet wired to inquiry_items (Phase B). Omit `products`
+  // so the strict update schema rejects it instead of accepting-then-ignoring it.
+  .omit({ products: true })
   .extend({ quantityUom: z.enum(QUANTITY_UOMS) })
   .partial()
   .strict()

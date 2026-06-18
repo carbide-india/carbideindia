@@ -188,6 +188,7 @@ export async function updateInquiry(
   id: string,
   input: UpdateInquiryInput,
 ): Promise<ActionResult> {
+  // NOTE (Phase A): edits update only the legacy single-product columns; inquiry_items are NOT synced here — product editing arrives in Phase B.
   await requireUser();
   if (!isUuid(id)) return { ok: false, error: "Invalid inquiry id." };
   const parsed = UpdateInquirySchema.safeParse(input);
