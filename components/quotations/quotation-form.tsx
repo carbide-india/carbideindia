@@ -2,15 +2,19 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
+import { Trash2 } from "lucide-react";
 import {
   COSTING_DONE_STATUSES,
   COSTING_DONE_STATUS_LABELS,
 } from "@/db/enums";
 import { CreateQuotationSchema } from "@/lib/validators/quotation";
-import { createQuotation } from "@/app/(app)/quotations/actions";
+import {
+  createQuotation,
+  getInquiryItemsForQuote,
+} from "@/app/(app)/quotations/actions";
 import type { QuoteAutofill } from "@/lib/queries/quotes";
 import type { InquiryOption } from "@/lib/queries/inquiries";
 import type { EmployeeOption } from "@/lib/queries/employees";
@@ -26,13 +30,13 @@ import {
 
 /** RHF holds the schema's *input* shape (pre-transform); zodResolver hands the
  *  parsed *output* (defaults applied, `""` folded to `undefined`) to the submit
- *  handler — which is exactly what createQuotation takes. */
+ *  handler -- which is exactly what createQuotation takes. */
 export type QuotationFormValues = z.input<typeof CreateQuotationSchema>;
 type QuotationFormOutput = z.output<typeof CreateQuotationSchema>;
 
 interface Props {
   inquiries: InquiryOption[];
-  /** Unused for now (the SM owns the sales person) — kept for parity with the
+  /** Unused for now (the SM owns the sales person) -- kept for parity with the
    *  house-style page wiring; reserved for a future "Created by" override. */
   employees: EmployeeOption[];
 }
@@ -47,7 +51,7 @@ const QUOTE_SENT_OPTIONS = [
   { value: "no" as const, label: "No" },
 ];
 
-/** Money / number <input> → number | undefined (no NaN); 0 is a valid amount. */
+/** Money / number <input> to number | undefined (no NaN); 0 is a valid amount. */
 const moneyRegister = { setValueAs: (v: unknown) => moneyValue(v) };
 const qtyRegister = moneyRegister;
 function moneyValue(v: unknown): number | undefined {
@@ -56,11 +60,32 @@ function moneyValue(v: unknown): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
+/** Shape of one fresh, empty quote line. */
+const EMPTY_LINE = {
+  custProductName: "",
+  custDrawingNo: "",
+  drawingRevisionNo: "",
+  qty: undefined,
+  gradeCustomer: "",
+  gradeNameForCust: "",
+  tolerance: "",
+  condition: "",
+  partNo: "",
+  finalCost: undefined,
+  negotiation: undefined,
+  quotePrice: undefined,
+  developmentTime: "",
+  deliveryTime: "",
+  validity: "",
+  inquiryItemId: undefined,
+  itemId: undefined,
+};
+
 /**
- * New Quotation form — Linked Enquiry (autofetch snapshot) / Product / Pricing
- * / Timeline & Validity / Status. The SM picker fetches getQuoteAutofill on
- * select and prefills the editable snapshot fields; Quote No auto-numbers
- * `<SM>-Q01` when left blank.
+ * New Quotation form -- Linked Enquiry (autofetch snapshot) / Products &
+ * Pricing (per-line editor) / Status. The SM picker fetches getQuoteAutofill
+ * on select and pre-seeds the per-line editor from the SM's inquiry_items;
+ * Quote No auto-numbers `<SM>-Q01` when left blank.
  */
 export function QuotationForm({ inquiries }: Props) {
   const router = useRouter();
@@ -80,6 +105,7 @@ export function QuotationForm({ inquiries }: Props) {
     defaultValues: {
       inquiryId: "",
       quoteNo: "",
+      // Legacy flat fields (still in schema, optional -- action mirrors from line #1)
       custProductName: "",
       qty: undefined,
       custDrawingNo: "",
@@ -98,11 +124,19 @@ export function QuotationForm({ inquiries }: Props) {
       costingDoneStatus: "not_done",
       quotationLink: "",
       quoteSent: false,
+      lines: [{ ...EMPTY_LINE }],
     },
   });
 
-  /** On SM select: fetch the autofill snapshot and prefill the editable
-   *  product/grade fields (company + enquiry date are shown as captions). */
+  const { fields, append, remove, replace } = useFieldArray({
+    control,
+    name: "lines",
+  });
+
+  /** On SM select: fetch the autofill snapshot (company/date captions) then
+   *  seed the per-line editor from the SM's inquiry_items -- one line per
+   *  product, prefilling product/drawing/qty/grade/tolerance/condition.
+   *  Pricing + timeline stay blank for the user to fill. */
   async function onPickInquiry(id: string | undefined) {
     setValue("inquiryId", id ?? "", { shouldValidate: true });
     setSnapshot(null);
@@ -113,19 +147,27 @@ export function QuotationForm({ inquiries }: Props) {
       if (!res.ok) return;
       const data = (await res.json()) as QuoteAutofill;
       setSnapshot(data);
-      if (data.productDescription)
-        setValue("custProductName", data.productDescription);
-      setValue(
-        "qty",
-        data.quantityNos != null ? Number(data.quantityNos) : undefined,
-      );
-      // company/enquiry date stay read-only captions.
-      if (data.gradeName) setValue("gradeCustomer", data.gradeName);
-      if (data.toleranceName) setValue("tolerance", data.toleranceName);
-      if (data.conditionName) setValue("condition", data.conditionName);
+      // Seed one line per inquiry_items row; fall back to single empty line.
+      const seeds = await getInquiryItemsForQuote(id);
+      if (seeds.length >= 1) {
+        replace(
+          seeds.map((s) => ({
+            ...EMPTY_LINE,
+            inquiryItemId: s.inquiryItemId ?? undefined,
+            itemId: s.itemId ?? undefined,
+            custProductName: s.custProductName ?? "",
+            custDrawingNo: s.custDrawingNo ?? "",
+            drawingRevisionNo: s.drawingRevisionNo ?? "",
+            qty: s.qty != null ? Number(s.qty) : undefined,
+            gradeCustomer: s.gradeCustomer ?? "",
+            tolerance: s.tolerance ?? "",
+            condition: s.condition ?? "",
+          })),
+        );
+      }
     } catch {
       fireToast({
-        message: "Could not auto-fetch the enquiry — fill the fields manually.",
+        message: "Could not auto-fetch the enquiry -- fill the fields manually.",
         type: "error",
       });
     } finally {
@@ -156,10 +198,10 @@ export function QuotationForm({ inquiries }: Props) {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-6" noValidate>
-      {/* ── 1 · Linked Enquiry ───────────────────────────────────────── */}
+      {/* 1. Linked Enquiry */}
       <SectionCard
         title="Linked Enquiry"
-        hint="Pick the SM this quote belongs to — its company, product and grade are auto-fetched and editable below."
+        hint="Pick the SM this quote belongs to -- its company, product and grade are auto-fetched and editable below."
       >
         <Field label="Enquiry (SM)" labelOnly required>
           <Controller
@@ -169,8 +211,8 @@ export function QuotationForm({ inquiries }: Props) {
               <Select
                 value={field.value ?? ""}
                 onValueChange={(v) => void onPickInquiry(v || undefined)}
-                placeholder="Select an enquiry…"
-                searchPlaceholder="Search SM number or company…"
+                placeholder="Select an enquiry..."
+                searchPlaceholder="Search SM number or company..."
                 searchable
                 ariaLabel="Linked enquiry"
                 options={inquiries.map((o) => ({
@@ -186,11 +228,11 @@ export function QuotationForm({ inquiries }: Props) {
           <div className="flex flex-col gap-3 rounded-xl border border-hairline bg-surface-soft px-4 py-3">
             <div className="flex flex-wrap items-start gap-x-8 gap-y-2">
               <Caption label="Company">
-                {autofetching ? "…" : snapshot?.companyName ?? "—"}
+                {autofetching ? "..." : snapshot?.companyName ?? "—"}
               </Caption>
               <Caption label="Enquiry Date">
                 {autofetching
-                  ? "…"
+                  ? "..."
                   : snapshot?.enquiryDate
                     ? formatDate(new Date(snapshot.enquiryDate))
                     : "—"}
@@ -220,103 +262,232 @@ export function QuotationForm({ inquiries }: Props) {
         </Field>
       </SectionCard>
 
-      {/* ── 2 · Product ──────────────────────────────────────────────── */}
+      {/* 2. Products & Pricing (per-line repeatable editor) */}
       <SectionCard
-        title="Product"
-        hint="Customer-facing product, drawing and grade — prefilled from the SM, edit as needed."
+        title="Products & Pricing"
+        hint="One line per product -- prefilled from the enquiry; add pricing per line."
       >
-        <div className="grid grid-cols-[1fr_auto] gap-4 max-md:grid-cols-1">
-          <Field id="qt-product" label="Customer Product Name">
-            <input
-              id="qt-product"
-              type="text"
-              className="nt-input"
-              placeholder="e.g. Tungsten carbide insert, CNMG…"
-              {...register("custProductName")}
-            />
-          </Field>
-          <Field id="qt-qty" label="Qty" className="md:w-[180px]">
-            <input
-              id="qt-qty"
-              type="number"
-              inputMode="numeric"
-              min={0}
-              step="any"
-              className="nt-input tabular-nums"
-              placeholder="0"
-              {...register("qty", qtyRegister)}
-            />
-          </Field>
-        </div>
+        {fields.map((field, index) => (
+          <div
+            key={field.id}
+            className="flex flex-col gap-5 rounded-section border border-hairline p-5"
+            style={{ background: "var(--color-surface-soft)" }}
+          >
+            {/* Card header */}
+            <div className="flex items-center justify-between">
+              <h3 className="text-[13px] font-bold text-ink-strong">
+                Line {index + 1}
+              </h3>
+              <button
+                type="button"
+                onClick={() => remove(index)}
+                disabled={fields.length === 1}
+                className="inline-flex items-center gap-1.5 rounded-chip border border-hairline px-3 py-1.5 text-[12.5px] font-semibold text-ink-muted transition-colors hover:border-hairline-strong hover:text-ink-strong disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Trash2 size={13} strokeWidth={2.4} />
+                Remove
+              </button>
+            </div>
 
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-          <Field id="qt-drw" label="Customer Drawing No">
-            <input id="qt-drw" type="text" className="nt-input" {...register("custDrawingNo")} />
-          </Field>
-          <Field id="qt-rev" label="Drawing Revision No">
-            <input id="qt-rev" type="text" className="nt-input" {...register("drawingRevisionNo")} />
-          </Field>
-        </div>
+            {/* Product identity */}
+            <div className="grid grid-cols-[1fr_auto] gap-4 max-md:grid-cols-1">
+              <Field
+                id={`lines.${index}.custProductName`}
+                label="Customer Product Name"
+              >
+                <input
+                  id={`lines.${index}.custProductName`}
+                  type="text"
+                  className="nt-input"
+                  placeholder="e.g. Tungsten carbide insert, CNMG..."
+                  {...register(`lines.${index}.custProductName`)}
+                />
+              </Field>
+              <Field
+                id={`lines.${index}.qty`}
+                label="Qty"
+                className="md:w-[180px]"
+              >
+                <input
+                  id={`lines.${index}.qty`}
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  step="any"
+                  className="nt-input tabular-nums"
+                  placeholder="0"
+                  {...register(`lines.${index}.qty`, qtyRegister)}
+                />
+              </Field>
+            </div>
 
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-          <Field id="qt-part" label="Part No">
-            <input id="qt-part" type="text" className="nt-input" {...register("partNo")} />
-          </Field>
-          <Field id="qt-gradecust" label="Grade Name for Customer">
-            <input id="qt-gradecust" type="text" className="nt-input" {...register("gradeNameForCust")} />
-          </Field>
-        </div>
+            <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+              <Field
+                id={`lines.${index}.custDrawingNo`}
+                label="Customer Drawing No"
+              >
+                <input
+                  id={`lines.${index}.custDrawingNo`}
+                  type="text"
+                  className="nt-input"
+                  {...register(`lines.${index}.custDrawingNo`)}
+                />
+              </Field>
+              <Field
+                id={`lines.${index}.drawingRevisionNo`}
+                label="Drawing Revision No"
+              >
+                <input
+                  id={`lines.${index}.drawingRevisionNo`}
+                  type="text"
+                  className="nt-input"
+                  {...register(`lines.${index}.drawingRevisionNo`)}
+                />
+              </Field>
+            </div>
 
-        <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-          <Field id="qt-grade" label="Grade (Customer)">
-            <input id="qt-grade" type="text" className="nt-input" {...register("gradeCustomer")} />
-          </Field>
-          <Field id="qt-tol" label="Tolerance">
-            <input id="qt-tol" type="text" className="nt-input" {...register("tolerance")} />
-          </Field>
-          <Field id="qt-cond" label="Condition">
-            <input id="qt-cond" type="text" className="nt-input" {...register("condition")} />
-          </Field>
+            <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+              <Field id={`lines.${index}.partNo`} label="Part No">
+                <input
+                  id={`lines.${index}.partNo`}
+                  type="text"
+                  className="nt-input"
+                  {...register(`lines.${index}.partNo`)}
+                />
+              </Field>
+              <Field
+                id={`lines.${index}.gradeNameForCust`}
+                label="Grade Name for Customer"
+              >
+                <input
+                  id={`lines.${index}.gradeNameForCust`}
+                  type="text"
+                  className="nt-input"
+                  {...register(`lines.${index}.gradeNameForCust`)}
+                />
+              </Field>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
+              <Field
+                id={`lines.${index}.gradeCustomer`}
+                label="Grade (Customer)"
+              >
+                <input
+                  id={`lines.${index}.gradeCustomer`}
+                  type="text"
+                  className="nt-input"
+                  {...register(`lines.${index}.gradeCustomer`)}
+                />
+              </Field>
+              <Field id={`lines.${index}.tolerance`} label="Tolerance">
+                <input
+                  id={`lines.${index}.tolerance`}
+                  type="text"
+                  className="nt-input"
+                  {...register(`lines.${index}.tolerance`)}
+                />
+              </Field>
+              <Field id={`lines.${index}.condition`} label="Condition">
+                <input
+                  id={`lines.${index}.condition`}
+                  type="text"
+                  className="nt-input"
+                  {...register(`lines.${index}.condition`)}
+                />
+              </Field>
+            </div>
+
+            {/* Pricing */}
+            <div
+              className="pt-4"
+              style={{ borderTop: "1px solid var(--color-hairline)" }}
+            >
+              <p className="mb-3 text-[11px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
+                Pricing
+              </p>
+              <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
+                <MiniField label="Final Cost">
+                  <MoneyInput
+                    aria-label={`Final cost line ${index + 1}`}
+                    {...register(`lines.${index}.finalCost`, moneyRegister)}
+                  />
+                </MiniField>
+                <MiniField label="Negotiation">
+                  <MoneyInput
+                    aria-label={`Negotiation line ${index + 1}`}
+                    {...register(`lines.${index}.negotiation`, moneyRegister)}
+                  />
+                </MiniField>
+                <MiniField label="Quote Price">
+                  <MoneyInput
+                    aria-label={`Quote price line ${index + 1}`}
+                    {...register(`lines.${index}.quotePrice`, moneyRegister)}
+                  />
+                </MiniField>
+              </div>
+            </div>
+
+            {/* Timeline & Validity */}
+            <div
+              className="pt-4"
+              style={{ borderTop: "1px solid var(--color-hairline)" }}
+            >
+              <p className="mb-3 text-[11px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
+                Timeline &amp; Validity
+              </p>
+              <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
+                <Field
+                  id={`lines.${index}.developmentTime`}
+                  label="Development Time"
+                >
+                  <input
+                    id={`lines.${index}.developmentTime`}
+                    type="text"
+                    className="nt-input"
+                    placeholder="e.g. 6-8 weeks"
+                    {...register(`lines.${index}.developmentTime`)}
+                  />
+                </Field>
+                <Field
+                  id={`lines.${index}.deliveryTime`}
+                  label="Delivery Time"
+                >
+                  <input
+                    id={`lines.${index}.deliveryTime`}
+                    type="text"
+                    className="nt-input"
+                    placeholder="e.g. 30 days from PO"
+                    {...register(`lines.${index}.deliveryTime`)}
+                  />
+                </Field>
+                <Field id={`lines.${index}.validity`} label="Validity">
+                  <input
+                    id={`lines.${index}.validity`}
+                    type="text"
+                    className="nt-input"
+                    placeholder="e.g. 30 days"
+                    {...register(`lines.${index}.validity`)}
+                  />
+                </Field>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Add line button */}
+        <div>
+          <button
+            type="button"
+            onClick={() => append({ ...EMPTY_LINE })}
+            className="inline-flex items-center gap-2 rounded-chip border border-brand bg-brand/8 px-4 py-2.5 text-[13px] font-semibold text-brand transition-colors hover:bg-brand/12"
+          >
+            + Add line
+          </button>
         </div>
       </SectionCard>
 
-      {/* ── 3 · Pricing ──────────────────────────────────────────────── */}
-      <SectionCard
-        title="Pricing"
-        hint="All amounts in ₹. Negotiation is the give, Quote Price is what the customer sees."
-      >
-        <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
-          <MiniField label="Final Cost">
-            <MoneyInput aria-label="Final cost" {...register("finalCost", moneyRegister)} />
-          </MiniField>
-          <MiniField label="Negotiation">
-            <MoneyInput aria-label="Negotiation" {...register("negotiation", moneyRegister)} />
-          </MiniField>
-          <MiniField label="Quote Price">
-            <MoneyInput aria-label="Quote price" {...register("quotePrice", moneyRegister)} />
-          </MiniField>
-        </div>
-      </SectionCard>
-
-      {/* ── 4 · Timeline & Validity ──────────────────────────────────── */}
-      <SectionCard
-        title="Timeline & Validity"
-        hint="Free-text per Manan's sheet — e.g. “6–8 weeks”, “30 days from PO”."
-      >
-        <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-          <Field id="qt-dev" label="Development Time">
-            <input id="qt-dev" type="text" className="nt-input" {...register("developmentTime")} />
-          </Field>
-          <Field id="qt-del" label="Delivery Time">
-            <input id="qt-del" type="text" className="nt-input" {...register("deliveryTime")} />
-          </Field>
-          <Field id="qt-val" label="Validity">
-            <input id="qt-val" type="text" className="nt-input" {...register("validity")} />
-          </Field>
-        </div>
-      </SectionCard>
-
-      {/* ── 5 · Status ───────────────────────────────────────────────── */}
+      {/* 3. Status */}
       <SectionCard title="Status">
         <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1 items-start">
           <Field label="Costing Done Status" labelOnly>
@@ -355,7 +526,7 @@ export function QuotationForm({ inquiries }: Props) {
             id="qt-link"
             type="url"
             className="nt-input"
-            placeholder="https://…"
+            placeholder="https://..."
             {...register("quotationLink")}
           />
         </Field>
@@ -387,14 +558,14 @@ export function QuotationForm({ inquiries }: Props) {
             letterSpacing: "0.005em",
           }}
         >
-          {pending ? "Creating…" : "Create Quotation"}
+          {pending ? "Creating..." : "Create Quotation"}
         </button>
       </div>
     </form>
   );
 }
 
-/** ₹-prefixed number input — the rupee sign sits inside the field so the
+/** Rs-prefixed number input -- the rupee sign sits inside the field so the
  *  amount always reads as money. */
 const MoneyInput = React.forwardRef<
   HTMLInputElement,
@@ -403,7 +574,7 @@ const MoneyInput = React.forwardRef<
   return (
     <div className="relative w-[180px]">
       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[14px] font-semibold text-ink-subtle">
-        ₹
+        &#8377;
       </span>
       <input
         ref={ref}
@@ -419,19 +590,27 @@ const MoneyInput = React.forwardRef<
   );
 });
 
-function Caption({ label, children }: { label: string; children: React.ReactNode }) {
+function Caption({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex flex-col gap-0.5">
       <span className="text-[11px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
         {label}
       </span>
-      <span className="text-[14px] font-semibold text-ink-strong">{children}</span>
+      <span className="text-[14px] font-semibold text-ink-strong">
+        {children}
+      </span>
     </div>
   );
 }
 
 /** Builds a compact dimension string from non-null values.
- *  OD is prefixed with "Ø"; parts joined with " × ". */
+ *  OD is prefixed with a diameter symbol; parts joined with x. */
 function buildDimString(s: QuoteAutofill): string | null {
   const parts: string[] = [];
   if (s.outerDia != null) parts.push(`Ø${s.outerDia}`);
@@ -442,16 +621,16 @@ function buildDimString(s: QuoteAutofill): string | null {
   return parts.length > 0 ? parts.join(" × ") : null;
 }
 
-/** Read-only "SM Details" row — shape, dimensions, contact.
+/** Read-only "SM Details" row -- shape, dimensions, contact.
  *  Renders nothing when all three sections are empty. */
 function SmDetailsRow({ snapshot: s }: { snapshot: QuoteAutofill }) {
   const dimStr = buildDimString(s);
-  const contactName = [s.contactFirstName, s.contactLastName]
-    .filter(Boolean)
-    .join(" ") || null;
+  const contactName =
+    [s.contactFirstName, s.contactLastName].filter(Boolean).join(" ") || null;
   const hasShape = s.shape != null;
   const hasDims = dimStr != null || s.dimensionNotes != null;
-  const hasContact = contactName != null || s.contactNo != null || s.contactEmail != null;
+  const hasContact =
+    contactName != null || s.contactNo != null || s.contactEmail != null;
 
   if (!hasShape && !hasDims && !hasContact) return null;
 
@@ -468,7 +647,9 @@ function SmDetailsRow({ snapshot: s }: { snapshot: QuoteAutofill }) {
       )}
       {hasContact && (
         <Caption label="Contact">
-          {[contactName, s.contactNo, s.contactEmail].filter(Boolean).join(" · ") || "—"}
+          {[contactName, s.contactNo, s.contactEmail]
+            .filter(Boolean)
+            .join(" · ") || "—"}
         </Caption>
       )}
     </div>

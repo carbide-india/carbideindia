@@ -5,7 +5,11 @@ import { count, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { quotations, quotationItems, type NewQuotation } from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
-import { getQuoteAutofill } from "@/lib/queries/quotes";
+import {
+  getQuoteAutofill,
+  getInquiryItemSeeds,
+  type QuoteLineSeed,
+} from "@/lib/queries/quotes";
 import { COSTING_DONE_STATUSES, type CostingDoneStatus } from "@/db/enums";
 import {
   CreateQuotationSchema,
@@ -39,6 +43,20 @@ function stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
 }
 
 const MAX_NO_TRIES = 5;
+
+/**
+ * Quote-line seeds for the form's per-line editor — one per `inquiry_items`
+ * row of the picked SM, ordered by sort order. Called client-side on SM select
+ * to pre-fill the lines (product/drawing/qty/grade/tolerance/condition);
+ * pricing + timeline stay blank for the user to fill.
+ */
+export async function getInquiryItemsForQuote(
+  inquiryId: string,
+): Promise<QuoteLineSeed[]> {
+  await requireUser();
+  if (!isUuid(inquiryId)) return [];
+  return getInquiryItemSeeds(inquiryId);
+}
 
 export async function createQuotation(
   input: CreateQuotationInput,

@@ -4,6 +4,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/lib/db";
 import {
   inquiries,
+  inquiryItems,
   employees,
   masterOptions,
   quotations,
@@ -141,6 +142,51 @@ export async function listQuotationOptions(): Promise<QuotationOption[]> {
     .from(quotations)
     .orderBy(desc(quotations.createdAt))
     .limit(100);
+}
+
+/**
+ * One quote-line seed per `inquiry_items` row of an SM — used to pre-fill the
+ * Quotation form's per-line editor when the SM is picked. Resolves the
+ * tolerance/condition master ids → their display names via two aliased LEFT
+ * JOINs (same row type as the grade alias, so aliasing is required), ordered by
+ * the product's sort order. `gradeCustomer` is the raw free-text from the line;
+ * `inquiryItemId`/`itemId` carry the source product + its linked Item (if any).
+ */
+export interface QuoteLineSeed {
+  inquiryItemId: string;
+  itemId: string | null;
+  custProductName: string | null;
+  custDrawingNo: string | null;
+  drawingRevisionNo: string | null;
+  qty: string | null;
+  gradeCustomer: string | null;
+  tolerance: string | null;
+  condition: string | null;
+}
+
+export async function getInquiryItemSeeds(
+  inquiryId: string,
+): Promise<QuoteLineSeed[]> {
+  const tolerance = alias(masterOptions, "tolerance");
+  const condition = alias(masterOptions, "condition");
+
+  return db
+    .select({
+      inquiryItemId: inquiryItems.id,
+      itemId: inquiryItems.itemId,
+      custProductName: inquiryItems.custProductName,
+      custDrawingNo: inquiryItems.custDrawingNo,
+      drawingRevisionNo: inquiryItems.drawingRevisionNo,
+      qty: inquiryItems.quantityNos,
+      gradeCustomer: inquiryItems.gradeCustomer,
+      tolerance: tolerance.name,
+      condition: condition.name,
+    })
+    .from(inquiryItems)
+    .leftJoin(tolerance, eq(inquiryItems.toleranceId, tolerance.id))
+    .leftJoin(condition, eq(inquiryItems.conditionId, condition.id))
+    .where(eq(inquiryItems.inquiryId, inquiryId))
+    .orderBy(asc(inquiryItems.sortOrder));
 }
 
 /** All line items for a quotation, in sort order. */
