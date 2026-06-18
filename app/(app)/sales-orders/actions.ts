@@ -3,9 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { count, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { salesOrders, type NewSalesOrder } from "@/db/schema";
+import { salesOrders, salesOrderItems, type NewSalesOrder } from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
 import { getQuoteAutofill, getQuotationAutofill } from "@/lib/queries/quotes";
+import { soLineRows } from "@/lib/sales-orders/line-rows";
 import {
   CreateSalesOrderSchema,
   UpdateSalesOrderSchema,
@@ -73,6 +74,10 @@ export async function createSalesOrder(
   const money = (n: number | undefined): string | undefined =>
     n !== undefined ? String(n) : undefined;
 
+  // Build per-line rows first so line #1 can mirror into the legacy columns.
+  const lineRows = soLineRows(v);
+  const line0 = lineRows[0];
+
   const values: Omit<NewSalesOrder, "soNo"> = {
     inquiryId: v.inquiryId,
     quotationId: v.quotationId,
@@ -80,13 +85,14 @@ export async function createSalesOrder(
     companyName: auto.companyName,
     enquiryDate: auto.enquiryDate,
     salesPersonId: auto.salesPersonId,
-    custProductName: v.custProductName ?? auto.productDescription,
-    qty: v.qty != null ? String(v.qty) : auto.quantityNos,
-    partNo: v.partNo ?? quote?.partNo ?? undefined,
-    quotePrice: money(v.quotePrice) ?? quote?.quotePrice ?? undefined,
-    developmentTime: v.developmentTime ?? quote?.developmentTime ?? undefined,
-    deliveryTime: v.deliveryTime ?? quote?.deliveryTime ?? undefined,
-    validity: v.validity ?? quote?.validity ?? undefined,
+    // per-line legacy mirror — sourced from line #1
+    custProductName: line0?.custProductName ?? v.custProductName ?? auto.productDescription,
+    qty: line0?.qty ?? (v.qty != null ? String(v.qty) : auto.quantityNos),
+    partNo: line0?.partNo ?? quote?.partNo ?? undefined,
+    quotePrice: line0?.quotePrice ?? quote?.quotePrice ?? undefined,
+    developmentTime: line0?.developmentTime ?? quote?.developmentTime ?? undefined,
+    deliveryTime: line0?.deliveryTime ?? quote?.deliveryTime ?? undefined,
+    validity: line0?.validity ?? quote?.validity ?? undefined,
     quotationLink: v.quotationLink ?? quote?.quotationLink ?? undefined,
     customerPoNo: v.customerPoNo,
     customerPoDate: v.customerPoDate ? new Date(v.customerPoDate) : undefined,
@@ -102,11 +108,17 @@ export async function createSalesOrder(
     const soNo =
       v.soNo ?? `${auto.smNumber}-SO${String(existingCount + attempt).padStart(2, "0")}`;
     try {
-      const [row] = await db
-        .insert(salesOrders)
-        .values({ ...values, soNo })
-        .returning({ id: salesOrders.id });
-      if (!row) return { ok: false, error: "Insert returned no row" };
+      const row = await db.transaction(async (tx) => {
+        const [r] = await tx
+          .insert(salesOrders)
+          .values({ ...values, soNo })
+          .returning({ id: salesOrders.id });
+        if (!r) throw new Error("salesOrders insert returned no row");
+        if (lineRows.length) {
+          await tx.insert(salesOrderItems).values(lineRows.map((x) => ({ salesOrderId: r.id, ...x })));
+        }
+        return r;
+      });
       revalidatePath("/sales-orders");
       return { ok: true, id: row.id, soNo };
     } catch (err: unknown) {

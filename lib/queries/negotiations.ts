@@ -1,7 +1,7 @@
 import "server-only";
-import { and, desc, eq, ilike, or } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, or } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { negotiations, employees, type Negotiation } from "@/db/schema";
+import { negotiations, negotiationItems, employees, type Negotiation } from "@/db/schema";
 import type { NegotiationStatus } from "@/db/enums";
 
 /** One row of the /negotiations register table. */
@@ -71,4 +71,13 @@ export async function getNegotiationById(
     .where(eq(negotiations.id, id))
     .limit(1);
   return row ?? null;
+}
+
+/** All line items for a negotiation, in sort order. */
+export async function getNegotiationItems(negotiationId: string) {
+  return db
+    .select()
+    .from(negotiationItems)
+    .where(eq(negotiationItems.negotiationId, negotiationId))
+    .orderBy(asc(negotiationItems.sortOrder));
 }

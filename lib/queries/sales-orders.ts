@@ -1,7 +1,7 @@
 import "server-only";
-import { and, desc, eq, ilike, or } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, or } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { salesOrders, type SalesOrder } from "@/db/schema";
+import { salesOrders, salesOrderItems, type SalesOrder } from "@/db/schema";
 
 /** One row of the /sales-orders register table. */
 export interface SalesOrderListItem {
@@ -61,4 +61,13 @@ export async function getSalesOrderById(
     .where(eq(salesOrders.id, id))
     .limit(1);
   return row ?? null;
+}
+
+/** All line items for a sales order, in sort order. */
+export async function getSalesOrderItems(salesOrderId: string) {
+  return db
+    .select()
+    .from(salesOrderItems)
+    .where(eq(salesOrderItems.salesOrderId, salesOrderId))
+    .orderBy(asc(salesOrderItems.sortOrder));
 }
