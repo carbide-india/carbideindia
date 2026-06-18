@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth/current";
-import { getSalesOrderById } from "@/lib/queries/sales-orders";
+import { getSalesOrderById, getSalesOrderItems } from "@/lib/queries/sales-orders";
 import { getInquiryById } from "@/lib/queries/inquiries";
 import { listEmployeeOptions } from "@/lib/queries/employees";
 import {
@@ -38,11 +38,12 @@ export default async function SalesOrderDetailPage({ params }: PageProps) {
   if (!salesOrder) notFound();
 
   // The linked enquiry (SM repo) supplies the header SM chip + number.
-  const [employees, inquiry] = await Promise.all([
+  const [employees, inquiry, lines] = await Promise.all([
     listEmployeeOptions(),
     salesOrder.inquiryId
       ? getInquiryById(salesOrder.inquiryId)
       : Promise.resolve(null),
+    getSalesOrderItems(salesOrder.id),
   ]);
 
   const inquiryLink: SalesOrderInquiryLink | null = inquiry
@@ -59,6 +60,7 @@ export default async function SalesOrderDetailPage({ params }: PageProps) {
         salesOrder={salesOrder}
         employees={employees}
         inquiryLink={inquiryLink}
+        lines={lines}
       />
     </main>
   );

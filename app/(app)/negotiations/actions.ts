@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { count, eq, inArray } from "drizzle-orm";
+import { and, count, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { negotiations, negotiationItems, type NewNegotiation } from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
@@ -187,6 +187,37 @@ export async function updateNegotiation(
     console.error("[updateNegotiation] failed", err);
     return { ok: false, error: "Could not save the negotiation. Please try again." };
   }
+
+  // Mirror line-#1 per-line subset into negotiation_items (sortOrder = 0).
+  const LINE1_KEYS = [
+    "custProductName", "qty", "partNo",
+    "finalCost", "negotiation", "quotePrice",
+    "developmentTime", "deliveryTime", "validity",
+  ] as const;
+  type Line1Key = typeof LINE1_KEYS[number];
+  const line1Patch: Partial<Record<Line1Key, string | null>> = {};
+  for (const k of LINE1_KEYS) {
+    const val = (patch as Record<string, unknown>)[k];
+    if (val !== undefined) {
+      line1Patch[k] = val === null ? null : String(val);
+    }
+  }
+  if (Object.keys(line1Patch).length > 0) {
+    try {
+      await db
+        .update(negotiationItems)
+        .set({ ...line1Patch, updatedAt: new Date() })
+        .where(
+          and(
+            eq(negotiationItems.negotiationId, id),
+            eq(negotiationItems.sortOrder, 0),
+          ),
+        );
+    } catch (err) {
+      console.error("[updateNegotiation] line-1 sync failed", err);
+    }
+  }
+
   revalidatePath("/negotiations");
   revalidatePath(`/negotiations/${id}`);
   return { ok: true };

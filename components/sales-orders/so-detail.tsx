@@ -6,7 +6,7 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { ArrowLeft, ArrowUpRight, Loader2, Plus } from "lucide-react";
-import type { SalesOrder } from "@/db/schema";
+import type { SalesOrder, SalesOrderItem } from "@/db/schema";
 import {
   setSalesOrderSent,
   updateSalesOrder,
@@ -28,6 +28,7 @@ interface Props {
   salesOrder: SalesOrder;
   employees: EmployeeOption[];
   inquiryLink: SalesOrderInquiryLink | null;
+  lines: SalesOrderItem[];
 }
 
 const SO_SENT_OPTIONS = [
@@ -92,7 +93,7 @@ const NUMERIC_KEYS = new Set<keyof SoEditValues>(["quotePrice", "qty"]);
  * Open Register), read cards for Quote Summary + Customer PO + SO Docs plus ONE
  * dirty-only edit form (mirrors the quotation/negotiation detail).
  */
-export function SoDetail({ salesOrder, employees, inquiryLink }: Props) {
+export function SoDetail({ salesOrder, employees, inquiryLink, lines }: Props) {
   const router = useRouter();
   const [sentPending, startSentTransition] = React.useTransition();
 
@@ -269,6 +270,20 @@ export function SoDetail({ salesOrder, employees, inquiryLink }: Props) {
               <ReadLink label="Quotation Link" href={salesOrder.quotationLink} />
             </div>
           </SectionCard>
+
+          {/* Sales Order Lines (read-only) */}
+          {lines.length > 0 && (
+            <SectionCard
+              title="Sales Order Lines"
+              hint="Editing here updates Line 1 — additional lines are read-only."
+            >
+              <div className="flex flex-col gap-4">
+                {lines.map((line, idx) => (
+                  <SoLineCard key={line.id} line={line} lineNo={idx + 1} />
+                ))}
+              </div>
+            </SectionCard>
+          )}
 
           {/* One form for the editable area: Product + Quote Summary + Customer PO + SO Docs. */}
           <form onSubmit={onSubmit} className="flex flex-col gap-6" noValidate>
@@ -506,6 +521,46 @@ function SidebarRow({ label, value }: { label: string; value: string }) {
         {label}
       </span>
       <span className="text-[14px] font-semibold text-ink-strong">{value}</span>
+    </div>
+  );
+}
+
+function SoLineCard({ line, lineNo }: { line: SalesOrderItem; lineNo: number }) {
+  return (
+    <div className="rounded-xl border border-hairline bg-surface-soft px-4 py-4 flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <span className="text-[11px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
+          Line {lineNo}
+        </span>
+        {line.custProductName && (
+          <span className="text-[13.5px] font-semibold text-ink-strong">
+            {line.custProductName}
+          </span>
+        )}
+      </div>
+      <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
+        <LineStat label="Qty" value={line.qty ?? "—"} />
+        <LineStat label="Part No" value={line.partNo ?? "—"} />
+      </div>
+      <div className="grid grid-cols-1 gap-4 border-t border-hairline pt-3 max-md:grid-cols-1">
+        <ReadStat label="Quote Price" value={money(line.quotePrice)} emphasis />
+      </div>
+      <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
+        <LineStat label="Development Time" value={line.developmentTime ?? "—"} />
+        <LineStat label="Delivery Time" value={line.deliveryTime ?? "—"} />
+        <LineStat label="Validity" value={line.validity ?? "—"} />
+      </div>
+    </div>
+  );
+}
+
+function LineStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[11px] uppercase tracking-[0.10em] font-bold text-ink-subtle">
+        {label}
+      </span>
+      <span className="text-[13.5px] font-semibold text-ink-strong">{value}</span>
     </div>
   );
 }

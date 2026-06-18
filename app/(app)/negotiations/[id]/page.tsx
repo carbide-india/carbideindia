@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth/current";
-import { getNegotiationById } from "@/lib/queries/negotiations";
+import { getNegotiationById, getNegotiationItems } from "@/lib/queries/negotiations";
 import { getInquiryById } from "@/lib/queries/inquiries";
 import { listEmployeeOptions } from "@/lib/queries/employees";
 import {
@@ -38,11 +38,12 @@ export default async function NegotiationDetailPage({ params }: PageProps) {
   if (!negotiation) notFound();
 
   // The linked enquiry (SM repo) supplies the header SM chip + number.
-  const [employees, inquiry] = await Promise.all([
+  const [employees, inquiry, lines] = await Promise.all([
     listEmployeeOptions(),
     negotiation.inquiryId
       ? getInquiryById(negotiation.inquiryId)
       : Promise.resolve(null),
+    getNegotiationItems(negotiation.id),
   ]);
 
   const inquiryLink: NegotiationInquiryLink | null = inquiry
@@ -59,6 +60,7 @@ export default async function NegotiationDetailPage({ params }: PageProps) {
         negotiation={negotiation}
         employees={employees}
         inquiryLink={inquiryLink}
+        lines={lines}
       />
     </main>
   );
