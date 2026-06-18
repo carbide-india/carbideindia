@@ -9,6 +9,26 @@ const Money = z.number().nonnegative().optional();
 /** Quantity: the form sends a number; stored numeric. Non-negative, optional. */
 const Qty = z.number().nonnegative().optional();
 
+// ── Per-line sales-order item schema (used by sales_order_items child table) ──
+// Coerce locally so string inputs from FormData are accepted for line items
+// without widening the shared Money/Qty helpers used by the flat fields.
+const CoercedMoney = z.coerce.number().nonnegative().optional();
+const CoercedQty = z.coerce.number().nonnegative().optional();
+
+export const SoLineSchema = z.object({
+  custProductName:   OptionalText(300),
+  qty:               CoercedQty,
+  partNo:            OptionalText(120),
+  quotePrice:        CoercedMoney,
+  developmentTime:   OptionalText(120),
+  deliveryTime:      OptionalText(120),
+  validity:          OptionalText(120),
+  inquiryItemId:     z.string().uuid().optional(),
+  quotationItemId:   z.string().uuid().optional(),
+  itemId:            z.string().uuid().optional(),
+});
+export type SoLineInput = z.input<typeof SoLineSchema>;
+
 /**
  * Base field set shared by Create/Update — base-object + derive pattern
  * (zod v4 has no `.innerType()`). inquiryId required; quotationId optional
@@ -37,12 +57,17 @@ const SalesOrderFieldsSchema = z.object({
   customerSoLink: OptionalText(2000),
   customerSoSent: z.boolean().default(false),
   productionSoLink: OptionalText(2000),
+  // Per-line items (Phase D)
+  lines: z.array(SoLineSchema).optional(),
 });
 
 export const CreateSalesOrderSchema = SalesOrderFieldsSchema;
 export type CreateSalesOrderInput = z.input<typeof CreateSalesOrderSchema>;
 
-export const UpdateSalesOrderSchema = SalesOrderFieldsSchema.extend({
+export const UpdateSalesOrderSchema = SalesOrderFieldsSchema
+  // line edits are not wired to sales_order_items yet (later phase); omit so strict update rejects them
+  .omit({ lines: true })
+  .extend({
   inquiryId: z.string().uuid().optional(),
   customerSoSent: z.boolean(),
 })
