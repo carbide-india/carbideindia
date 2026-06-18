@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth/current";
-import { getInquiryById } from "@/lib/queries/inquiries";
+import { getInquiryById, getInquiryItems } from "@/lib/queries/inquiries";
 import { listEmployeeOptions } from "@/lib/queries/employees";
 import { listMasterOptions } from "@/lib/queries/masters";
 import { InquiryDetail } from "@/components/inquiries/inquiry-detail";
@@ -34,11 +34,12 @@ export default async function InquiryDetailPage({ params }: PageProps) {
   const inquiry = await getInquiryById(id);
   if (!inquiry) notFound();
 
-  const [employees, grades, tolerances, conditions] = await Promise.all([
+  const [employees, grades, tolerances, conditions, items] = await Promise.all([
     listEmployeeOptions(),
     listMasterOptions("internal_grade"),
     listMasterOptions("tolerance"),
     listMasterOptions("condition"),
+    getInquiryItems(id),
   ]);
 
   // Resolve master ids → display names server-side; the detail view is
@@ -49,9 +50,16 @@ export default async function InquiryDetailPage({ params }: PageProps) {
     condition: conditions.find((c) => c.id === inquiry.conditionId)?.name ?? null,
   };
 
+  const products = items.map((it) => ({
+    ...it,
+    gradeName: grades.find((g) => g.id === it.gradeId)?.name ?? null,
+    toleranceName: tolerances.find((t) => t.id === it.toleranceId)?.name ?? null,
+    conditionName: conditions.find((c) => c.id === it.conditionId)?.name ?? null,
+  }));
+
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
-      <InquiryDetail inquiry={inquiry} employees={employees} masterNames={masterNames} />
+      <InquiryDetail inquiry={inquiry} employees={employees} masterNames={masterNames} products={products} />
     </main>
   );
 }

@@ -13,7 +13,7 @@ import {
   INQUIRY_SOURCE_LABELS,
   type CheckState,
 } from "@/db/enums";
-import type { Inquiry } from "@/db/schema";
+import type { Inquiry, InquiryItem } from "@/db/schema";
 import { setEnquiryStatus } from "@/app/(app)/inquiries/actions";
 import type { EmployeeOption } from "@/lib/queries/employees";
 import { formatDate } from "@/lib/format";
@@ -33,10 +33,18 @@ interface MasterNames {
   condition: string | null;
 }
 
+/** An inquiry_items row with resolved master names. */
+export type ProductRow = InquiryItem & {
+  gradeName: string | null;
+  toleranceName: string | null;
+  conditionName: string | null;
+};
+
 interface Props {
   inquiry: Inquiry;
   employees: EmployeeOption[];
   masterNames: MasterNames;
+  products: ProductRow[];
 }
 
 /**
@@ -44,7 +52,7 @@ interface Props {
  * sidebar (per the transcript: status lives beside the record, not inside
  * the form), Primary Feasibility below.
  */
-export function InquiryDetail({ inquiry, employees, masterNames }: Props) {
+export function InquiryDetail({ inquiry, employees, masterNames, products }: Props) {
   const salesPerson =
     employees.find((e) => e.id === inquiry.assignedSalesPersonId)?.name ?? null;
   const createdBy =
@@ -137,7 +145,7 @@ export function InquiryDetail({ inquiry, employees, masterNames }: Props) {
             />
           </ReadCard>
 
-          <ReadCard title="Product & Checklist">
+          <ReadCard title="Checklist & Products">
             <div className="flex flex-col gap-4">
               <p className="text-[14px] leading-relaxed text-ink-strong whitespace-pre-wrap">
                 {inquiry.productDescription}
@@ -161,28 +169,72 @@ export function InquiryDetail({ inquiry, employees, masterNames }: Props) {
               </div>
               <InfoGrid
                 rows={[
-                  [
-                    "Quantity",
-                    inquiry.quantityNos ? `${inquiry.quantityNos} ${inquiry.quantityUom}` : null,
-                  ],
                   ["Docs Given", inquiry.docsGiven?.length ? inquiry.docsGiven.join(", ") : null],
                   [
                     "Sample Received",
                     inquiry.sampleReceived === null ? null : inquiry.sampleReceived ? "Yes" : "No",
                   ],
-                  ["Shape", inquiry.shape],
-                  ["Outer Dia", inquiry.outerDia],
-                  ["Inner Dia", inquiry.innerDia],
-                  ["Length", inquiry.length],
-                  ["Width", inquiry.width],
-                  ["Thickness", inquiry.thickness],
-                  ["Dimension Notes", inquiry.dimensionNotes],
-                  ["Grade (Internal)", masterNames.grade],
-                  ["Tolerance", masterNames.tolerance],
-                  ["Condition", masterNames.condition],
                   ["Enquiry Notes", inquiry.enquiryNotes],
                 ]}
               />
+
+              {/* ── Per-product list ──────────────────────────────────── */}
+              {products.length > 0 ? (
+                <div className="flex flex-col gap-4 mt-2">
+                  {products.map((p, idx) => (
+                    <div
+                      key={p.id}
+                      className="rounded-section border border-hairline bg-surface-soft p-4"
+                    >
+                      <p className="mb-3 text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
+                        Product {idx + 1}
+                        {p.custProductName ? (
+                          <span className="ml-2 normal-case text-ink-muted font-semibold">
+                            — {p.custProductName}
+                          </span>
+                        ) : null}
+                      </p>
+                      <InfoGrid
+                        rows={[
+                          ["Product Name", p.custProductName],
+                          ["Drawing No", p.custDrawingNo],
+                          ["Drawing Rev", p.drawingRevisionNo],
+                          ["Shape", p.shape],
+                          ["Dimensions", composeDimensions(p)],
+                          ["Dimension Notes", p.dimensionNotes],
+                          ["Grade (Internal)", p.gradeName],
+                          ["Tolerance", p.toleranceName],
+                          ["Condition", p.conditionName],
+                          [
+                            "Quantity",
+                            p.quantityNos ? `${p.quantityNos} ${p.quantityUom}` : null,
+                          ],
+                        ]}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                /* Fallback: pre-Phase-A single-product block */
+                <InfoGrid
+                  rows={[
+                    [
+                      "Quantity",
+                      inquiry.quantityNos ? `${inquiry.quantityNos} ${inquiry.quantityUom}` : null,
+                    ],
+                    ["Shape", inquiry.shape],
+                    ["Outer Dia", inquiry.outerDia],
+                    ["Inner Dia", inquiry.innerDia],
+                    ["Length", inquiry.length],
+                    ["Width", inquiry.width],
+                    ["Thickness", inquiry.thickness],
+                    ["Dimension Notes", inquiry.dimensionNotes],
+                    ["Grade (Internal)", masterNames.grade],
+                    ["Tolerance", masterNames.tolerance],
+                    ["Condition", masterNames.condition],
+                  ]}
+                />
+              )}
             </div>
           </ReadCard>
 
@@ -223,6 +275,21 @@ export function InquiryDetail({ inquiry, employees, masterNames }: Props) {
       </div>
     </div>
   );
+}
+
+/* ── Local helpers ───────────────────────────────────────────────────── */
+
+/** Compose present dimension fields into a compact string like "OD 12 · ID 8 · L 100". */
+function composeDimensions(
+  p: Pick<InquiryItem, "outerDia" | "innerDia" | "length" | "width" | "thickness">,
+): string | null {
+  const parts: string[] = [];
+  if (p.outerDia) parts.push(`OD ${p.outerDia}`);
+  if (p.innerDia) parts.push(`ID ${p.innerDia}`);
+  if (p.length) parts.push(`L ${p.length}`);
+  if (p.width) parts.push(`W ${p.width}`);
+  if (p.thickness) parts.push(`T ${p.thickness}`);
+  return parts.length > 0 ? parts.join(" · ") : null;
 }
 
 /* ── Local read-only building blocks ─────────────────────────────────── */
