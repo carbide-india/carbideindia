@@ -588,6 +588,11 @@ export const items = pgTable(
   "items",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    // Sole writer is createItem(), which draws nextval('item_seq_seq') ONCE and
+    // supplies both `seq` and the assembled item_code from that single draw — so
+    // the two always agree. The column default is a fallback for any future
+    // direct insert; never insert an items row without an explicit `seq` from
+    // the same draw used to build item_code, or the two will diverge.
     seq: integer("seq").notNull().default(sql`nextval('item_seq_seq')`),
     itemCode: text("item_code").notNull().unique(),
     // Normalized fingerprint of the uniqueness columns (see create action).

@@ -124,7 +124,9 @@ export async function createItem(input: CreateItemInput): Promise<Result> {
     .filter((d): d is number => d !== null);
   const sizeCode = v.sizeCode || (dimList.length ? deriveSizeCode(dimList) : "");
 
-  // Draw the next serial, then assemble the code.
+  // Draw the next serial ONCE, then assemble the code AND insert with the same
+  // value (the items.seq column has a nextval default, but we always supply seq
+  // explicitly so the stored serial matches the one baked into item_code).
   const seqRows = (await db.execute(sql`SELECT nextval('item_seq_seq')::int AS seq`)) as unknown as { seq: number }[];
   const seq = Number(seqRows[0]?.seq ?? 0);
   const itemCode = buildItemCode({
