@@ -5,7 +5,12 @@ import { count, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { salesOrders, salesOrderItems, type NewSalesOrder } from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
-import { getQuoteAutofill, getQuotationAutofill } from "@/lib/queries/quotes";
+import {
+  getQuoteAutofill,
+  getQuotationAutofill,
+  getInquiryItemSeeds,
+  type QuoteLineSeed,
+} from "@/lib/queries/quotes";
 import { soLineRows } from "@/lib/sales-orders/line-rows";
 import {
   CreateSalesOrderSchema,
@@ -20,13 +25,28 @@ import {
  * deferred call as the sample/quotation actions).
  */
 
-type ActionResult =
-  | { ok: true; id?: string; soNo?: string }
-  | { ok: false; error: string };
-
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isUuid = (v: string): boolean => UUID_RE.test(v);
+
+/**
+ * Sales-order line seeds for the form per-line editor -- one per
+ * inquiry_items row of the picked SM, ordered by sort order.  Called
+ * client-side on SM select to pre-fill the lines (product name + qty);
+ * pricing + timeline stay blank for the user to fill.  Delegates to the
+ * shared getInquiryItemSeeds query used by the quote + negotiation forms.
+ */
+export async function getInquiryItemsForSalesOrder(
+  inquiryId: string,
+): Promise<QuoteLineSeed[]> {
+  await requireUser();
+  if (!isUuid(inquiryId)) return [];
+  return getInquiryItemSeeds(inquiryId);
+}
+
+type ActionResult =
+  | { ok: true; id?: string; soNo?: string }
+  | { ok: false; error: string };
 
 function stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
   return Object.fromEntries(

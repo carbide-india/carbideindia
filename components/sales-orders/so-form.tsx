@@ -2,11 +2,15 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
+import { Trash2 } from "lucide-react";
 import { CreateSalesOrderSchema } from "@/lib/validators/sales-order";
-import { createSalesOrder } from "@/app/(app)/sales-orders/actions";
+import {
+  createSalesOrder,
+  getInquiryItemsForSalesOrder,
+} from "@/app/(app)/sales-orders/actions";
 import type {
   QuoteAutofill,
   QuotationAutofill,
@@ -26,14 +30,14 @@ import {
 
 /** RHF holds the schema's *input* shape (pre-transform); zodResolver hands the
  *  parsed *output* (defaults applied, `""` folded to `undefined`) to the submit
- *  handler — which is exactly what createSalesOrder takes. */
+ *  handler -- which is exactly what createSalesOrder takes. */
 export type SoFormValues = z.input<typeof CreateSalesOrderSchema>;
 type SoFormOutput = z.output<typeof CreateSalesOrderSchema>;
 
 interface Props {
   inquiries: InquiryOption[];
   quotations: QuotationOption[];
-  /** Unused for now (the SM owns the sales person) — kept for parity with the
+  /** Unused for now (the SM owns the sales person) -- kept for parity with the
    *  house-style page wiring; reserved for a future "Created by" override. */
   employees: EmployeeOption[];
 }
@@ -43,7 +47,7 @@ const SO_SENT_OPTIONS = [
   { value: "no" as const, label: "No" },
 ];
 
-/** Money / number <input> → number | undefined (no NaN); 0 is a valid amount. */
+/** Money / number <input> to number | undefined (no NaN); 0 is a valid amount. */
 const moneyRegister = { setValueAs: (v: unknown) => moneyValue(v) };
 const qtyRegister = moneyRegister;
 function moneyValue(v: unknown): number | undefined {
@@ -52,12 +56,27 @@ function moneyValue(v: unknown): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
+/** Shape of one fresh, empty sales-order line. */
+const EMPTY_LINE = {
+  custProductName: "",
+  qty: undefined,
+  partNo: "",
+  quotePrice: undefined,
+  developmentTime: "",
+  deliveryTime: "",
+  validity: "",
+  inquiryItemId: undefined,
+  quotationItemId: undefined,
+  itemId: undefined,
+} as const;
+
 /**
- * New Sales Order form — Linked Enquiry (SM autofetch snapshot + Linked
- * Quotation prefill) / Quote Summary / Customer PO / Sales Order Docs. The SM
- * picker fetches getQuoteAutofill on select; the Quotation picker fetches
- * getQuotationAutofill to prefill price/timeline/validity/link/part. SO No
- * auto-numbers `<SM>-SO01` server-side.
+ * New Sales Order form -- Linked Enquiry (SM autofetch snapshot + Linked
+ * Quotation prefill) / Products & Pricing (per-line editor seeded from SM
+ * products) / Customer PO / Sales Order Docs. The SM picker seeds the
+ * per-line editor from the SM's inquiry_items; the Quotation picker fetches
+ * getQuotationAutofill to prefill price/timeline/validity/link on line 1.
+ * SO No auto-numbers `<SM>-SO01` server-side.
  */
 export function SoForm({ inquiries, quotations }: Props) {
   const router = useRouter();
@@ -79,13 +98,6 @@ export function SoForm({ inquiries, quotations }: Props) {
       inquiryId: "",
       quotationId: undefined,
       soNo: "",
-      custProductName: "",
-      qty: undefined,
-      partNo: "",
-      quotePrice: undefined,
-      developmentTime: "",
-      deliveryTime: "",
-      validity: "",
       quotationLink: "",
       customerPoNo: "",
       customerPoDate: "",
@@ -93,32 +105,49 @@ export function SoForm({ inquiries, quotations }: Props) {
       customerSoLink: "",
       customerSoSent: false,
       productionSoLink: "",
+      lines: [{ ...EMPTY_LINE }],
     },
   });
 
-  /** On SM select: fetch the autofill snapshot. Company + enquiry date + sales
-   *  person are shown as read-only captions; product/qty are part of the
-   *  server-side snapshot copied at create. */
+  const { fields, append, remove, replace } = useFieldArray({
+    control,
+    name: "lines",
+  });
+
+  /** On SM select: fetch the autofill snapshot (company/date/sales person captions)
+   *  then seed the per-line editor from the SM's inquiry_items -- one line per
+   *  product, prefilling product name + qty; pricing + timeline stay blank. */
   async function onPickInquiry(id: string | undefined) {
     setValue("inquiryId", id ?? "", { shouldValidate: true });
     setSnapshot(null);
-    if (!id) return;
+    if (!id) {
+      replace([{ ...EMPTY_LINE }]);
+      return;
+    }
     setAutofetching(true);
     try {
       const res = await fetch(`/api/quotes/autofill?inquiryId=${id}`);
       if (!res.ok) return;
       const data = (await res.json()) as QuoteAutofill;
       setSnapshot(data);
-      // Company / enquiry date / sales person stay read-only captions; product
-      // + qty prefill the editable Product fields (overridable before submit).
-      setValue("custProductName", data.productDescription ?? "");
-      setValue(
-        "qty",
-        data.quantityNos != null ? Number(data.quantityNos) : undefined,
-      );
+      // Seed one line per inquiry_items row; fall back to single empty line.
+      const seeds = await getInquiryItemsForSalesOrder(id);
+      if (seeds.length >= 1) {
+        replace(
+          seeds.map((s) => ({
+            ...EMPTY_LINE,
+            inquiryItemId: s.inquiryItemId ?? undefined,
+            itemId: s.itemId ?? undefined,
+            custProductName: s.custProductName ?? "",
+            qty: s.qty != null ? Number(s.qty) : undefined,
+          })),
+        );
+      } else {
+        replace([{ ...EMPTY_LINE }]);
+      }
     } catch {
       fireToast({
-        message: "Could not auto-fetch the enquiry — fill the fields manually.",
+        message: "Could not auto-fetch the enquiry -- fill the fields manually.",
         type: "error",
       });
     } finally {
@@ -126,8 +155,8 @@ export function SoForm({ inquiries, quotations }: Props) {
     }
   }
 
-  /** On Quotation select: fetch the quote's price/timeline/validity/link/part
-   *  and prefill the editable inputs (shown read-mostly but kept editable). */
+  /** On Quotation select: fetch the quote's price/timeline/validity/link and
+   *  prefill the editable inputs on line 1 (kept editable). */
   async function onPickQuotation(id: string | undefined) {
     setQuoteId(id ?? "");
     setValue("quotationId", id ?? undefined, { shouldValidate: true });
@@ -136,15 +165,15 @@ export function SoForm({ inquiries, quotations }: Props) {
       const res = await fetch(`/api/quotes/quotation-autofill?quotationId=${id}`);
       if (!res.ok) return;
       const data = (await res.json()) as QuotationAutofill;
-      if (data.quotePrice != null) setValue("quotePrice", Number(data.quotePrice));
-      if (data.developmentTime) setValue("developmentTime", data.developmentTime);
-      if (data.deliveryTime) setValue("deliveryTime", data.deliveryTime);
-      if (data.validity) setValue("validity", data.validity);
+      if (data.quotePrice != null) setValue("lines.0.quotePrice", Number(data.quotePrice));
+      if (data.developmentTime) setValue("lines.0.developmentTime", data.developmentTime);
+      if (data.deliveryTime) setValue("lines.0.deliveryTime", data.deliveryTime);
+      if (data.validity) setValue("lines.0.validity", data.validity);
       if (data.quotationLink) setValue("quotationLink", data.quotationLink);
-      if (data.partNo) setValue("partNo", data.partNo);
+      if (data.partNo) setValue("lines.0.partNo", data.partNo);
     } catch {
       fireToast({
-        message: "Could not auto-fetch the quotation — fill the fields manually.",
+        message: "Could not auto-fetch the quotation -- fill the fields manually.",
         type: "error",
       });
     }
@@ -173,10 +202,10 @@ export function SoForm({ inquiries, quotations }: Props) {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-6" noValidate>
-      {/* ── 1 · Linked Enquiry ───────────────────────────────────────── */}
+      {/* -- 1 . Linked Enquiry ------------------------------------------- */}
       <SectionCard
         title="Linked Enquiry"
-        hint="Pick the SM this sales order belongs to — its company, sales person and product are auto-fetched. Link the quotation to pull its pricing."
+        hint="Pick the SM this sales order belongs to -- its company, sales person and products are auto-fetched. Link the quotation to pull its pricing."
       >
         <Field label="Enquiry (SM)" labelOnly required>
           <Controller
@@ -186,8 +215,8 @@ export function SoForm({ inquiries, quotations }: Props) {
               <Select
                 value={field.value ?? ""}
                 onValueChange={(v) => void onPickInquiry(v || undefined)}
-                placeholder="Select an enquiry…"
-                searchPlaceholder="Search SM number or company…"
+                placeholder="Select an enquiry..."
+                searchPlaceholder="Search SM number or company..."
                 searchable
                 ariaLabel="Linked enquiry"
                 options={inquiries.map((o) => ({
@@ -203,17 +232,17 @@ export function SoForm({ inquiries, quotations }: Props) {
           <div className="flex flex-col gap-3 rounded-xl border border-hairline bg-surface-soft px-4 py-3">
             <div className="flex flex-wrap items-start gap-x-8 gap-y-2">
               <Caption label="Company">
-                {autofetching ? "…" : snapshot?.companyName ?? "—"}
+                {autofetching ? "..." : snapshot?.companyName ?? "—"}
               </Caption>
               <Caption label="Enquiry Date">
                 {autofetching
-                  ? "…"
+                  ? "..."
                   : snapshot?.enquiryDate
                     ? formatDate(new Date(snapshot.enquiryDate))
                     : "—"}
               </Caption>
               <Caption label="Sales Person">
-                {autofetching ? "…" : snapshot?.salesPersonName ?? "—"}
+                {autofetching ? "..." : snapshot?.salesPersonName ?? "—"}
               </Caption>
             </div>
             {!autofetching && snapshot && <SmDetailsRow snapshot={snapshot} />}
@@ -224,8 +253,8 @@ export function SoForm({ inquiries, quotations }: Props) {
           <Select
             value={quoteId}
             onValueChange={(v) => void onPickQuotation(v || undefined)}
-            placeholder="Optional — link a quotation to pull its pricing…"
-            searchPlaceholder="Search quote number or company…"
+            placeholder="Optional -- link a quotation to pull its pricing..."
+            searchPlaceholder="Search quote number or company..."
             searchable
             ariaLabel="Linked quotation"
             options={quotations.map((o) => ({
@@ -247,77 +276,162 @@ export function SoForm({ inquiries, quotations }: Props) {
           <p className="text-[12.5px] text-ink-subtle">
             SO No auto-numbers as{" "}
             <span style={{ fontFamily: "var(--font-mono)" }}>&lt;SM&gt;-SO01</span>{" "}
-            — leave blank.
+            -- leave blank.
           </p>
         </Field>
-      </SectionCard>
 
-      {/* ── 2 · Product ──────────────────────────────────────────────── */}
-      <SectionCard
-        title="Product"
-        hint="Customer product, quantity and part — prefilled from the SM, edit as needed."
-      >
-        <Field id="so-product" label="Cust Product Name">
-          <input
-            id="so-product"
-            type="text"
-            className="nt-input"
-            placeholder="e.g. Tungsten carbide insert, CNMG…"
-            {...register("custProductName")}
-          />
-        </Field>
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-          <Field id="so-qty" label="Qty">
-            <input
-              id="so-qty"
-              type="number"
-              inputMode="numeric"
-              min={0}
-              step="any"
-              className="nt-input tabular-nums"
-              placeholder="0"
-              {...register("qty", qtyRegister)}
-            />
-          </Field>
-          <Field id="so-part" label="Part No">
-            <input id="so-part" type="text" className="nt-input" {...register("partNo")} />
-          </Field>
-        </div>
-      </SectionCard>
-
-      {/* ── 3 · Quote Summary ────────────────────────────────────────── */}
-      <SectionCard
-        title="Quote Summary"
-        hint="Pulled from the linked quotation — editable if anything changed."
-      >
-        <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
-          <MiniField label="Quote Price">
-            <MoneyInput aria-label="Quote price" {...register("quotePrice", moneyRegister)} />
-          </MiniField>
-        </div>
-        <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-          <Field id="so-dev" label="Development Time">
-            <input id="so-dev" type="text" className="nt-input" {...register("developmentTime")} />
-          </Field>
-          <Field id="so-del" label="Delivery Time">
-            <input id="so-del" type="text" className="nt-input" {...register("deliveryTime")} />
-          </Field>
-          <Field id="so-val" label="Validity">
-            <input id="so-val" type="text" className="nt-input" {...register("validity")} />
-          </Field>
-        </div>
         <Field id="so-link" label="Quotation Link">
           <input
             id="so-link"
             type="url"
             className="nt-input"
-            placeholder="https://…"
+            placeholder="https://..."
             {...register("quotationLink")}
           />
         </Field>
       </SectionCard>
 
-      {/* ── 4 · Customer PO ──────────────────────────────────────────── */}
+      {/* -- 2 . Products & Pricing (per-line editor) --------------------- */}
+      <SectionCard
+        title="Products &amp; Pricing"
+        hint="One line per product -- prefilled from the enquiry. Add quote price and timeline per line."
+      >
+        {fields.map((field, index) => (
+          <div
+            key={field.id}
+            className="flex flex-col gap-4 rounded-xl border border-hairline bg-surface-soft px-4 py-4"
+          >
+            {/* Line header */}
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
+                Line {index + 1}
+              </p>
+              <button
+                type="button"
+                aria-label={`Remove line ${index + 1}`}
+                disabled={fields.length === 1}
+                onClick={() => remove(index)}
+                className="inline-flex items-center justify-center rounded-lg p-1.5 text-ink-subtle transition-colors hover:bg-red-50 hover:text-red-600 disabled:pointer-events-none disabled:opacity-30"
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
+
+            {/* Product */}
+            <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+              <Field
+                id={`lines.${index}.custProductName`}
+                label="Cust Product Name"
+              >
+                <input
+                  id={`lines.${index}.custProductName`}
+                  type="text"
+                  className="nt-input"
+                  placeholder="e.g. Tungsten carbide insert, CNMG..."
+                  {...register(`lines.${index}.custProductName`)}
+                />
+              </Field>
+              <Field id={`lines.${index}.qty`} label="Qty">
+                <input
+                  id={`lines.${index}.qty`}
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  step="any"
+                  className="nt-input tabular-nums"
+                  placeholder="0"
+                  {...register(`lines.${index}.qty`, qtyRegister)}
+                />
+              </Field>
+            </div>
+
+            <Field id={`lines.${index}.partNo`} label="Part No">
+              <input
+                id={`lines.${index}.partNo`}
+                type="text"
+                className="nt-input"
+                {...register(`lines.${index}.partNo`)}
+              />
+            </Field>
+
+            {/* Pricing */}
+            <div
+              className="pt-4"
+              style={{ borderTop: "1px solid var(--color-hairline)" }}
+            >
+              <p className="mb-3 text-[11px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
+                Pricing
+              </p>
+              <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
+                <MiniField label="Quote Price">
+                  <MoneyInput
+                    aria-label={`Quote price line ${index + 1}`}
+                    {...register(`lines.${index}.quotePrice`, moneyRegister)}
+                  />
+                </MiniField>
+              </div>
+            </div>
+
+            {/* Timeline & Validity */}
+            <div
+              className="pt-4"
+              style={{ borderTop: "1px solid var(--color-hairline)" }}
+            >
+              <p className="mb-3 text-[11px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
+                Timeline &amp; Validity
+              </p>
+              <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
+                <Field
+                  id={`lines.${index}.developmentTime`}
+                  label="Development Time"
+                >
+                  <input
+                    id={`lines.${index}.developmentTime`}
+                    type="text"
+                    className="nt-input"
+                    placeholder="e.g. 6-8 weeks"
+                    {...register(`lines.${index}.developmentTime`)}
+                  />
+                </Field>
+                <Field
+                  id={`lines.${index}.deliveryTime`}
+                  label="Delivery Time"
+                >
+                  <input
+                    id={`lines.${index}.deliveryTime`}
+                    type="text"
+                    className="nt-input"
+                    placeholder="e.g. 30 days from PO"
+                    {...register(`lines.${index}.deliveryTime`)}
+                  />
+                </Field>
+                <Field id={`lines.${index}.validity`} label="Validity">
+                  <input
+                    id={`lines.${index}.validity`}
+                    type="text"
+                    className="nt-input"
+                    placeholder="e.g. 30 days"
+                    {...register(`lines.${index}.validity`)}
+                  />
+                </Field>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Add line button */}
+        <div>
+          <button
+            type="button"
+            onClick={() => append({ ...EMPTY_LINE })}
+            className="inline-flex items-center gap-2 rounded-chip border border-brand bg-brand/8 px-4 py-2.5 text-[13px] font-semibold text-brand transition-colors hover:bg-brand/12"
+          >
+            + Add line
+          </button>
+        </div>
+      </SectionCard>
+
+      {/* -- 3 . Customer PO -------------------------------------------- */}
       <SectionCard
         title="Customer PO"
         hint="The purchase order the customer raised against the quote."
@@ -334,14 +448,14 @@ export function SoForm({ inquiries, quotations }: Props) {
               id="so-polink"
               type="url"
               className="nt-input"
-              placeholder="https://…"
+              placeholder="https://..."
               {...register("customerPoLink")}
             />
           </Field>
         </div>
       </SectionCard>
 
-      {/* ── 5 · Sales Order Docs ─────────────────────────────────────── */}
+      {/* -- 4 . Sales Order Docs --------------------------------------- */}
       <SectionCard
         title="Sales Order Docs"
         hint="The customer-facing SO sent back and the internal production SO."
@@ -352,7 +466,7 @@ export function SoForm({ inquiries, quotations }: Props) {
               id="so-custlink"
               type="url"
               className="nt-input"
-              placeholder="https://…"
+              placeholder="https://..."
               {...register("customerSoLink")}
             />
           </Field>
@@ -361,7 +475,7 @@ export function SoForm({ inquiries, quotations }: Props) {
               id="so-prodlink"
               type="url"
               className="nt-input"
-              placeholder="https://…"
+              placeholder="https://..."
               {...register("productionSoLink")}
             />
           </Field>
@@ -409,14 +523,14 @@ export function SoForm({ inquiries, quotations }: Props) {
             letterSpacing: "0.005em",
           }}
         >
-          {pending ? "Creating…" : "Create Sales Order"}
+          {pending ? "Creating..." : "Create Sales Order"}
         </button>
       </div>
     </form>
   );
 }
 
-/** ₹-prefixed number input — the rupee sign sits inside the field so the
+/** &#8377;-prefixed number input -- the rupee sign sits inside the field so the
  *  amount always reads as money. */
 const MoneyInput = React.forwardRef<
   HTMLInputElement,
@@ -425,7 +539,7 @@ const MoneyInput = React.forwardRef<
   return (
     <div className="relative w-[180px]">
       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[14px] font-semibold text-ink-subtle">
-        ₹
+        &#8377;
       </span>
       <input
         ref={ref}
@@ -453,7 +567,7 @@ function Caption({ label, children }: { label: string; children: React.ReactNode
 }
 
 /** Builds a compact dimension string from non-null values.
- *  OD is prefixed with "Ø"; parts joined with " × ". */
+ *  OD is prefixed with a diameter symbol; parts joined with x. */
 function buildDimString(s: QuoteAutofill): string | null {
   const parts: string[] = [];
   if (s.outerDia != null) parts.push(`Ø${s.outerDia}`);
@@ -464,7 +578,7 @@ function buildDimString(s: QuoteAutofill): string | null {
   return parts.length > 0 ? parts.join(" × ") : null;
 }
 
-/** Read-only "SM Details" row — shape, dimensions, contact.
+/** Read-only "SM Details" row -- shape, dimensions, contact.
  *  Renders nothing when all three sections are empty. */
 function SmDetailsRow({ snapshot: s }: { snapshot: QuoteAutofill }) {
   const dimStr = buildDimString(s);
