@@ -6,7 +6,12 @@ import { db } from "@/lib/db";
 import { negotiations, negotiationItems, type NewNegotiation } from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
 import { negotiationLineRows } from "@/lib/negotiations/line-rows";
-import { getQuoteAutofill, getQuotationAutofill } from "@/lib/queries/quotes";
+import {
+  getQuoteAutofill,
+  getQuotationAutofill,
+  getInquiryItemSeeds,
+  type QuoteLineSeed,
+} from "@/lib/queries/quotes";
 import { NEGOTIATION_STATUSES, type NegotiationStatus } from "@/db/enums";
 import {
   CreateNegotiationSchema,
@@ -20,6 +25,21 @@ import {
  * Negotiation server actions — Phase 4 write path. No audit logging (same
  * deferred call as the sample/quotation actions).
  */
+
+/**
+ * Negotiation line seeds for the form per-line editor -- one per
+ * inquiry_items row of the picked SM, ordered by sort order.  Called
+ * client-side on SM select to pre-fill the lines (product name + qty);
+ * pricing stays blank for the user to fill.  Delegates to the shared
+ * getInquiryItemSeeds query used by the quote form.
+ */
+export async function getInquiryItemsForNegotiation(
+  inquiryId: string,
+): Promise<QuoteLineSeed[]> {
+  await requireUser();
+  if (!isUuid(inquiryId)) return [];
+  return getInquiryItemSeeds(inquiryId);
+}
 
 type ActionResult =
   | { ok: true; id?: string; negotiationNo?: string }

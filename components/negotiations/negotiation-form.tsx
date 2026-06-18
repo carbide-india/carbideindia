@@ -2,15 +2,19 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
+import { Trash2 } from "lucide-react";
 import {
   NEGOTIATION_STATUSES,
   NEGOTIATION_STATUS_LABELS,
 } from "@/db/enums";
 import { CreateNegotiationSchema } from "@/lib/validators/negotiation";
-import { createNegotiation } from "@/app/(app)/negotiations/actions";
+import {
+  createNegotiation,
+  getInquiryItemsForNegotiation,
+} from "@/app/(app)/negotiations/actions";
 import type { QuoteAutofill, QuotationAutofill, QuotationOption } from "@/lib/queries/quotes";
 import type { InquiryOption } from "@/lib/queries/inquiries";
 import type { EmployeeOption } from "@/lib/queries/employees";
@@ -26,14 +30,14 @@ import {
 
 /** RHF holds the schema's *input* shape (pre-transform); zodResolver hands the
  *  parsed *output* (defaults applied, `""` folded to `undefined`) to the submit
- *  handler — which is exactly what createNegotiation takes. */
+ *  handler -- which is exactly what createNegotiation takes. */
 export type NegotiationFormValues = z.input<typeof CreateNegotiationSchema>;
 type NegotiationFormOutput = z.output<typeof CreateNegotiationSchema>;
 
 interface Props {
   inquiries: InquiryOption[];
   quotations: QuotationOption[];
-  /** Unused for now (the SM owns the sales person) — kept for parity with the
+  /** Unused for now (the SM owns the sales person) -- kept for parity with the
    *  house-style page wiring; reserved for a future "Created by" override. */
   employees: EmployeeOption[];
 }
@@ -43,7 +47,7 @@ const NEGOTIATION_STATUS_OPTIONS = NEGOTIATION_STATUSES.map((s) => ({
   label: NEGOTIATION_STATUS_LABELS[s],
 }));
 
-/** Money / number <input> → number | undefined (no NaN); 0 is a valid amount. */
+/** Money / number <input> to number | undefined (no NaN); 0 is a valid amount. */
 const moneyRegister = { setValueAs: (v: unknown) => moneyValue(v) };
 const qtyRegister = moneyRegister;
 function moneyValue(v: unknown): number | undefined {
@@ -52,12 +56,29 @@ function moneyValue(v: unknown): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
+/** Shape of one fresh, empty negotiation line. */
+const EMPTY_LINE = {
+  custProductName: "",
+  qty: undefined,
+  partNo: "",
+  finalCost: undefined,
+  negotiation: undefined,
+  quotePrice: undefined,
+  developmentTime: "",
+  deliveryTime: "",
+  validity: "",
+  inquiryItemId: undefined,
+  quotationItemId: undefined,
+  itemId: undefined,
+} as const;
+
 /**
- * New Negotiation form — Linked Enquiry (SM autofetch snapshot + optional
- * Linked Quotation prefill) / Pricing / Timeline & Validity / Status & Notes.
- * The SM picker fetches getQuoteAutofill on select; the Quotation picker
- * fetches getQuotationAutofill to prefill price/timeline/validity/link.
- * Negotiation No auto-numbers `<SM>-N01` when left blank.
+ * New Negotiation form -- Linked Enquiry (SM autofetch snapshot + optional
+ * Linked Quotation prefill) / Products &amp; Pricing (per-line editor) /
+ * Status &amp; Notes. The SM picker fetches getQuoteAutofill on select and
+ * pre-seeds the per-line editor from the SM's inquiry_items; the Quotation
+ * picker fetches getQuotationAutofill to prefill price/timeline/validity/link
+ * on line 1. Negotiation No auto-numbers `&lt;SM&gt;-N01` when left blank.
  */
 export function NegotiationForm({ inquiries, quotations }: Props) {
   const router = useRouter();
@@ -79,6 +100,7 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
       inquiryId: "",
       quotationId: undefined,
       negotiationNo: "",
+      // Legacy flat fields (still in schema, optional -- action mirrors from line #1)
       custProductName: "",
       qty: undefined,
       partNo: "",
@@ -91,32 +113,49 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
       quotationLink: "",
       negotiationStatus: "to_start",
       negotiationNotes: "",
+      lines: [{ ...EMPTY_LINE }],
     },
   });
 
-  /** On SM select: fetch the autofill snapshot. Company + enquiry date + sales
-   *  person are shown as read-only captions; product/qty are prefilled into
-   *  editable inputs. */
+  const { fields, append, remove, replace } = useFieldArray({
+    control,
+    name: "lines",
+  });
+
+  /** On SM select: fetch the autofill snapshot (company/date/sales person captions)
+   *  then seed the per-line editor from the SM's inquiry_items -- one line per
+   *  product, prefilling product name + qty; pricing + timeline stay blank. */
   async function onPickInquiry(id: string | undefined) {
     setValue("inquiryId", id ?? "", { shouldValidate: true });
     setSnapshot(null);
-    if (!id) return;
+    if (!id) {
+      replace([{ ...EMPTY_LINE }]);
+      return;
+    }
     setAutofetching(true);
     try {
       const res = await fetch(`/api/quotes/autofill?inquiryId=${id}`);
       if (!res.ok) return;
       const data = (await res.json()) as QuoteAutofill;
       setSnapshot(data);
-      // Company / enquiry date / sales person stay read-only captions; product
-      // + qty prefill the editable Product fields (overridable before submit).
-      setValue("custProductName", data.productDescription ?? "");
-      setValue(
-        "qty",
-        data.quantityNos != null ? Number(data.quantityNos) : undefined,
-      );
+      // Seed one line per inquiry_items row; fall back to single empty line.
+      const seeds = await getInquiryItemsForNegotiation(id);
+      if (seeds.length >= 1) {
+        replace(
+          seeds.map((s) => ({
+            ...EMPTY_LINE,
+            inquiryItemId: s.inquiryItemId ?? undefined,
+            itemId: s.itemId ?? undefined,
+            custProductName: s.custProductName ?? "",
+            qty: s.qty != null ? Number(s.qty) : undefined,
+          })),
+        );
+      } else {
+        replace([{ ...EMPTY_LINE }]);
+      }
     } catch {
       fireToast({
-        message: "Could not auto-fetch the enquiry — fill the fields manually.",
+        message: "Could not auto-fetch the enquiry -- fill the fields manually.",
         type: "error",
       });
     } finally {
@@ -125,7 +164,8 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
   }
 
   /** On Quotation select: fetch the quote's price/timeline/validity/link and
-   *  prefill the editable inputs. */
+   *  prefill the editable inputs. Sets the legacy flat fields (action uses them
+   *  as fallback when lines[0] is blank). */
   async function onPickQuotation(id: string | undefined) {
     setQuoteId(id ?? "");
     setValue("quotationId", id ?? undefined, { shouldValidate: true });
@@ -134,6 +174,7 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
       const res = await fetch(`/api/quotes/quotation-autofill?quotationId=${id}`);
       if (!res.ok) return;
       const data = (await res.json()) as QuotationAutofill;
+      // Mirror onto legacy flat fields (action picks them up if lines[0] is blank)
       if (data.finalCost != null) setValue("finalCost", Number(data.finalCost));
       if (data.quotePrice != null) setValue("quotePrice", Number(data.quotePrice));
       if (data.developmentTime) setValue("developmentTime", data.developmentTime);
@@ -143,7 +184,7 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
       if (data.partNo) setValue("partNo", data.partNo);
     } catch {
       fireToast({
-        message: "Could not auto-fetch the quotation — fill the fields manually.",
+        message: "Could not auto-fetch the quotation -- fill the fields manually.",
         type: "error",
       });
     }
@@ -172,10 +213,10 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-6" noValidate>
-      {/* ── 1 · Linked Enquiry ───────────────────────────────────────── */}
+      {/* -- 1 . Linked Enquiry ------------------------------------------- */}
       <SectionCard
         title="Linked Enquiry"
-        hint="Pick the SM this negotiation belongs to — its company, sales person and product are auto-fetched. Optionally link a quotation to pull its pricing."
+        hint="Pick the SM this negotiation belongs to -- its company, sales person and products are auto-fetched. Optionally link a quotation to pull its pricing."
       >
         <Field label="Enquiry (SM)" labelOnly required>
           <Controller
@@ -185,8 +226,8 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
               <Select
                 value={field.value ?? ""}
                 onValueChange={(v) => void onPickInquiry(v || undefined)}
-                placeholder="Select an enquiry…"
-                searchPlaceholder="Search SM number or company…"
+                placeholder="Select an enquiry..."
+                searchPlaceholder="Search SM number or company..."
                 searchable
                 ariaLabel="Linked enquiry"
                 options={inquiries.map((o) => ({
@@ -223,8 +264,8 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
           <Select
             value={quoteId}
             onValueChange={(v) => void onPickQuotation(v || undefined)}
-            placeholder="Optional — link a quotation to pull its pricing…"
-            searchPlaceholder="Search quote number or company…"
+            placeholder="Optional -- link a quotation to pull its pricing..."
+            searchPlaceholder="Search quote number or company..."
             searchable
             ariaLabel="Linked quotation"
             options={quotations.map((o) => ({
@@ -246,83 +287,166 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
           <p className="text-[12.5px] text-ink-subtle">
             Negotiation No auto-numbers as{" "}
             <span style={{ fontFamily: "var(--font-mono)" }}>&lt;SM&gt;-N01</span>{" "}
-            — leave blank.
+            -- leave blank.
           </p>
         </Field>
       </SectionCard>
 
-      {/* ── 2 · Product ──────────────────────────────────────────────── */}
+      {/* -- 2 . Products & Pricing (per-line editor) --------------------- */}
       <SectionCard
-        title="Product"
-        hint="Customer product, quantity and part — prefilled from the SM, edit as needed."
+        title="Products &amp; Pricing"
+        hint="One line per product -- prefilled from the enquiry; add negotiated pricing per line."
       >
-        <Field id="ng-product" label="Cust Product Name">
-          <input
-            id="ng-product"
-            type="text"
-            className="nt-input"
-            placeholder="e.g. Tungsten carbide insert, CNMG…"
-            {...register("custProductName")}
-          />
-        </Field>
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-          <Field id="ng-qty" label="Qty">
-            <input
-              id="ng-qty"
-              type="number"
-              inputMode="numeric"
-              min={0}
-              step="any"
-              className="nt-input tabular-nums"
-              placeholder="0"
-              {...register("qty", qtyRegister)}
-            />
-          </Field>
-          <Field id="ng-part" label="Part No">
-            <input id="ng-part" type="text" className="nt-input" {...register("partNo")} />
-          </Field>
+        {fields.map((field, index) => (
+          <div
+            key={field.id}
+            className="flex flex-col gap-4 rounded-xl border border-hairline bg-surface-soft px-4 py-4"
+          >
+            {/* Line header */}
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
+                Line {index + 1}
+              </p>
+              <button
+                type="button"
+                aria-label={`Remove line ${index + 1}`}
+                disabled={fields.length === 1}
+                onClick={() => remove(index)}
+                className="inline-flex items-center justify-center rounded-lg p-1.5 text-ink-subtle transition-colors hover:bg-red-50 hover:text-red-600 disabled:pointer-events-none disabled:opacity-30"
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
+
+            {/* Product */}
+            <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+              <Field
+                id={`lines.${index}.custProductName`}
+                label="Cust Product Name"
+              >
+                <input
+                  id={`lines.${index}.custProductName`}
+                  type="text"
+                  className="nt-input"
+                  placeholder="e.g. Tungsten carbide insert, CNMG..."
+                  {...register(`lines.${index}.custProductName`)}
+                />
+              </Field>
+              <Field id={`lines.${index}.qty`} label="Qty">
+                <input
+                  id={`lines.${index}.qty`}
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  step="any"
+                  className="nt-input tabular-nums"
+                  placeholder="0"
+                  {...register(`lines.${index}.qty`, qtyRegister)}
+                />
+              </Field>
+            </div>
+
+            <Field id={`lines.${index}.partNo`} label="Part No">
+              <input
+                id={`lines.${index}.partNo`}
+                type="text"
+                className="nt-input"
+                {...register(`lines.${index}.partNo`)}
+              />
+            </Field>
+
+            {/* Pricing */}
+            <div
+              className="pt-4"
+              style={{ borderTop: "1px solid var(--color-hairline)" }}
+            >
+              <p className="mb-3 text-[11px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
+                Pricing
+              </p>
+              <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
+                <MiniField label="Final Cost">
+                  <MoneyInput
+                    aria-label={`Final cost line ${index + 1}`}
+                    {...register(`lines.${index}.finalCost`, moneyRegister)}
+                  />
+                </MiniField>
+                <MiniField label="Negotiation">
+                  <MoneyInput
+                    aria-label={`Negotiation line ${index + 1}`}
+                    {...register(`lines.${index}.negotiation`, moneyRegister)}
+                  />
+                </MiniField>
+                <MiniField label="Quote Price">
+                  <MoneyInput
+                    aria-label={`Quote price line ${index + 1}`}
+                    {...register(`lines.${index}.quotePrice`, moneyRegister)}
+                  />
+                </MiniField>
+              </div>
+            </div>
+
+            {/* Timeline & Validity */}
+            <div
+              className="pt-4"
+              style={{ borderTop: "1px solid var(--color-hairline)" }}
+            >
+              <p className="mb-3 text-[11px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
+                Timeline &amp; Validity
+              </p>
+              <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
+                <Field
+                  id={`lines.${index}.developmentTime`}
+                  label="Development Time"
+                >
+                  <input
+                    id={`lines.${index}.developmentTime`}
+                    type="text"
+                    className="nt-input"
+                    placeholder="e.g. 6-8 weeks"
+                    {...register(`lines.${index}.developmentTime`)}
+                  />
+                </Field>
+                <Field
+                  id={`lines.${index}.deliveryTime`}
+                  label="Delivery Time"
+                >
+                  <input
+                    id={`lines.${index}.deliveryTime`}
+                    type="text"
+                    className="nt-input"
+                    placeholder="e.g. 30 days from PO"
+                    {...register(`lines.${index}.deliveryTime`)}
+                  />
+                </Field>
+                <Field id={`lines.${index}.validity`} label="Validity">
+                  <input
+                    id={`lines.${index}.validity`}
+                    type="text"
+                    className="nt-input"
+                    placeholder="e.g. 30 days"
+                    {...register(`lines.${index}.validity`)}
+                  />
+                </Field>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Add line button */}
+        <div>
+          <button
+            type="button"
+            onClick={() => append({ ...EMPTY_LINE })}
+            className="inline-flex items-center gap-2 rounded-chip border border-brand bg-brand/8 px-4 py-2.5 text-[13px] font-semibold text-brand transition-colors hover:bg-brand/12"
+          >
+            + Add line
+          </button>
         </div>
       </SectionCard>
 
-      {/* ── 3 · Pricing ──────────────────────────────────────────────── */}
+      {/* -- 3 . Status & Notes ------------------------------------------ */}
       <SectionCard
-        title="Pricing"
-        hint="All amounts in ₹. Negotiation is the give, Quote Price is what the customer sees."
-      >
-        <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
-          <MiniField label="Final Cost">
-            <MoneyInput aria-label="Final cost" {...register("finalCost", moneyRegister)} />
-          </MiniField>
-          <MiniField label="Negotiation">
-            <MoneyInput aria-label="Negotiation" {...register("negotiation", moneyRegister)} />
-          </MiniField>
-          <MiniField label="Quote Price">
-            <MoneyInput aria-label="Quote price" {...register("quotePrice", moneyRegister)} />
-          </MiniField>
-        </div>
-      </SectionCard>
-
-      {/* ── 4 · Timeline & Validity ──────────────────────────────────── */}
-      <SectionCard
-        title="Timeline & Validity"
-        hint="Free-text per Manan's sheet — e.g. “6–8 weeks”, “30 days from PO”."
-      >
-        <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-          <Field id="ng-dev" label="Development Time">
-            <input id="ng-dev" type="text" className="nt-input" {...register("developmentTime")} />
-          </Field>
-          <Field id="ng-del" label="Delivery Time">
-            <input id="ng-del" type="text" className="nt-input" {...register("deliveryTime")} />
-          </Field>
-          <Field id="ng-val" label="Validity">
-            <input id="ng-val" type="text" className="nt-input" {...register("validity")} />
-          </Field>
-        </div>
-      </SectionCard>
-
-      {/* ── 5 · Status & Notes ───────────────────────────────────────── */}
-      <SectionCard
-        title="Status & Notes"
+        title="Status &amp; Notes"
         hint="The live pipeline state plus the quote document and any negotiation notes."
       >
         <Field label="Negotiation Status" labelOnly>
@@ -348,7 +472,7 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
             id="ng-link"
             type="url"
             className="nt-input"
-            placeholder="https://…"
+            placeholder="https://..."
             {...register("quotationLink")}
           />
         </Field>
@@ -358,7 +482,7 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
             id="ng-notes"
             rows={4}
             className="nt-input resize-y"
-            placeholder="Counter-offers, customer feedback, next steps…"
+            placeholder="Counter-offers, customer feedback, next steps..."
             {...register("negotiationNotes")}
           />
         </Field>
@@ -390,14 +514,14 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
             letterSpacing: "0.005em",
           }}
         >
-          {pending ? "Creating…" : "Create Negotiation"}
+          {pending ? "Creating..." : "Create Negotiation"}
         </button>
       </div>
     </form>
   );
 }
 
-/** ₹-prefixed number input — the rupee sign sits inside the field so the
+/** Rs-prefixed number input -- the rupee sign sits inside the field so the
  *  amount always reads as money. */
 const MoneyInput = React.forwardRef<
   HTMLInputElement,
@@ -406,7 +530,7 @@ const MoneyInput = React.forwardRef<
   return (
     <div className="relative w-[180px]">
       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[14px] font-semibold text-ink-subtle">
-        ₹
+        &#8377;
       </span>
       <input
         ref={ref}
@@ -434,7 +558,7 @@ function Caption({ label, children }: { label: string; children: React.ReactNode
 }
 
 /** Builds a compact dimension string from non-null values.
- *  OD is prefixed with "Ø"; parts joined with " × ". */
+ *  OD is prefixed with a diameter symbol; parts joined with x. */
 function buildDimString(s: QuoteAutofill): string | null {
   const parts: string[] = [];
   if (s.outerDia != null) parts.push(`Ø${s.outerDia}`);
@@ -445,7 +569,7 @@ function buildDimString(s: QuoteAutofill): string | null {
   return parts.length > 0 ? parts.join(" × ") : null;
 }
 
-/** Read-only "SM Details" row — shape, dimensions, contact.
+/** Read-only "SM Details" row -- shape, dimensions, contact.
  *  Renders nothing when all three sections are empty. */
 function SmDetailsRow({ snapshot: s }: { snapshot: QuoteAutofill }) {
   const dimStr = buildDimString(s);
