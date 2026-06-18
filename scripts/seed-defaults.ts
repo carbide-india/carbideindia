@@ -120,6 +120,15 @@ const MASTER_SEEDS: Record<MasterKind, string[]> = {
     "Tumble",
   ],
   internal_grade: [], // data pending from Alokbhai — admin adds via UI
+  size: [
+    "Small", "Medium", "Large",
+    "Small Assembly", "Medium Assembly", "Large Assembly",
+    "Special", "Assembly", "Powder",
+  ],
+  shape: [
+    "Cylinder - Reg", "H. Cylinder - Reg", "Flat - Reg",
+    "Cylinder - Spl", "H. Cylinder - Spl", "Flat - Spl",
+  ],
   tolerance: [
     "CID06",
     "CID06(CID07)",
