@@ -1,7 +1,7 @@
 import "server-only";
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { inquiries, employees, type Inquiry } from "@/db/schema";
+import { inquiries, inquiryItems, employees, type Inquiry } from "@/db/schema";
 import type { EnquiryStatus, FeasibilityStatus } from "@/db/enums";
 
 /** One row of the /inquiries register table. */
@@ -142,4 +142,13 @@ export async function getNextSmNumber(): Promise<number> {
   if (!row) return 9579;
   const last = Number(row.last_value);
   return row.is_called ? last + 1 : last;
+}
+
+/** All product rows for a given inquiry, ordered by sort_order. */
+export async function getInquiryItems(inquiryId: string) {
+  return db
+    .select()
+    .from(inquiryItems)
+    .where(eq(inquiryItems.inquiryId, inquiryId))
+    .orderBy(asc(inquiryItems.sortOrder));
 }

@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { eq, inArray, sql } from "drizzle-orm";
 import type { z } from "zod";
 import { db } from "@/lib/db";
-import { inquiries, clients, clientContacts, type NewInquiry } from "@/db/schema";
+import { inquiries, inquiryItems, clients, clientContacts, type NewInquiry } from "@/db/schema";
+import { productRowsForInquiry } from "@/lib/inquiries/product-rows";
 import { requireUser } from "@/lib/auth/current";
 import { ENQUIRY_STATUSES, type EnquiryStatus } from "@/db/enums";
 import {
@@ -114,6 +115,9 @@ export async function createInquiry(
         }
       }
 
+      const productRows = productRowsForInquiry(v);
+      const p0 = productRows[0];
+
       const [row] = await tx
         .insert(inquiries)
         .values({
@@ -137,26 +141,26 @@ export async function createInquiry(
           contactNo: v.contactNo,
           contactEmail: v.contactEmail,
           ccEmails: v.ccEmails,
-          productDescription: v.productDescription,
+          productDescription: p0?.custProductName ?? v.productDescription,
           quantityStatus: v.quantityStatus,
-          quantityNos: v.quantityNos != null ? String(v.quantityNos) : undefined,
-          quantityUom: v.quantityUom,
+          quantityNos: p0?.quantityNos ?? undefined,
+          quantityUom: p0?.quantityUom ?? v.quantityUom,
           docsGiven: v.docsGiven,
           shapeDimensionCheck: v.shapeDimensionCheck,
           gradeCheck: v.gradeCheck,
           toleranceCheck: v.toleranceCheck,
           conditionCheck: v.conditionCheck,
           sampleReceived: v.sampleReceived,
-          shape: v.shape,
-          outerDia: v.outerDia != null ? String(v.outerDia) : undefined,
-          innerDia: v.innerDia != null ? String(v.innerDia) : undefined,
-          length: v.length != null ? String(v.length) : undefined,
-          width: v.width != null ? String(v.width) : undefined,
-          thickness: v.thickness != null ? String(v.thickness) : undefined,
-          dimensionNotes: v.dimensionNotes,
-          gradeId: v.gradeId,
-          toleranceId: v.toleranceId,
-          conditionId: v.conditionId,
+          shape: p0?.shape ?? undefined,
+          outerDia: p0?.outerDia ?? undefined,
+          innerDia: p0?.innerDia ?? undefined,
+          length: p0?.length ?? undefined,
+          width: p0?.width ?? undefined,
+          thickness: p0?.thickness ?? undefined,
+          dimensionNotes: p0?.dimensionNotes ?? undefined,
+          gradeId: p0?.gradeId ?? undefined,
+          toleranceId: p0?.toleranceId ?? undefined,
+          conditionId: p0?.conditionId ?? undefined,
           smFolderLink: v.smFolderLink,
           enquiryNotes: v.enquiryNotes,
           assignedSalesPersonId: v.assignedSalesPersonId,
@@ -164,6 +168,11 @@ export async function createInquiry(
         })
         .returning({ id: inquiries.id, smNumber: inquiries.smNumber });
       if (!row) throw new Error("inquiries insert returned no row");
+
+      if (productRows.length) {
+        await tx.insert(inquiryItems).values(productRows.map((r) => ({ inquiryId: row.id, ...r })));
+      }
+
       return row;
     });
 
