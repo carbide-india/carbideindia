@@ -33,6 +33,37 @@ export async function listMasterOptions(
   )();
 }
 
+export interface MasterOptionWithCode {
+  id: string;
+  name: string;
+  code: string | null;
+}
+
+/**
+ * Active options WITH their short code for the item-form — the live code
+ * preview needs the code to assemble a `buildItemCode` result client-side.
+ * Same cache + tag as `listMasterOptions`.
+ */
+export async function listMasterOptionsWithCode(
+  kind: MasterKind,
+): Promise<MasterOptionWithCode[]> {
+  return unstable_cache(
+    async (): Promise<MasterOptionWithCode[]> => {
+      return db
+        .select({
+          id: masterOptions.id,
+          name: masterOptions.name,
+          code: masterOptions.code,
+        })
+        .from(masterOptions)
+        .where(and(eq(masterOptions.kind, kind), eq(masterOptions.isActive, true)))
+        .orderBy(asc(masterOptions.sortOrder), asc(masterOptions.name));
+    },
+    ["list-master-options-with-code", kind],
+    { tags: [CACHE_TAGS.masters], revalidate: 600 },
+  )();
+}
+
 /** Full rows for the admin Masters screen (all kinds, active + inactive). */
 export async function listAllMasters(): Promise<MasterOption[]> {
   return db

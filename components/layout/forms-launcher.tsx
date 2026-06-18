@@ -15,6 +15,7 @@ import {
   Handshake,
   PackageCheck,
   UserCheck,
+  Database,
   ArrowRight,
   LayoutList,
   type LucideIcon,
@@ -44,6 +45,7 @@ const ACTIVE_PREFIXES = [
   "/negotiations",
   "/sales-orders",
   "/meetings",
+  "/items",
 ] as const;
 
 interface ActiveCard {
@@ -109,6 +111,13 @@ const ACTIVE_CARDS: ActiveCard[] = [
     desc: "Log a client visit — sales, contact and outcome.",
     href: "/meetings/new" as Route,
     registerHref: "/meetings" as Route,
+  },
+  {
+    name: "Item Master",
+    Icon: Database,
+    desc: "Register a product — shape, grade & size → auto item code.",
+    href: "/items/new" as Route,
+    registerHref: "/items" as Route,
   },
 ];
 
