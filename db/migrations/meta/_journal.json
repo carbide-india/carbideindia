@@ -113,6 +113,13 @@
       "when": 1781747249095,
       "tag": "0015_inquiry_items",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1781756389436,
+      "tag": "0016_item_master_per_product",
+      "breakpoints": true
     }
   ]
 }

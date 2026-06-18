@@ -37,6 +37,7 @@ import {
   COSTING_DONE_STATUSES,
   NEGOTIATION_STATUSES,
   MEETING_PURPOSES,
+  COSTING_TYPES,
 } from "./enums";
 
 /**
@@ -416,6 +417,10 @@ export const masterOptions = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     kind: masterKindEnum("kind").notNull(),
     name: text("name").notNull(),
+    // Short code used to assemble the Item Master code (e.g. Shape "Cylinder -
+    // Reg" → "C", Condition "Sintered" → "B", Size "Small" → "S"). Optional;
+    // only the item-code masters (size/shape/condition/grade) carry one.
+    code: text("code"),
     isActive: boolean("is_active").notNull().default(true),
     sortOrder: integer("sort_order").notNull().default(100),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -554,8 +559,9 @@ export const inquiryItems = pgTable(
     conditionId: uuid("condition_id").references(() => masterOptions.id, { onDelete: "set null" }),
     quantityNos: numeric("quantity_nos"),
     quantityUom: text("quantity_uom").notNull().default("Nos"),
-    // FK to items added in Phase B (items table doesn't exist on main yet).
-    itemId: uuid("item_id"),
+    // FK to the Item / Product Master (Phase B). onDelete: set null so deleting
+    // an item leaves the inquiry line intact, just unlinked.
+    itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -563,6 +569,75 @@ export const inquiryItems = pgTable(
 );
 export type InquiryItem = typeof inquiryItems.$inferSelect;
 export type NewInquiryItem = typeof inquiryItems.$inferInsert;
+
+// ── Item / Product Master (2026-06-17, Alok) ────────────────────
+export const costingTypeEnum = pgEnum("costing_type", COSTING_TYPES);
+
+/** Item serial → the "10001" in S-10001-C-… */
+export const itemSeqSeq = pgSequence("item_seq_seq", { startWith: 10001 });
+
+/**
+ * The Item / Product Master. Each unique physical product (by shape + grade +
+ * condition + tolerance + dimensions) gets ONE row with a generated internal
+ * `item_code`. Most descriptive fields auto-pull from the source Enquiry; the
+ * code masters (shape/size/condition/internal grade) carry the short codes the
+ * `item_code` is assembled from. `dedup_key` is a normalized fingerprint of the
+ * uniqueness columns — a UNIQUE index on it makes "reuse if identical" atomic.
+ */
+export const items = pgTable(
+  "items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    seq: integer("seq").notNull().default(sql`nextval('item_seq_seq')`),
+    itemCode: text("item_code").notNull().unique(),
+    // Normalized fingerprint of the uniqueness columns (see create action).
+    dedupKey: text("dedup_key").notNull(),
+
+    // Source enquiry + snapshots (auto-pulled).
+    inquiryId: uuid("inquiry_id").references(() => inquiries.id, { onDelete: "set null" }),
+    smNumber: text("sm_number"),
+    enquiryDate: timestamp("enquiry_date", { withTimezone: true }),
+    customerName: text("customer_name"),
+    custProductName: text("cust_product_name"),
+    custDrawingNo: text("cust_drawing_no"),
+    drawingRevisionNo: text("drawing_revision_no"),
+    qty: numeric("qty"),
+
+    // Classification (code-bearing masters) + size class.
+    sizeCode: text("size_code"),                 // S / M / L … (derived or chosen)
+    shapeId: uuid("shape_id").references(() => masterOptions.id, { onDelete: "set null" }),
+    internalGradeId: uuid("internal_grade_id").references(() => masterOptions.id, { onDelete: "set null" }),
+    toleranceId: uuid("tolerance_id").references(() => masterOptions.id, { onDelete: "set null" }),
+    conditionId: uuid("condition_id").references(() => masterOptions.id, { onDelete: "set null" }),
+    gradeCustomer: text("grade_customer"),
+    gradeNameForCust: text("grade_name_for_cust"),
+
+    // Dimensions (mm, 2 decimals).
+    outerDia: numeric("outer_dia"), innerDia: numeric("inner_dia"),
+    length: numeric("length"), width: numeric("width"), thickness: numeric("thickness"),
+    dimensionNotes: text("dimension_notes"),
+
+    // Part identity + quotation insert lines.
+    partNo: text("part_no"),
+    partDescription1: text("part_description_1"),
+    partDescription2: text("part_description_2"),
+    partDescription3: text("part_description_3"),
+    partDescription4: text("part_description_4"),
+    partTag: text("part_tag"),
+    costingType: costingTypeEnum("costing_type"),
+
+    createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("items_dedup_key_uidx").on(t.dedupKey),
+    index("items_inquiry_idx").on(t.inquiryId),
+    index("items_shape_idx").on(t.shapeId),
+  ],
+);
+export type Item = typeof items.$inferSelect;
+export type NewItem = typeof items.$inferInsert;
 
 // ── Sample Register (Phase 3) ───────────────────────────────────
 export const sampleStatusEnum = pgEnum("sample_status", SAMPLE_STATUSES);

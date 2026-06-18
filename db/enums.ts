@@ -233,8 +233,21 @@ export const MASTER_KINDS = [
   "internal_grade",
   "tolerance",
   "condition",
+  // Item Master (2026-06-17): size + shape carry a short `code` used to
+  // assemble the internal item code.
+  "size",
+  "shape",
 ] as const;
 export type MasterKind = (typeof MASTER_KINDS)[number];
+
+/** Item Master costing route. */
+export const COSTING_TYPES = ["inhouse", "bought_out", "both"] as const;
+export type CostingType = (typeof COSTING_TYPES)[number];
+export const COSTING_TYPE_LABELS: Record<CostingType, string> = {
+  inhouse: "In-house",
+  bought_out: "Bought-out",
+  both: "Both",
+};
 
 export const MASTER_KIND_LABELS: Record<MasterKind, string> = {
   customer_type: "Customer Type",
@@ -243,6 +256,8 @@ export const MASTER_KIND_LABELS: Record<MasterKind, string> = {
   internal_grade: "Internal Grade",
   tolerance: "Tolerance",
   condition: "Condition",
+  size: "Size",
+  shape: "Shape",
 };
 
 // ── Inquiry module (Phase 2) — option lists from Manan's sheet ──
