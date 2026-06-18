@@ -723,6 +723,37 @@ export const quotations = pgTable("quotations", {
 export type Quotation = typeof quotations.$inferSelect;
 export type NewQuotation = typeof quotations.$inferInsert;
 
+export const quotationItems = pgTable(
+  "quotation_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    quotationId: uuid("quotation_id").notNull().references(() => quotations.id, { onDelete: "cascade" }),
+    inquiryItemId: uuid("inquiry_item_id").references(() => inquiryItems.id, { onDelete: "set null" }),
+    itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
+    sortOrder: integer("sort_order").notNull().default(0),
+    custProductName: text("cust_product_name"),
+    custDrawingNo: text("cust_drawing_no"),
+    drawingRevisionNo: text("drawing_revision_no"),
+    qty: numeric("qty"),
+    gradeCustomer: text("grade_customer"),
+    gradeNameForCust: text("grade_name_for_cust"),
+    tolerance: text("tolerance"),
+    condition: text("condition"),
+    partNo: text("part_no"),
+    finalCost: numeric("final_cost"),
+    negotiation: numeric("negotiation"),
+    quotePrice: numeric("quote_price"),
+    developmentTime: text("development_time"),
+    deliveryTime: text("delivery_time"),
+    validity: text("validity"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("quotation_items_quotation_idx").on(t.quotationId, t.sortOrder)],
+);
+export type QuotationItem = typeof quotationItems.$inferSelect;
+export type NewQuotationItem = typeof quotationItems.$inferInsert;
+
 export const negotiations = pgTable("negotiations", {
   id: uuid("id").primaryKey().defaultRandom(),
   inquiryId: uuid("inquiry_id").notNull().references(() => inquiries.id, { onDelete: "cascade" }),

@@ -120,6 +120,13 @@
       "when": 1781756389436,
       "tag": "0016_item_master_per_product",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1781770720014,
+      "tag": "0017_quotation_items",
+      "breakpoints": true
     }
   ]
 }
