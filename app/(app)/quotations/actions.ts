@@ -122,14 +122,17 @@ export async function createQuotation(
     const quoteNo =
       v.quoteNo ?? `${auto.smNumber}-Q${String(existingCount + attempt).padStart(2, "0")}`;
     try {
-      const [row] = await db
-        .insert(quotations)
-        .values({ ...values, quoteNo })
-        .returning({ id: quotations.id });
-      if (!row) return { ok: false, error: "Insert returned no row" };
-      if (lineRows.length) {
-        await db.insert(quotationItems).values(lineRows.map((r) => ({ quotationId: row.id, ...r })));
-      }
+      const row = await db.transaction(async (tx) => {
+        const [r] = await tx
+          .insert(quotations)
+          .values({ ...values, quoteNo })
+          .returning({ id: quotations.id });
+        if (!r) throw new Error("quotations insert returned no row");
+        if (lineRows.length) {
+          await tx.insert(quotationItems).values(lineRows.map((x) => ({ quotationId: r.id, ...x })));
+        }
+        return r;
+      });
       revalidatePath("/quotations");
       return { ok: true, id: row.id, quoteNo };
     } catch (err: unknown) {
