@@ -46,6 +46,7 @@ const ACTIVE_PREFIXES = [
   "/sales-orders",
   "/meetings",
   "/items",
+  "/costings",
 ] as const;
 
 interface ActiveCard {
@@ -119,15 +120,16 @@ const ACTIVE_CARDS: ActiveCard[] = [
     href: "/items/new" as Route,
     registerHref: "/items" as Route,
   },
-];
-
-const DISABLED_CARDS: DisabledCard[] = [
   {
     name: "Costing",
     Icon: Calculator,
-    desc: "BU/BO and in-house sheets with auto weight calcs.",
+    desc: "In-house or bought-out cost sheet with live estimate.",
+    href: "/costings/new" as Route,
+    registerHref: "/costings" as Route,
   },
 ];
+
+const DISABLED_CARDS: DisabledCard[] = [];
 
 function IconSquare({ Icon }: { Icon: LucideIcon }) {
   return (
