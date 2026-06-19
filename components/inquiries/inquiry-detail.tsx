@@ -256,7 +256,7 @@ export function InquiryDetail({ inquiry, employees, masterNames, products }: Pro
                             onClick={() => handleGenerateItem(p.id)}
                             className="inline-flex items-center rounded-pill border border-hairline px-3 py-1 text-[12px] font-bold text-ink-muted hover:bg-surface-card hover:text-ink-strong transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {generatingId === p.id ? "Generating&#8230;" : "Generate item code"}
+                            {generatingId === p.id ? "Generating…" : "Generate item code"}
                           </button>
                         )}
                       </div>
@@ -265,7 +265,7 @@ export function InquiryDetail({ inquiry, employees, masterNames, products }: Pro
                         <span className="text-[12px] font-bold text-ink-subtle">Costing</span>
                         {p.costingFinalCost ? (
                           <span className="font-mono text-[13px] font-semibold text-ink-strong">
-                            Final Cost &#8377;{p.costingFinalCost}
+                            Final Cost ₹{p.costingFinalCost}
                           </span>
                         ) : (
                           <span className="text-[13px] text-ink-muted">Not costed</span>
