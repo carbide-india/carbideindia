@@ -347,6 +347,17 @@ export const STAGE_LOCATIONS = ["Undecided", "Inhouse", "Lab Testing Company Lis
 
 export const SAMPLE_REPORT_TYPES = ["Dimension Report", "Chemical Analysis Report", "Drawing Report", "Costing Report"] as const;
 
+// ── Costing module (Phase C) — route + logic enums ──
+export const COSTING_ROUTES = ["inhouse", "bought_out"] as const;
+export type CostingRoute = (typeof COSTING_ROUTES)[number];
+export const COSTING_ROUTE_LABELS: Record<CostingRoute, string> = { inhouse: "In-house", bought_out: "Bought-Out" };
+export const COSTING_LOGICS = ["previously_made", "tooling_available", "tooling_to_be_made", "no_tooling"] as const;
+export type CostingLogic = (typeof COSTING_LOGICS)[number];
+export const COSTING_LOGIC_LABELS: Record<CostingLogic, string> = {
+  previously_made: "Previously made", tooling_available: "Tooling available",
+  tooling_to_be_made: "Tooling to be made", no_tooling: "No tooling",
+};
+
 // ── Quote lifecycle (Phase 4) — from Quote Master / Negotiation / SO sheets ──
 export const COSTING_DONE_STATUSES = ["not_done", "in_process", "done"] as const;
 export type CostingDoneStatus = (typeof COSTING_DONE_STATUSES)[number];

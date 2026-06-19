@@ -38,6 +38,8 @@ import {
   NEGOTIATION_STATUSES,
   MEETING_PURPOSES,
   COSTING_TYPES,
+  COSTING_ROUTES,
+  COSTING_LOGICS,
 } from "./enums";
 
 /**
@@ -690,6 +692,52 @@ export type NewSample = typeof samples.$inferInsert;
 // ── Quotation / Negotiation / Sales Order (Phase 4) ─────────────
 export const costingDoneStatusEnum = pgEnum("costing_done_status", COSTING_DONE_STATUSES);
 export const negotiationStatusEnum = pgEnum("negotiation_status", NEGOTIATION_STATUSES);
+
+// ── Costing module (Phase C) ────────────────────────────────────
+export const costingRouteEnum = pgEnum("costing_route", COSTING_ROUTES);
+export const costingLogicEnum = pgEnum("costing_logic", COSTING_LOGICS);
+
+export const costings = pgTable(
+  "costings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    inquiryItemId: uuid("inquiry_item_id").notNull().references(() => inquiryItems.id, { onDelete: "cascade" }),
+    inquiryId: uuid("inquiry_id").notNull().references(() => inquiries.id, { onDelete: "cascade" }),
+    costingType: costingRouteEnum("costing_type").notNull(),
+    costingLogic: costingLogicEnum("costing_logic"),
+    isChosen: boolean("is_chosen").notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(0),
+    qty: numeric("qty"),
+    // in-house inputs
+    toolType: text("tool_type"), toolCostMethod: text("tool_cost_method"), toolFlatCost: numeric("tool_flat_cost"),
+    blockWt: numeric("block_wt"), theoreticalWt: numeric("theoretical_wt"), pressingWt: numeric("pressing_wt"),
+    weightUsed: text("weight_used"),
+    lossPct: numeric("loss_pct"), rmPricePerKg: numeric("rm_price_per_kg"),
+    vaPct: numeric("va_pct"), vaFloorPerKg: numeric("va_floor_per_kg"),
+    shapingRatePerMin: numeric("shaping_rate_per_min"), shapingMins: numeric("shaping_mins"),
+    machiningType: text("machining_type"), machiningRate: numeric("machining_rate"),
+    overheadPct: numeric("overhead_pct"), negotiationPct: numeric("negotiation_pct"),
+    // bought-out inputs
+    outsourcedVendorCost: numeric("outsourced_vendor_cost"), vendorOhPct: numeric("vendor_oh_pct"),
+    vendorNotes: text("vendor_notes"), developmentCost: numeric("development_cost"),
+    developmentNotes: text("development_notes"), technicalNotes: text("technical_notes"),
+    // computed outputs (snapshot)
+    lossWt: numeric("loss_wt"), rmPerGm: numeric("rm_per_gm"), vaPerGm: numeric("va_per_gm"),
+    sinteredCostPerGm: numeric("sintered_cost_per_gm"), sinteredPricePerPiece: numeric("sintered_price_per_piece"),
+    shapingCostPerPiece: numeric("shaping_cost_per_piece"), machiningCostPerPiece: numeric("machining_cost_per_piece"),
+    costAfterMachining: numeric("cost_after_machining"), negotiationAmount: numeric("negotiation_amount"),
+    finalCostPerPiece: numeric("final_cost_per_piece"), quoteValue: numeric("quote_value"),
+    // meta
+    developmentTime: text("development_time"), deliveryTime: text("delivery_time"), validity: text("validity"),
+    costingDoneStatus: costingDoneStatusEnum("costing_done_status").notNull().default("not_done"),
+    createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("costings_inquiry_idx").on(t.inquiryId), index("costings_item_idx").on(t.inquiryItemId, t.sortOrder)],
+);
+export type Costing = typeof costings.$inferSelect;
+export type NewCosting = typeof costings.$inferInsert;
 
 export const quotations = pgTable("quotations", {
   id: uuid("id").primaryKey().defaultRandom(),
