@@ -4,6 +4,22 @@ import { db } from "@/lib/db";
 import { costings, inquiries, inquiryItems } from "@/db/schema";
 
 /**
+ * Tiny caption query for the /costings/new page: fetches the product name
+ * (custProductName) for a single inquiry_item so the form header shows the
+ * product without requiring the caller to reload the full inquiry.
+ */
+export async function getInquiryItemCaption(
+  inquiryItemId: string,
+): Promise<string> {
+  const [row] = await db
+    .select({ custProductName: inquiryItems.custProductName })
+    .from(inquiryItems)
+    .where(eq(inquiryItems.id, inquiryItemId))
+    .limit(1);
+  return row?.custProductName ?? "Unknown product";
+}
+
+/**
  * One row of the /costings register — joins inquiry smNumber/companyName and
  * the inquiry_item's custProductName so the register is human-readable without
  * extra round-trips.
