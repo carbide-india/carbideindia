@@ -10,7 +10,7 @@ export const CreateCostingSchema = z.object({
   costingLogic: z.enum(COSTING_LOGICS).optional(),
   qty: N,
   toolType: z.string().optional(), toolCostMethod: z.string().optional(), toolFlatCost: N,
-  blockWt: N, theoreticalWt: N, pressingWt: N, weightUsed: z.string().optional(),
+  blockWt: N, theoreticalWt: N, pressingWt: N, weightUsed: z.enum(["pressing", "theoretical", "block"]).optional(),
   lossPct: N, rmPricePerKg: N, vaPct: N, vaFloorPerKg: N,
   shapingRatePerMin: N, shapingMins: N,
   machiningType: z.string().optional(), machiningRate: N, overheadPct: N, negotiationPct: N,

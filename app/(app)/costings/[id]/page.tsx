@@ -1,3 +1,4 @@
+import * as React from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
@@ -304,8 +305,6 @@ function ReadCard({
     </section>
   );
 }
-
-import * as React from "react";
 
 function InfoGrid({
   rows,
