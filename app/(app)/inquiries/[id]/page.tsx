@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth/current";
 import { getInquiryById, getInquiryItems } from "@/lib/queries/inquiries";
 import { listEmployeeOptions } from "@/lib/queries/employees";
 import { listMasterOptions } from "@/lib/queries/masters";
+import { getChosenCostingsForInquiry } from "@/lib/queries/costings";
 import { InquiryDetail } from "@/components/inquiries/inquiry-detail";
 
 export const dynamic = "force-dynamic";
@@ -34,12 +35,13 @@ export default async function InquiryDetailPage({ params }: PageProps) {
   const inquiry = await getInquiryById(id);
   if (!inquiry) notFound();
 
-  const [employees, grades, tolerances, conditions, items] = await Promise.all([
+  const [employees, grades, tolerances, conditions, items, chosenCostings] = await Promise.all([
     listEmployeeOptions(),
     listMasterOptions("internal_grade"),
     listMasterOptions("tolerance"),
     listMasterOptions("condition"),
     getInquiryItems(id),
+    getChosenCostingsForInquiry(id),
   ]);
 
   // Resolve master ids → display names server-side; the detail view is
@@ -50,13 +52,23 @@ export default async function InquiryDetailPage({ params }: PageProps) {
     condition: conditions.find((c) => c.id === inquiry.conditionId)?.name ?? null,
   };
 
-  const products = items.map((it) => ({
-    ...it,
-    gradeName: grades.find((g) => g.id === it.gradeId)?.name ?? null,
-    toleranceName: tolerances.find((t) => t.id === it.toleranceId)?.name ?? null,
-    conditionName: conditions.find((c) => c.id === it.conditionId)?.name ?? null,
-    itemCode: it.itemCode ?? null,
-  }));
+  // Build a map for O(1) lookup of chosen costing per inquiry_item.
+  const costingByItemId = new Map(
+    chosenCostings.map((c) => [c.inquiryItemId, c]),
+  );
+
+  const products = items.map((it) => {
+    const costing = costingByItemId.get(it.id);
+    return {
+      ...it,
+      gradeName: grades.find((g) => g.id === it.gradeId)?.name ?? null,
+      toleranceName: tolerances.find((t) => t.id === it.toleranceId)?.name ?? null,
+      conditionName: conditions.find((c) => c.id === it.conditionId)?.name ?? null,
+      itemCode: it.itemCode ?? null,
+      costingFinalCost: costing?.finalCostPerPiece ?? null,
+      costingDoneStatus: costing?.costingDoneStatus ?? null,
+    };
+  });
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">

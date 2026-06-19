@@ -12,7 +12,10 @@ import {
   ENQUIRY_STATUS_COLORS,
   INQUIRY_PRIORITY_LABELS,
   INQUIRY_SOURCE_LABELS,
+  COSTING_DONE_STATUS_LABELS,
+  COSTING_DONE_STATUS_COLORS,
   type CheckState,
+  type CostingDoneStatus,
 } from "@/db/enums";
 import type { Inquiry, InquiryItem } from "@/db/schema";
 import { setEnquiryStatus, generateItemForInquiryItem } from "@/app/(app)/inquiries/actions";
@@ -35,12 +38,14 @@ interface MasterNames {
   condition: string | null;
 }
 
-/** An inquiry_items row with resolved master names and linked item code. */
+/** An inquiry_items row with resolved master names, linked item code, and chosen costing summary. */
 export type ProductRow = InquiryItem & {
   gradeName: string | null;
   toleranceName: string | null;
   conditionName: string | null;
   itemCode: string | null;
+  costingFinalCost: string | null;
+  costingDoneStatus: CostingDoneStatus | null;
 };
 
 interface Props {
@@ -251,9 +256,32 @@ export function InquiryDetail({ inquiry, employees, masterNames, products }: Pro
                             onClick={() => handleGenerateItem(p.id)}
                             className="inline-flex items-center rounded-pill border border-hairline px-3 py-1 text-[12px] font-bold text-ink-muted hover:bg-surface-card hover:text-ink-strong transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {generatingId === p.id ? "Generating…" : "Generate item code"}
+                            {generatingId === p.id ? "Generating&#8230;" : "Generate item code"}
                           </button>
                         )}
+                      </div>
+                      {/* Costing row */}
+                      <div className="mt-3 flex items-center gap-3">
+                        <span className="text-[12px] font-bold text-ink-subtle">Costing</span>
+                        {p.costingFinalCost ? (
+                          <span className="font-mono text-[13px] font-semibold text-ink-strong">
+                            Final Cost &#8377;{p.costingFinalCost}
+                          </span>
+                        ) : (
+                          <span className="text-[13px] text-ink-muted">Not costed</span>
+                        )}
+                        {p.costingDoneStatus && (
+                          <Chip
+                            label={COSTING_DONE_STATUS_LABELS[p.costingDoneStatus]}
+                            tone={COSTING_DONE_STATUS_COLORS[p.costingDoneStatus]}
+                          />
+                        )}
+                        <Link
+                          href={`/costings/new?inquiryItemId=${p.id}&inquiryId=${inquiry.id}` as Route}
+                          className="inline-flex items-center rounded-pill border border-hairline px-3 py-1 text-[12px] font-bold text-ink-muted hover:bg-surface-card hover:text-ink-strong transition-colors"
+                        >
+                          Cost this product
+                        </Link>
                       </div>
                     </div>
                   ))}
