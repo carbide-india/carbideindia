@@ -162,6 +162,7 @@ export function QuotationForm({ inquiries }: Props) {
             gradeCustomer: s.gradeCustomer ?? "",
             tolerance: s.tolerance ?? "",
             condition: s.condition ?? "",
+            finalCost: s.finalCost != null ? Number(s.finalCost) : undefined,
           })),
         );
       } else {

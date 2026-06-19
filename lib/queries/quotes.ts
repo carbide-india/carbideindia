@@ -1,5 +1,5 @@
 import "server-only";
-import { asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/lib/db";
 import {
@@ -9,6 +9,7 @@ import {
   masterOptions,
   quotations,
   quotationItems,
+  costings,
 } from "@/db/schema";
 
 /**
@@ -162,6 +163,8 @@ export interface QuoteLineSeed {
   gradeCustomer: string | null;
   tolerance: string | null;
   condition: string | null;
+  /** Final cost per piece from the chosen costing (if one exists). */
+  finalCost: string | null;
 }
 
 export async function getInquiryItemSeeds(
@@ -169,6 +172,7 @@ export async function getInquiryItemSeeds(
 ): Promise<QuoteLineSeed[]> {
   const tolerance = alias(masterOptions, "tolerance");
   const condition = alias(masterOptions, "condition");
+  const chosen = alias(costings, "chosen_costing");
 
   return db
     .select({
@@ -181,10 +185,18 @@ export async function getInquiryItemSeeds(
       gradeCustomer: inquiryItems.gradeCustomer,
       tolerance: tolerance.name,
       condition: condition.name,
+      finalCost: chosen.finalCostPerPiece,
     })
     .from(inquiryItems)
     .leftJoin(tolerance, eq(inquiryItems.toleranceId, tolerance.id))
     .leftJoin(condition, eq(inquiryItems.conditionId, condition.id))
+    .leftJoin(
+      chosen,
+      and(
+        eq(chosen.inquiryItemId, inquiryItems.id),
+        eq(chosen.isChosen, true),
+      ),
+    )
     .where(eq(inquiryItems.inquiryId, inquiryId))
     .orderBy(asc(inquiryItems.sortOrder));
 }
