@@ -57,8 +57,8 @@ export function ClientList({ clients }: Props) {
               style={{ background: "var(--color-surface-soft)" }}
             >
               <th className="px-5 py-4">Name</th>
+              <th className="px-5 py-4">City</th>
               <th className="px-5 py-4">Tags</th>
-              <th className="px-5 py-4 tabular-nums">Sort</th>
               <th className="px-5 py-4 tabular-nums">Tasks</th>
               <th className="px-5 py-4">Status</th>
               <th className="px-5 py-4 text-right">
@@ -119,9 +119,9 @@ function ClientRow({
     >
       <td className="px-5 py-4">
         <span className="text-ink-strong font-medium">{client.name}</span>
-        {client.city && (
-          <span className="text-[13px] text-ink-subtle">{" · "}{client.city}</span>
-        )}
+      </td>
+      <td className="px-5 py-4 text-ink-soft">
+        {client.city ? client.city : <span className="text-ink-subtle">—</span>}
       </td>
       <td className="px-5 py-4">
         {client.tags && client.tags.length > 0 ? (
@@ -144,7 +144,6 @@ function ClientRow({
           <span className="text-ink-subtle">—</span>
         )}
       </td>
-      <td className="px-5 py-4 tabular-nums text-ink-soft">{client.sortOrder}</td>
       <td className="px-5 py-4 tabular-nums text-ink-soft">{client.taskCount}</td>
       <td className="px-5 py-4">
         {client.isActive ? (
@@ -166,38 +165,45 @@ function ClientRow({
         )}
       </td>
       <td className="px-5 py-4 text-right">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              aria-label="Client actions"
-              disabled={pending}
-              className="inline-flex items-center justify-center size-9 rounded-lg border border-hairline text-ink-soft hover:border-hairline-strong hover:text-ink-strong transition-colors disabled:opacity-50 data-[state=open]:border-brand data-[state=open]:text-brand"
-            >
-              <MoreHorizontal size={18} strokeWidth={2.2} />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem onSelect={onEdit}>
-              <Pencil size={15} strokeWidth={2.2} />
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onSelect={(e) => {
-                e.preventDefault();
-                toggleActive();
-              }}
-            >
-              <Power size={15} strokeWidth={2.2} />
-              {client.isActive ? "Deactivate" : "Reactivate"}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem danger onSelect={onDelete}>
-              <Trash2 size={15} strokeWidth={2.2} />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="inline-flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onEdit}
+            disabled={pending}
+            className="inline-flex items-center gap-1.5 h-9 rounded-lg border border-hairline px-3 text-[13px] font-semibold text-ink-soft hover:border-brand hover:text-brand transition-colors disabled:opacity-50"
+          >
+            <Pencil size={15} strokeWidth={2.2} />
+            Edit
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label="More client actions"
+                disabled={pending}
+                className="inline-flex items-center justify-center size-9 rounded-lg border border-hairline text-ink-soft hover:border-hairline-strong hover:text-ink-strong transition-colors disabled:opacity-50 data-[state=open]:border-brand data-[state=open]:text-brand"
+              >
+                <MoreHorizontal size={18} strokeWidth={2.2} />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  toggleActive();
+                }}
+              >
+                <Power size={15} strokeWidth={2.2} />
+                {client.isActive ? "Deactivate" : "Reactivate"}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem danger onSelect={onDelete}>
+                <Trash2 size={15} strokeWidth={2.2} />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </td>
     </tr>
   );
