@@ -40,6 +40,7 @@ import {
   COSTING_TYPES,
   COSTING_ROUTES,
   COSTING_LOGICS,
+  AUDIT_ACTIONS,
 } from "./enums";
 
 /**
@@ -57,6 +58,7 @@ export const taskStatusEnum = pgEnum("task_status", TASK_STATUSES);
 export const employeeRoleEnum = pgEnum("employee_role", EMPLOYEE_ROLES);
 export const taskPriorityEnum = pgEnum("task_priority", TASK_PRIORITIES);
 export const approvalStatusEnum = pgEnum("approval_status", APPROVAL_STATUSES);
+export const auditActionEnum = pgEnum("audit_action", AUDIT_ACTIONS);
 
 export const employees = pgTable("employees", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -1053,6 +1055,32 @@ export const documents = pgTable(
     index("documents_client_idx").on(t.clientId),
   ],
 );
+
+// ── Audit trail (ERP Phase 1) ───────────────────────────────────────────────
+// Generic append-only change history. Legally-required (India Companies Act).
+// No FK on entity_id (polymorphic across any entity); actor_id FKs employees
+// but is nullable + set-null so deleting an employee never loses the trail.
+export const auditLog = pgTable(
+  "audit_log",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    entityType: text("entity_type").notNull(),
+    entityId: uuid("entity_id").notNull(),
+    entityLabel: text("entity_label"),
+    action: auditActionEnum("action").notNull(),
+    actorId: uuid("actor_id").references(() => employees.id, { onDelete: "set null" }),
+    actorName: text("actor_name"),
+    changes: jsonb("changes").$type<Array<{ field: string; old: unknown; new: unknown }>>(),
+    summary: text("summary"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("audit_log_entity_idx").on(t.entityType, t.entityId, t.createdAt),
+    index("audit_log_actor_idx").on(t.actorId),
+  ],
+);
+export type AuditLog = typeof auditLog.$inferSelect;
+export type NewAuditLog = typeof auditLog.$inferInsert;
 
 // M5.1 — admin-managed display overrides for the 9 task statuses. PK is the
 // task_status enum value; updates only (RLS: insert/delete revoked at the

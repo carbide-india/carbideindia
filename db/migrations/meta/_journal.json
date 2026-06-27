@@ -148,6 +148,13 @@
       "when": 1782533202818,
       "tag": "0020_client_master",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1782551731528,
+      "tag": "0021_audit_log",
+      "breakpoints": true
     }
   ]
 }

@@ -401,3 +401,10 @@ export const MEETING_PURPOSE_COLORS: Record<MeetingPurpose, string> = {
  *  `text`, NOT a pgEnum) so it stays flexible — "Other" reveals a specify input
  *  whose TYPED value is what gets stored (never the literal "Other"). */
 export const MEETING_SOURCES = ["WhatsApp","Call","Email","In-Person Visit","Walk In","Exhibition","Reference","Other"] as const;
+
+// ── Audit trail (ERP Phase 1) — generic append-only change history ──
+// Legally-required (India Companies Act) entity change log. The `action`
+// column is a pgEnum; everything else (entity_type, label, summary) is free
+// text so any entity can be audited without schema churn.
+export const AUDIT_ACTIONS = ["create", "update", "delete", "restore"] as const;
+export type AuditAction = (typeof AUDIT_ACTIONS)[number];
