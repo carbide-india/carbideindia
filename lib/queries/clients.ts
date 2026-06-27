@@ -10,8 +10,16 @@ import {
   tasks,
   type Client,
   type ClientContact,
+  type ClientAddress,
+  type ClientBankAccount,
 } from "@/db/schema";
+import type { GstRegistrationType } from "@/db/enums";
 import { CACHE_TAGS } from "@/lib/cache-tags";
+import { getClientAddresses, getClientBankAccounts } from "@/lib/queries/client-children";
+import type {
+  ClientAddressInput,
+  ClientBankAccountInput,
+} from "@/lib/validators/client-kyc";
 
 /**
  * Active client names, alphabetical (case-insensitive). Drives the
@@ -187,6 +195,15 @@ export interface ClientEditValues {
   transporter: string;
   otherReferences: string;
   msmeUdyamNo: string;
+  // ── GST normalization (ERP Phase 2) ──
+  gstRegistrationType?: GstRegistrationType;
+  placeOfSupply: string;
+  isTransporter: boolean;
+  // ── Normalized multi-address / multi-bank children (ERP Phase 2) ──
+  //    Shaped as the validator INPUT (nulls folded to undefined) so the form's
+  //    field arrays prefill cleanly; DB-only columns (id/timestamps) dropped.
+  addresses: ClientAddressInput[];
+  bankAccounts: ClientBankAccountInput[];
 }
 
 export async function getClientForEdit(
@@ -199,6 +216,37 @@ export async function getClientForEdit(
     .select()
     .from(clientContacts)
     .where(eq(clientContacts.clientId, clientId));
+  // Normalized children (ERP Phase 2) — drive the multi-address / multi-bank
+  // editors. Map DB rows → validator-input shape (null → undefined).
+  const [addressRows, bankRows] = await Promise.all([
+    getClientAddresses(clientId),
+    getClientBankAccounts(clientId),
+  ]);
+  const addresses: ClientAddressInput[] = addressRows.map((a) => ({
+    addressType: a.addressType,
+    isPrimary: a.isPrimary,
+    label: a.label ?? undefined,
+    line1: a.line1 ?? undefined,
+    line2: a.line2 ?? undefined,
+    line3: a.line3 ?? undefined,
+    line4: a.line4 ?? undefined,
+    city: a.city ?? undefined,
+    state: a.state ?? undefined,
+    country: a.country ?? undefined,
+    pinCode: a.pinCode ?? undefined,
+    gstin: a.gstin ?? undefined,
+    notes: a.notes ?? undefined,
+  }));
+  const bankAccounts: ClientBankAccountInput[] = bankRows.map((b) => ({
+    isPrimary: b.isPrimary,
+    bankName: b.bankName ?? undefined,
+    accountNo: b.accountNo ?? undefined,
+    ifsc: b.ifsc ?? undefined,
+    branch: b.branch ?? undefined,
+    accountHolder: b.accountHolder ?? undefined,
+    accountType: b.accountType ?? undefined,
+    notes: b.notes ?? undefined,
+  }));
   const primary = allContacts.find((c) => c.isPrimary);
   const additional = allContacts.filter((c) => !c.isPrimary);
   // Stored at noon UTC, so an ISO slice gives the intended calendar date.
@@ -260,6 +308,13 @@ export async function getClientForEdit(
     transporter: row.transporter ?? "",
     otherReferences: row.otherReferences ?? "",
     msmeUdyamNo: row.msmeUdyamNo ?? "",
+    // ── GST normalization (ERP Phase 2) ──
+    gstRegistrationType: row.gstRegistrationType ?? undefined,
+    placeOfSupply: row.placeOfSupply ?? "",
+    isTransporter: row.isTransporter ?? false,
+    // ── Normalized children ──
+    addresses,
+    bankAccounts,
   };
 }
 
@@ -280,6 +335,10 @@ export interface ClientRecord extends Client {
   salesPersonName: string | null;
   /** All contacts for this client — primary contact first, then additional. */
   contacts: ClientContact[];
+  /** Normalized addresses (ERP Phase 2) — ordered by type then sort order. */
+  addresses: ClientAddress[];
+  /** Normalized bank accounts (ERP Phase 2) — primary first, then sort order. */
+  bankAccounts: ClientBankAccount[];
 }
 
 export async function getClientRecord(
@@ -340,6 +399,12 @@ export async function getClientRecord(
     ...allContacts.filter((c) => !c.isPrimary),
   ];
 
+  // ── 5. Normalized children (ERP Phase 2) ──
+  const [addresses, bankAccounts] = await Promise.all([
+    getClientAddresses(clientId),
+    getClientBankAccounts(clientId),
+  ]);
+
   return {
     ...row,
     customerTypeName: row.customerTypeName ?? null,
@@ -347,6 +412,8 @@ export async function getClientRecord(
     productTypeNames,
     salesPersonName,
     contacts,
+    addresses,
+    bankAccounts,
   };
 }
 

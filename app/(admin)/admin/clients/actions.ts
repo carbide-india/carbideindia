@@ -3,8 +3,15 @@
 import { revalidatePath, updateTag } from "next/cache";
 import { and, eq, ne, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { clients, clientContacts, tasks, settingsEvents } from "@/db/schema";
-import { requireAdmin } from "@/lib/auth/current";
+import {
+  clients,
+  clientContacts,
+  clientAddresses,
+  clientBankAccounts,
+  tasks,
+  settingsEvents,
+} from "@/db/schema";
+import { requireAdmin, requireUser } from "@/lib/auth/current";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 import {
   CreateClientSchema,
@@ -29,6 +36,9 @@ const AUDITED_CLIENT_FIELDS = [
   "productTypeIds",
   "gstin",
   "panNo",
+  "gstRegistrationType",
+  "placeOfSupply",
+  "isTransporter",
   "paymentTerms",
   "creditDays",
   "creditLimit",
@@ -231,6 +241,83 @@ export async function adminUpdateClientKyc(
     }
   }
 
+  // ── Normalize the submitted children (ERP Phase 2) ──────────────────────
+  // Enforce "exactly one primary per addressType" and "exactly one primary
+  // bank overall": if none flagged, the first becomes primary; if several
+  // flagged, only the first stays. Produces insert rows with sortOrder = index.
+  let addressRows: (typeof clientAddresses.$inferInsert)[] | undefined;
+  if (v.addresses !== undefined) {
+    const primarySeenForType = new Set<string>();
+    const flaggedCountByType = new Map<string, number>();
+    for (const a of v.addresses) {
+      if (a.isPrimary) {
+        flaggedCountByType.set(a.addressType, (flaggedCountByType.get(a.addressType) ?? 0) + 1);
+      }
+    }
+    addressRows = v.addresses.map((a, i) => {
+      let isPrimary = false;
+      const flagged = flaggedCountByType.get(a.addressType) ?? 0;
+      if (flagged === 0) {
+        // None flagged for this type → first occurrence becomes primary.
+        if (!primarySeenForType.has(a.addressType)) {
+          isPrimary = true;
+          primarySeenForType.add(a.addressType);
+        }
+      } else if (a.isPrimary && !primarySeenForType.has(a.addressType)) {
+        // Keep only the first flagged of this type.
+        isPrimary = true;
+        primarySeenForType.add(a.addressType);
+      }
+      return {
+        clientId: client.id,
+        addressType: a.addressType,
+        isPrimary,
+        label: a.label ?? null,
+        line1: a.line1 ?? null,
+        line2: a.line2 ?? null,
+        line3: a.line3 ?? null,
+        line4: a.line4 ?? null,
+        city: a.city ?? null,
+        state: a.state ?? null,
+        country: a.country ?? null,
+        pinCode: a.pinCode ?? null,
+        gstin: a.gstin ?? null,
+        notes: a.notes ?? null,
+        sortOrder: i,
+      };
+    });
+  }
+
+  let bankRows: (typeof clientBankAccounts.$inferInsert)[] | undefined;
+  if (v.bankAccounts !== undefined) {
+    const hasFlagged = v.bankAccounts.some((b) => b.isPrimary);
+    let primaryAssigned = false;
+    bankRows = v.bankAccounts.map((b, i) => {
+      let isPrimary = false;
+      if (!hasFlagged) {
+        if (!primaryAssigned) {
+          isPrimary = true;
+          primaryAssigned = true;
+        }
+      } else if (b.isPrimary && !primaryAssigned) {
+        isPrimary = true;
+        primaryAssigned = true;
+      }
+      return {
+        clientId: client.id,
+        isPrimary,
+        bankName: b.bankName ?? null,
+        accountNo: b.accountNo ?? null,
+        ifsc: b.ifsc ?? null,
+        branch: b.branch ?? null,
+        accountHolder: b.accountHolder ?? null,
+        accountType: b.accountType ?? null,
+        notes: b.notes ?? null,
+        sortOrder: i,
+      };
+    });
+  }
+
   // Full overwrite of the form-managed columns — a cleared field becomes NULL.
   const patch: Partial<typeof clients.$inferInsert> = {
     name: v.name,
@@ -246,6 +333,9 @@ export async function adminUpdateClientKyc(
     pinCode: v.pinCode ?? null,
     gstin: v.gstin ?? null,
     panNo: v.panNo ?? null,
+    gstRegistrationType: v.gstRegistrationType ?? null,
+    placeOfSupply: v.placeOfSupply ?? null,
+    isTransporter: v.isTransporter ?? false,
     billToAddress: v.billToAddress ?? null,
     paymentTerms: v.paymentTerms ?? null,
     freightCharges: v.freightCharges ?? null,
@@ -273,9 +363,58 @@ export async function adminUpdateClientKyc(
     updatedAt: new Date(),
   };
 
+  // ── Mirror PRIMARY children → legacy `clients` columns (back-compat) ──────
+  // Only override when the corresponding children were submitted; otherwise
+  // leave the legacy columns as the scalar form fields above already set them.
+  if (addressRows !== undefined) {
+    const primaryRegistered = addressRows.find(
+      (r) => r.addressType === "registered" && r.isPrimary,
+    );
+    patch.addressLine1 = primaryRegistered?.line1 ?? null;
+    patch.addressLine2 = primaryRegistered?.line2 ?? null;
+    patch.addressLine3 = primaryRegistered?.line3 ?? null;
+    patch.addressLine4 = primaryRegistered?.line4 ?? null;
+    patch.city = primaryRegistered?.city ?? null;
+    patch.state = primaryRegistered?.state ?? null;
+    patch.country = primaryRegistered?.country ?? null;
+    patch.pinCode = primaryRegistered?.pinCode ?? null;
+
+    const primaryBillTo = addressRows.find(
+      (r) => r.addressType === "bill_to" && r.isPrimary,
+    );
+    patch.billToAddress = primaryBillTo?.line1 ?? null;
+
+    const primaryShipTo = addressRows.find(
+      (r) => r.addressType === "ship_to" && r.isPrimary,
+    );
+    patch.shipToAddress = primaryShipTo?.line1 ?? null;
+  }
+  if (bankRows !== undefined) {
+    const primaryBank = bankRows.find((r) => r.isPrimary);
+    patch.bankName = primaryBank?.bankName ?? null;
+    patch.bankAccountNo = primaryBank?.accountNo ?? null;
+    patch.bankIfsc = primaryBank?.ifsc ?? null;
+    patch.bankBranch = primaryBank?.branch ?? null;
+    patch.bankAccountHolder = primaryBank?.accountHolder ?? null;
+  }
+
   try {
     await db.transaction(async (tx) => {
       await tx.update(clients).set(patch).where(eq(clients.id, client.id));
+
+      // ── Replace-all the normalized children (only when submitted) ──
+      if (addressRows !== undefined) {
+        await tx.delete(clientAddresses).where(eq(clientAddresses.clientId, client.id));
+        if (addressRows.length > 0) {
+          await tx.insert(clientAddresses).values(addressRows);
+        }
+      }
+      if (bankRows !== undefined) {
+        await tx.delete(clientBankAccounts).where(eq(clientBankAccounts.clientId, client.id));
+        if (bankRows.length > 0) {
+          await tx.insert(clientBankAccounts).values(bankRows);
+        }
+      }
 
       // A client name IS the task's title — propagate a rename to every task.
       if (v.name !== client.name) {
@@ -361,6 +500,9 @@ export async function adminUpdateClientKyc(
     productTypeIds: client.productTypeIds,
     gstin: client.gstin,
     panNo: client.panNo,
+    gstRegistrationType: client.gstRegistrationType,
+    placeOfSupply: client.placeOfSupply,
+    isTransporter: client.isTransporter,
     paymentTerms: client.paymentTerms,
     creditDays: client.creditDays,
     creditLimit: client.creditLimit,
@@ -393,6 +535,9 @@ export async function adminUpdateClientKyc(
     productTypeIds: v.productTypeIds ?? null,
     gstin: v.gstin ?? null,
     panNo: v.panNo ?? null,
+    gstRegistrationType: v.gstRegistrationType ?? null,
+    placeOfSupply: v.placeOfSupply ?? null,
+    isTransporter: v.isTransporter ?? false,
     paymentTerms: v.paymentTerms ?? null,
     creditDays: v.creditDays ?? null,
     creditLimit: v.creditLimit != null ? String(v.creditLimit) : null,
@@ -428,6 +573,20 @@ export async function adminUpdateClientKyc(
     actorName: me.name,
     changes,
   });
+
+  // Child rows (addresses / bank accounts) aren't field-diffed — record a
+  // single summary entry when either was submitted.
+  if (addressRows !== undefined || bankRows !== undefined) {
+    await recordAudit({
+      entityType: "client",
+      entityId: client.id,
+      entityLabel: v.name,
+      action: "update",
+      actorId: me.id,
+      actorName: me.name,
+      summary: "Addresses/bank updated",
+    });
+  }
 
   revalidateClientSurfaces();
   revalidatePath(`/admin/clients/${client.id}/edit`);
@@ -527,4 +686,47 @@ export async function updateClient(
 
   revalidateClientSurfaces();
   return { ok: true };
+}
+
+export interface DuplicateClientMatch {
+  id: string;
+  name: string;
+  clientCode: string | null;
+}
+
+/**
+ * GSTIN/PAN dedup probe for the KYC form (ERP Phase 2). Returns OTHER clients
+ * whose normalized (trim + upper) `gstin` or `pan_no` equals a supplied
+ * non-empty value, excluding `excludeId` (the client being edited). The form
+ * uses this to warn — it is NON-BLOCKING; an empty payload returns `[]`.
+ */
+export async function checkClientDuplicate(input: {
+  gstin?: string | null;
+  panNo?: string | null;
+  excludeId?: string | null;
+}): Promise<DuplicateClientMatch[]> {
+  await requireUser();
+
+  const gstin = input.gstin?.trim().toUpperCase() ?? "";
+  const panNo = input.panNo?.trim().toUpperCase() ?? "";
+  if (!gstin && !panNo) return [];
+
+  const matchClauses: ReturnType<typeof sql>[] = [];
+  if (gstin) matchClauses.push(sql`upper(trim(${clients.gstin})) = ${gstin}`);
+  if (panNo) matchClauses.push(sql`upper(trim(${clients.panNo})) = ${panNo}`);
+  const matchExpr = matchClauses.reduce((acc, clause) =>
+    acc ? sql`${acc} OR ${clause}` : clause,
+  );
+
+  const exclude = input.excludeId?.trim();
+  const where = exclude
+    ? sql`(${matchExpr}) AND ${clients.id} <> ${exclude}`
+    : matchExpr;
+
+  const rows = await db
+    .select({ id: clients.id, name: clients.name, clientCode: clients.clientCode })
+    .from(clients)
+    .where(where);
+
+  return rows;
 }
