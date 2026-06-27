@@ -313,6 +313,8 @@ export const clients = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     name: text("name").notNull().unique(),
     isActive: boolean("is_active").notNull().default(true),
+    // Governance (ERP Phase 4): deactivate-only — clients are never hard-deleted.
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     sortOrder: integer("sort_order").notNull().default(100),
     // ── Carbide KYC (Phase 2) — auto-fetch source for inquiries ──
     customerTypeId: uuid("customer_type_id").references(() => masterOptions.id, { onDelete: "set null" }),
@@ -706,6 +708,11 @@ export const items = pgTable(
     altUom: text("alt_uom"),
     altUomConversion: numeric("alt_uom_conversion"),
 
+    // Governance (ERP Phase 4): deactivate-only lifecycle. Items are never
+    // hard-deleted; is_active=false + deleted_at marks a retired item.
+    isActive: boolean("is_active").notNull().default(true),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+
     createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -714,6 +721,7 @@ export const items = pgTable(
     uniqueIndex("items_dedup_key_uidx").on(t.dedupKey),
     index("items_inquiry_idx").on(t.inquiryId),
     index("items_shape_idx").on(t.shapeId),
+    index("items_active_idx").on(t.isActive),
   ],
 );
 export type Item = typeof items.$inferSelect;

@@ -112,6 +112,8 @@ export async function getItemById(id: string): Promise<ItemDetail | null> {
       uom: items.uom,
       altUom: items.altUom,
       altUomConversion: items.altUomConversion,
+      isActive: items.isActive,
+      deletedAt: items.deletedAt,
       createdById: items.createdById,
       createdAt: items.createdAt,
       updatedAt: items.updatedAt,
