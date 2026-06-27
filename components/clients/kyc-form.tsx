@@ -10,13 +10,21 @@ import { upload } from "@vercel/blob/client";
 import { Check, ImagePlus, Loader2, Plus, Trash2, X } from "lucide-react";
 import { CreateClientKycSchema } from "@/lib/validators/client-kyc";
 import { createClientKyc } from "@/app/(app)/clients/actions";
-import { adminUpdateClientKyc } from "@/app/(admin)/admin/clients/actions";
+import {
+  adminUpdateClientKyc,
+  checkClientDuplicate,
+  type DuplicateClientMatch,
+} from "@/app/(admin)/admin/clients/actions";
+import {
+  ADDRESS_TYPES,
+  ADDRESS_TYPE_LABELS,
+  GST_REGISTRATION_TYPES,
+  GST_REGISTRATION_TYPE_LABELS,
+} from "@/db/enums";
 import { fireToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { Select } from "@/components/ui/select";
 import { TagsInput } from "@/components/ui/tags-input";
-import { INDIA_STATES, citiesForState } from "@/lib/data/india-states-cities";
-import { SearchableSelect } from "@/components/inquiries/searchable-select";
 import { Field, SectionCard } from "@/components/inquiries/form-field";
 import { toOptionalNumber } from "@/lib/form-utils";
 import type { MasterOptionItem } from "@/lib/queries/masters";
@@ -98,8 +106,6 @@ export function KycForm({
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
   const [serverError, setServerError] = React.useState<string | null>(null);
-  // "Select a state first" guard for the dependent City dropdown.
-  const [cityGateError, setCityGateError] = React.useState(false);
 
   const {
     register,
@@ -137,6 +143,29 @@ export function KycForm({
       bankIfsc: "",
       bankBranch: "",
       bankAccountHolder: "",
+      // ── GST normalization (ERP Phase 2) ──
+      gstRegistrationType: undefined,
+      placeOfSupply: "",
+      isTransporter: false,
+      // ── Normalized multi-address / multi-bank children ──
+      // New client: seed one empty registered address; editing prefills below.
+      addresses: [
+        {
+          addressType: "registered",
+          isPrimary: false,
+          line1: "",
+          line2: "",
+          line3: "",
+          line4: "",
+          city: "",
+          state: "",
+          country: "",
+          pinCode: "",
+          gstin: "",
+          notes: "",
+        },
+      ],
+      bankAccounts: [],
       tags: [],
       contactFirstName: "",
       contactLastName: "",
@@ -155,6 +184,39 @@ export function KycForm({
 
   const { fields: additionalContactFields, append: appendContact, remove: removeContact } =
     useFieldArray({ control, name: "additionalContacts" });
+
+  const { fields: addressFields, append: appendAddress, remove: removeAddress } =
+    useFieldArray({ control, name: "addresses" });
+
+  const { fields: bankFields, append: appendBank, remove: removeBank } =
+    useFieldArray({ control, name: "bankAccounts" });
+
+  // Non-blocking GSTIN/PAN dedup warning. On blur of either field we ask the
+  // server for clients sharing the same GSTIN/PAN (excluding the one we edit);
+  // matches are surfaced inline and never block submit.
+  const [dupMatches, setDupMatches] = React.useState<DuplicateClientMatch[]>([]);
+  const [dupPending, startDupCheck] = React.useTransition();
+
+  function runDupCheck() {
+    const gstin = (watch("gstin") ?? "").trim();
+    const panNo = (watch("panNo") ?? "").trim();
+    if (!gstin && !panNo) {
+      setDupMatches([]);
+      return;
+    }
+    startDupCheck(async () => {
+      try {
+        const matches = await checkClientDuplicate({
+          gstin: gstin || undefined,
+          panNo: panNo || undefined,
+          excludeId: editClientId,
+        });
+        setDupMatches(matches);
+      } catch {
+        setDupMatches([]);
+      }
+    });
+  }
 
   // Business-card scans live in form state via the URL fields — uploads run on
   // file-pick and never block the save. `front`/`back` track in-flight uploads.
@@ -395,10 +457,20 @@ export function KycForm({
       >
         <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
           <Field id="kyc-gstin" label="GSTIN">
-            <input id="kyc-gstin" type="text" className="nt-input" {...register("gstin")} />
+            <input
+              id="kyc-gstin"
+              type="text"
+              className="nt-input"
+              {...register("gstin", { onBlur: runDupCheck })}
+            />
           </Field>
           <Field id="kyc-pan" label="PAN / IT No">
-            <input id="kyc-pan" type="text" className="nt-input" {...register("panNo")} />
+            <input
+              id="kyc-pan"
+              type="text"
+              className="nt-input"
+              {...register("panNo", { onBlur: runDupCheck })}
+            />
           </Field>
           <Field id="kyc-msme" label="MSME / Udyam No">
             <input
@@ -410,118 +482,201 @@ export function KycForm({
             />
           </Field>
         </div>
-      </SectionCard>
 
-      {/* ── 3 · Addresses ────────────────────────────────────────────── */}
-      <SectionCard title="Addresses">
-        {/* Address lines first, then State / City / Pin (Hetesh 2026-06-17). */}
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-          <Field id="kyc-addr1" label="Address Line 1">
-            <input id="kyc-addr1" type="text" className="nt-input" {...register("addressLine1")} />
-          </Field>
-          <Field id="kyc-addr2" label="Address Line 2">
-            <input id="kyc-addr2" type="text" className="nt-input" {...register("addressLine2")} />
-          </Field>
-          <Field id="kyc-addr3" label="Address Line 3">
-            <input id="kyc-addr3" type="text" className="nt-input" {...register("addressLine3")} />
-          </Field>
-          <Field id="kyc-addr4" label="Address Line 4">
-            <input id="kyc-addr4" type="text" className="nt-input" {...register("addressLine4")} />
-          </Field>
-        </div>
+        {/* Non-blocking dedup warning — existing clients sharing this GSTIN/PAN. */}
+        {(dupPending || dupMatches.length > 0) && (
+          <p
+            className="text-[12.5px] font-semibold"
+            style={{ color: dupMatches.length > 0 ? "#B45309" : "var(--color-ink-subtle)" }}
+            role="status"
+          >
+            {dupPending
+              ? "Checking for duplicates..."
+              : `Possible duplicate: ${dupMatches
+                  .map((m) => `${m.name}${m.clientCode ? ` (${m.clientCode})` : ""}`)
+                  .join(", ")}`}
+          </p>
+        )}
+
         <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-          {/* State — always shown; allowCustom lets a foreign state be typed. */}
-          <Field label="State" labelOnly>
+          <Field label="GST Registration Type" labelOnly>
             <Controller
               control={control}
-              name="state"
+              name="gstRegistrationType"
               render={({ field }) => (
-                <SearchableSelect
-                  ariaLabel="State"
-                  value={field.value || undefined}
-                  onChange={(v) => {
-                    field.onChange(v ?? "");
-                    // State changed — the old city no longer applies.
-                    setValue("city", "");
-                    if (v) setCityGateError(false);
-                  }}
-                  options={INDIA_STATES}
-                  placeholder="Select or type a state..."
-                  searchPlaceholder="Search states..."
-                  emptyText="No states match — type to add."
-                  allowCustom
+                <Select
+                  ariaLabel="GST Registration Type"
+                  value={field.value ?? ""}
+                  onValueChange={(v) => field.onChange(v || undefined)}
+                  placeholder="Select type..."
+                  options={GST_REGISTRATION_TYPES.map((t) => ({
+                    value: t,
+                    label: GST_REGISTRATION_TYPE_LABELS[t],
+                  }))}
                 />
               )}
             />
           </Field>
-          <Field label="City" labelOnly>
-            <Controller
-              control={control}
-              name="city"
-              render={({ field }) => {
-                const selectedState = watch("state") ?? "";
-                return (
-                  <>
-                    <SearchableSelect
-                      ariaLabel="City"
-                      value={field.value || undefined}
-                      onChange={(v) => field.onChange(v ?? "")}
-                      options={citiesForState(selectedState)}
-                      placeholder="Select city..."
-                      searchPlaceholder="Search cities..."
-                      emptyText="No cities match."
-                      allowCustom
-                      disabled={!selectedState}
-                      invalid={cityGateError && !selectedState}
-                      onDisabledClick={() => {
-                        setCityGateError(true);
-                        fireToast({
-                          message: "Select a state first — the city list depends on it.",
-                          type: "error",
-                        });
-                      }}
-                    />
-                    {cityGateError && !selectedState && (
-                      <p className="text-[12.5px] font-semibold" style={{ color: "#D32F2F" }}>
-                        Select a state first.
-                      </p>
-                    )}
-                  </>
-                );
-              }}
-            />
-          </Field>
-          <Field id="kyc-pin" label="Pin Code">
+          <Field id="kyc-pos" label="Place of Supply">
             <input
-              id="kyc-pin"
+              id="kyc-pos"
               type="text"
               className="nt-input"
-              {...register("pinCode")}
+              placeholder="e.g. Maharashtra"
+              {...register("placeOfSupply")}
+            />
+          </Field>
+          <Field label="Is Transporter" labelOnly>
+            <Controller
+              control={control}
+              name="isTransporter"
+              render={({ field }) => (
+                <label className="inline-flex items-center gap-2 py-2 text-[13px] font-semibold text-ink-muted">
+                  <input
+                    type="checkbox"
+                    className="size-[16px] accent-brand"
+                    checked={Boolean(field.value)}
+                    onChange={(e) => field.onChange(e.target.checked)}
+                  />
+                  This client is a transporter
+                </label>
+              )}
             />
           </Field>
         </div>
+      </SectionCard>
 
-        <Field id="kyc-billto" label="Bill-to Address">
-          <textarea
-            id="kyc-billto"
-            rows={2}
-            className="nt-input resize-y"
-            style={{ fontWeight: 400 }}
-            placeholder="Billing address (if different from the address above)"
-            {...register("billToAddress")}
-          />
-        </Field>
+      {/* ── 3 · Addresses ────────────────────────────────────────────── */}
+      <SectionCard
+        title="Addresses"
+        hint="Registered, bill-to, ship-to and consignee addresses — flag one as primary."
+      >
+        {addressFields.map((field, idx) => (
+          <div
+            key={field.id}
+            className="rounded-xl border border-hairline bg-surface-soft p-4 flex flex-col gap-4"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[13px] font-semibold text-ink-strong">
+                Address {idx + 1}
+              </p>
+              <button
+                type="button"
+                aria-label={`Remove address ${idx + 1}`}
+                onClick={() => removeAddress(idx)}
+                className="inline-flex items-center gap-1 text-[12px] font-semibold text-ink-muted hover:text-red-600 transition-colors"
+              >
+                <Trash2 size={13} strokeWidth={2.4} />
+                Remove
+              </button>
+            </div>
 
-        <Field id="kyc-shipto" label="Ship-to Address">
-          <textarea
-            id="kyc-shipto"
-            rows={2}
-            className="nt-input resize-y"
-            style={{ fontWeight: 400 }}
-            placeholder="Shipping address (if different from the billing address)"
-            {...register("shipToAddress")}
-          />
-        </Field>
+            <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+              <Field label="Address Type" labelOnly>
+                <Controller
+                  control={control}
+                  name={`addresses.${idx}.addressType`}
+                  render={({ field: f }) => (
+                    <Select
+                      ariaLabel="Address Type"
+                      value={f.value ?? "registered"}
+                      onValueChange={(v) => f.onChange(v)}
+                      options={ADDRESS_TYPES.map((t) => ({
+                        value: t,
+                        label: ADDRESS_TYPE_LABELS[t],
+                      }))}
+                    />
+                  )}
+                />
+              </Field>
+              <Field label="Primary" labelOnly>
+                <Controller
+                  control={control}
+                  name={`addresses.${idx}.isPrimary`}
+                  render={({ field: f }) => (
+                    <label className="inline-flex items-center gap-2 py-2 text-[13px] font-semibold text-ink-muted">
+                      <input
+                        type="checkbox"
+                        className="size-[16px] accent-brand"
+                        checked={Boolean(f.value)}
+                        onChange={(e) => f.onChange(e.target.checked)}
+                      />
+                      Primary address
+                    </label>
+                  )}
+                />
+              </Field>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+              <Field id={`kyc-addr${idx}-l1`} label="Address Line 1">
+                <input id={`kyc-addr${idx}-l1`} type="text" className="nt-input" {...register(`addresses.${idx}.line1`)} />
+              </Field>
+              <Field id={`kyc-addr${idx}-l2`} label="Address Line 2">
+                <input id={`kyc-addr${idx}-l2`} type="text" className="nt-input" {...register(`addresses.${idx}.line2`)} />
+              </Field>
+              <Field id={`kyc-addr${idx}-l3`} label="Address Line 3">
+                <input id={`kyc-addr${idx}-l3`} type="text" className="nt-input" {...register(`addresses.${idx}.line3`)} />
+              </Field>
+              <Field id={`kyc-addr${idx}-l4`} label="Address Line 4">
+                <input id={`kyc-addr${idx}-l4`} type="text" className="nt-input" {...register(`addresses.${idx}.line4`)} />
+              </Field>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
+              <Field id={`kyc-addr${idx}-city`} label="City">
+                <input id={`kyc-addr${idx}-city`} type="text" className="nt-input" {...register(`addresses.${idx}.city`)} />
+              </Field>
+              <Field id={`kyc-addr${idx}-state`} label="State">
+                <input id={`kyc-addr${idx}-state`} type="text" className="nt-input" {...register(`addresses.${idx}.state`)} />
+              </Field>
+              <Field id={`kyc-addr${idx}-country`} label="Country">
+                <input id={`kyc-addr${idx}-country`} type="text" className="nt-input" placeholder="e.g. India" {...register(`addresses.${idx}.country`)} />
+              </Field>
+              <Field id={`kyc-addr${idx}-pin`} label="Pin Code">
+                <input id={`kyc-addr${idx}-pin`} type="text" className="nt-input" {...register(`addresses.${idx}.pinCode`)} />
+              </Field>
+              <Field id={`kyc-addr${idx}-gstin`} label="GSTIN">
+                <input id={`kyc-addr${idx}-gstin`} type="text" className="nt-input" {...register(`addresses.${idx}.gstin`)} />
+              </Field>
+            </div>
+
+            <Field id={`kyc-addr${idx}-notes`} label="Notes">
+              <textarea
+                id={`kyc-addr${idx}-notes`}
+                rows={2}
+                className="nt-input resize-y"
+                style={{ fontWeight: 400 }}
+                placeholder="Notes about this address..."
+                {...register(`addresses.${idx}.notes`)}
+              />
+            </Field>
+          </div>
+        ))}
+
+        <button
+          type="button"
+          onClick={() =>
+            appendAddress({
+              addressType: "registered",
+              isPrimary: false,
+              line1: "",
+              line2: "",
+              line3: "",
+              line4: "",
+              city: "",
+              state: "",
+              country: "",
+              pinCode: "",
+              gstin: "",
+              notes: "",
+            })
+          }
+          className="inline-flex items-center gap-1.5 self-start rounded-chip border border-hairline-strong bg-surface-card px-4 py-2 text-[13px] font-semibold text-ink-muted hover:text-ink-strong hover:border-ink-subtle transition-colors"
+        >
+          <Plus size={14} strokeWidth={2.6} />
+          Add address
+        </button>
       </SectionCard>
 
       {/* ── 4 · Contact Person ───────────────────────────────────────── */}
@@ -740,54 +895,86 @@ export function KycForm({
       {/* ── 6 · Bank Details ─────────────────────────────────────────── */}
       <SectionCard
         title="Bank Details"
-        hint="Banking details for payments and account reconciliation."
+        hint="One or more bank accounts for payments — flag one as primary."
       >
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-          <Field id="kyc-bankname" label="Bank Name">
-            <input
-              id="kyc-bankname"
-              type="text"
-              className="nt-input"
-              placeholder="e.g. State Bank of India"
-              {...register("bankName")}
+        {bankFields.map((field, idx) => (
+          <div
+            key={field.id}
+            className="rounded-xl border border-hairline bg-surface-soft p-4 flex flex-col gap-4"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[13px] font-semibold text-ink-strong">
+                Account {idx + 1}
+              </p>
+              <button
+                type="button"
+                aria-label={`Remove bank account ${idx + 1}`}
+                onClick={() => removeBank(idx)}
+                className="inline-flex items-center gap-1 text-[12px] font-semibold text-ink-muted hover:text-red-600 transition-colors"
+              >
+                <Trash2 size={13} strokeWidth={2.4} />
+                Remove
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+              <Field id={`kyc-bank${idx}-name`} label="Bank Name">
+                <input id={`kyc-bank${idx}-name`} type="text" className="nt-input" placeholder="e.g. State Bank of India" {...register(`bankAccounts.${idx}.bankName`)} />
+              </Field>
+              <Field id={`kyc-bank${idx}-accno`} label="Account No">
+                <input id={`kyc-bank${idx}-accno`} type="text" className="nt-input" {...register(`bankAccounts.${idx}.accountNo`)} />
+              </Field>
+              <Field id={`kyc-bank${idx}-ifsc`} label="IFSC Code">
+                <input id={`kyc-bank${idx}-ifsc`} type="text" className="nt-input" placeholder="e.g. SBIN0001234" {...register(`bankAccounts.${idx}.ifsc`)} />
+              </Field>
+              <Field id={`kyc-bank${idx}-branch`} label="Branch">
+                <input id={`kyc-bank${idx}-branch`} type="text" className="nt-input" placeholder="e.g. Ambad, Nashik" {...register(`bankAccounts.${idx}.branch`)} />
+              </Field>
+              <Field id={`kyc-bank${idx}-holder`} label="Account Holder">
+                <input id={`kyc-bank${idx}-holder`} type="text" className="nt-input" placeholder="Name on the account" {...register(`bankAccounts.${idx}.accountHolder`)} />
+              </Field>
+              <Field id={`kyc-bank${idx}-type`} label="Account Type">
+                <input id={`kyc-bank${idx}-type`} type="text" className="nt-input" placeholder="e.g. Current / Savings" {...register(`bankAccounts.${idx}.accountType`)} />
+              </Field>
+            </div>
+
+            <Controller
+              control={control}
+              name={`bankAccounts.${idx}.isPrimary`}
+              render={({ field: f }) => (
+                <label className="inline-flex items-center gap-2 text-[13px] font-semibold text-ink-muted">
+                  <input
+                    type="checkbox"
+                    className="size-[16px] accent-brand"
+                    checked={Boolean(f.value)}
+                    onChange={(e) => f.onChange(e.target.checked)}
+                  />
+                  Primary account
+                </label>
+              )}
             />
-          </Field>
-          <Field id="kyc-bankaccno" label="Account No">
-            <input
-              id="kyc-bankaccno"
-              type="text"
-              className="nt-input"
-              {...register("bankAccountNo")}
-            />
-          </Field>
-          <Field id="kyc-bankifsc" label="IFSC Code">
-            <input
-              id="kyc-bankifsc"
-              type="text"
-              className="nt-input"
-              placeholder="e.g. SBIN0001234"
-              {...register("bankIfsc")}
-            />
-          </Field>
-          <Field id="kyc-bankbranch" label="Branch">
-            <input
-              id="kyc-bankbranch"
-              type="text"
-              className="nt-input"
-              placeholder="e.g. Ambad, Nashik"
-              {...register("bankBranch")}
-            />
-          </Field>
-          <Field id="kyc-bankholder" label="Account Holder">
-            <input
-              id="kyc-bankholder"
-              type="text"
-              className="nt-input"
-              placeholder="Name on the account"
-              {...register("bankAccountHolder")}
-            />
-          </Field>
-        </div>
+          </div>
+        ))}
+
+        <button
+          type="button"
+          onClick={() =>
+            appendBank({
+              bankName: "",
+              accountNo: "",
+              ifsc: "",
+              branch: "",
+              accountHolder: "",
+              accountType: "",
+              isPrimary: false,
+              notes: "",
+            })
+          }
+          className="inline-flex items-center gap-1.5 self-start rounded-chip border border-hairline-strong bg-surface-card px-4 py-2 text-[13px] font-semibold text-ink-muted hover:text-ink-strong hover:border-ink-subtle transition-colors"
+        >
+          <Plus size={14} strokeWidth={2.6} />
+          Add account
+        </button>
       </SectionCard>
 
       {/* ── 7 · Documents ────────────────────────────────────────────── */}
