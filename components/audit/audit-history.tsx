@@ -22,7 +22,29 @@ function formatAuditDate(d: Date): string {
 
 /* ── Field-name humanizer ───────────────────────────────────────────────── */
 
+// Whole-field overrides for nicer labels (checked before the generic pass).
+const FIELD_LABELS: Record<string, string> = {
+  kycSalesPersonId: "Sales Person",
+  productTypeIds: "Product Types",
+};
+
+// Tokens that should render fully upper-cased after Title-Casing.
+const ACRONYMS = new Set([
+  "GSTIN",
+  "PAN",
+  "IFSC",
+  "MSME",
+  "UOM",
+  "HSN",
+  "SO",
+  "SM",
+  "KYC",
+]);
+
 function humanizeField(field: string): string {
+  const override = FIELD_LABELS[field];
+  if (override) return override;
+
   // Split on camelCase transitions and underscores
   const words = field
     .replace(/_/g, " ")
@@ -30,7 +52,10 @@ function humanizeField(field: string): string {
     .split(" ")
     .filter(Boolean);
   return words
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .map((w) => {
+      const title = w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+      return ACRONYMS.has(title.toUpperCase()) ? title.toUpperCase() : title;
+    })
     .join(" ");
 }
 
