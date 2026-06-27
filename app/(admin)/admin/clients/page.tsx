@@ -35,7 +35,13 @@ export default async function ClientsPage() {
             {rows.length} total · {activeCount} active · {totalTasks} tasks mapped
           </p>
         </div>
-        <div className="mt-1">
+        <div className="mt-1 flex items-center gap-3">
+          <a
+            href="/admin/clients/export.xlsx"
+            className="inline-flex items-center gap-2 rounded-lg border border-ink-subtle/30 bg-surface px-4 py-2 text-sm font-medium text-ink-subtle hover:bg-surface-raised hover:text-ink transition-colors"
+          >
+            Export to Excel
+          </a>
           <CreateClientDialog />
         </div>
       </header>
