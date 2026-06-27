@@ -52,6 +52,9 @@ export async function GET(): Promise<Response> {
       partDescription4: items.partDescription4,
       partTag: items.partTag,
       costingType: items.costingType,
+      hsnCode: items.hsnCode,
+      uom: items.uom,
+      altUom: items.altUom,
       customerName: items.customerName,
       smNumber: items.smNumber,
       custProductName: items.custProductName,
@@ -91,6 +94,9 @@ export async function GET(): Promise<Response> {
     "Part Desc 4",
     "Part Tag",
     "Costing Type",
+    "HSN",
+    "UoM",
+    "Alt UoM",
     "Customer",
     "SM Number",
     "Cust Product Name",
@@ -131,6 +137,9 @@ export async function GET(): Promise<Response> {
       r.partDescription4 ?? "",
       r.partTag ?? "",
       costingTypeLabel,
+      r.hsnCode ?? "",
+      r.uom ?? "",
+      r.altUom ?? "",
       r.customerName ?? "",
       r.smNumber ?? "",
       r.custProductName ?? "",
@@ -167,6 +176,9 @@ export async function GET(): Promise<Response> {
     { wch: 28 }, // Part Desc 4
     { wch: 16 }, // Part Tag
     { wch: 14 }, // Costing Type
+    { wch: 10 }, // HSN
+    { wch: 8  }, // UoM
+    { wch: 10 }, // Alt UoM
     { wch: 28 }, // Customer
     { wch: 14 }, // SM Number
     { wch: 32 }, // Cust Product Name
