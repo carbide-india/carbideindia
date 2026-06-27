@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { INQUIRY_CURRENCIES, INQUIRY_COUNTRIES } from "@/db/enums";
+import {
+  INQUIRY_CURRENCIES,
+  INQUIRY_COUNTRIES,
+  GST_REGISTRATION_TYPES,
+  ADDRESS_TYPES,
+} from "@/db/enums";
 
 const Trimmed = (max: number) => z.string().trim().max(max);
 /**
@@ -11,6 +16,44 @@ const OptionalText = (max = 500) =>
 
 /** "HH:MM" wall-clock time, stored as text on clients (sheet-true). */
 const MeetingTime = z.string().regex(/^\d{2}:\d{2}$/, "Use HH:MM").optional();
+
+/**
+ * One normalized client address (ERP Phase 2 — Customer Master). Mirrors the
+ * `client_addresses` child table: a typed address (registered / bill_to /
+ * ship_to / consignee), optionally flagged primary, with free-text lines.
+ */
+export const ClientAddressSchema = z.object({
+  addressType: z.enum(ADDRESS_TYPES),
+  isPrimary: z.coerce.boolean().optional(),
+  label: OptionalText(80),
+  line1: OptionalText(240),
+  line2: OptionalText(240),
+  line3: OptionalText(240),
+  line4: OptionalText(240),
+  city: OptionalText(120),
+  state: OptionalText(120),
+  country: OptionalText(120),
+  pinCode: OptionalText(20),
+  gstin: OptionalText(40),
+  notes: OptionalText(500),
+});
+export type ClientAddressInput = z.input<typeof ClientAddressSchema>;
+
+/**
+ * One normalized client bank account (ERP Phase 2 — Customer Master). Mirrors
+ * the `client_bank_accounts` child table; each row optionally flagged primary.
+ */
+export const ClientBankAccountSchema = z.object({
+  isPrimary: z.coerce.boolean().optional(),
+  bankName: OptionalText(120),
+  accountNo: OptionalText(60),
+  ifsc: OptionalText(20),
+  branch: OptionalText(120),
+  accountHolder: OptionalText(120),
+  accountType: OptionalText(40),
+  notes: OptionalText(500),
+});
+export type ClientBankAccountInput = z.input<typeof ClientBankAccountSchema>;
 
 /**
  * Base field set shared by Create/Update — same base-object + derive pattern
@@ -32,6 +75,13 @@ const ClientKycFieldsSchema = z.object({
   pinCode: OptionalText(20),
   // ── Commercial / tax (Customer Master) ──
   gstin: OptionalText(40), panNo: OptionalText(20),
+  // ── GST normalization (ERP Phase 2) ──
+  gstRegistrationType: z.enum(GST_REGISTRATION_TYPES).optional(),
+  placeOfSupply: OptionalText(60),
+  isTransporter: z.coerce.boolean().optional(),
+  // Normalized multi-address / multi-bank children (optional).
+  addresses: z.array(ClientAddressSchema).optional(),
+  bankAccounts: z.array(ClientBankAccountSchema).optional(),
   billToAddress: OptionalText(1000),
   paymentTerms: OptionalText(240), freightCharges: OptionalText(240),
   qtyDeviation: OptionalText(80),
