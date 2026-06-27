@@ -1,13 +1,15 @@
 import "server-only";
-import { aliasedTable, and, asc, eq, getTableColumns, sql } from "drizzle-orm";
+import { aliasedTable, and, asc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import {
   clientContacts,
   clients,
+  employees,
   masterOptions,
   tasks,
   type Client,
+  type ClientContact,
 } from "@/db/schema";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 
@@ -171,6 +173,19 @@ export interface ClientEditValues {
   kycSalesPersonId?: string;
   businessCardFrontUrl?: string;
   businessCardBackUrl?: string;
+  // ── Credit & banking (migration 0020) ──
+  creditDays?: number;
+  creditLimit?: number;
+  bankName: string;
+  bankAccountNo: string;
+  bankIfsc: string;
+  bankBranch: string;
+  bankAccountHolder: string;
+  // ── Logistics & compliance ──
+  shipToAddress: string;
+  transporter: string;
+  otherReferences: string;
+  msmeUdyamNo: string;
 }
 
 export async function getClientForEdit(
@@ -230,6 +245,106 @@ export async function getClientForEdit(
     kycSalesPersonId: row.kycSalesPersonId ?? undefined,
     businessCardFrontUrl: row.businessCardFrontUrl ?? undefined,
     businessCardBackUrl: row.businessCardBackUrl ?? undefined,
+    // ── Credit & banking (migration 0020) ──
+    creditDays: row.creditDays ?? undefined,
+    creditLimit: row.creditLimit != null ? Number(row.creditLimit) : undefined,
+    bankName: row.bankName ?? "",
+    bankAccountNo: row.bankAccountNo ?? "",
+    bankIfsc: row.bankIfsc ?? "",
+    bankBranch: row.bankBranch ?? "",
+    bankAccountHolder: row.bankAccountHolder ?? "",
+    // ── Logistics & compliance ──
+    shipToAddress: row.shipToAddress ?? "",
+    transporter: row.transporter ?? "",
+    otherReferences: row.otherReferences ?? "",
+    msmeUdyamNo: row.msmeUdyamNo ?? "",
+  };
+}
+
+/**
+ * Full read-only client record: every column on `clients` plus resolved names
+ * for type/product masters and the KYC sales person, and all contacts (primary
+ * first). Used by the Client Master record page (Task 6) and any future
+ * read-only views. Admin-only caller.
+ */
+export interface ClientRecord extends Client {
+  /** Resolved name for `customerTypeId` (null if unset or master deleted). */
+  customerTypeName: string | null;
+  /** Resolved name for `industryTypeId` (null if unset or master deleted). */
+  industryTypeName: string | null;
+  /** Resolved names for each id in `productTypeIds` (empty array if unset). */
+  productTypeNames: string[];
+  /** Full name of the KYC sales person employee (null if unset or deleted). */
+  salesPersonName: string | null;
+  /** All contacts for this client — primary contact first, then additional. */
+  contacts: ClientContact[];
+}
+
+export async function getClientRecord(
+  clientId: string,
+): Promise<ClientRecord | null> {
+  // ── 1. Core client row + resolved type names (two left joins on masterOptions) ──
+  const customerType = aliasedTable(masterOptions, "customer_type");
+  const industryType = aliasedTable(masterOptions, "industry_type");
+
+  const [row] = await db
+    .select({
+      ...getTableColumns(clients),
+      customerTypeName: customerType.name,
+      industryTypeName: industryType.name,
+    })
+    .from(clients)
+    .leftJoin(customerType, eq(customerType.id, clients.customerTypeId))
+    .leftJoin(industryType, eq(industryType.id, clients.industryTypeId))
+    .where(eq(clients.id, clientId))
+    .limit(1);
+
+  if (!row) return null;
+
+  // ── 2. Resolve product type names (batch lookup, preserves order) ──
+  let productTypeNames: string[] = [];
+  if (row.productTypeIds && row.productTypeIds.length > 0) {
+    const ptRows = await db
+      .select({ id: masterOptions.id, name: masterOptions.name })
+      .from(masterOptions)
+      .where(inArray(masterOptions.id, row.productTypeIds));
+    // Preserve the stored order.
+    const nameById = new Map(ptRows.map((r) => [r.id, r.name]));
+    productTypeNames = row.productTypeIds
+      .map((id) => nameById.get(id))
+      .filter((n): n is string => n !== undefined);
+  }
+
+  // ── 3. Sales person name ──
+  let salesPersonName: string | null = null;
+  if (row.kycSalesPersonId) {
+    const [sp] = await db
+      .select({ name: employees.name })
+      .from(employees)
+      .where(eq(employees.id, row.kycSalesPersonId))
+      .limit(1);
+    salesPersonName = sp?.name ?? null;
+  }
+
+  // ── 4. Contacts — primary first, then additional ──
+  const allContacts = await db
+    .select()
+    .from(clientContacts)
+    .where(eq(clientContacts.clientId, clientId))
+    .orderBy(asc(clientContacts.createdAt));
+  // Sort: primary first, preserving insertion order within each group.
+  const contacts: ClientContact[] = [
+    ...allContacts.filter((c) => c.isPrimary),
+    ...allContacts.filter((c) => !c.isPrimary),
+  ];
+
+  return {
+    ...row,
+    customerTypeName: row.customerTypeName ?? null,
+    industryTypeName: row.industryTypeName ?? null,
+    productTypeNames,
+    salesPersonName,
+    contacts,
   };
 }
 
