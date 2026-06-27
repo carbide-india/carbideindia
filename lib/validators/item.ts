@@ -37,5 +37,10 @@ export const CreateItemSchema = z.object({
   partDescription4: OptText(240),
   partTag: OptText(120),
   costingType: z.enum(COSTING_TYPES).optional(),
+  // Tax & units (ERP Phase 3). Excluded from the dedup fingerprint.
+  hsnCode: OptText(20),
+  uom: OptText(20),
+  altUom: OptText(20),
+  altUomConversion: Num,
 });
 export type CreateItemInput = z.input<typeof CreateItemSchema>;

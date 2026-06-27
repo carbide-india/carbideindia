@@ -13,6 +13,9 @@ export interface ItemListItem {
   custProductName: string | null;
   partNo: string | null;
   costingType: Item["costingType"];
+  hsnCode: string | null;
+  uom: string | null;
+  drawingRevisionNo: string | null;
   createdAt: Date;
   shapeName: string | null;
   gradeName: string | null;
@@ -40,6 +43,9 @@ export async function listItems(): Promise<ItemListItem[]> {
       custProductName: items.custProductName,
       partNo: items.partNo,
       costingType: items.costingType,
+      hsnCode: items.hsnCode,
+      uom: items.uom,
+      drawingRevisionNo: items.drawingRevisionNo,
       createdAt: items.createdAt,
       shapeName: shape.name,
       gradeName: grade.name,
@@ -102,6 +108,10 @@ export async function getItemById(id: string): Promise<ItemDetail | null> {
       partDescription4: items.partDescription4,
       partTag: items.partTag,
       costingType: items.costingType,
+      hsnCode: items.hsnCode,
+      uom: items.uom,
+      altUom: items.altUom,
+      altUomConversion: items.altUomConversion,
       createdById: items.createdById,
       createdAt: items.createdAt,
       updatedAt: items.updatedAt,

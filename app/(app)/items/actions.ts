@@ -172,6 +172,10 @@ export async function createItem(input: CreateItemInput): Promise<Result> {
         partDescription4: v.partDescription4 ?? null,
         partTag: v.partTag ?? null,
         costingType: v.costingType ?? null,
+        hsnCode: v.hsnCode ?? null,
+        uom: v.uom ?? "Nos",
+        altUom: v.altUom ?? null,
+        altUomConversion: v.altUomConversion != null ? String(v.altUomConversion) : null,
         createdById: me.id,
       })
       .onConflictDoNothing({ target: items.dedupKey })
