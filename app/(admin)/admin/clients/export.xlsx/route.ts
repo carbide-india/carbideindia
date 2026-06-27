@@ -3,6 +3,7 @@ import { aliasedTable, asc, eq, getTableColumns, inArray } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth/current";
 import { db } from "@/lib/db";
 import { clientContacts, clients, employees, masterOptions } from "@/db/schema";
+import { GST_REGISTRATION_TYPE_LABELS } from "@/db/enums";
 
 /**
  * GET /admin/clients/export.xlsx
@@ -101,6 +102,9 @@ export async function GET(): Promise<Response> {
     "GSTIN",
     "PAN",
     "MSME/Udyam",
+    "GST Registration Type",
+    "Place of Supply",
+    "Is Transporter",
     "Bill To",
     "Ship To",
     "Payment Terms",
@@ -146,6 +150,11 @@ export async function GET(): Promise<Response> {
       : "";
     const creditLimit =
       r.creditLimit != null ? Number(r.creditLimit) : "";
+    const gstRegistrationType = r.gstRegistrationType
+      ? GST_REGISTRATION_TYPE_LABELS[r.gstRegistrationType]
+      : "";
+    const isTransporter =
+      r.isTransporter === true ? "Yes" : r.isTransporter === false ? "No" : "";
 
     return [
       r.clientCode ?? "",
@@ -162,6 +171,9 @@ export async function GET(): Promise<Response> {
       r.gstin ?? "",
       r.panNo ?? "",
       r.msmeUdyamNo ?? "",
+      gstRegistrationType,
+      r.placeOfSupply ?? "",
+      isTransporter,
       r.billToAddress ?? "",
       r.shipToAddress ?? "",
       r.paymentTerms ?? "",
@@ -206,6 +218,9 @@ export async function GET(): Promise<Response> {
     { wch: 18 }, // GSTIN
     { wch: 14 }, // PAN
     { wch: 20 }, // MSME/Udyam
+    { wch: 22 }, // GST Registration Type
+    { wch: 18 }, // Place of Supply
+    { wch: 14 }, // Is Transporter
     { wch: 30 }, // Bill To
     { wch: 30 }, // Ship To
     { wch: 18 }, // Payment Terms

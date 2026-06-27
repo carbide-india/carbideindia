@@ -3,6 +3,10 @@ import Link from "next/link";
 import type { Route } from "next";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { formatDate, formatInr } from "@/lib/format";
+import {
+  ADDRESS_TYPE_LABELS,
+  GST_REGISTRATION_TYPE_LABELS,
+} from "@/db/enums";
 import type { ClientRecord as ClientRecordType } from "@/lib/queries/clients";
 import type { ClientDocument } from "@/lib/queries/client-documents";
 import type { AuditEntry } from "@/lib/queries/audit";
@@ -143,19 +147,82 @@ export function ClientRecord({ record, documents, auditEntries }: Props) {
               ["GSTIN", record.gstin],
               ["PAN", record.panNo],
               ["MSME / Udyam No", record.msmeUdyamNo],
+              [
+                "GST Registration Type",
+                record.gstRegistrationType
+                  ? GST_REGISTRATION_TYPE_LABELS[record.gstRegistrationType]
+                  : null,
+              ],
+              ["Place of Supply", record.placeOfSupply],
+              [
+                "Is Transporter",
+                record.isTransporter != null
+                  ? record.isTransporter
+                    ? "Yes"
+                    : "No"
+                  : null,
+              ],
             ]}
           />
         </ReadCard>
 
         {/* 3. Addresses */}
         <ReadCard title="Addresses">
-          <InfoGrid
-            rows={[
-              ["Registered Address", registeredAddress],
-              ["Bill-to Address", record.billToAddress],
-              ["Ship-to Address", record.shipToAddress],
-            ]}
-          />
+          {record.addresses.length > 0 ? (
+            <div className="flex flex-col gap-4">
+              {record.addresses.map((addr) => {
+                const composed = composeAddress({
+                  line1: addr.line1,
+                  line2: addr.line2,
+                  line3: addr.line3,
+                  line4: addr.line4,
+                  city: addr.city,
+                  state: addr.state,
+                  country: addr.country,
+                  pin: addr.pinCode,
+                });
+                return (
+                  <div
+                    key={addr.id}
+                    className="flex flex-col gap-1 border-b border-hairline pb-4 last:border-0 last:pb-0"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[14px] font-semibold text-ink-strong">
+                        {ADDRESS_TYPE_LABELS[addr.addressType]}
+                      </span>
+                      {addr.label && (
+                        <span className="text-[13px] text-ink-muted">
+                          {addr.label}
+                        </span>
+                      )}
+                      {addr.isPrimary && <PrimaryChip />}
+                    </div>
+                    {composed && (
+                      <p className="text-[14px] text-ink-strong break-words">
+                        {composed}
+                      </p>
+                    )}
+                    <div className="flex flex-wrap gap-x-6 gap-y-1 text-[13px] text-ink-soft">
+                      {addr.gstin && <span>GSTIN: {addr.gstin}</span>}
+                    </div>
+                    {addr.notes && (
+                      <p className="text-[13px] text-ink-muted break-words">
+                        {addr.notes}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <InfoGrid
+              rows={[
+                ["Registered Address", registeredAddress],
+                ["Bill-to Address", record.billToAddress],
+                ["Ship-to Address", record.shipToAddress],
+              ]}
+            />
+          )}
         </ReadCard>
 
         {/* 4. Contacts */}
@@ -224,15 +291,47 @@ export function ClientRecord({ record, documents, auditEntries }: Props) {
 
         {/* 6. Bank Details */}
         <ReadCard title="Bank Details">
-          <InfoGrid
-            rows={[
-              ["Bank Name", record.bankName],
-              ["Account No", record.bankAccountNo],
-              ["IFSC", record.bankIfsc],
-              ["Branch", record.bankBranch],
-              ["Account Holder", record.bankAccountHolder],
-            ]}
-          />
+          {record.bankAccounts.length > 0 ? (
+            <div className="flex flex-col gap-4">
+              {record.bankAccounts.map((bank) => (
+                <div
+                  key={bank.id}
+                  className="flex flex-col gap-2 border-b border-hairline pb-4 last:border-0 last:pb-0"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[14px] font-semibold text-ink-strong">
+                      {bank.bankName ?? "Bank account"}
+                    </span>
+                    {bank.isPrimary && <PrimaryChip />}
+                  </div>
+                  <InfoGrid
+                    rows={[
+                      ["Account No", bank.accountNo],
+                      ["IFSC", bank.ifsc],
+                      ["Branch", bank.branch],
+                      ["Account Holder", bank.accountHolder],
+                      ["Account Type", bank.accountType],
+                    ]}
+                  />
+                  {bank.notes && (
+                    <p className="text-[13px] text-ink-muted break-words">
+                      {bank.notes}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <InfoGrid
+              rows={[
+                ["Bank Name", record.bankName],
+                ["Account No", record.bankAccountNo],
+                ["IFSC", record.bankIfsc],
+                ["Branch", record.bankBranch],
+                ["Account Holder", record.bankAccountHolder],
+              ]}
+            />
+          )}
         </ReadCard>
 
         {/* 7. Documents */}
@@ -333,6 +432,21 @@ function composeAddress(parts: {
 }
 
 /* ── Read-only building blocks ───────────────────────────────────────── */
+
+function PrimaryChip() {
+  return (
+    <span
+      className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold"
+      style={{
+        background: "var(--color-surface-soft)",
+        color: "var(--color-ink-soft)",
+        border: "1px solid var(--color-hairline)",
+      }}
+    >
+      Primary
+    </span>
+  );
+}
 
 function ReadCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
