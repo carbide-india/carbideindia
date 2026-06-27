@@ -700,6 +700,12 @@ export const items = pgTable(
     partTag: text("part_tag"),
     costingType: costingTypeEnum("costing_type"),
 
+    // Item Master completion (ERP Phase 3): HSN code + units of measure.
+    hsnCode: text("hsn_code"),
+    uom: text("uom").default("Nos"),
+    altUom: text("alt_uom"),
+    altUomConversion: numeric("alt_uom_conversion"),
+
     createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -1091,6 +1097,7 @@ export const documents = pgTable(
     sizeBytes: integer("size_bytes"),
     taskId: uuid("task_id").references(() => tasks.id, { onDelete: "set null" }),
     clientId: uuid("client_id").references(() => clients.id, { onDelete: "cascade" }),
+    itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
     uploadedById: uuid("uploaded_by_id").references(() => employees.id, {
       onDelete: "set null",
     }),
@@ -1101,6 +1108,7 @@ export const documents = pgTable(
     index("documents_created_idx").on(t.createdAt),
     index("documents_task_idx").on(t.taskId),
     index("documents_client_idx").on(t.clientId),
+    index("documents_item_idx").on(t.itemId),
   ],
 );
 
