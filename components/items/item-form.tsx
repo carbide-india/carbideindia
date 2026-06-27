@@ -104,6 +104,9 @@ export function ItemForm({
       partDescription3: "",
       partDescription4: "",
       partTag: "",
+      hsnCode: "",
+      uom: "Nos",
+      altUom: "",
     },
   });
 
@@ -452,6 +455,52 @@ export function ItemForm({
               className="nt-input"
               placeholder="How we present the grade"
               {...register("gradeNameForCust")}
+            />
+          </Field>
+        </div>
+      </SectionCard>
+
+      {/* ── Tax & Units ──────────────────────────────────────────── */}
+      <SectionCard
+        title="Tax & Units"
+        hint="HSN code (GST) and the unit of measure. Alt UoM lets you record a secondary unit and its conversion to the base UoM."
+      >
+        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+          <Field id="item-hsn" label="HSN Code">
+            <input
+              id="item-hsn"
+              type="text"
+              className="nt-input"
+              placeholder="e.g. 8209"
+              {...register("hsnCode")}
+            />
+          </Field>
+          <Field id="item-uom" label="Unit of Measure (UoM)">
+            <input
+              id="item-uom"
+              type="text"
+              className="nt-input"
+              placeholder="Nos"
+              {...register("uom")}
+            />
+          </Field>
+          <Field id="item-alt-uom" label="Alt UoM">
+            <input
+              id="item-alt-uom"
+              type="text"
+              className="nt-input"
+              placeholder="e.g. Kg"
+              {...register("altUom")}
+            />
+          </Field>
+          <Field id="item-alt-uom-conv" label="Alt UoM Conversion (1 Alt UoM = ? base)">
+            <input
+              id="item-alt-uom-conv"
+              type="number"
+              min={0}
+              step="any"
+              className="nt-input"
+              {...register("altUomConversion")}
             />
           </Field>
         </div>

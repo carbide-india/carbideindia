@@ -19,7 +19,8 @@ interface Props {
 
 /**
  * Item Master register table — thin config wrapper over RegisterDataTable.
- * Columns: Item Code, Customer, Product, Part No, Costing Type, Created.
+ * Columns: Item Code, Customer, Product, Part No, HSN, UoM, Drawing Rev,
+ * Costing Type, Created.
  */
 export function ItemTable({ rows }: Props) {
   const columns = React.useMemo<RegisterColumn<ItemListItem>[]>(
@@ -71,6 +72,34 @@ export function ItemTable({ rows }: Props) {
         sortValue: (r) => r.partNo ?? "",
         cell: (r) => (
           <span className="text-ink-soft tabular-nums">{r.partNo ?? "—"}</span>
+        ),
+      },
+      {
+        id: "hsnCode",
+        header: "HSN",
+        searchable: true,
+        sortValue: (r) => r.hsnCode ?? "",
+        cell: (r) => (
+          <span className="text-ink-soft tabular-nums">{r.hsnCode ?? "—"}</span>
+        ),
+      },
+      {
+        id: "uom",
+        header: "UoM",
+        sortValue: (r) => r.uom ?? "",
+        cell: (r) => (
+          <span className="text-ink-soft text-[12.5px]">{r.uom ?? "—"}</span>
+        ),
+      },
+      {
+        id: "drawingRevisionNo",
+        header: "Drawing Rev",
+        searchable: true,
+        sortValue: (r) => r.drawingRevisionNo ?? "",
+        cell: (r) => (
+          <span className="text-ink-soft tabular-nums">
+            {r.drawingRevisionNo ?? "—"}
+          </span>
         ),
       },
       {

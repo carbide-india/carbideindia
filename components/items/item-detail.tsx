@@ -75,6 +75,22 @@ export function ItemDetail({ item, auditEntries }: Props) {
           />
         </ReadCard>
 
+        {/* Tax & Units */}
+        <ReadCard title="Tax & Units">
+          <InfoGrid
+            rows={[
+              ["HSN Code", item.hsnCode],
+              ["Unit of Measure", item.uom],
+              [
+                "Alt UoM",
+                item.altUom && item.altUomConversion
+                  ? `${item.altUom} (1 = ${item.altUomConversion} ${item.uom ?? "base"})`
+                  : item.altUom,
+              ],
+            ]}
+          />
+        </ReadCard>
+
         {/* Dimensions */}
         <ReadCard title="Dimensions">
           <InfoGrid
