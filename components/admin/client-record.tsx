@@ -68,7 +68,7 @@ export function ClientRecord({ record, documents }: Props) {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-[12px] uppercase tracking-[0.18em] font-bold text-ink-subtle">
-            Client Master &#183; Record
+            Client Master · Record
           </p>
           {record.clientCode && (
             <p className="font-mono text-[15px] text-ink-muted mt-0.5">{record.clientCode}</p>
@@ -134,7 +134,7 @@ export function ClientRecord({ record, documents }: Props) {
         </ReadCard>
 
         {/* 2. Registration & Tax */}
-        <ReadCard title="Registration &amp; Tax">
+        <ReadCard title="Registration & Tax">
           <InfoGrid
             rows={[
               ["GSTIN", record.gstin],
@@ -197,7 +197,7 @@ export function ClientRecord({ record, documents }: Props) {
         )}
 
         {/* 5. Commercial & Credit */}
-        <ReadCard title="Commercial &amp; Credit">
+        <ReadCard title="Commercial & Credit">
           <InfoGrid
             rows={[
               ["Payment Terms", record.paymentTerms],
@@ -267,7 +267,7 @@ export function ClientRecord({ record, documents }: Props) {
 
         {/* 9. Meeting & Notes */}
         {hasMeetingOrNotes && (
-          <ReadCard title="Meeting &amp; Notes">
+          <ReadCard title="Meeting & Notes">
             <InfoGrid
               rows={[
                 [
@@ -332,10 +332,9 @@ function ReadCard({ title, children }: { title: string; children: React.ReactNod
       className="bg-surface-card rounded-section border border-hairline p-6"
       style={{ boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)" }}
     >
-      <h2
-        className="mb-4 text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle"
-        dangerouslySetInnerHTML={{ __html: title }}
-      />
+      <h2 className="mb-4 text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
+        {title}
+      </h2>
       {children}
     </section>
   );
