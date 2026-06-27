@@ -3,7 +3,12 @@
 import { revalidatePath, updateTag } from "next/cache";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { clients, clientContacts } from "@/db/schema";
+import {
+  clients,
+  clientContacts,
+  clientAddresses,
+  clientBankAccounts,
+} from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 import {
@@ -12,6 +17,12 @@ import {
   type CreateClientKycInput,
   type UpdateClientKycInput,
 } from "@/lib/validators/client-kyc";
+import {
+  buildKycClientPatch,
+  normalizeAddressRows,
+  normalizeBankRows,
+  applyPrimaryMirror,
+} from "@/lib/clients/kyc-write";
 
 /**
  * Client KYC server actions (Phase 3 — onboarding write path). Unlike the
@@ -167,21 +178,54 @@ export async function createClientKyc(
         .where(sql`lower(${clients.name}) = ${v.name.toLowerCase()}`)
         .limit(1);
 
-      const kyc = toClientColumns(v);
+      // Full KYC patch — captures the WHOLE onboarding form (addresses, bank,
+      // GST, PAN, MSME, credit, ship-to) via the shared writer helper so the
+      // sales-floor path persists exactly what the admin Edit path does.
+      const patch: Partial<typeof clients.$inferInsert> = {
+        ...buildKycClientPatch(v),
+        name: v.name,
+        updatedAt: new Date(),
+      };
+
       let id: string;
       if (existing) {
         id = existing.id;
-        await tx
-          .update(clients)
-          .set({ ...kyc, updatedAt: new Date() })
-          .where(eq(clients.id, id));
       } else {
         const [c] = await tx
           .insert(clients)
-          .values({ name: v.name, ...kyc })
+          .values({ ...patch, name: v.name })
           .returning({ id: clients.id });
         if (!c) throw new Error("clients insert returned no row");
         id = c.id;
+      }
+
+      // Now that the client id is known, normalize the children and mirror the
+      // PRIMARY rows back into the legacy `clients` columns, then write.
+      const addressRows = normalizeAddressRows(id, v.addresses);
+      const bankRows = normalizeBankRows(id, v.bankAccounts);
+      applyPrimaryMirror(patch, addressRows, bankRows);
+
+      if (existing) {
+        await tx.update(clients).set(patch).where(eq(clients.id, id));
+      } else if (addressRows !== undefined || bankRows !== undefined) {
+        // For a fresh insert the mirror may have changed legacy columns after
+        // children were normalized — re-apply the patch to capture them.
+        await tx.update(clients).set(patch).where(eq(clients.id, id));
+      }
+
+      // Replace-all the normalized children (only when submitted). The delete is
+      // a no-op for a brand-new id; for the upsert-existing branch it replaces.
+      if (addressRows !== undefined) {
+        await tx.delete(clientAddresses).where(eq(clientAddresses.clientId, id));
+        if (addressRows.length > 0) {
+          await tx.insert(clientAddresses).values(addressRows);
+        }
+      }
+      if (bankRows !== undefined) {
+        await tx.delete(clientBankAccounts).where(eq(clientBankAccounts.clientId, id));
+        if (bankRows.length > 0) {
+          await tx.insert(clientBankAccounts).values(bankRows);
+        }
       }
 
       await upsertPrimaryContact(tx, id, toContactColumns(v));

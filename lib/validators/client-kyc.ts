@@ -125,6 +125,8 @@ const ClientKycFieldsSchema = z.object({
 
 export const CreateClientKycSchema = ClientKycFieldsSchema;
 export type CreateClientKycInput = z.input<typeof CreateClientKycSchema>;
+/** Parsed (post-transform) shape — what `safeParse(...).data` yields. */
+export type CreateClientKycParsed = z.output<typeof CreateClientKycSchema>;
 
 /**
  * Patch-shaped schema for edits — every field optional, unknown keys
