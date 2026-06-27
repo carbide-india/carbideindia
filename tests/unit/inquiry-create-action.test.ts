@@ -168,8 +168,11 @@ describe("createInquiry", () => {
     expect(res).toMatchObject({ ok: true, id: "inq-1", smNumber: "SM9579" });
 
     expect(selectState.calls).toBe(0);
-    expect(insertCalls).toHaveLength(1);
-    const inquiryInsert = insertCalls[0];
+    // The inquiry header insert is an object; the per-product inquiry_items
+    // insert pushes an array — assert on the header row only.
+    const headerInserts = insertCalls.filter((c) => !Array.isArray(c));
+    expect(headerInserts).toHaveLength(1);
+    const inquiryInsert = headerInserts[0];
     expect(inquiryInsert?.clientId).toBe(VALID_UUID);
     expect(inquiryInsert?.companyName).toBe("Acme Carbides");
   });

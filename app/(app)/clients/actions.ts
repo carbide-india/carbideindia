@@ -186,6 +186,12 @@ export async function createClientKyc(
         name: v.name,
         updatedAt: new Date(),
       };
+      // Onboarding-only columns the admin Edit form has no inputs for (so the
+      // shared writer omits them to avoid blanking them on admin saves) — the
+      // new-client KYC form DOES collect these, so persist when provided.
+      if (v.export !== undefined) patch.export = v.export;
+      if (v.currency !== undefined) patch.currency = v.currency;
+      if (v.country !== undefined) patch.country = v.country;
 
       let id: string;
       if (existing) {

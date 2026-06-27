@@ -43,7 +43,17 @@ vi.mock("@/lib/db", () => {
       },
     }),
   }));
-  return { db: { insert, update, select } };
+  // createQuotation/createNegotiation/createSalesOrder wrap the header + line
+  // inserts in db.transaction(cb); the tx exposes the same insert/update/select.
+  const txDb = { insert, update, select };
+  return {
+    db: {
+      insert,
+      update,
+      select,
+      transaction: vi.fn(async (cb: (tx: typeof txDb) => unknown) => cb(txDb)),
+    },
+  };
 });
 
 vi.mock("@/lib/auth/current", () => ({
@@ -108,8 +118,11 @@ describe("createQuotation", () => {
     const res = await createQuotation({ inquiryId: INQUIRY_UUID });
     expect(res).toEqual({ ok: true, id: "row-1", quoteNo: "SM9579-Q01" });
 
-    expect(insertCalls).toHaveLength(1);
-    expect(insertCalls[0]).toMatchObject({
+    // Header inserts are objects; the quotation_items line insert pushes an
+    // array — filter it out so we assert on the header row only.
+    const headerInserts = insertCalls.filter((c) => !Array.isArray(c));
+    expect(headerInserts).toHaveLength(1);
+    expect(headerInserts[0]).toMatchObject({
       inquiryId: INQUIRY_UUID,
       quoteNo: "SM9579-Q01",
       companyName: "Acme Carbide",
@@ -129,9 +142,10 @@ describe("createQuotation", () => {
     insertErrors.push({ code: "23505", constraint: "quotations_quote_no_unique" });
     const res = await createQuotation({ inquiryId: INQUIRY_UUID });
     expect(res).toEqual({ ok: true, id: "row-1", quoteNo: "SM9579-Q02" });
-    expect(insertCalls).toHaveLength(2);
-    expect(insertCalls[0]?.quoteNo).toBe("SM9579-Q01");
-    expect(insertCalls[1]?.quoteNo).toBe("SM9579-Q02");
+    const headerInserts = insertCalls.filter((c) => !Array.isArray(c));
+    expect(headerInserts).toHaveLength(2);
+    expect(headerInserts[0]?.quoteNo).toBe("SM9579-Q01");
+    expect(headerInserts[1]?.quoteNo).toBe("SM9579-Q02");
   });
 
   it("errors when the linked enquiry is missing", async () => {

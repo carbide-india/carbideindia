@@ -45,7 +45,10 @@ vi.mock("@/lib/db", () => {
       },
     }),
   }));
-  const txDb = { insert, update, select };
+  // createClientKyc replace-alls normalized children when addresses/bank are
+  // submitted — the tx exposes delete() too (a no-op recorder here).
+  const del = vi.fn(() => ({ where: () => Promise.resolve(undefined) }));
+  const txDb = { insert, update, select, delete: del };
   return {
     db: {
       insert,
