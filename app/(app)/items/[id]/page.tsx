@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth/current";
 import { getItemById } from "@/lib/queries/items";
+import { getItemDocuments } from "@/lib/queries/item-documents";
 import { getAuditLog } from "@/lib/queries/audit";
 import { ItemDetail } from "@/components/items/item-detail";
 
@@ -28,15 +29,16 @@ export default async function ItemDetailPage({ params }: PageProps) {
   const { id } = await params;
   if (!UUID_RE.test(id)) notFound();
 
-  const [item, auditEntries] = await Promise.all([
+  const [item, auditEntries, documents] = await Promise.all([
     getItemById(id),
     getAuditLog("item", id),
+    getItemDocuments(id),
   ]);
   if (!item) notFound();
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
-      <ItemDetail item={item} auditEntries={auditEntries} />
+      <ItemDetail item={item} auditEntries={auditEntries} documents={documents} />
     </main>
   );
 }

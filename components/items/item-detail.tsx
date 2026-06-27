@@ -6,14 +6,17 @@ import { COSTING_TYPE_LABELS } from "@/db/enums";
 import { formatDate } from "@/lib/format";
 import type { ItemDetail as ItemDetailType } from "@/lib/queries/items";
 import type { AuditEntry } from "@/lib/queries/audit";
+import type { ItemDocument } from "@/lib/queries/item-documents";
 import { AuditHistory } from "@/components/audit/audit-history";
+import { ItemDocuments } from "@/components/items/item-documents";
 
 interface Props {
   item: ItemDetailType;
   auditEntries: AuditEntry[];
+  documents: ItemDocument[];
 }
 
-export function ItemDetail({ item, auditEntries }: Props) {
+export function ItemDetail({ item, auditEntries, documents }: Props) {
   return (
     <div className="flex flex-col gap-6">
       {/* ── Breadcrumb ─────────────────────────────────────────────── */}
@@ -141,6 +144,11 @@ export function ItemDetail({ item, auditEntries }: Props) {
               ["Last Updated", formatDate(item.updatedAt)],
             ]}
           />
+        </ReadCard>
+
+        {/* Drawings & Documents */}
+        <ReadCard title="Drawings & Documents">
+          <ItemDocuments itemId={item.id} documents={documents} />
         </ReadCard>
 
         {/* History */}
