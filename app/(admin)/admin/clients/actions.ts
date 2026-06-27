@@ -32,6 +32,7 @@ import {
 } from "@/lib/clients/kyc-write";
 import { recordAudit } from "@/lib/audit/record";
 import { diffFields } from "@/lib/audit/diff";
+import { findActiveDuplicateClient } from "@/lib/clients/dedup";
 
 // Scalar editable columns tracked by the audit trail.
 // contactFirstName / additionalContacts are stored in client_contacts — not here.
@@ -310,6 +311,20 @@ export async function adminUpdateClientKyc(
     if (clash[0] && clash[0].id !== client.id) {
       return { ok: false, error: "A client with this name already exists." };
     }
+  }
+
+  // Hard dedup (ERP Phase 4): block an edit that would collide with ANOTHER
+  // active client's GSTIN/PAN. Excludes the client being edited.
+  const dup = await findActiveDuplicateClient({
+    gstin: v.gstin,
+    panNo: v.panNo,
+    excludeId: client.id,
+  });
+  if (dup) {
+    return {
+      ok: false,
+      error: `A client with this GSTIN/PAN already exists: ${dup.name}${dup.clientCode ? ` (${dup.clientCode})` : ""}.`,
+    };
   }
 
   // ── Normalize the submitted children (ERP Phase 2) ──────────────────────

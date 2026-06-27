@@ -17,6 +17,7 @@ import {
   type CreateClientKycInput,
   type UpdateClientKycInput,
 } from "@/lib/validators/client-kyc";
+import { findActiveDuplicateClient } from "@/lib/clients/dedup";
 import {
   buildKycClientPatch,
   normalizeAddressRows,
@@ -166,6 +167,18 @@ export async function createClientKyc(
   const v = parsed.data;
   if (v.meetingDate && !isParseableDate(v.meetingDate)) {
     return { ok: false, error: "Invalid meeting date" };
+  }
+
+  // Hard dedup (ERP Phase 4): block a new client whose GSTIN/PAN already
+  // belongs to another active client. The upsert-by-name path below may still
+  // match the SAME client by name; that's fine — this only guards a distinct
+  // duplicate. (excludeId left unset: a brand-new client has no id yet.)
+  const dup = await findActiveDuplicateClient({ gstin: v.gstin, panNo: v.panNo });
+  if (dup && dup.name.toLowerCase() !== v.name.toLowerCase()) {
+    return {
+      ok: false,
+      error: `A client with this GSTIN/PAN already exists: ${dup.name}${dup.clientCode ? ` (${dup.clientCode})` : ""}.`,
+    };
   }
 
   try {
