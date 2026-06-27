@@ -41,6 +41,8 @@ import {
   COSTING_ROUTES,
   COSTING_LOGICS,
   AUDIT_ACTIONS,
+  GST_REGISTRATION_TYPES,
+  ADDRESS_TYPES,
 } from "./enums";
 
 /**
@@ -302,6 +304,9 @@ export const clientsClientCodeSeq = pgSequence("clients_client_code_seq", { star
  * authenticated users (see migration 0022).  We never hard-delete; flip
  * `is_active` to hide a client from the picker.
  */
+export const gstRegistrationTypeEnum = pgEnum("gst_registration_type", GST_REGISTRATION_TYPES);
+export const addressTypeEnum = pgEnum("address_type", ADDRESS_TYPES);
+
 export const clients = pgTable(
   "clients",
   {
@@ -344,6 +349,10 @@ export const clients = pgTable(
     transporter: text("transporter"),
     otherReferences: text("other_references"),
     msmeUdyamNo: text("msme_udyam_no"),
+    // ── GST / commercial (ERP Phase 2 — Customer Master normalization) ──
+    gstRegistrationType: gstRegistrationTypeEnum("gst_registration_type"),
+    placeOfSupply: text("place_of_supply"),
+    isTransporter: boolean("is_transporter").notNull().default(false),
     // ── Customer categorization (Alok 2026-06-17): open, multi-value, optional
     //    tags — "what kind of customer he is" (Mining / Defense / Cutting …). ──
     tags: text("tags").array(),
@@ -399,6 +408,45 @@ export const clientContacts = pgTable(
   (t) => [index("client_contacts_client_idx").on(t.clientId)],
 );
 export type ClientContact = typeof clientContacts.$inferSelect;
+
+/**
+ * Normalized addresses per client (ERP Phase 2 — Customer Master). The legacy
+ * address columns on `clients` stay for back-compat; this child table is the
+ * normalized source of truth (registered / bill_to / ship_to / consignee), each
+ * optionally flagged primary, ordered by sort_order.
+ */
+export const clientAddresses = pgTable("client_addresses", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  clientId: uuid("client_id").notNull().references(() => clients.id, { onDelete: "cascade" }),
+  addressType: addressTypeEnum("address_type").notNull(),
+  isPrimary: boolean("is_primary").notNull().default(false),
+  label: text("label"),
+  line1: text("line_1"), line2: text("line_2"), line3: text("line_3"), line4: text("line_4"),
+  city: text("city"), state: text("state"), country: text("country"), pinCode: text("pin_code"),
+  gstin: text("gstin"), notes: text("notes"), sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("client_addresses_client_idx").on(t.clientId, t.addressType, t.sortOrder)]);
+export type ClientAddress = typeof clientAddresses.$inferSelect;
+export type NewClientAddress = typeof clientAddresses.$inferInsert;
+
+/**
+ * Normalized bank accounts per client (ERP Phase 2 — Customer Master). The
+ * legacy 5 bank columns on `clients` stay for back-compat; this child table
+ * holds the normalized rows, each optionally flagged primary.
+ */
+export const clientBankAccounts = pgTable("client_bank_accounts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  clientId: uuid("client_id").notNull().references(() => clients.id, { onDelete: "cascade" }),
+  isPrimary: boolean("is_primary").notNull().default(false),
+  bankName: text("bank_name"), accountNo: text("account_no"), ifsc: text("ifsc"),
+  branch: text("branch"), accountHolder: text("account_holder"), accountType: text("account_type"),
+  notes: text("notes"), sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("client_bank_accounts_client_idx").on(t.clientId, t.sortOrder)]);
+export type ClientBankAccount = typeof clientBankAccounts.$inferSelect;
+export type NewClientBankAccount = typeof clientBankAccounts.$inferInsert;
 
 /**
  * Subjects — canonical list backing the "Subject" picker on the task forms.

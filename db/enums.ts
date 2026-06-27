@@ -402,6 +402,39 @@ export const MEETING_PURPOSE_COLORS: Record<MeetingPurpose, string> = {
  *  whose TYPED value is what gets stored (never the literal "Other"). */
 export const MEETING_SOURCES = ["WhatsApp","Call","Email","In-Person Visit","Walk In","Exhibition","Reference","Other"] as const;
 
+// ── Customer Master normalization (ERP Phase 2) ──
+// GST registration type per customer (commercial/tax). Stored as a pgEnum on
+// clients.gst_registration_type.
+export const GST_REGISTRATION_TYPES = [
+  "regular",
+  "composition",
+  "unregistered",
+  "sez",
+  "overseas",
+  "uin",
+  "deemed_export",
+] as const;
+export type GstRegistrationType = (typeof GST_REGISTRATION_TYPES)[number];
+export const GST_REGISTRATION_TYPE_LABELS: Record<GstRegistrationType, string> = {
+  regular: "Regular",
+  composition: "Composition",
+  unregistered: "Unregistered",
+  sez: "SEZ",
+  overseas: "Overseas",
+  uin: "UIN",
+  deemed_export: "Deemed Export",
+};
+
+// Address types for the normalized client_addresses child table.
+export const ADDRESS_TYPES = ["registered", "bill_to", "ship_to", "consignee"] as const;
+export type AddressType = (typeof ADDRESS_TYPES)[number];
+export const ADDRESS_TYPE_LABELS: Record<AddressType, string> = {
+  registered: "Registered",
+  bill_to: "Bill To",
+  ship_to: "Ship To",
+  consignee: "Consignee",
+};
+
 // ── Audit trail (ERP Phase 1) — generic append-only change history ──
 // Legally-required (India Companies Act) entity change log. The `action`
 // column is a pgEnum; everything else (entity_type, label, summary) is free
