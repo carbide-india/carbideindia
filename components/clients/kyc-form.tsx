@@ -20,6 +20,8 @@ import { SearchableSelect } from "@/components/inquiries/searchable-select";
 import { Field, SectionCard } from "@/components/inquiries/form-field";
 import type { MasterOptionItem } from "@/lib/queries/masters";
 import type { EmployeeOption } from "@/lib/queries/employees";
+import { ClientDocuments } from "@/components/clients/client-documents";
+import type { ClientDocument } from "@/lib/queries/client-documents";
 
 /** RHF holds the schema's *input* shape (pre-transform); zodResolver hands
  *  the parsed *output* (`""` folded to `undefined`, currency/country
@@ -37,6 +39,10 @@ interface Props {
   editClientId?: string;
   /** Prefill values for edit mode — shaped like the form's input fields. */
   initialValues?: Partial<KycFormValues>;
+  /** The generated client code (e.g. CL-0001) — shown read-only when editing. */
+  clientCode?: string;
+  /** Pre-presigned documents list for the Documents section (edit mode only). */
+  documents?: ClientDocument[];
 }
 
 /* ── Business-card upload (browser → Vercel Blob, client-direct) ──────── */
@@ -72,10 +78,10 @@ function emptyToUndefined(v: unknown): string | undefined {
 }
 
 /**
- * Client KYC form — Manan's onboarding sheet as four card sections
- * (Company / Address / Contact Person / Meeting). Option lists for Customer
- * Type, Industry Type and Product Types are admin-managed masters. No selfie
- * field, no active toggle — both were explicit removals.
+ * Client KYC form — reorganised into 9 sections matching the Client Master
+ * spec: Identity / Registration & Tax / Addresses / Contacts /
+ * Commercial & Credit / Bank Details / Documents / Business Cards /
+ * Meeting & Notes.
  */
 export function KycForm({
   customerTypes,
@@ -84,6 +90,8 @@ export function KycForm({
   employees,
   editClientId,
   initialValues,
+  clientCode,
+  documents,
 }: Props) {
   const isEdit = Boolean(editClientId);
   const router = useRouter();
@@ -113,10 +121,21 @@ export function KycForm({
       pinCode: "",
       gstin: "",
       panNo: "",
+      msmeUdyamNo: "",
       billToAddress: "",
+      shipToAddress: "",
       paymentTerms: "",
       freightCharges: "",
       qtyDeviation: "",
+      transporter: "",
+      otherReferences: "",
+      creditDays: undefined,
+      creditLimit: undefined,
+      bankName: "",
+      bankAccountNo: "",
+      bankIfsc: "",
+      bankBranch: "",
+      bankAccountHolder: "",
       tags: [],
       contactFirstName: "",
       contactLastName: "",
@@ -215,11 +234,27 @@ export function KycForm({
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-6" noValidate>
-      {/* ── 1 · Company ──────────────────────────────────────────────── */}
+
+      {/* ── 1 · Identity ─────────────────────────────────────────────── */}
       <SectionCard
-        title="Company"
+        title="Identity"
         hint="Who the client is — type, industry and the products they buy."
       >
+        {/* Client Code — read-only display field, only when editing */}
+        {isEdit && clientCode && (
+          <Field id="kyc-client-code" label="Client Code">
+            <input
+              id="kyc-client-code"
+              type="text"
+              className="nt-input"
+              value={clientCode}
+              disabled
+              readOnly
+              aria-readonly="true"
+            />
+          </Field>
+        )}
+
         <Field id="kyc-name" label="Company Name" required>
           <input
             id="kyc-name"
@@ -250,29 +285,6 @@ export function KycForm({
           />
         </div>
 
-        <Field label="Sales Person" labelOnly>
-          <Controller
-            control={control}
-            name="kycSalesPersonId"
-            render={({ field }) => (
-              <Select
-                ariaLabel="Sales Person"
-                value={field.value ?? ""}
-                onValueChange={(v) => field.onChange(v || undefined)}
-                placeholder={
-                  employees.length === 0
-                    ? "No employees yet"
-                    : "Select an employee…"
-                }
-                disabled={employees.length === 0}
-                searchable
-                searchPlaceholder="Search employees…"
-                options={employees.map((e) => ({ value: e.id, label: e.name }))}
-              />
-            )}
-          />
-        </Field>
-
         {/* Product Types — checkbox chip grid over the admin-managed master. */}
         <Field label="Product Types">
           <Controller
@@ -284,7 +296,7 @@ export function KycForm({
                 <>
                   {productTypes.length === 0 ? (
                     <p className="text-[13px] text-ink-subtle">
-                      No product types yet — add them in Admin → Masters.
+                      No product types yet — add them in Admin &#8594; Masters.
                     </p>
                   ) : (
                     <div className="flex flex-wrap gap-2">
@@ -345,15 +357,62 @@ export function KycForm({
                 id="kyc-tags"
                 value={field.value ?? []}
                 onChange={field.onChange}
-                placeholder="e.g. Mining, Defense, Cutting…"
+                placeholder="e.g. Mining, Defense, Cutting..."
+              />
+            )}
+          />
+        </Field>
+
+        <Field label="Sales Person" labelOnly>
+          <Controller
+            control={control}
+            name="kycSalesPersonId"
+            render={({ field }) => (
+              <Select
+                ariaLabel="Sales Person"
+                value={field.value ?? ""}
+                onValueChange={(v) => field.onChange(v || undefined)}
+                placeholder={
+                  employees.length === 0
+                    ? "No employees yet"
+                    : "Select an employee..."
+                }
+                disabled={employees.length === 0}
+                searchable
+                searchPlaceholder="Search employees..."
+                options={employees.map((e) => ({ value: e.id, label: e.name }))}
               />
             )}
           />
         </Field>
       </SectionCard>
 
-      {/* ── 2 · Address ──────────────────────────────────────────────── */}
-      <SectionCard title="Address">
+      {/* ── 2 · Registration & Tax ───────────────────────────────────── */}
+      <SectionCard
+        title="Registration &amp; Tax"
+        hint="GST, PAN and MSME / Udyam registration details."
+      >
+        <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
+          <Field id="kyc-gstin" label="GSTIN">
+            <input id="kyc-gstin" type="text" className="nt-input" {...register("gstin")} />
+          </Field>
+          <Field id="kyc-pan" label="PAN / IT No">
+            <input id="kyc-pan" type="text" className="nt-input" {...register("panNo")} />
+          </Field>
+          <Field id="kyc-msme" label="MSME / Udyam No">
+            <input
+              id="kyc-msme"
+              type="text"
+              className="nt-input"
+              placeholder="e.g. UDYAM-MH-00-0000000"
+              {...register("msmeUdyamNo")}
+            />
+          </Field>
+        </div>
+      </SectionCard>
+
+      {/* ── 3 · Addresses ────────────────────────────────────────────── */}
+      <SectionCard title="Addresses">
         {/* Address lines first, then State / City / Pin (Hetesh 2026-06-17). */}
         <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
           <Field id="kyc-addr1" label="Address Line 1">
@@ -381,13 +440,13 @@ export function KycForm({
                   value={field.value || undefined}
                   onChange={(v) => {
                     field.onChange(v ?? "");
-                    // State changed → the old city no longer applies.
+                    // State changed — the old city no longer applies.
                     setValue("city", "");
                     if (v) setCityGateError(false);
                   }}
                   options={INDIA_STATES}
-                  placeholder="Select or type a state…"
-                  searchPlaceholder="Search states…"
+                  placeholder="Select or type a state..."
+                  searchPlaceholder="Search states..."
                   emptyText="No states match — type to add."
                   allowCustom
                 />
@@ -407,8 +466,8 @@ export function KycForm({
                       value={field.value || undefined}
                       onChange={(v) => field.onChange(v ?? "")}
                       options={citiesForState(selectedState)}
-                      placeholder="Select city…"
-                      searchPlaceholder="Search cities…"
+                      placeholder="Select city..."
+                      searchPlaceholder="Search cities..."
                       emptyText="No cities match."
                       allowCustom
                       disabled={!selectedState}
@@ -451,33 +510,20 @@ export function KycForm({
             {...register("billToAddress")}
           />
         </Field>
+
+        <Field id="kyc-shipto" label="Ship-to Address">
+          <textarea
+            id="kyc-shipto"
+            rows={2}
+            className="nt-input resize-y"
+            style={{ fontWeight: 400 }}
+            placeholder="Shipping address (if different from the billing address)"
+            {...register("shipToAddress")}
+          />
+        </Field>
       </SectionCard>
 
-      {/* ── Tax & Commercial ─────────────────────────────────────────── */}
-      <SectionCard
-        title="Tax & Commercial"
-        hint="GST / PAN and the commercial terms for this customer."
-      >
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-          <Field id="kyc-gstin" label="GSTIN">
-            <input id="kyc-gstin" type="text" className="nt-input" {...register("gstin")} />
-          </Field>
-          <Field id="kyc-pan" label="PAN / IT No">
-            <input id="kyc-pan" type="text" className="nt-input" {...register("panNo")} />
-          </Field>
-          <Field id="kyc-payterms" label="Payment Terms">
-            <input id="kyc-payterms" type="text" className="nt-input" {...register("paymentTerms")} />
-          </Field>
-          <Field id="kyc-freight" label="Freight Charges">
-            <input id="kyc-freight" type="text" className="nt-input" {...register("freightCharges")} />
-          </Field>
-          <Field id="kyc-qtydev" label="Quantity Deviation">
-            <input id="kyc-qtydev" type="text" className="nt-input" placeholder="e.g. ±10%" {...register("qtyDeviation")} />
-          </Field>
-        </div>
-      </SectionCard>
-
-      {/* ── 3 · Contact Person ───────────────────────────────────────── */}
+      {/* ── 4 · Contact Person ───────────────────────────────────────── */}
       <SectionCard
         title="Contact Person"
         hint="Saved as the client's primary contact — auto-fetched on enquiries."
@@ -531,7 +577,7 @@ export function KycForm({
             rows={2}
             className="nt-input resize-y"
             style={{ fontWeight: 400 }}
-            placeholder="Notes about this contact person…"
+            placeholder="Notes about this contact person..."
             {...register("contactNotes")}
           />
         </Field>
@@ -605,7 +651,7 @@ export function KycForm({
                 rows={2}
                 className="nt-input resize-y"
                 style={{ fontWeight: 400 }}
-                placeholder="Notes about this contact…"
+                placeholder="Notes about this contact..."
                 {...register(`additionalContacts.${idx}.notes`)}
               />
             </Field>
@@ -631,7 +677,136 @@ export function KycForm({
         </button>
       </SectionCard>
 
-      {/* ── 4 · Business Card ────────────────────────────────────────── */}
+      {/* ── 5 · Commercial & Credit ──────────────────────────────────── */}
+      <SectionCard
+        title="Commercial &amp; Credit"
+        hint="Payment terms, credit limits, freight and logistics details."
+      >
+        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+          <Field id="kyc-payterms" label="Payment Terms">
+            <input id="kyc-payterms" type="text" className="nt-input" {...register("paymentTerms")} />
+          </Field>
+          <Field id="kyc-freight" label="Freight Charges">
+            <input id="kyc-freight" type="text" className="nt-input" {...register("freightCharges")} />
+          </Field>
+          <Field id="kyc-creditdays" label="Credit Days">
+            <input
+              id="kyc-creditdays"
+              type="number"
+              min={0}
+              step={1}
+              className="nt-input"
+              placeholder="e.g. 30"
+              {...register("creditDays", { valueAsNumber: true })}
+            />
+          </Field>
+          <Field id="kyc-creditlimit" label="Credit Limit">
+            <input
+              id="kyc-creditlimit"
+              type="number"
+              min={0}
+              step={0.01}
+              className="nt-input"
+              placeholder="e.g. 500000"
+              {...register("creditLimit", { valueAsNumber: true })}
+            />
+          </Field>
+          <Field id="kyc-transporter" label="Transporter">
+            <input
+              id="kyc-transporter"
+              type="text"
+              className="nt-input"
+              placeholder="e.g. Blue Dart"
+              {...register("transporter")}
+            />
+          </Field>
+          <Field id="kyc-qtydev" label="Quantity Deviation">
+            <input id="kyc-qtydev" type="text" className="nt-input" placeholder="e.g. +/-10%" {...register("qtyDeviation")} />
+          </Field>
+        </div>
+        <Field id="kyc-otherrefs" label="Other References">
+          <textarea
+            id="kyc-otherrefs"
+            rows={2}
+            className="nt-input resize-y"
+            style={{ fontWeight: 400 }}
+            placeholder="Any other references or notes relevant to this client..."
+            {...register("otherReferences")}
+          />
+        </Field>
+      </SectionCard>
+
+      {/* ── 6 · Bank Details ─────────────────────────────────────────── */}
+      <SectionCard
+        title="Bank Details"
+        hint="Banking details for payments and account reconciliation."
+      >
+        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+          <Field id="kyc-bankname" label="Bank Name">
+            <input
+              id="kyc-bankname"
+              type="text"
+              className="nt-input"
+              placeholder="e.g. State Bank of India"
+              {...register("bankName")}
+            />
+          </Field>
+          <Field id="kyc-bankaccno" label="Account No">
+            <input
+              id="kyc-bankaccno"
+              type="text"
+              className="nt-input"
+              {...register("bankAccountNo")}
+            />
+          </Field>
+          <Field id="kyc-bankifsc" label="IFSC Code">
+            <input
+              id="kyc-bankifsc"
+              type="text"
+              className="nt-input"
+              placeholder="e.g. SBIN0001234"
+              {...register("bankIfsc")}
+            />
+          </Field>
+          <Field id="kyc-bankbranch" label="Branch">
+            <input
+              id="kyc-bankbranch"
+              type="text"
+              className="nt-input"
+              placeholder="e.g. Ambad, Nashik"
+              {...register("bankBranch")}
+            />
+          </Field>
+          <Field id="kyc-bankholder" label="Account Holder">
+            <input
+              id="kyc-bankholder"
+              type="text"
+              className="nt-input"
+              placeholder="Name on the account"
+              {...register("bankAccountHolder")}
+            />
+          </Field>
+        </div>
+      </SectionCard>
+
+      {/* ── 7 · Documents ────────────────────────────────────────────── */}
+      <SectionCard
+        title="Documents"
+        hint="Attach PDFs, images and other files to this client record."
+      >
+        {editClientId ? (
+          <ClientDocuments
+            clientId={editClientId}
+            documents={documents ?? []}
+          />
+        ) : (
+          <p className="text-[13px] text-ink-subtle">
+            Save the client first, then you can attach documents.
+          </p>
+        )}
+      </SectionCard>
+
+      {/* ── 8 · Business Card ────────────────────────────────────────── */}
       <SectionCard
         title="Business Card"
         hint="Optional scans of the contact's card — uploads run immediately; the client saves fine without them."
@@ -654,22 +829,18 @@ export function KycForm({
         </div>
       </SectionCard>
 
-      {/* ── 5 · Notes ────────────────────────────────────────────────── */}
-      <SectionCard title="Notes" hint="General notes about this client.">
+      {/* ── 9 · Meeting & Notes ──────────────────────────────────────── */}
+      <SectionCard title="Meeting &amp; Notes">
         <Field id="kyc-notes" label="Client Notes">
           <textarea
             id="kyc-notes"
             rows={3}
             className="nt-input resize-y"
             style={{ fontWeight: 400 }}
-            placeholder="Any general notes about this client…"
+            placeholder="Any general notes about this client..."
             {...register("notes")}
           />
         </Field>
-      </SectionCard>
-
-      {/* ── 6 · Meeting ──────────────────────────────────────────────── */}
-      <SectionCard title="Meeting">
         <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
           <Field id="kyc-mdate" label="Meeting Date">
             <input
@@ -702,7 +873,7 @@ export function KycForm({
             rows={3}
             className="nt-input resize-y"
             style={{ fontWeight: 400 }}
-            placeholder="Key points from the meeting…"
+            placeholder="Key points from the meeting..."
             {...register("meetingNotes")}
           />
         </Field>
@@ -734,7 +905,7 @@ export function KycForm({
             letterSpacing: "0.005em",
           }}
         >
-          {pending ? "Saving…" : isEdit ? "Save changes" : "Onboard Client"}
+          {pending ? "Saving..." : isEdit ? "Save changes" : "Onboard Client"}
         </button>
       </div>
     </form>
@@ -746,7 +917,7 @@ export function KycForm({
  * as Product Types' chips, but radio (only one selectable; Manan's "only 1 to
  * select" rule keeps the stored id a single uuid). Clicking the selected chip
  * clears it; a11y via role="radiogroup" + role="radio"/aria-checked. Empty
- * master shows the "add in Admin → Masters" fallback.
+ * master shows the "add in Admin -> Masters" fallback.
  */
 function MasterChips({
   control,
@@ -768,7 +939,7 @@ function MasterChips({
           <>
             {options.length === 0 ? (
               <p className="text-[13px] text-ink-subtle">
-                No options — add in Admin → Masters.
+                No options — add in Admin &#8594; Masters.
               </p>
             ) : (
               <div
@@ -811,7 +982,7 @@ function MasterChips({
 
 /**
  * One business-card side (Front / Back): a single labelled image upload that
- * shows a thumbnail + remove × once uploaded. Mirrors the sample-form photo
+ * shows a thumbnail + remove x once uploaded. Mirrors the sample-form photo
  * tile, scaled to a single image per side and never required.
  */
 function CardUpload({
@@ -829,7 +1000,7 @@ function CardUpload({
 }) {
   const inputRef = React.useRef<HTMLInputElement>(null);
   return (
-    <Field label={`Business Card — ${label}`} labelOnly>
+    <Field label={`Business Card -- ${label}`} labelOnly>
       <input
         ref={inputRef}
         type="file"
@@ -876,7 +1047,7 @@ function CardUpload({
             <ImagePlus size={18} />
           )}
           <span className="text-[11.5px] font-semibold">
-            {uploading ? "Uploading…" : `Add ${label.toLowerCase()}`}
+            {uploading ? "Uploading..." : `Add ${label.toLowerCase()}`}
           </span>
         </button>
       )}
