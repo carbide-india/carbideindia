@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn(), updateTag: vi.fn() }));
+// createClientKyc now imports lib/clients/dedup, which `import "server-only"`.
+// Neutralise it under vitest (the dedup guard early-returns with no GSTIN/PAN).
+vi.mock("server-only", () => ({}));
 
 // Recorders, hoisted so the vi.mock factory below can close over them.
 // Insert rows are identified by shape: name → clients, firstName → contacts.
