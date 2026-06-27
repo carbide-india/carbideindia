@@ -288,6 +288,9 @@ export const employeeDepartments = pgTable(
   ],
 );
 
+/** Client codes: CL-0001, CL-0002, … */
+export const clientsClientCodeSeq = pgSequence("clients_client_code_seq", { startWith: 1 });
+
 /**
  * Client list — backs the "Client Name" picker on the task forms.  Mirrors
  * the `departments` pattern: an admin/seed-managed canonical list that the
@@ -325,6 +328,20 @@ export const clients = pgTable(
     paymentTerms: text("payment_terms"),
     freightCharges: text("freight_charges"),
     qtyDeviation: text("qty_deviation"),
+    // ── Client Master fields (migration 0020) ──
+    clientCode: text("client_code").unique()
+      .default(sql`'CL-' || lpad(nextval('clients_client_code_seq')::text, 4, '0')`),
+    creditDays: integer("credit_days"),
+    creditLimit: numeric("credit_limit"),
+    bankName: text("bank_name"),
+    bankAccountNo: text("bank_account_no"),
+    bankIfsc: text("bank_ifsc"),
+    bankBranch: text("bank_branch"),
+    bankAccountHolder: text("bank_account_holder"),
+    shipToAddress: text("ship_to_address"),
+    transporter: text("transporter"),
+    otherReferences: text("other_references"),
+    msmeUdyamNo: text("msme_udyam_no"),
     // ── Customer categorization (Alok 2026-06-17): open, multi-value, optional
     //    tags — "what kind of customer he is" (Mining / Defense / Cutting …). ──
     tags: text("tags").array(),
@@ -1023,6 +1040,7 @@ export const documents = pgTable(
     mimeType: text("mime_type"),
     sizeBytes: integer("size_bytes"),
     taskId: uuid("task_id").references(() => tasks.id, { onDelete: "set null" }),
+    clientId: uuid("client_id").references(() => clients.id, { onDelete: "cascade" }),
     uploadedById: uuid("uploaded_by_id").references(() => employees.id, {
       onDelete: "set null",
     }),
@@ -1032,6 +1050,7 @@ export const documents = pgTable(
   (t) => [
     index("documents_created_idx").on(t.createdAt),
     index("documents_task_idx").on(t.taskId),
+    index("documents_client_idx").on(t.clientId),
   ],
 );
 
