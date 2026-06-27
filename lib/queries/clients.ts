@@ -134,6 +134,7 @@ export interface ClientAutofill {
  */
 export interface ClientEditValues {
   name: string;
+  clientCode?: string;
   customerTypeId?: string;
   industryTypeId?: string;
   productTypeIds: string[];
@@ -206,6 +207,7 @@ export async function getClientForEdit(
     : "";
   return {
     name: row.name,
+    clientCode: row.clientCode ?? undefined,
     customerTypeId: row.customerTypeId ?? undefined,
     industryTypeId: row.industryTypeId ?? undefined,
     productTypeIds: row.productTypeIds ?? [],

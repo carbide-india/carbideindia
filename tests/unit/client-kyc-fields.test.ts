@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { CreateClientKycSchema } from "@/lib/validators/client-kyc";
+import { toOptionalNumber } from "@/lib/form-utils";
 
 const BASE = {
   name: "Test Corp",
@@ -121,5 +122,29 @@ describe("CreateClientKycSchema — credit / bank / ship fields", () => {
   it("omitting all new fields still parses successfully (backward compat)", () => {
     const result = CreateClientKycSchema.safeParse(BASE);
     expect(result.success).toBe(true);
+  });
+
+  it("schema accepts creditDays: undefined (cleared field)", () => {
+    const result = CreateClientKycSchema.safeParse({ ...BASE, creditDays: undefined });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.creditDays).toBeUndefined();
+  });
+});
+
+describe("toOptionalNumber — empty-field coercion helper", () => {
+  it('returns undefined for empty string ""', () => {
+    expect(toOptionalNumber("")).toBeUndefined();
+  });
+
+  it("returns undefined for NaN", () => {
+    expect(toOptionalNumber(NaN)).toBeUndefined();
+  });
+
+  it("returns undefined for null", () => {
+    expect(toOptionalNumber(null)).toBeUndefined();
+  });
+
+  it("returns 30 for numeric input 30", () => {
+    expect(toOptionalNumber(30)).toBe(30);
   });
 });

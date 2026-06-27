@@ -6,9 +6,6 @@ import { listMasterOptions } from "@/lib/queries/masters";
 import { listEmployeeOptions } from "@/lib/queries/employees";
 import { getClientForEdit } from "@/lib/queries/clients";
 import { getClientDocuments } from "@/lib/queries/client-documents";
-import { db } from "@/lib/db";
-import { clients } from "@/db/schema";
-import { eq } from "drizzle-orm";
 import { KycForm } from "@/components/clients/kyc-form";
 
 export const dynamic = "force-dynamic";
@@ -33,14 +30,8 @@ export default async function EditClientPage({ params }: PageProps) {
 
   if (!client) notFound();
 
-  // Fetch clientCode separately (not part of ClientEditValues which is
-  // shaped for form prefill — clientCode is read-only display only).
-  const [clientRow] = await db
-    .select({ clientCode: clients.clientCode })
-    .from(clients)
-    .where(eq(clients.id, id))
-    .limit(1);
-  const clientCode = clientRow?.clientCode ?? undefined;
+  // clientCode is now returned by getClientForEdit (read-only display only).
+  const clientCode = client.clientCode;
 
   return (
     <div>

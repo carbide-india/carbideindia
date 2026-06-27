@@ -18,6 +18,7 @@ import { TagsInput } from "@/components/ui/tags-input";
 import { INDIA_STATES, citiesForState } from "@/lib/data/india-states-cities";
 import { SearchableSelect } from "@/components/inquiries/searchable-select";
 import { Field, SectionCard } from "@/components/inquiries/form-field";
+import { toOptionalNumber } from "@/lib/form-utils";
 import type { MasterOptionItem } from "@/lib/queries/masters";
 import type { EmployeeOption } from "@/lib/queries/employees";
 import { ClientDocuments } from "@/components/clients/client-documents";
@@ -697,7 +698,7 @@ export function KycForm({
               step={1}
               className="nt-input"
               placeholder="e.g. 30"
-              {...register("creditDays", { valueAsNumber: true })}
+              {...register("creditDays", { setValueAs: toOptionalNumber })}
             />
           </Field>
           <Field id="kyc-creditlimit" label="Credit Limit">
@@ -708,7 +709,7 @@ export function KycForm({
               step={0.01}
               className="nt-input"
               placeholder="e.g. 500000"
-              {...register("creditLimit", { valueAsNumber: true })}
+              {...register("creditLimit", { setValueAs: toOptionalNumber })}
             />
           </Field>
           <Field id="kyc-transporter" label="Transporter">

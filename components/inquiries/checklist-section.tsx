@@ -22,12 +22,9 @@ const YES_NO = [
   { value: "no", label: "No" },
 ] as const;
 
-/** Empty number inputs must reach zod as `undefined`, never NaN or "". */
-export function toOptionalNumber(v: unknown): number | undefined {
-  if (v === "" || v === null || v === undefined) return undefined;
-  const n = Number(v);
-  return Number.isNaN(n) ? undefined : n;
-}
+/** Empty number inputs must reach zod as `undefined`, never NaN or "".
+ *  Implementation lives in lib/form-utils; re-exported here for backward compat. */
+export { toOptionalNumber } from "@/lib/form-utils";
 
 interface Props {
   control: Control<InquiryFormValues>;
