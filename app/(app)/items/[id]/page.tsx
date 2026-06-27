@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function ItemDetailPage({ params }: PageProps) {
-  await requireUser();
+  const me = await requireUser();
   const { id } = await params;
   if (!UUID_RE.test(id)) notFound();
 
@@ -38,7 +38,12 @@ export default async function ItemDetailPage({ params }: PageProps) {
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
-      <ItemDetail item={item} auditEntries={auditEntries} documents={documents} />
+      <ItemDetail
+        item={item}
+        auditEntries={auditEntries}
+        documents={documents}
+        isAdmin={me.isAdmin}
+      />
     </main>
   );
 }

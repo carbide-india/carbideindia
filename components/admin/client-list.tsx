@@ -1,20 +1,18 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
-import * as Dialog from "@radix-ui/react-dialog";
-import { MoreHorizontal, Pencil, Power, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Power } from "lucide-react";
 import { fireToast } from "@/lib/toast";
-import { updateClient, deleteClient } from "@/app/(admin)/admin/clients/actions";
+import { deleteClient, reactivateClient } from "@/app/(admin)/admin/clients/actions";
 import type { ClientWithCount } from "@/lib/queries/clients";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
 interface Props {
@@ -23,7 +21,6 @@ interface Props {
 
 export function ClientList({ clients }: Props) {
   const router = useRouter();
-  const [deleting, setDeleting] = useState<ClientWithCount | null>(null);
 
   if (clients.length === 0) {
     return (
@@ -46,42 +43,38 @@ export function ClientList({ clients }: Props) {
   }
 
   return (
-    <>
-      <div
-        className="overflow-hidden rounded-section border border-hairline bg-surface-card"
-        style={{ boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)" }}
-      >
-        <table className="w-full text-[15px]">
-          <thead>
-            <tr
-              className="text-left text-[12px] uppercase tracking-[0.08em] text-ink-subtle font-bold border-b border-hairline"
-              style={{ background: "var(--color-surface-soft)" }}
-            >
-              <th className="px-5 py-4">Name</th>
-              <th className="px-5 py-4">City</th>
-              <th className="px-5 py-4">Tags</th>
-              <th className="px-5 py-4 tabular-nums">Tasks</th>
-              <th className="px-5 py-4">Status</th>
-              <th className="px-5 py-4 text-right">
-                <span className="sr-only">Actions</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {clients.map((c, i) => (
-              <ClientRow
-                key={c.id}
-                client={c}
-                rowIndex={i}
-                onEdit={() => router.push(`/admin/clients/${c.id}/edit` as Route)}
-                onDelete={() => setDeleting(c)}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <DeleteClientDialog client={deleting} onClose={() => setDeleting(null)} />
-    </>
+    <div
+      className="overflow-hidden rounded-section border border-hairline bg-surface-card"
+      style={{ boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)" }}
+    >
+      <table className="w-full text-[15px]">
+        <thead>
+          <tr
+            className="text-left text-[12px] uppercase tracking-[0.08em] text-ink-subtle font-bold border-b border-hairline"
+            style={{ background: "var(--color-surface-soft)" }}
+          >
+            <th className="px-5 py-4">Name</th>
+            <th className="px-5 py-4">City</th>
+            <th className="px-5 py-4">Tags</th>
+            <th className="px-5 py-4 tabular-nums">Tasks</th>
+            <th className="px-5 py-4">Status</th>
+            <th className="px-5 py-4 text-right">
+              <span className="sr-only">Actions</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {clients.map((c, i) => (
+            <ClientRow
+              key={c.id}
+              client={c}
+              rowIndex={i}
+              onEdit={() => router.push(`/admin/clients/${c.id}/edit` as Route)}
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -89,18 +82,21 @@ function ClientRow({
   client,
   rowIndex,
   onEdit,
-  onDelete,
 }: {
   client: ClientWithCount;
   rowIndex: number;
   onEdit: () => void;
-  onDelete: () => void;
 }) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
 
+  // Deactivate-only (ERP Phase 4): masters are never hard-deleted. The single
+  // control toggles the audited soft-deactivate / reactivate actions.
   function toggleActive() {
     startTransition(async () => {
-      const res = await updateClient(client.id, { isActive: !client.isActive });
+      const res = client.isActive
+        ? await deleteClient(client.id)
+        : await reactivateClient(client.id);
       if (!res.ok) {
         fireToast({ message: res.error });
         return;
@@ -110,6 +106,7 @@ function ClientRow({
           ? `${client.name} deactivated.`
           : `${client.name} reactivated.`,
       });
+      router.refresh();
     });
   }
 
@@ -194,6 +191,7 @@ function ClientRow({
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               <DropdownMenuItem
+                danger={client.isActive}
                 onSelect={(e) => {
                   e.preventDefault();
                   toggleActive();
@@ -202,86 +200,10 @@ function ClientRow({
                 <Power size={15} strokeWidth={2.2} />
                 {client.isActive ? "Deactivate" : "Reactivate"}
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem danger onSelect={onDelete}>
-                <Trash2 size={15} strokeWidth={2.2} />
-                Delete
-              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </td>
     </tr>
-  );
-}
-
-function DeleteClientDialog({
-  client,
-  onClose,
-}: {
-  client: ClientWithCount | null;
-  onClose: () => void;
-}) {
-  const [pending, startTransition] = useTransition();
-
-  function confirmDelete() {
-    if (!client) return;
-    startTransition(async () => {
-      const res = await deleteClient(client.id);
-      if (!res.ok) {
-        fireToast({ message: res.error });
-        return;
-      }
-      fireToast({ message: `${client.name} deleted.` });
-      onClose();
-    });
-  }
-
-  return (
-    <Dialog.Root open={client !== null} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/30 z-[90]" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-[100] -translate-x-1/2 -translate-y-1/2 w-full max-w-md rounded-xl bg-white border border-[#E2E8F0] p-6 shadow-lg">
-          <Dialog.Title className="font-serif text-xl text-[#0F172A] mb-1">
-            Delete client
-          </Dialog.Title>
-          <Dialog.Description className="text-[15px] text-[#64748B] mb-4">
-            Remove <strong className="text-ink-strong">“{client?.name}”</strong>{" "}
-            from the Client Name picker. This can&rsquo;t be undone.
-            {client && client.taskCount > 0 && (
-              <>
-                {" "}
-                <span className="text-[#B71C1C] font-medium">
-                  {client.taskCount} {client.taskCount === 1 ? "task is" : "tasks are"} filed
-                  under this name
-                </span>{" "}
-                — they keep the label, it just won&rsquo;t be selectable anymore.
-              </>
-            )}
-          </Dialog.Description>
-          <div className="flex justify-end gap-2 pt-2">
-            <Dialog.Close asChild>
-              <button
-                type="button"
-                className="px-4 py-2.5 text-[14px] font-medium text-[#64748B]"
-                disabled={pending}
-              >
-                Cancel
-              </button>
-            </Dialog.Close>
-            <button
-              type="button"
-              onClick={confirmDelete}
-              disabled={pending}
-              className="inline-flex items-center gap-2 rounded-md py-2.5 px-5 text-[14px] font-semibold text-white disabled:opacity-50"
-              style={{ background: "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))" }}
-            >
-              <Trash2 size={15} strokeWidth={2.4} />
-              {pending ? "Deleting…" : "Delete client"}
-            </button>
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
   );
 }

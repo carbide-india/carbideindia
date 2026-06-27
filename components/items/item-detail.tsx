@@ -9,14 +9,16 @@ import type { AuditEntry } from "@/lib/queries/audit";
 import type { ItemDocument } from "@/lib/queries/item-documents";
 import { AuditHistory } from "@/components/audit/audit-history";
 import { ItemDocuments } from "@/components/items/item-documents";
+import { ItemStatusControl } from "@/components/items/item-status-control";
 
 interface Props {
   item: ItemDetailType;
   auditEntries: AuditEntry[];
   documents: ItemDocument[];
+  isAdmin: boolean;
 }
 
-export function ItemDetail({ item, auditEntries, documents }: Props) {
+export function ItemDetail({ item, auditEntries, documents, isAdmin }: Props) {
   return (
     <div className="flex flex-col gap-6">
       {/* ── Breadcrumb ─────────────────────────────────────────────── */}
@@ -38,9 +40,20 @@ export function ItemDetail({ item, auditEntries, documents }: Props) {
           <p className="text-[12px] uppercase tracking-[0.18em] font-bold text-ink-subtle">
             Item Master · Record
           </p>
-          <h1 className="font-mono text-[40px] leading-tight tracking-tight text-ink-strong">
-            {item.itemCode}
-          </h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="font-mono text-[40px] leading-tight tracking-tight text-ink-strong">
+              {item.itemCode}
+            </h1>
+            {!item.isActive && (
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold"
+                style={{ background: "rgba(15, 23, 42, 0.05)", color: "var(--color-ink-subtle)" }}
+              >
+                <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--color-ink-subtle)" }} />
+                Inactive
+              </span>
+            )}
+          </div>
           <p className="text-[15px] text-ink-muted">
             {item.seq && (
               <>
@@ -57,6 +70,13 @@ export function ItemDetail({ item, auditEntries, documents }: Props) {
             )}
           </p>
         </div>
+        {isAdmin && (
+          <ItemStatusControl
+            itemId={item.id}
+            itemCode={item.itemCode}
+            isActive={item.isActive}
+          />
+        )}
       </header>
 
       {/* ── Cards ──────────────────────────────────────────────────── */}

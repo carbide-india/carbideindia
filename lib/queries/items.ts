@@ -16,6 +16,7 @@ export interface ItemListItem {
   hsnCode: string | null;
   uom: string | null;
   drawingRevisionNo: string | null;
+  isActive: boolean;
   createdAt: Date;
   shapeName: string | null;
   gradeName: string | null;
@@ -46,6 +47,7 @@ export async function listItems(): Promise<ItemListItem[]> {
       hsnCode: items.hsnCode,
       uom: items.uom,
       drawingRevisionNo: items.drawingRevisionNo,
+      isActive: items.isActive,
       createdAt: items.createdAt,
       shapeName: shape.name,
       gradeName: grade.name,
