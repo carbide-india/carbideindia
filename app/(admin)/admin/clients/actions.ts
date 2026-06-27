@@ -153,6 +153,13 @@ export async function createClient(
   return { ok: true, id: inserted.id };
 }
 
+/**
+ * Deactivate a client (ERP Phase 4 governance — deactivate-only). Clients are
+ * NEVER hard-deleted: a master referenced by past inquiries/quotes/orders must
+ * keep its row so those transactions stay intact. This sets is_active=false +
+ * deleted_at so the client drops out of the picker but the record survives.
+ * Kept the `deleteClient` export name so existing callers need no change.
+ */
 export async function deleteClient(
   clientId: string,
 ): Promise<ActionResult> {
@@ -167,12 +174,13 @@ export async function deleteClient(
     where: eq(clients.id, parsedId.data),
   });
   if (!client) return { ok: false, error: "Client not found" };
+  if (!client.isActive) return { ok: true }; // already deactivated — idempotent
 
-  // Roster-only delete: `clients` is just the picker list (no FK from tasks),
-  // so removing a row leaves every task untouched — tasks keep their existing
-  // Client Name text. This only removes the name from the picker.
   try {
-    await db.delete(clients).where(eq(clients.id, client.id));
+    await db
+      .update(clients)
+      .set({ isActive: false, deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(clients.id, client.id));
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return { ok: false, error: `DB: ${msg}` };
@@ -183,9 +191,9 @@ export async function deleteClient(
       scope: "client",
       targetId: client.id,
       actorId: me.id,
-      eventType: "deleted",
-      fromValue: { name: client.name },
-      toValue: null,
+      eventType: "updated",
+      fromValue: { isActive: true },
+      toValue: { isActive: false },
     });
   } catch (err) {
     console.error("[deleteClient] audit write failed", err);
@@ -198,7 +206,64 @@ export async function deleteClient(
     action: "delete",
     actorId: me.id,
     actorName: me.name,
-    summary: `Client "${client.name}" deleted`,
+    summary: `Client "${client.name}" deactivated`,
+  });
+
+  revalidateClientSurfaces();
+  return { ok: true };
+}
+
+/**
+ * Reactivate a previously-deactivated client (ERP Phase 4). Clears the
+ * deactivation flags so the client returns to the picker.
+ */
+export async function reactivateClient(
+  clientId: string,
+): Promise<ActionResult> {
+  const me = await requireAdmin();
+
+  const parsedId = ClientIdSchema.safeParse(clientId);
+  if (!parsedId.success) {
+    return { ok: false, error: parsedId.error.issues[0]?.message ?? "Invalid client id" };
+  }
+
+  const client = await db.query.clients.findFirst({
+    where: eq(clients.id, parsedId.data),
+  });
+  if (!client) return { ok: false, error: "Client not found" };
+  if (client.isActive) return { ok: true }; // already active — idempotent
+
+  try {
+    await db
+      .update(clients)
+      .set({ isActive: true, deletedAt: null, updatedAt: new Date() })
+      .where(eq(clients.id, client.id));
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: `DB: ${msg}` };
+  }
+
+  try {
+    await db.insert(settingsEvents).values({
+      scope: "client",
+      targetId: client.id,
+      actorId: me.id,
+      eventType: "updated",
+      fromValue: { isActive: false },
+      toValue: { isActive: true },
+    });
+  } catch (err) {
+    console.error("[reactivateClient] audit write failed", err);
+  }
+
+  await recordAudit({
+    entityType: "client",
+    entityId: client.id,
+    entityLabel: client.name,
+    action: "restore",
+    actorId: me.id,
+    actorName: me.name,
+    summary: `Client "${client.name}" reactivated`,
   });
 
   revalidateClientSurfaces();

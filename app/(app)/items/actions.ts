@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { inquiries, inquiryItems, items, masterOptions } from "@/db/schema";
-import { requireUser } from "@/lib/auth/current";
+import { requireUser, requireAdmin } from "@/lib/auth/current";
 import { CreateItemSchema, type CreateItemInput } from "@/lib/validators/item";
 import { itemDedupKey } from "@/lib/item-master/dedup";
 import { buildItemCode, deriveSizeCode } from "@/lib/item-master/item-code";
@@ -206,4 +206,87 @@ export async function createItem(input: CreateItemInput): Promise<Result> {
     console.error("[createItem] failed", err);
     return { ok: false, error: "Could not save the item. Please try again." };
   }
+}
+
+type ToggleResult = { ok: true } | { ok: false; error: string };
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Deactivate an item (ERP Phase 4 governance — deactivate-only). Items are
+ * NEVER hard-deleted: an item referenced by inquiries/quotes/orders keeps its
+ * row. Admin-only. Sets is_active=false + deleted_at.
+ */
+export async function deactivateItem(itemId: string): Promise<ToggleResult> {
+  const me = await requireAdmin();
+  if (!UUID_RE.test(itemId)) return { ok: false, error: "Invalid item id." };
+
+  const [item] = await db
+    .select({ id: items.id, itemCode: items.itemCode, isActive: items.isActive })
+    .from(items)
+    .where(eq(items.id, itemId))
+    .limit(1);
+  if (!item) return { ok: false, error: "Item not found." };
+  if (!item.isActive) return { ok: true }; // idempotent
+
+  try {
+    await db
+      .update(items)
+      .set({ isActive: false, deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(items.id, item.id));
+  } catch (err) {
+    console.error("[deactivateItem] failed", err);
+    return { ok: false, error: "Could not deactivate the item. Please try again." };
+  }
+
+  await recordAudit({
+    entityType: "item",
+    entityId: item.id,
+    entityLabel: item.itemCode,
+    action: "delete",
+    actorId: me.id,
+    actorName: me.name,
+    summary: `Item ${item.itemCode} deactivated`,
+  });
+  revalidatePath("/items");
+  revalidatePath(`/items/${item.id}`);
+  return { ok: true };
+}
+
+/** Reactivate a previously-deactivated item (ERP Phase 4). Admin-only. */
+export async function reactivateItem(itemId: string): Promise<ToggleResult> {
+  const me = await requireAdmin();
+  if (!UUID_RE.test(itemId)) return { ok: false, error: "Invalid item id." };
+
+  const [item] = await db
+    .select({ id: items.id, itemCode: items.itemCode, isActive: items.isActive })
+    .from(items)
+    .where(eq(items.id, itemId))
+    .limit(1);
+  if (!item) return { ok: false, error: "Item not found." };
+  if (item.isActive) return { ok: true }; // idempotent
+
+  try {
+    await db
+      .update(items)
+      .set({ isActive: true, deletedAt: null, updatedAt: new Date() })
+      .where(eq(items.id, item.id));
+  } catch (err) {
+    console.error("[reactivateItem] failed", err);
+    return { ok: false, error: "Could not reactivate the item. Please try again." };
+  }
+
+  await recordAudit({
+    entityType: "item",
+    entityId: item.id,
+    entityLabel: item.itemCode,
+    action: "restore",
+    actorId: me.id,
+    actorName: me.name,
+    summary: `Item ${item.itemCode} reactivated`,
+  });
+  revalidatePath("/items");
+  revalidatePath(`/items/${item.id}`);
+  return { ok: true };
 }
