@@ -17,6 +17,42 @@ import {
   CreateClientKycSchema,
   type CreateClientKycInput,
 } from "@/lib/validators/client-kyc";
+import { recordAudit } from "@/lib/audit/record";
+import { diffFields } from "@/lib/audit/diff";
+
+// Scalar editable columns tracked by the audit trail.
+// contactFirstName / additionalContacts are stored in client_contacts — not here.
+const AUDITED_CLIENT_FIELDS = [
+  "name",
+  "customerTypeId",
+  "industryTypeId",
+  "gstin",
+  "panNo",
+  "paymentTerms",
+  "creditDays",
+  "creditLimit",
+  "bankName",
+  "bankAccountNo",
+  "bankIfsc",
+  "bankBranch",
+  "bankAccountHolder",
+  "shipToAddress",
+  "transporter",
+  "otherReferences",
+  "msmeUdyamNo",
+  "freightCharges",
+  "qtyDeviation",
+  "addressLine1",
+  "addressLine2",
+  "addressLine3",
+  "addressLine4",
+  "city",
+  "state",
+  "pinCode",
+  "notes",
+  "kycSalesPersonId",
+  "tags",
+] as const;
 
 type ActionResult<T = unknown> =
   | ({ ok: true } & T)
@@ -86,6 +122,16 @@ export async function createClient(
     console.error("[createClient] audit write failed", err);
   }
 
+  await recordAudit({
+    entityType: "client",
+    entityId: inserted.id,
+    entityLabel: inserted.name,
+    action: "create",
+    actorId: me.id,
+    actorName: me.name,
+    summary: "Client created",
+  });
+
   revalidateClientSurfaces();
   return { ok: true, id: inserted.id };
 }
@@ -127,6 +173,16 @@ export async function deleteClient(
   } catch (err) {
     console.error("[deleteClient] audit write failed", err);
   }
+
+  await recordAudit({
+    entityType: "client",
+    entityId: client.id,
+    entityLabel: client.name,
+    action: "delete",
+    actorId: me.id,
+    actorName: me.name,
+    summary: `Client "${client.name}" deleted`,
+  });
 
   revalidateClientSurfaces();
   return { ok: true };
@@ -295,6 +351,80 @@ export async function adminUpdateClientKyc(
   } catch (err) {
     console.error("[adminUpdateClientKyc] audit write failed", err);
   }
+
+  // Field-level diff audit: build before/after snapshots keyed by audited fields.
+  const beforeSnapshot: Record<string, unknown> = {
+    name: client.name,
+    customerTypeId: client.customerTypeId,
+    industryTypeId: client.industryTypeId,
+    gstin: client.gstin,
+    panNo: client.panNo,
+    paymentTerms: client.paymentTerms,
+    creditDays: client.creditDays,
+    creditLimit: client.creditLimit,
+    bankName: client.bankName,
+    bankAccountNo: client.bankAccountNo,
+    bankIfsc: client.bankIfsc,
+    bankBranch: client.bankBranch,
+    bankAccountHolder: client.bankAccountHolder,
+    shipToAddress: client.shipToAddress,
+    transporter: client.transporter,
+    otherReferences: client.otherReferences,
+    msmeUdyamNo: client.msmeUdyamNo,
+    freightCharges: client.freightCharges,
+    qtyDeviation: client.qtyDeviation,
+    addressLine1: client.addressLine1,
+    addressLine2: client.addressLine2,
+    addressLine3: client.addressLine3,
+    addressLine4: client.addressLine4,
+    city: client.city,
+    state: client.state,
+    pinCode: client.pinCode,
+    notes: client.notes,
+    kycSalesPersonId: client.kycSalesPersonId,
+    tags: client.tags,
+  };
+  const afterSnapshot: Record<string, unknown> = {
+    name: v.name,
+    customerTypeId: v.customerTypeId ?? null,
+    industryTypeId: v.industryTypeId ?? null,
+    gstin: v.gstin ?? null,
+    panNo: v.panNo ?? null,
+    paymentTerms: v.paymentTerms ?? null,
+    creditDays: v.creditDays ?? null,
+    creditLimit: v.creditLimit != null ? String(v.creditLimit) : null,
+    bankName: v.bankName ?? null,
+    bankAccountNo: v.bankAccountNo ?? null,
+    bankIfsc: v.bankIfsc ?? null,
+    bankBranch: v.bankBranch ?? null,
+    bankAccountHolder: v.bankAccountHolder ?? null,
+    shipToAddress: v.shipToAddress ?? null,
+    transporter: v.transporter ?? null,
+    otherReferences: v.otherReferences ?? null,
+    msmeUdyamNo: v.msmeUdyamNo ?? null,
+    freightCharges: v.freightCharges ?? null,
+    qtyDeviation: v.qtyDeviation ?? null,
+    addressLine1: v.addressLine1 ?? null,
+    addressLine2: v.addressLine2 ?? null,
+    addressLine3: v.addressLine3 ?? null,
+    addressLine4: v.addressLine4 ?? null,
+    city: v.city ?? null,
+    state: v.state ?? null,
+    pinCode: v.pinCode ?? null,
+    notes: v.notes ?? null,
+    kycSalesPersonId: v.kycSalesPersonId ?? null,
+    tags: v.tags ?? null,
+  };
+  const changes = diffFields(beforeSnapshot, afterSnapshot, AUDITED_CLIENT_FIELDS);
+  await recordAudit({
+    entityType: "client",
+    entityId: client.id,
+    entityLabel: v.name ?? client.name,
+    action: "update",
+    actorId: me.id,
+    actorName: me.name,
+    changes,
+  });
 
   revalidateClientSurfaces();
   revalidatePath(`/admin/clients/${client.id}/edit`);

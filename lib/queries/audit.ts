@@ -1,7 +1,9 @@
-import { desc, eq } from "drizzle-orm";
+import "server-only";
+import { and, desc, eq } from "drizzle-orm";
 import { db, employees } from "@/lib/db";
-import { taskEvents } from "@/db/schema";
+import { auditLog, taskEvents } from "@/db/schema";
 import type { TaskEventType } from "@/lib/events";
+import type { FieldChange } from "@/lib/audit/diff";
 
 export type AuditFeedRow = {
   id: string;
@@ -47,6 +49,53 @@ export async function listTaskEvents(taskId: string): Promise<AuditFeedRow[]> {
     fromValue: r.fromValue,
     toValue: r.toValue,
     note: r.note,
+    createdAt: r.createdAt,
+  }));
+}
+
+// ── Audit log (ERP Phase 1) ────────────────────────────────────────────────
+
+export type AuditEntry = {
+  id: string;
+  action: string;
+  /** Resolved display name: live employee name, falling back to the snapshot. */
+  actorName: string | null;
+  changes: FieldChange[] | null;
+  summary: string | null;
+  createdAt: Date;
+};
+
+/**
+ * Returns all audit_log rows for the given entity, newest-first.
+ * The actor name is resolved by LEFT JOINing the employees table; if the
+ * employee row was deleted (actor_id set null) the snapshot actor_name is
+ * used instead.
+ */
+export async function getAuditLog(
+  entityType: string,
+  entityId: string,
+): Promise<AuditEntry[]> {
+  const rows = await db
+    .select({
+      id: auditLog.id,
+      action: auditLog.action,
+      actorNameLive: employees.name,
+      actorNameSnapshot: auditLog.actorName,
+      changes: auditLog.changes,
+      summary: auditLog.summary,
+      createdAt: auditLog.createdAt,
+    })
+    .from(auditLog)
+    .leftJoin(employees, eq(auditLog.actorId, employees.id))
+    .where(and(eq(auditLog.entityType, entityType), eq(auditLog.entityId, entityId)))
+    .orderBy(desc(auditLog.createdAt));
+
+  return rows.map((r) => ({
+    id: r.id,
+    action: r.action,
+    actorName: r.actorNameLive ?? r.actorNameSnapshot ?? null,
+    changes: (r.changes as FieldChange[] | null) ?? null,
+    summary: r.summary ?? null,
     createdAt: r.createdAt,
   }));
 }

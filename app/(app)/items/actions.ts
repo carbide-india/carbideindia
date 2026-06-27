@@ -8,6 +8,7 @@ import { requireUser } from "@/lib/auth/current";
 import { CreateItemSchema, type CreateItemInput } from "@/lib/validators/item";
 import { itemDedupKey } from "@/lib/item-master/dedup";
 import { buildItemCode, deriveSizeCode } from "@/lib/item-master/item-code";
+import { recordAudit } from "@/lib/audit/record";
 
 type Result =
   | { ok: true; id: string; itemCode: string; reused: boolean }
@@ -186,6 +187,15 @@ export async function createItem(input: CreateItemInput): Promise<Result> {
       if (winner) return { ok: true, id: winner.id, itemCode: winner.itemCode, reused: true };
       return { ok: false, error: "Could not save the item. Please try again." };
     }
+    await recordAudit({
+      entityType: "item",
+      entityId: row.id,
+      entityLabel: row.itemCode,
+      action: "create",
+      actorId: me.id,
+      actorName: me.name,
+      summary: "Item created",
+    });
     revalidatePath("/items");
     return { ok: true, id: row.id, itemCode: row.itemCode, reused: false };
   } catch (err) {
