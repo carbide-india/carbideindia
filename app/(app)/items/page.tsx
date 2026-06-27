@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Download } from "lucide-react";
 import { DashboardHeader } from "@/components/layout/header";
 import { DashboardFooter } from "@/components/layout/footer";
 import { ItemTable, NEW_ITEM_ROUTE } from "@/components/items/item-table";
@@ -40,18 +40,27 @@ export default async function ItemsPage() {
               internal code per unique shape, grade &amp; size combination.
             </p>
           </div>
-          <Link
-            href={NEW_ITEM_ROUTE}
-            className="inline-flex items-center gap-2 text-cta text-white px-6 py-3 rounded-chip transition-transform hover:-translate-y-px"
-            style={{
-              background:
-                "linear-gradient(135deg, rgb(63, 63, 148), rgb(47, 47, 111))",
-              boxShadow: "0 6px 16px rgba(63, 63, 148, 0.32)",
-            }}
-          >
-            <Plus size={16} strokeWidth={2.4} />
-            New Item
-          </Link>
+          <div className="flex items-center gap-3">
+            <a
+              href="/items/export.xlsx"
+              className="inline-flex items-center gap-2 text-cta text-ink-muted border border-hairline bg-surface-card px-5 py-3 rounded-chip hover:text-ink-strong hover:border-ink-subtle transition-colors"
+            >
+              <Download size={15} strokeWidth={2.2} />
+              Export to Excel
+            </a>
+            <Link
+              href={NEW_ITEM_ROUTE}
+              className="inline-flex items-center gap-2 text-cta text-white px-6 py-3 rounded-chip transition-transform hover:-translate-y-px"
+              style={{
+                background:
+                  "linear-gradient(135deg, rgb(63, 63, 148), rgb(47, 47, 111))",
+                boxShadow: "0 6px 16px rgba(63, 63, 148, 0.32)",
+              }}
+            >
+              <Plus size={16} strokeWidth={2.4} />
+              New Item
+            </Link>
+          </div>
         </header>
         <ItemTable rows={rows} />
       </main>
