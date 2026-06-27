@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/current";
 import { getClientRecord } from "@/lib/queries/clients";
 import { getClientDocuments } from "@/lib/queries/client-documents";
+import { getAuditLog } from "@/lib/queries/audit";
 import { ClientRecord } from "@/components/admin/client-record";
 
 export const dynamic = "force-dynamic";
@@ -28,16 +29,17 @@ export default async function ClientRecordPage({ params }: PageProps) {
   const { id } = await params;
   if (!UUID_RE.test(id)) notFound();
 
-  const [record, documents] = await Promise.all([
+  const [record, documents, auditEntries] = await Promise.all([
     getClientRecord(id),
     getClientDocuments(id),
+    getAuditLog("client", id),
   ]);
 
   if (!record) notFound();
 
   return (
     <div>
-      <ClientRecord record={record} documents={documents} />
+      <ClientRecord record={record} documents={documents} auditEntries={auditEntries} />
     </div>
   );
 }

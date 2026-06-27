@@ -5,14 +5,17 @@ import { ArrowLeft, Pencil } from "lucide-react";
 import { formatDate, formatInr } from "@/lib/format";
 import type { ClientRecord as ClientRecordType } from "@/lib/queries/clients";
 import type { ClientDocument } from "@/lib/queries/client-documents";
+import type { AuditEntry } from "@/lib/queries/audit";
 import { ClientDocuments } from "@/components/clients/client-documents";
+import { AuditHistory } from "@/components/audit/audit-history";
 
 interface Props {
   record: ClientRecordType;
   documents: ClientDocument[];
+  auditEntries: AuditEntry[];
 }
 
-export function ClientRecord({ record, documents }: Props) {
+export function ClientRecord({ record, documents, auditEntries }: Props) {
   /* ── Composed address ──────────────────────────────────────────────── */
   const registeredAddress = composeAddress({
     line1: record.addressLine1,
@@ -291,6 +294,11 @@ export function ClientRecord({ record, documents }: Props) {
               ["Last Updated", formatDate(record.updatedAt)],
             ]}
           />
+        </ReadCard>
+
+        {/* History */}
+        <ReadCard title="History">
+          <AuditHistory entries={auditEntries} />
         </ReadCard>
 
       </div>

@@ -5,12 +5,15 @@ import { ArrowLeft } from "lucide-react";
 import { COSTING_TYPE_LABELS } from "@/db/enums";
 import { formatDate } from "@/lib/format";
 import type { ItemDetail as ItemDetailType } from "@/lib/queries/items";
+import type { AuditEntry } from "@/lib/queries/audit";
+import { AuditHistory } from "@/components/audit/audit-history";
 
 interface Props {
   item: ItemDetailType;
+  auditEntries: AuditEntry[];
 }
 
-export function ItemDetail({ item }: Props) {
+export function ItemDetail({ item, auditEntries }: Props) {
   return (
     <div className="flex flex-col gap-6">
       {/* ── Breadcrumb ─────────────────────────────────────────────── */}
@@ -122,6 +125,11 @@ export function ItemDetail({ item }: Props) {
               ["Last Updated", formatDate(item.updatedAt)],
             ]}
           />
+        </ReadCard>
+
+        {/* History */}
+        <ReadCard title="History">
+          <AuditHistory entries={auditEntries} />
         </ReadCard>
       </div>
     </div>
