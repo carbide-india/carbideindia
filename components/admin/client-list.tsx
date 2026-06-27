@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -118,7 +119,12 @@ function ClientRow({
       style={{ background: rowIndex % 2 === 1 ? "rgba(15, 23, 42, 0.012)" : undefined }}
     >
       <td className="px-5 py-4">
-        <span className="text-ink-strong font-medium">{client.name}</span>
+        <Link
+          href={`/admin/clients/${client.id}` as Route}
+          className="text-ink-strong font-medium hover:text-brand transition-colors"
+        >
+          {client.name}
+        </Link>
       </td>
       <td className="px-5 py-4 text-ink-soft">
         {client.city ? client.city : <span className="text-ink-subtle">—</span>}
