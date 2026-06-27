@@ -53,6 +53,17 @@ const ClientKycFieldsSchema = z.object({
     email: OptionalText(160),
     notes: OptionalText(2000),
   })).optional(),
+  // ── Credit & banking ──
+  creditDays: z.coerce.number().int().nonnegative().optional(),
+  creditLimit: z.coerce.number().nonnegative().optional(),
+  bankName: OptionalText(120), bankAccountNo: OptionalText(60),
+  bankIfsc: OptionalText(20), bankBranch: OptionalText(120),
+  bankAccountHolder: OptionalText(120),
+  // ── Logistics & compliance ──
+  shipToAddress: OptionalText(1000),
+  transporter: OptionalText(160),
+  otherReferences: OptionalText(500),
+  msmeUdyamNo: OptionalText(40),
   meetingDate: z.string().optional(),                 // ISO date
   meetingStart: MeetingTime,
   meetingEnd: MeetingTime,
