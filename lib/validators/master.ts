@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { MASTER_KINDS } from "@/db/enums";
+import { ShapeConfigSchema } from "@/lib/masters/shape-config";
 
 const NameSchema = z
   .string()
@@ -28,6 +29,8 @@ export const UpdateMasterSchema = z
     name: NameSchema.optional(),
     isActive: z.boolean().optional(),
     sortOrder: z.number().int().min(0).max(9999).optional(),
+    // Shape dimension config (only meaningful for `shape` kind).
+    config: ShapeConfigSchema.optional(),
   })
   .strict()
   .refine((v) => Object.keys(v).length > 0, { message: "No changes to save." });

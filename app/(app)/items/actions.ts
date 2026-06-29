@@ -9,6 +9,7 @@ import { CreateItemSchema, type CreateItemInput } from "@/lib/validators/item";
 import { itemDedupKey } from "@/lib/item-master/dedup";
 import { buildItemCode, deriveSizeCode } from "@/lib/item-master/item-code";
 import { recordAudit } from "@/lib/audit/record";
+import { resolveShapeConfig, requiredDims, DIM_LABELS } from "@/lib/masters/shape-config";
 
 type Result =
   | { ok: true; id: string; itemCode: string; reused: boolean }
@@ -94,6 +95,27 @@ export async function createItem(input: CreateItemInput): Promise<Result> {
     outerDia: numOrNull(v.outerDia), innerDia: numOrNull(v.innerDia),
     length: numOrNull(v.length), width: numOrNull(v.width), thickness: numOrNull(v.thickness),
   };
+
+  // Enforce the selected shape's required dimensions (forms/masters redesign —
+  // the shape master's config is the source of truth; trust it server-side).
+  if (v.shapeId) {
+    const [shapeRow] = await db
+      .select({ config: masterOptions.config })
+      .from(masterOptions)
+      .where(eq(masterOptions.id, v.shapeId))
+      .limit(1);
+    if (shapeRow) {
+      const cfg = resolveShapeConfig(shapeRow.config);
+      const missing = requiredDims(cfg).filter((f) => dims[f] == null);
+      if (missing.length > 0) {
+        return {
+          ok: false,
+          error: `Missing required dimension(s) for this shape: ${missing.map((f) => DIM_LABELS[f]).join(", ")}.`,
+        };
+      }
+    }
+  }
+
   const dedupKey = itemDedupKey({
     shapeId: v.shapeId, internalGradeId: v.internalGradeId,
     conditionId: v.conditionId, toleranceId: v.toleranceId, ...dims,

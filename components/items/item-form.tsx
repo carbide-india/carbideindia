@@ -15,6 +15,13 @@ import { Field, SectionCard } from "@/components/inquiries/form-field";
 import { buildItemCode, deriveSizeCode } from "@/lib/item-master/item-code";
 import type { MasterOptionWithCode } from "@/lib/queries/masters";
 import type { InquiryOption } from "@/lib/queries/inquiries";
+import {
+  DIM_FIELDS,
+  DIM_LABELS,
+  defaultShapeConfig,
+  type DimField,
+  type ShapeConfig,
+} from "@/lib/masters/shape-config";
 
 export type ItemFormValues = z.input<typeof CreateItemSchema>;
 type ItemFormOutput = z.output<typeof CreateItemSchema>;
@@ -26,6 +33,8 @@ interface Props {
   conditions: MasterOptionWithCode[];
   sizes: MasterOptionWithCode[];
   inquiries: InquiryOption[];
+  /** Per-shape dimension config keyed by shape id (forms/masters redesign). */
+  shapeProfiles: Record<string, ShapeConfig>;
 }
 
 /** Size-class options — shown alongside the auto-derived value so user can override. */
@@ -53,6 +62,7 @@ export function ItemForm({
   // sizes is used for the sizeCodeById lookup map (live preview dep)
   sizes,
   inquiries,
+  shapeProfiles,
 }: Props) {
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
@@ -121,6 +131,22 @@ export function ItemForm({
   const watchedL = watch("length");
   const watchedW = watch("width");
   const watchedT = watch("thickness");
+
+  // Resolve the selected shape's dimension config (which dims apply). Defaults
+  // to all-optional when no shape is chosen or it has no config.
+  const shapeConfig: ShapeConfig =
+    (watchedShapeId && shapeProfiles[watchedShapeId]) || defaultShapeConfig();
+
+  // When the shape changes, blank any dimension the new shape hides so a
+  // stale value can't be persisted for an inapplicable field.
+  React.useEffect(() => {
+    for (const f of DIM_FIELDS) {
+      if (shapeConfig.dims[f] === "hidden") {
+        setValue(f, undefined, { shouldValidate: false, shouldDirty: false });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedShapeId]);
 
   /** Live item-code preview derived from current form values. */
   const previewCode = React.useMemo(() => {
@@ -506,67 +532,37 @@ export function ItemForm({
         </div>
       </SectionCard>
 
-      {/* ── 3 · Dimensions ───────────────────────────────────────── */}
+      {/* ── 3 · Dimensions (driven by the selected Shape) ─────────── */}
       <SectionCard
         title="Dimensions"
-        hint="All values in mm. Outer Dia / Inner Dia / Length / Width / Thickness — leave blank if not applicable."
+        hint={
+          watchedShapeId
+            ? "Only the dimensions this shape uses are shown. Required fields are marked *."
+            : "All values in mm. Pick a Shape above to show only the dimensions it needs."
+        }
       >
         <div className="grid grid-cols-3 gap-4 max-md:grid-cols-2 max-sm:grid-cols-1">
-          <Field id="item-od" label="Outer Dia (mm)">
-            <input
-              id="item-od"
-              type="number"
-              min={0}
-              step="any"
-              className="nt-input"
-              placeholder="0.00"
-              {...register("outerDia")}
-            />
-          </Field>
-          <Field id="item-id" label="Inner Dia (mm)">
-            <input
-              id="item-id"
-              type="number"
-              min={0}
-              step="any"
-              className="nt-input"
-              placeholder="0.00"
-              {...register("innerDia")}
-            />
-          </Field>
-          <Field id="item-length" label="Length (mm)">
-            <input
-              id="item-length"
-              type="number"
-              min={0}
-              step="any"
-              className="nt-input"
-              placeholder="0.00"
-              {...register("length")}
-            />
-          </Field>
-          <Field id="item-width" label="Width (mm)">
-            <input
-              id="item-width"
-              type="number"
-              min={0}
-              step="any"
-              className="nt-input"
-              placeholder="0.00"
-              {...register("width")}
-            />
-          </Field>
-          <Field id="item-thickness" label="Thickness (mm)">
-            <input
-              id="item-thickness"
-              type="number"
-              min={0}
-              step="any"
-              className="nt-input"
-              placeholder="0.00"
-              {...register("thickness")}
-            />
-          </Field>
+          {DIM_FIELDS.map((f) => {
+            const rule = shapeConfig.dims[f];
+            if (rule === "hidden") return null;
+            return (
+              <Field
+                key={f}
+                id={`item-${f}`}
+                label={`${DIM_LABELS[f]} (mm)${rule === "required" ? " *" : ""}`}
+              >
+                <input
+                  id={`item-${f}`}
+                  type="number"
+                  min={0}
+                  step="any"
+                  className="nt-input"
+                  placeholder="0.00"
+                  {...register(f)}
+                />
+              </Field>
+            );
+          })}
         </div>
         <Field id="item-dim-notes" label="Dimension Notes">
           <textarea

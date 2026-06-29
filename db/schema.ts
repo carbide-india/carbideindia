@@ -492,6 +492,11 @@ export const masterOptions = pgTable(
     // Reg" → "C", Condition "Sintered" → "B", Size "Small" → "S"). Optional;
     // only the item-code masters (size/shape/condition/grade) carry one.
     code: text("code"),
+    // Per-option config (forms/masters redesign — Phase B). For `shape` rows
+    // this holds the ShapeConfig (which dimensions are required/optional/hidden)
+    // that drives the item & enquiry forms. Generic jsonb so other kinds can
+    // carry config later without a migration.
+    config: jsonb("config"),
     isActive: boolean("is_active").notNull().default(true),
     sortOrder: integer("sort_order").notNull().default(100),
     createdAt: timestamp("created_at", { withTimezone: true })

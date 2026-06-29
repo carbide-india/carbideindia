@@ -187,6 +187,7 @@ export async function updateMasterOption(
   if (parsed.data.name !== undefined) patch.name = parsed.data.name;
   if (parsed.data.isActive !== undefined) patch.isActive = parsed.data.isActive;
   if (parsed.data.sortOrder !== undefined) patch.sortOrder = parsed.data.sortOrder;
+  if (parsed.data.config !== undefined) patch.config = parsed.data.config;
 
   try {
     await db.update(masterOptions).set(patch).where(eq(masterOptions.id, option.id));

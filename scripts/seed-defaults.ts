@@ -26,6 +26,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { MASTER_KINDS, type MasterKind } from "@/db/enums";
+import { presetForShapeName } from "@/lib/masters/shape-config";
 
 async function seedStatusSettings(): Promise<void> {
   await db.execute(sql`
@@ -213,10 +214,31 @@ async function seedMasterOptions(): Promise<void> {
   }
 }
 
+/**
+ * Set the dimension-config preset on each Shape that has none yet (forms/
+ * masters redesign — Phase B). Idempotent: only fills config IS NULL.
+ */
+async function seedShapeConfigs(): Promise<void> {
+  const shapes = (await db.execute(sql`
+    SELECT id, name FROM master_options WHERE kind = 'shape' AND config IS NULL
+  `)) as unknown as { id: string; name: string }[];
+  let n = 0;
+  for (const s of shapes) {
+    const preset = presetForShapeName(s.name);
+    if (!preset) continue;
+    await db.execute(sql`
+      UPDATE master_options SET config = ${JSON.stringify(preset)}::jsonb WHERE id = ${s.id}
+    `);
+    n++;
+  }
+  console.log(`shape configs seeded: ${n}`);
+}
+
 async function main(): Promise<void> {
   await seedStatusSettings();
   await seedOrgSettings();
   await seedMasterOptions();
+  await seedShapeConfigs();
   console.log("seed-defaults: done");
 }
 

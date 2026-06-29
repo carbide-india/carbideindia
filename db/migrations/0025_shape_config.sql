@@ -1,0 +1,1 @@
+ALTER TABLE "master_options" ADD COLUMN "config" jsonb;
