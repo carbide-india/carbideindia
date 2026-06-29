@@ -1,6 +1,7 @@
 import { DashboardHeader } from "@/components/layout/header";
 import { DashboardFooter } from "@/components/layout/footer";
 import { ItemForm } from "@/components/items/item-form";
+import { BackLink } from "@/components/ui/back-link";
 import { requireUser } from "@/lib/auth/current";
 import { listMasterOptionsWithCode, getShapeProfiles } from "@/lib/queries/masters";
 import { listInquiryOptions } from "@/lib/queries/inquiries";
@@ -25,6 +26,9 @@ export default async function NewItemPage() {
     <>
       <DashboardHeader generatedAt={new Date()} />
       <main className="mx-auto max-w-[980px] px-12 max-md:px-4 pt-8 pb-16">
+        <div className="mb-4">
+          <BackLink href="/items" label="Item Master" />
+        </div>
         <header className="mb-6">
           <div className="text-[10px] uppercase tracking-[0.18em] text-ink-subtle font-bold">
             Production · Item Master

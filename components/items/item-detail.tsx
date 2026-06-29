@@ -1,7 +1,4 @@
 import * as React from "react";
-import Link from "next/link";
-import type { Route } from "next";
-import { ArrowLeft } from "lucide-react";
 import { COSTING_TYPE_LABELS } from "@/db/enums";
 import { formatDate } from "@/lib/format";
 import type { ItemDetail as ItemDetailType } from "@/lib/queries/items";
@@ -10,6 +7,7 @@ import type { ItemDocument } from "@/lib/queries/item-documents";
 import { AuditHistory } from "@/components/audit/audit-history";
 import { ItemDocuments } from "@/components/items/item-documents";
 import { ItemStatusControl } from "@/components/items/item-status-control";
+import { BackLink } from "@/components/ui/back-link";
 
 interface Props {
   item: ItemDetailType;
@@ -20,28 +18,20 @@ interface Props {
 
 export function ItemDetail({ item, auditEntries, documents, isAdmin }: Props) {
   return (
-    <div className="flex flex-col gap-6">
-      {/* ── Breadcrumb ─────────────────────────────────────────────── */}
-      <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-[13px]">
-        <Link
-          href={"/items" as Route}
-          className="inline-flex items-center gap-1.5 font-semibold text-ink-muted hover:text-ink-strong transition-colors"
-        >
-          <ArrowLeft size={14} strokeWidth={2.4} />
-          Item Master
-        </Link>
-        <span className="text-ink-subtle">/</span>
-        <span className="font-mono text-ink-subtle">{item.itemCode}</span>
-      </nav>
+    <div className="flex flex-col gap-8">
+      {/* ── Back link ──────────────────────────────────────────────── */}
+      <div>
+        <BackLink href="/items" label="Item Master" />
+      </div>
 
       {/* ── Header ─────────────────────────────────────────────────── */}
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-[12px] uppercase tracking-[0.18em] font-bold text-ink-subtle">
+      <header className="flex flex-wrap items-start justify-between gap-5 border-b border-hairline pb-7">
+        <div className="min-w-0">
+          <p className="text-[11px] uppercase tracking-[0.2em] font-bold text-ink-subtle">
             Item Master · Record
           </p>
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="font-mono text-[40px] leading-tight tracking-tight text-ink-strong">
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <h1 className="font-mono text-[44px] leading-none tracking-tight text-ink-strong break-all">
               {item.itemCode}
             </h1>
             {!item.isActive && (
@@ -54,10 +44,10 @@ export function ItemDetail({ item, auditEntries, documents, isAdmin }: Props) {
               </span>
             )}
           </div>
-          <p className="text-[15px] text-ink-muted">
+          <p className="mt-3 text-[15px] text-ink-muted">
             {item.seq && (
               <>
-                <span className="font-semibold">#{item.seq}</span>
+                <span className="font-semibold text-ink-soft">#{item.seq}</span>
                 <span className="mx-2 text-ink-subtle">·</span>
               </>
             )}
@@ -218,10 +208,10 @@ function hasPartData(
 function ReadCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section
-      className="bg-surface-card rounded-section border border-hairline p-6"
+      className="bg-surface-card rounded-section border border-hairline p-7 max-md:p-6"
       style={{ boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)" }}
     >
-      <h2 className="mb-4 text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
+      <h2 className="mb-5 pb-3 border-b border-hairline text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
         {title}
       </h2>
       {children}
@@ -237,11 +227,13 @@ function InfoGrid({
   const visible = rows.filter(([, v]) => v !== null && v !== undefined && v !== "");
   if (visible.length === 0) return null;
   return (
-    <dl className="grid grid-cols-1 gap-x-8 gap-y-2.5 sm:grid-cols-2">
+    <dl className="grid grid-cols-1 gap-x-10 gap-y-5 sm:grid-cols-2">
       {visible.map(([label, value]) => (
-        <div key={label} className="flex flex-col gap-0.5">
-          <dt className="text-[12px] font-bold text-ink-subtle">{label}</dt>
-          <dd className="text-[14px] text-ink-strong break-words">{value}</dd>
+        <div key={label} className="flex flex-col gap-1">
+          <dt className="text-[11px] uppercase tracking-[0.08em] font-bold text-ink-subtle">
+            {label}
+          </dt>
+          <dd className="text-[15px] leading-snug text-ink-strong break-words">{value}</dd>
         </div>
       ))}
     </dl>

@@ -1,6 +1,7 @@
 import { DashboardHeader } from "@/components/layout/header";
 import { DashboardFooter } from "@/components/layout/footer";
 import { InquiryForm } from "@/components/inquiries/inquiry-form";
+import { BackLink } from "@/components/ui/back-link";
 import { requireUser, getCurrentEmployee } from "@/lib/auth/current";
 import { listClientOptions } from "@/lib/queries/clients";
 import { listEmployeeOptions } from "@/lib/queries/employees";
@@ -26,6 +27,9 @@ export default async function NewInquiryPage() {
     <>
       <DashboardHeader generatedAt={new Date()} />
       <main className="mx-auto max-w-[980px] px-12 max-md:px-4 pt-8 pb-16">
+        <div className="mb-4">
+          <BackLink href="/inquiries" label="Enquiries" />
+        </div>
         <header className="mb-6">
           <div className="text-[10px] uppercase tracking-[0.18em] text-ink-subtle font-bold">
             Sales · Enquiry Register

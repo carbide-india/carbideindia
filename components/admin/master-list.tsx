@@ -51,24 +51,56 @@ export function MasterList({ items }: Props) {
     <>
       <Tabs.Root value={kind} onValueChange={(v) => setKind(v as MasterKind)}>
         <Tabs.List
-          className="mb-8 flex gap-1 border-b border-[rgba(15,23,42,0.08)] overflow-x-auto max-md:gap-0"
+          className="mb-8 flex flex-wrap gap-2"
           aria-label="Master kinds"
         >
-          {MASTER_KINDS.map((k) => (
-            <Tabs.Trigger key={k} value={k} className="settings-tab-trigger">
-              {MASTER_KIND_LABELS[k]}
-            </Tabs.Trigger>
-          ))}
+          {MASTER_KINDS.map((k) => {
+            const active = kind === k;
+            const count = items.filter((o) => o.kind === k).length;
+            return (
+              <Tabs.Trigger
+                key={k}
+                value={k}
+                className="group inline-flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand)] focus-visible:ring-offset-2"
+                style={
+                  active
+                    ? { background: "var(--color-brand)", color: "#fff" }
+                    : {
+                        background: "var(--color-surface-card)",
+                        color: "var(--color-ink-soft)",
+                        border: "1px solid var(--color-hairline)",
+                      }
+                }
+              >
+                {MASTER_KIND_LABELS[k]}
+                <span
+                  className="inline-flex min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-bold tabular-nums"
+                  style={
+                    active
+                      ? { background: "rgba(255,255,255,0.22)", color: "#fff" }
+                      : { background: "var(--color-surface-soft)", color: "var(--color-ink-subtle)" }
+                  }
+                >
+                  {count}
+                </span>
+              </Tabs.Trigger>
+            );
+          })}
         </Tabs.List>
         {MASTER_KINDS.map((k) => {
           const rows = items.filter((o) => o.kind === k);
           return (
             <Tabs.Content key={k} value={k} forceMount hidden={kind !== k}>
-              <div className="mb-4 flex items-center justify-between gap-4 flex-wrap">
-                <p className="text-[14px] text-ink-subtle tabular-nums">
-                  {rows.length} {rows.length === 1 ? "option" : "options"} ·{" "}
-                  {rows.filter((o) => o.isActive).length} active
-                </p>
+              <div className="mb-5 flex items-end justify-between gap-4 flex-wrap">
+                <div>
+                  <h2 className="text-[18px] font-bold tracking-tight text-ink-strong">
+                    {MASTER_KIND_LABELS[k]}
+                  </h2>
+                  <p className="mt-0.5 text-[13px] text-ink-subtle tabular-nums">
+                    {rows.length} {rows.length === 1 ? "option" : "options"} ·{" "}
+                    {rows.filter((o) => o.isActive).length} active
+                  </p>
+                </div>
                 <div className="flex items-center gap-2">
                   <BulkCreateMasterDialog kind={k} />
                   <CreateMasterDialog kind={k} />
@@ -252,7 +284,7 @@ function CreateMasterDialog({ kind }: { kind: MasterKind }) {
     >
       <Dialog.Trigger asChild>
         <button
-          className="rounded-md py-2.5 px-5 text-[14px] font-medium text-white"
+          className="inline-flex h-10 items-center rounded-lg px-4 text-[14px] font-semibold text-white shadow-sm transition-opacity hover:opacity-95"
           style={{ background: "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))" }}
         >
           + New option
@@ -384,7 +416,7 @@ function BulkCreateMasterDialog({ kind }: { kind: MasterKind }) {
     >
       <Dialog.Trigger asChild>
         <button
-          className="rounded-md py-2.5 px-5 text-[14px] font-medium text-ink-strong border border-[#CBD5E1] bg-white hover:bg-surface-soft transition-colors"
+          className="inline-flex h-10 items-center rounded-lg border border-hairline bg-surface-card px-4 text-[14px] font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand"
         >
           Bulk add
         </button>
@@ -554,25 +586,28 @@ function EditMasterDialog({
               />
             </div>
             {isShape && (
-              <div>
-                <label className="block text-[14px] font-semibold text-[#0F172A] mb-1.5">
-                  Dimensions for this shape
+              <div className="rounded-lg border border-hairline bg-surface-soft p-4">
+                <label className="block text-[14px] font-semibold text-[#0F172A]">
+                  Dimension matrix
                 </label>
-                <p className="text-[12.5px] text-[#64748B] mb-2">
+                <p className="mt-1 text-[12.5px] text-[#64748B]" style={{ lineHeight: 1.5 }}>
                   Controls which dimension inputs the Item &amp; Enquiry forms
                   show for this shape.
                 </p>
-                <div className="space-y-1.5">
+                <div className="mt-3 divide-y divide-hairline rounded-lg border border-hairline bg-white">
                   {DIM_FIELDS.map((d) => (
-                    <div key={d} className="flex items-center justify-between gap-3">
-                      <span className="text-[13.5px] text-[#0F172A]">{DIM_LABELS[d]}</span>
+                    <div key={d} className="flex items-center justify-between gap-3 px-3 py-2.5">
+                      <span className="text-[13.5px] font-medium text-[#0F172A]">
+                        {DIM_LABELS[d]}
+                      </span>
                       <div className="inline-flex rounded-md border border-[#CBD5E1] overflow-hidden">
                         {DIM_RULES.map((r) => (
                           <button
                             key={r}
                             type="button"
                             onClick={() => setDims((prev) => ({ ...prev, [d]: r }))}
-                            className={`px-2.5 py-1 text-[12px] font-semibold transition-colors ${
+                            aria-pressed={dims[d] === r}
+                            className={`px-3 py-1.5 text-[12px] font-semibold transition-colors ${
                               dims[d] === r
                                 ? "bg-[#3F3F94] text-white"
                                 : "bg-white text-[#64748B] hover:bg-[#F1F5F9]"

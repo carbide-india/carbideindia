@@ -173,7 +173,7 @@ export function ClientRecord({ record, documents, auditEntries }: Props) {
           {record.addresses.length > 0 ? (
             <div className="flex flex-col gap-4">
               {record.addresses.map((addr) => {
-                const composed = composeAddress({
+                const lines = addressLines({
                   line1: addr.line1,
                   line2: addr.line2,
                   line3: addr.line3,
@@ -186,7 +186,7 @@ export function ClientRecord({ record, documents, auditEntries }: Props) {
                 return (
                   <div
                     key={addr.id}
-                    className="flex flex-col gap-1 border-b border-hairline pb-4 last:border-0 last:pb-0"
+                    className="flex flex-col gap-2.5 border-b border-hairline pb-5 last:border-0 last:pb-0"
                   >
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-[14px] font-semibold text-ink-strong">
@@ -199,14 +199,23 @@ export function ClientRecord({ record, documents, auditEntries }: Props) {
                       )}
                       {addr.isPrimary && <PrimaryChip />}
                     </div>
-                    {composed && (
-                      <p className="text-[14px] text-ink-strong break-words">
-                        {composed}
+                    {lines.length > 0 ? (
+                      <address className="not-italic text-[14px] leading-relaxed text-ink-strong">
+                        {lines.map((line, idx) => (
+                          <span key={idx} className="block break-words">
+                            {line}
+                          </span>
+                        ))}
+                      </address>
+                    ) : (
+                      <p className="text-[13px] text-ink-subtle">No address on file</p>
+                    )}
+                    {addr.gstin && (
+                      <p className="text-[13px] text-ink-soft">
+                        <span className="font-semibold text-ink-subtle">GSTIN</span>{" "}
+                        <span className="font-mono">{addr.gstin}</span>
                       </p>
                     )}
-                    <div className="flex flex-wrap gap-x-6 gap-y-1 text-[13px] text-ink-soft">
-                      {addr.gstin && <span>GSTIN: {addr.gstin}</span>}
-                    </div>
                     {addr.notes && (
                       <p className="text-[13px] text-ink-muted break-words">
                         {addr.notes}
@@ -430,6 +439,33 @@ function composeAddress(parts: {
   if (parts.country) segments.push(parts.country);
   if (parts.pin) segments.push(`PIN: ${parts.pin}`);
   return segments.length > 0 ? segments.join(", ") : null;
+}
+
+/**
+ * Returns address as separate display lines (Line 1, Line 2…, City/State/Country,
+ * PIN) so it stacks cleanly and never reads as one scrambled comma string.
+ */
+function addressLines(parts: {
+  line1: string | null | undefined;
+  line2: string | null | undefined;
+  line3: string | null | undefined;
+  line4: string | null | undefined;
+  city: string | null | undefined;
+  state: string | null | undefined;
+  country: string | null | undefined;
+  pin: string | null | undefined;
+}): string[] {
+  const lines: string[] = [];
+  if (parts.line1) lines.push(parts.line1);
+  if (parts.line2) lines.push(parts.line2);
+  if (parts.line3) lines.push(parts.line3);
+  if (parts.line4) lines.push(parts.line4);
+  const locality = [parts.city, parts.state, parts.country]
+    .filter(Boolean)
+    .join(", ");
+  if (locality) lines.push(locality);
+  if (parts.pin) lines.push(`PIN ${parts.pin}`);
+  return lines;
 }
 
 /* ── Read-only building blocks ───────────────────────────────────────── */
