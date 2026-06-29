@@ -154,14 +154,6 @@ export function ClientRecord({ record, documents, auditEntries }: Props) {
                   : null,
               ],
               ["Place of Supply", record.placeOfSupply],
-              [
-                "Is Transporter",
-                record.isTransporter != null
-                  ? record.isTransporter
-                    ? "Yes"
-                    : "No"
-                  : null,
-              ],
             ]}
           />
         </ReadCard>
@@ -278,7 +270,6 @@ export function ClientRecord({ record, documents, auditEntries }: Props) {
               ["Credit Limit", creditLimitFormatted],
               ["Freight Charges", record.freightCharges],
               ["Transporter", record.transporter],
-              ["Qty Deviation", record.qtyDeviation],
               ["Currency", record.currency],
               [
                 "Export",

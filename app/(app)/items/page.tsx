@@ -5,6 +5,7 @@ import { DashboardFooter } from "@/components/layout/footer";
 import { ItemTable, NEW_ITEM_ROUTE } from "@/components/items/item-table";
 import { requireUser } from "@/lib/auth/current";
 import { listItems } from "@/lib/queries/items";
+import { BackLink } from "@/components/ui/back-link";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,9 @@ export default async function ItemsPage() {
     <>
       <DashboardHeader generatedAt={new Date()} />
       <main className="mx-auto max-w-[1600px] px-12 max-md:px-4 pt-10 pb-20">
+        <div className="mb-4">
+          <BackLink href="/" label="Dashboard" />
+        </div>
         <header className="mb-8 flex items-end justify-between gap-6 flex-wrap">
           <div>
             <div className="text-[10px] uppercase tracking-[0.18em] text-ink-subtle font-bold">

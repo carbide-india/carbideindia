@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/lib/auth/current";
 import { listAllMasters } from "@/lib/queries/masters";
 import { MasterList } from "@/components/admin/master-list";
+import { BackLink } from "@/components/ui/back-link";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Masters — Carbide India" };
@@ -17,6 +18,9 @@ export default async function MastersPage() {
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
+      <div className="mb-4">
+        <BackLink href="/" label="Dashboard" />
+      </div>
       <header className="mb-8 flex items-start justify-between gap-6 flex-wrap">
         <div>
           <div className="text-[10px] uppercase tracking-[0.18em] text-ink-subtle font-bold">

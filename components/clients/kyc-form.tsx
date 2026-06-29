@@ -526,23 +526,6 @@ export function KycForm({
               {...register("placeOfSupply")}
             />
           </Field>
-          <Field label="Is Transporter" labelOnly>
-            <Controller
-              control={control}
-              name="isTransporter"
-              render={({ field }) => (
-                <label className="inline-flex items-center gap-2 py-2 text-[13px] font-semibold text-ink-muted">
-                  <input
-                    type="checkbox"
-                    className="size-[16px] accent-brand"
-                    checked={Boolean(field.value)}
-                    onChange={(e) => field.onChange(e.target.checked)}
-                  />
-                  This client is a transporter
-                </label>
-              )}
-            />
-          </Field>
         </div>
       </SectionCard>
 
@@ -875,9 +858,6 @@ export function KycForm({
               placeholder="e.g. Blue Dart"
               {...register("transporter")}
             />
-          </Field>
-          <Field id="kyc-qtydev" label="Quantity Deviation">
-            <input id="kyc-qtydev" type="text" className="nt-input" placeholder="e.g. +/-10%" {...register("qtyDeviation")} />
           </Field>
         </div>
         <Field id="kyc-otherrefs" label="Other References">
