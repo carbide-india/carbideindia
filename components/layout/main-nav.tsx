@@ -1,6 +1,6 @@
 "use client";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ListTodo, CalendarDays, FolderKanban, SquareKanban, CalendarCheck, Boxes, Layers } from "lucide-react";
+import { LayoutDashboard, ListTodo, CalendarDays, FolderKanban, SquareKanban, CalendarCheck, Boxes, Layers, Building2 } from "lucide-react";
 import type { Route } from "next";
 import { MainNavPill } from "./main-nav-pill";
 import { FormsLauncher } from "./forms-launcher";
@@ -63,6 +63,16 @@ export function MainNav({ activeTasks, isAdmin, variant }: Props) {
         active={isActive("/items")}
         variant={variant}
       />
+      {/* Client Master — admin-only roster of clients. */}
+      {isAdmin && (
+        <MainNavPill
+          href={"/admin/clients" as Route}
+          label="Client Master"
+          Icon={Building2}
+          active={isActive("/admin/clients")}
+          variant={variant}
+        />
+      )}
       {/* Masters hub — admin-only (master data drives every form's dropdowns). */}
       {isAdmin && (
         <MainNavPill

@@ -2,6 +2,7 @@ import { requireAdmin } from "@/lib/auth/current";
 import { listClientsWithCounts } from "@/lib/queries/clients";
 import { ClientList } from "@/components/admin/client-list";
 import { CreateClientDialog } from "@/components/admin/create-client-dialog";
+import { BackLink } from "@/components/ui/back-link";
 
 export const dynamic = "force-dynamic";
 
@@ -13,10 +14,13 @@ export default async function ClientsPage() {
 
   return (
     <div>
+      <div className="mb-4">
+        <BackLink href="/" label="Dashboard" />
+      </div>
       <header className="mb-8 flex items-start justify-between gap-6 flex-wrap">
         <div>
           <div className="text-[10px] uppercase tracking-[0.18em] text-ink-subtle font-bold">
-            Admin · Clients
+            Client Master
           </div>
           <h1
             className="mt-1 text-ink-strong"
@@ -29,10 +33,10 @@ export default async function ClientsPage() {
               letterSpacing: "-0.02em",
             }}
           >
-            Clients
+            Client Master
           </h1>
           <p className="text-body-lg text-ink-subtle mt-2 max-w-2xl tabular-nums">
-            {rows.length} total · {activeCount} active · {totalTasks} tasks mapped
+            {rows.length} total · {activeCount} active
           </p>
         </div>
         <div className="mt-1 flex items-center gap-3">
