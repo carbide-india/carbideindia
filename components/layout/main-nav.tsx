@@ -1,6 +1,6 @@
 "use client";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ListTodo, CalendarDays, FolderKanban, SquareKanban, CalendarCheck } from "lucide-react";
+import { LayoutDashboard, ListTodo, CalendarDays, FolderKanban, SquareKanban, CalendarCheck, Boxes, Layers } from "lucide-react";
 import type { Route } from "next";
 import { MainNavPill } from "./main-nav-pill";
 import { FormsLauncher } from "./forms-launcher";
@@ -55,6 +55,24 @@ export function MainNav({ activeTasks, isAdmin, variant }: Props) {
           KYC, Samples + Phase-4 placeholders). Register list stays at
           /inquiries, reachable from the modal + ⌘K. */}
       <FormsLauncher variant={variant} />
+      {/* Item Master — first-class register pill (was only in the Forms modal). */}
+      <MainNavPill
+        href={"/items" as Route}
+        label="Item Master"
+        Icon={Boxes}
+        active={isActive("/items")}
+        variant={variant}
+      />
+      {/* Masters hub — admin-only (master data drives every form's dropdowns). */}
+      {isAdmin && (
+        <MainNavPill
+          href={"/masters" as Route}
+          label="Masters"
+          Icon={Layers}
+          active={isActive("/masters")}
+          variant={variant}
+        />
+      )}
       {/* Kanban is an admin-only board — hidden from doers. */}
       {isAdmin && (
         <MainNavPill

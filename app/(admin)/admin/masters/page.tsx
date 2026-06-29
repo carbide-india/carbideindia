@@ -1,41 +1,11 @@
-import { requireAdmin } from "@/lib/auth/current";
-import { listAllMasters } from "@/lib/queries/masters";
-import { MasterList } from "@/components/admin/master-list";
+import { redirect } from "next/navigation";
+import type { Route } from "next";
 
-export const dynamic = "force-dynamic";
-
-export default async function MastersPage() {
-  await requireAdmin();
-  const rows = await listAllMasters();
-  const activeCount = rows.filter((r) => r.isActive).length;
-
-  return (
-    <div>
-      <header className="mb-8 flex items-start justify-between gap-6 flex-wrap">
-        <div>
-          <div className="text-[10px] uppercase tracking-[0.18em] text-ink-subtle font-bold">
-            Admin · Masters
-          </div>
-          <h1
-            className="mt-1 text-ink-strong"
-            style={{
-              fontFamily: "var(--font-serif)",
-              fontStyle: "italic",
-              fontWeight: 500,
-              fontSize: 44,
-              lineHeight: 1.05,
-              letterSpacing: "-0.02em",
-            }}
-          >
-            Masters
-          </h1>
-          <p className="text-body-lg text-ink-subtle mt-2 max-w-2xl tabular-nums">
-            {rows.length} options total · {activeCount} active — these feed the
-            KYC and inquiry form dropdowns.
-          </p>
-        </div>
-      </header>
-      <MasterList items={rows} />
-    </div>
-  );
+/**
+ * Masters moved to the app-level header pill (/masters) in the forms/masters
+ * redesign. Keep this route as a permanent redirect so old links/bookmarks and
+ * the admin sidebar history don't 404.
+ */
+export default function AdminMastersRedirect() {
+  redirect("/masters" as Route);
 }
