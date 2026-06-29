@@ -2,7 +2,7 @@
 // Pure types shared by the client grid and the server commit. No runtime deps.
 
 export type RefKind =
-  | "grade" | "tolerance" | "condition"
+  | "grade" | "tolerance" | "condition" | "shape"
   | "customerType" | "industryType" | "productType"
   | "client" | "employee" | "inquirySM";
 

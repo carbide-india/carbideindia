@@ -72,7 +72,7 @@ export function resolveCell(field: ImportField, raw: string, lookups: Lookups): 
         : { ...base, value: null, status: "error" as const, error: `${field.header} "${text}" not found` };
     }
     case "refMulti": {
-      const parts = text.split(",").map((s) => s.trim()).filter(Boolean);
+      const parts = text.split(/[,;]/).map((s) => s.trim()).filter(Boolean);
       const ids: string[] = [];
       for (const p of parts) {
         const id = field.ref ? matchRef(field.ref.kind, p, lookups) : null;

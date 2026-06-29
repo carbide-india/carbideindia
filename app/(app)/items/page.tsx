@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Plus, Download } from "lucide-react";
+import type { Route } from "next";
+import { Plus, Download, Upload } from "lucide-react";
 import { DashboardHeader } from "@/components/layout/header";
 import { DashboardFooter } from "@/components/layout/footer";
 import { ItemTable, NEW_ITEM_ROUTE } from "@/components/items/item-table";
@@ -45,6 +46,13 @@ export default async function ItemsPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <Link
+              href={"/items/import" as Route}
+              className="inline-flex items-center gap-2 text-cta text-ink-muted border border-hairline bg-surface-card px-5 py-3 rounded-chip hover:text-ink-strong hover:border-ink-subtle transition-colors"
+            >
+              <Upload size={15} strokeWidth={2.2} />
+              Bulk upload
+            </Link>
             <a
               href="/items/export.xlsx"
               className="inline-flex items-center gap-2 text-cta text-ink-muted border border-hairline bg-surface-card px-5 py-3 rounded-chip hover:text-ink-strong hover:border-ink-subtle transition-colors"

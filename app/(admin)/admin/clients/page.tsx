@@ -1,3 +1,4 @@
+import { Upload } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/current";
 import { listClientsWithCounts } from "@/lib/queries/clients";
 import { ClientList } from "@/components/admin/client-list";
@@ -40,6 +41,13 @@ export default async function ClientsPage() {
           </p>
         </div>
         <div className="mt-1 flex items-center gap-3">
+          <a
+            href="/clients/import"
+            className="inline-flex items-center gap-2 rounded-lg border border-ink-subtle/30 bg-surface px-4 py-2 text-sm font-medium text-ink-subtle hover:bg-surface-raised hover:text-ink transition-colors"
+          >
+            <Upload size={15} strokeWidth={2.2} />
+            Bulk upload
+          </a>
           <a
             href="/admin/clients/export.xlsx"
             className="inline-flex items-center gap-2 rounded-lg border border-ink-subtle/30 bg-surface px-4 py-2 text-sm font-medium text-ink-subtle hover:bg-surface-raised hover:text-ink transition-colors"

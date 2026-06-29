@@ -17,6 +17,7 @@ const MASTER_KIND: Partial<Record<RefKind, MasterKind>> = {
   grade: "internal_grade",
   tolerance: "tolerance",
   condition: "condition",
+  shape: "shape",
   customerType: "customer_type",
   industryType: "industry_type",
   productType: "product_type",

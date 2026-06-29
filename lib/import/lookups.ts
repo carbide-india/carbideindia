@@ -9,7 +9,7 @@ import { listClientOptions } from "@/lib/queries/clients";
 import type { Lookups, RefKind, RefOption } from "@/lib/import/engine/spec";
 
 const MASTER_KIND: Partial<Record<RefKind, MasterKind>> = {
-  grade: "internal_grade", tolerance: "tolerance", condition: "condition",
+  grade: "internal_grade", tolerance: "tolerance", condition: "condition", shape: "shape",
   customerType: "customer_type", industryType: "industry_type", productType: "product_type",
 };
 
