@@ -4,7 +4,7 @@ import { InquiryForm } from "@/components/inquiries/inquiry-form";
 import { requireUser, getCurrentEmployee } from "@/lib/auth/current";
 import { listClientOptions } from "@/lib/queries/clients";
 import { listEmployeeOptions } from "@/lib/queries/employees";
-import { listMasterOptions } from "@/lib/queries/masters";
+import { listMasterOptions, getShapeProfiles } from "@/lib/queries/masters";
 import { BulkUploadButton } from "@/components/import/bulk-upload-button";
 
 export const dynamic = "force-dynamic";
@@ -12,13 +12,14 @@ export const dynamic = "force-dynamic";
 export default async function NewInquiryPage() {
   const me = await requireUser();
   const currentEmployee = await getCurrentEmployee();
-  const [clients, employees, grades, tolerances, conditions] =
+  const [clients, employees, grades, tolerances, conditions, shapeProfiles] =
     await Promise.all([
       listClientOptions(),
       listEmployeeOptions(),
       listMasterOptions("internal_grade"),
       listMasterOptions("tolerance"),
       listMasterOptions("condition"),
+      getShapeProfiles(),
     ]);
 
   return (
@@ -48,6 +49,7 @@ export default async function NewInquiryPage() {
           grades={grades}
           tolerances={tolerances}
           conditions={conditions}
+          shapeProfiles={shapeProfiles.byName}
           defaultSalesPersonId={me.id}
         />
       </main>

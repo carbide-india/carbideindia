@@ -27,6 +27,7 @@ import { ChecklistSection } from "./checklist-section";
 import type { ClientAutofill, ClientOption } from "@/lib/queries/clients";
 import type { EmployeeOption } from "@/lib/queries/employees";
 import type { MasterOptionItem } from "@/lib/queries/masters";
+import type { ShapeConfig } from "@/lib/masters/shape-config";
 
 /** RHF holds the schema's *input* shape (pre-transform); zodResolver hands
  *  the parsed *output* (with `quantityUom` defaulted, `""` folded to
@@ -41,6 +42,8 @@ interface Props {
   grades: MasterOptionItem[];
   tolerances: MasterOptionItem[];
   conditions: MasterOptionItem[];
+  /** Per-shape dimension config keyed by shape name. */
+  shapeProfiles: Record<string, ShapeConfig>;
   /** Current employee — preselected as the assigned sales person. */
   defaultSalesPersonId: string;
 }
@@ -70,6 +73,7 @@ export function InquiryForm({
   grades,
   tolerances,
   conditions,
+  shapeProfiles,
   defaultSalesPersonId,
 }: Props) {
   const router = useRouter();
@@ -517,9 +521,12 @@ export function InquiryForm({
       <ProductsSection
         control={control}
         register={register}
+        watch={watch}
+        setValue={setValue}
         grades={grades}
         tolerances={tolerances}
         conditions={conditions}
+        shapeProfiles={shapeProfiles}
       />
 
       {/* ── 4 · Checklist ────────────────────────────────────────────── */}

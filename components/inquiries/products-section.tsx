@@ -6,6 +6,8 @@ import {
   useFieldArray,
   type Control,
   type UseFormRegister,
+  type UseFormWatch,
+  type UseFormSetValue,
 } from "react-hook-form";
 import { Trash2 } from "lucide-react";
 import { INQUIRY_SHAPES, QUANTITY_UOMS } from "@/db/enums";
@@ -14,13 +16,23 @@ import { Field, SectionCard } from "./form-field";
 import { toOptionalNumber } from "./checklist-section";
 import type { InquiryFormValues } from "./inquiry-form";
 import type { MasterOptionItem } from "@/lib/queries/masters";
+import {
+  DIM_FIELDS,
+  DIM_LABELS,
+  defaultShapeConfig,
+  type ShapeConfig,
+} from "@/lib/masters/shape-config";
 
 interface Props {
   control: Control<InquiryFormValues>;
   register: UseFormRegister<InquiryFormValues>;
+  watch: UseFormWatch<InquiryFormValues>;
+  setValue: UseFormSetValue<InquiryFormValues>;
   grades: MasterOptionItem[];
   tolerances: MasterOptionItem[];
   conditions: MasterOptionItem[];
+  /** Per-shape dimension config keyed by shape NAME (matches the master name). */
+  shapeProfiles: Record<string, ShapeConfig>;
 }
 
 /** Shape of one fresh, empty product card. */
@@ -52,9 +64,12 @@ const EMPTY_PRODUCT = {
 export function ProductsSection({
   control,
   register,
+  watch,
+  setValue,
   grades,
   tolerances,
   conditions,
+  shapeProfiles,
 }: Props) {
   const { fields, append, remove } = useFieldArray({ control, name: "products" });
 
@@ -63,7 +78,14 @@ export function ProductsSection({
       title="Products"
       hint="Add every product on this enquiry — one card per product."
     >
-      {fields.map((field, index) => (
+      {fields.map((field, index) => {
+        // Resolve this card's shape config (which dims apply). Shape values
+        // match the shape master names, so we look up by name.
+        const shapeName = watch(`products.${index}.shape`);
+        const cfg: ShapeConfig =
+          (typeof shapeName === "string" && shapeProfiles[shapeName]) ||
+          defaultShapeConfig();
+        return (
         <div
           key={field.id}
           className="flex flex-col gap-5 rounded-section border border-hairline p-5"
@@ -126,7 +148,19 @@ export function ProductsSection({
                 <Select
                   id={`products.${index}.shape`}
                   value={f.value ?? ""}
-                  onValueChange={(v) => f.onChange(v || undefined)}
+                  onValueChange={(v) => {
+                    f.onChange(v || undefined);
+                    // Clear any dimension the newly-chosen shape hides.
+                    const next = (v && shapeProfiles[v]) || defaultShapeConfig();
+                    for (const d of DIM_FIELDS) {
+                      if (next.dims[d] === "hidden") {
+                        setValue(`products.${index}.${d}`, undefined, {
+                          shouldValidate: false,
+                          shouldDirty: false,
+                        });
+                      }
+                    }
+                  }}
                   placeholder="Select a shape…"
                   options={INQUIRY_SHAPES.map((s) => ({ value: s, label: s }))}
                 />
@@ -134,68 +168,30 @@ export function ProductsSection({
             />
           </Field>
 
-          {/* Dimensions — all in mm, all optional */}
+          {/* Dimensions — only those the selected shape uses (mm). */}
           <div className="grid grid-cols-5 gap-3 max-md:grid-cols-2">
-            <Field id={`products.${index}.outerDia`} label="Outer Dia">
-              <input
-                id={`products.${index}.outerDia`}
-                type="number"
-                min={0}
-                step="any"
-                className="nt-input"
-                {...register(`products.${index}.outerDia`, {
-                  setValueAs: toOptionalNumber,
-                })}
-              />
-            </Field>
-            <Field id={`products.${index}.innerDia`} label="Inner Dia">
-              <input
-                id={`products.${index}.innerDia`}
-                type="number"
-                min={0}
-                step="any"
-                className="nt-input"
-                {...register(`products.${index}.innerDia`, {
-                  setValueAs: toOptionalNumber,
-                })}
-              />
-            </Field>
-            <Field id={`products.${index}.length`} label="Length">
-              <input
-                id={`products.${index}.length`}
-                type="number"
-                min={0}
-                step="any"
-                className="nt-input"
-                {...register(`products.${index}.length`, {
-                  setValueAs: toOptionalNumber,
-                })}
-              />
-            </Field>
-            <Field id={`products.${index}.width`} label="Width">
-              <input
-                id={`products.${index}.width`}
-                type="number"
-                min={0}
-                step="any"
-                className="nt-input"
-                {...register(`products.${index}.width`, {
-                  setValueAs: toOptionalNumber,
-                })}
-              />
-            </Field>
-            <Field id={`products.${index}.thickness`} label="Thickness">
-              <input
-                id={`products.${index}.thickness`}
-                type="number"
-                min={0}
-                step="any"
-                className="nt-input"
-                {...register(`products.${index}.thickness`, {
-                  setValueAs: toOptionalNumber,
-                })}
-              />
-            </Field>
+            {DIM_FIELDS.map((dim) => {
+              const rule = cfg.dims[dim];
+              if (rule === "hidden") return null;
+              return (
+                <Field
+                  key={dim}
+                  id={`products.${index}.${dim}`}
+                  label={`${DIM_LABELS[dim]}${rule === "required" ? " *" : ""}`}
+                >
+                  <input
+                    id={`products.${index}.${dim}`}
+                    type="number"
+                    min={0}
+                    step="any"
+                    className="nt-input"
+                    {...register(`products.${index}.${dim}`, {
+                      setValueAs: toOptionalNumber,
+                    })}
+                  />
+                </Field>
+              );
+            })}
           </div>
 
           <Field
@@ -264,7 +260,8 @@ export function ProductsSection({
             </Field>
           </div>
         </div>
-      ))}
+        );
+      })}
 
       <div>
         <button
