@@ -12,6 +12,20 @@ import {
 } from "@/app/(admin)/admin/masters/actions";
 import { MASTER_KINDS, MASTER_KIND_LABELS, type MasterKind } from "@/db/enums";
 import type { MasterOption } from "@/db/schema";
+import {
+  DIM_FIELDS,
+  DIM_LABELS,
+  resolveShapeConfig,
+  type DimRule,
+  type ShapeConfig,
+} from "@/lib/masters/shape-config";
+
+const DIM_RULES: DimRule[] = ["required", "optional", "hidden"];
+const DIM_RULE_LABELS: Record<DimRule, string> = {
+  required: "Required",
+  optional: "Optional",
+  hidden: "Hidden",
+};
 
 interface Props {
   items: MasterOption[];
@@ -450,24 +464,40 @@ function EditMasterDialog({
 }) {
   const [name, setName] = useState(option?.name ?? "");
   const [sortOrder, setSortOrder] = useState<number>(option?.sortOrder ?? 100);
+  const [dims, setDims] = useState<ShapeConfig["dims"]>(
+    () => resolveShapeConfig(option?.config).dims,
+  );
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  const isShape = option?.kind === "shape";
 
   useEffect(() => {
     setName(option?.name ?? "");
     setSortOrder(option?.sortOrder ?? 100);
+    setDims(resolveShapeConfig(option?.config).dims);
     setError(null);
-  }, [option?.id, option?.name, option?.sortOrder]);
+  }, [option?.id, option?.name, option?.sortOrder, option?.config]);
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!option) return;
     setError(null);
 
-    const patch: { name?: string; sortOrder?: number } = {};
+    const patch: {
+      name?: string;
+      sortOrder?: number;
+      config?: ShapeConfig;
+    } = {};
     const trimmedName = name.trim();
     if (trimmedName !== option.name) patch.name = trimmedName;
     if (sortOrder !== option.sortOrder) patch.sortOrder = sortOrder;
+    if (isShape) {
+      const original = resolveShapeConfig(option.config).dims;
+      if (JSON.stringify(dims) !== JSON.stringify(original)) {
+        patch.config = { dims };
+      }
+    }
 
     if (Object.keys(patch).length === 0) {
       setError("No changes to save.");
@@ -523,6 +553,40 @@ function EditMasterDialog({
                 className="w-28 rounded-md border border-[#CBD5E1] px-3.5 py-2.5 text-[15px] tabular-nums"
               />
             </div>
+            {isShape && (
+              <div>
+                <label className="block text-[14px] font-semibold text-[#0F172A] mb-1.5">
+                  Dimensions for this shape
+                </label>
+                <p className="text-[12.5px] text-[#64748B] mb-2">
+                  Controls which dimension inputs the Item &amp; Enquiry forms
+                  show for this shape.
+                </p>
+                <div className="space-y-1.5">
+                  {DIM_FIELDS.map((d) => (
+                    <div key={d} className="flex items-center justify-between gap-3">
+                      <span className="text-[13.5px] text-[#0F172A]">{DIM_LABELS[d]}</span>
+                      <div className="inline-flex rounded-md border border-[#CBD5E1] overflow-hidden">
+                        {DIM_RULES.map((r) => (
+                          <button
+                            key={r}
+                            type="button"
+                            onClick={() => setDims((prev) => ({ ...prev, [d]: r }))}
+                            className={`px-2.5 py-1 text-[12px] font-semibold transition-colors ${
+                              dims[d] === r
+                                ? "bg-[#3F3F94] text-white"
+                                : "bg-white text-[#64748B] hover:bg-[#F1F5F9]"
+                            }`}
+                          >
+                            {DIM_RULE_LABELS[r]}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {error && (
               <div
                 role="alert"
