@@ -11,7 +11,8 @@ import { CreateItemSchema } from "@/lib/validators/item";
 import { createItem } from "@/app/(app)/items/actions";
 import { fireToast } from "@/lib/toast";
 import { Select } from "@/components/ui/select";
-import { Field, SectionCard } from "@/components/inquiries/form-field";
+import { Field } from "@/components/inquiries/form-field";
+import { FoldingSection, useFoldingForm } from "@/components/forms/folding-section";
 import { buildItemCode, deriveSizeCode } from "@/lib/item-master/item-code";
 import type { MasterOptionWithCode } from "@/lib/queries/masters";
 import type { InquiryOption } from "@/lib/queries/inquiries";
@@ -97,6 +98,7 @@ export function ItemForm({
     handleSubmit,
     setValue,
     watch,
+    trigger,
     formState: { errors },
   } = useForm<ItemFormValues, unknown, ItemFormOutput>({
     resolver: zodResolver(CreateItemSchema),
@@ -147,6 +149,18 @@ export function ItemForm({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedShapeId]);
+
+  // Folding "Google-Forms" sections — fields per section drive per-step
+  // validation on Continue. All item fields are optional client-side (the
+  // server enforces shape-required dims), so Continue mostly just advances.
+  const SECTION_FIELDS: string[][] = [
+    ["inquiryId", "smNumber", "customerName", "custProductName", "custDrawingNo", "drawingRevisionNo", "qty"],
+    ["shapeId", "internalGradeId", "toleranceId", "conditionId", "sizeCode", "costingType", "gradeCustomer", "gradeNameForCust"],
+    ["hsnCode", "uom", "altUom", "altUomConversion"],
+    ["outerDia", "innerDia", "length", "width", "thickness", "dimensionNotes"],
+    ["partNo", "partDescription1", "partDescription2", "partDescription3", "partDescription4", "partTag"],
+  ];
+  const fold = useFoldingForm(SECTION_FIELDS.length, (f) => trigger(f as never));
 
   /** Live item-code preview derived from current form values. */
   const previewCode = React.useMemo(() => {
@@ -248,9 +262,13 @@ export function ItemForm({
       </div>
 
       {/* ── 1 · Source Enquiry ───────────────────────────────────── */}
-      <SectionCard
+      <FoldingSection
+        ctl={fold}
+        index={0}
         title="Source Enquiry"
+        fields={SECTION_FIELDS[0]!}
         hint="Optional — pick an enquiry to auto-fill customer and SM number."
+        summary={watch("smNumber") || watch("customerName") || "No enquiry linked"}
       >
         <Field id="item-inquiry" label="From Enquiry" labelOnly>
           <Controller
@@ -336,12 +354,16 @@ export function ItemForm({
             />
           </Field>
         </div>
-      </SectionCard>
+      </FoldingSection>
 
       {/* ── 2 · Classification ───────────────────────────────────── */}
-      <SectionCard
+      <FoldingSection
+        ctl={fold}
+        index={1}
         title="Classification"
+        fields={SECTION_FIELDS[1]!}
         hint="These fields drive the internal item code — required for the code to be meaningful."
+        summary={displayCode}
       >
         <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
           <Field id="item-shape" label="Shape" labelOnly>
@@ -484,12 +506,16 @@ export function ItemForm({
             />
           </Field>
         </div>
-      </SectionCard>
+      </FoldingSection>
 
       {/* ── Tax & Units ──────────────────────────────────────────── */}
-      <SectionCard
+      <FoldingSection
+        ctl={fold}
+        index={2}
         title="Tax & Units"
+        fields={SECTION_FIELDS[2]!}
         hint="HSN code (GST) and the unit of measure. Alt UoM lets you record a secondary unit and its conversion to the base UoM."
+        summary={watch("hsnCode") ? `HSN ${watch("hsnCode")} · ${watch("uom") ?? "Nos"}` : (watch("uom") ?? "Nos")}
       >
         <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
           <Field id="item-hsn" label="HSN Code">
@@ -530,11 +556,14 @@ export function ItemForm({
             />
           </Field>
         </div>
-      </SectionCard>
+      </FoldingSection>
 
       {/* ── 3 · Dimensions (driven by the selected Shape) ─────────── */}
-      <SectionCard
+      <FoldingSection
+        ctl={fold}
+        index={3}
         title="Dimensions"
+        fields={SECTION_FIELDS[3]!}
         hint={
           watchedShapeId
             ? "Only the dimensions this shape uses are shown. Required fields are marked *."
@@ -574,12 +603,16 @@ export function ItemForm({
             {...register("dimensionNotes")}
           />
         </Field>
-      </SectionCard>
+      </FoldingSection>
 
       {/* ── 4 · Part Details ──────────────────────────────────────── */}
-      <SectionCard
+      <FoldingSection
+        ctl={fold}
+        index={4}
         title="Part Details"
+        fields={SECTION_FIELDS[4]!}
         hint="Part number, tag, and up to four description lines for quotation inserts."
+        hideContinue
       >
         <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
           <Field id="item-part-no" label="Part No">
@@ -633,7 +666,7 @@ export function ItemForm({
             {...register("partDescription4")}
           />
         </Field>
-      </SectionCard>
+      </FoldingSection>
 
       {(serverError ?? firstFieldError) && (
         <p
