@@ -63,8 +63,8 @@ export type ClientBankAccountInput = z.input<typeof ClientBankAccountSchema>;
  */
 const ClientKycFieldsSchema = z.object({
   name: Trimmed(160).min(1, "Client name is required"),
-  customerTypeId: z.string().uuid().optional(),
-  industryTypeId: z.string().uuid().optional(),
+  customerTypeIds: z.array(z.string().uuid()).optional(),
+  industryTypeIds: z.array(z.string().uuid()).optional(),
   productTypeIds: z.array(z.string().uuid()).optional(),
   export: z.boolean().optional(),
   currency: z.enum(INQUIRY_CURRENCIES).default("INR"),

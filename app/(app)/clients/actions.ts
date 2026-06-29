@@ -67,7 +67,7 @@ type ContactPatch = Partial<typeof clientContacts.$inferInsert>;
 
 /** Validator KYC fields → `clients` columns (defined keys only). */
 function toClientColumns(v: {
-  customerTypeId?: string; industryTypeId?: string; productTypeIds?: string[];
+  customerTypeIds?: string[]; industryTypeIds?: string[]; productTypeIds?: string[];
   export?: boolean; currency?: string; country?: string;
   state?: string; city?: string;
   addressLine1?: string; addressLine2?: string;
@@ -81,8 +81,13 @@ function toClientColumns(v: {
   businessCardFrontUrl?: string; businessCardBackUrl?: string;
 }): ClientPatch {
   const patch: ClientPatch = stripUndefined({
-    customerTypeId: v.customerTypeId,
-    industryTypeId: v.industryTypeId,
+    customerTypeIds: v.customerTypeIds,
+    industryTypeIds: v.industryTypeIds,
+    // Mirror the legacy singular columns to the FIRST selected id (back-compat).
+    // `stripUndefined` only drops keys whose value is literally `undefined`; when
+    // the array IS submitted we set the scalar mirror (first id or null).
+    customerTypeId: v.customerTypeIds !== undefined ? (v.customerTypeIds[0] ?? null) : undefined,
+    industryTypeId: v.industryTypeIds !== undefined ? (v.industryTypeIds[0] ?? null) : undefined,
     productTypeIds: v.productTypeIds,
     export: v.export,
     currency: v.currency,

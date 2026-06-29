@@ -121,8 +121,18 @@ export function ClientRecord({ record, documents, auditEntries }: Props) {
         <ReadCard title="Identity">
           <InfoGrid
             rows={[
-              ["Customer Type", record.customerTypeName],
-              ["Industry Type", record.industryTypeName],
+              [
+                "Customer Type",
+                record.customerTypeNames.length > 0
+                  ? record.customerTypeNames.join(", ")
+                  : null,
+              ],
+              [
+                "Industry Type",
+                record.industryTypeNames.length > 0
+                  ? record.industryTypeNames.join(", ")
+                  : null,
+              ],
               [
                 "Product Types",
                 record.productTypeNames.length > 0

@@ -319,6 +319,11 @@ export const clients = pgTable(
     // ── Carbide KYC (Phase 2) — auto-fetch source for inquiries ──
     customerTypeId: uuid("customer_type_id").references(() => masterOptions.id, { onDelete: "set null" }),
     industryTypeId: uuid("industry_type_id").references(() => masterOptions.id, { onDelete: "set null" }),
+    // Multi-select arrays (migration 0026). The singular *_id columns above are
+    // kept as a back-compat MIRROR (= first selected id) so inquiry auto-fill,
+    // exports and audit that still read the scalar keep working.
+    customerTypeIds: uuid("customer_type_ids").array(),  // multi-select checkboxes
+    industryTypeIds: uuid("industry_type_ids").array(),  // multi-select checkboxes
     productTypeIds: uuid("product_type_ids").array(),  // multi-select checkboxes
     export: boolean("export"),
     currency: text("currency"),

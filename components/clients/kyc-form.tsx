@@ -118,6 +118,8 @@ export function KycForm({
     resolver: zodResolver(CreateClientKycSchema),
     defaultValues: {
       name: "",
+      customerTypeIds: [],
+      industryTypeIds: [],
       productTypeIds: [],
       state: "",
       city: "",
@@ -336,13 +338,13 @@ export function KycForm({
         <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
           <MasterChips
             control={control}
-            name="customerTypeId"
+            name="customerTypeIds"
             label="Customer Type"
             options={customerTypes}
           />
           <MasterChips
             control={control}
-            name="industryTypeId"
+            name="industryTypeIds"
             label="Industry Type"
             options={industryTypes}
           />
@@ -1081,11 +1083,10 @@ export function KycForm({
 }
 
 /**
- * Single-select master picker rendered as a chip/tile group — the same visual
- * as Product Types' chips, but radio (only one selectable; Manan's "only 1 to
- * select" rule keeps the stored id a single uuid). Clicking the selected chip
- * clears it; a11y via role="radiogroup" + role="radio"/aria-checked. Empty
- * master shows the "add in Admin -> Masters" fallback.
+ * Multi-select master picker rendered as a checkbox chip grid — visually and
+ * behaviourally identical to Product Types. Stores an array of selected uuids;
+ * the legacy singular column is mirrored to the first selection server-side.
+ * Empty master shows the "add in Admin -> Masters" fallback.
  */
 function MasterChips({
   control,
@@ -1094,7 +1095,7 @@ function MasterChips({
   options,
 }: {
   control: Control<KycFormValues>;
-  name: "customerTypeId" | "industryTypeId";
+  name: "customerTypeIds" | "industryTypeIds";
   label: string;
   options: MasterOptionItem[];
 }) {
@@ -1103,46 +1104,64 @@ function MasterChips({
       <Controller
         control={control}
         name={name}
-        render={({ field }) => (
-          <>
-            {options.length === 0 ? (
-              <p className="text-[13px] text-ink-subtle">
-                No options — add in Admin &#8594; Masters.
+        render={({ field }) => {
+          const selected = field.value ?? [];
+          return (
+            <>
+              {options.length === 0 ? (
+                <p className="text-[13px] text-ink-subtle">
+                  No options — add in Admin &#8594; Masters.
+                </p>
+              ) : (
+                <div
+                  role="group"
+                  aria-label={label}
+                  className="flex flex-wrap gap-2"
+                >
+                  {options.map((opt) => {
+                    const checked = selected.includes(opt.id);
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        role="checkbox"
+                        aria-checked={checked}
+                        onClick={() =>
+                          field.onChange(
+                            checked
+                              ? selected.filter((id) => id !== opt.id)
+                              : [...selected, opt.id],
+                          )
+                        }
+                        className={cn(
+                          "inline-flex items-center gap-2 rounded-chip border px-3 py-2 text-[13px] font-semibold transition-colors",
+                          checked
+                            ? "border-brand bg-brand/8 text-ink-strong"
+                            : "border-hairline bg-surface-card text-ink-muted hover:border-hairline-strong hover:text-ink-strong",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "inline-flex size-[16px] items-center justify-center rounded-[4px] border transition-colors",
+                            checked
+                              ? "bg-brand border-brand text-white"
+                              : "border-hairline-strong bg-white text-transparent",
+                          )}
+                        >
+                          <Check size={11} strokeWidth={3} />
+                        </span>
+                        {opt.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              <p className="text-[12px] text-ink-subtle">
+                {selected.length} selected
               </p>
-            ) : (
-              <div
-                role="radiogroup"
-                aria-label={label}
-                className="flex flex-wrap gap-2"
-              >
-                {options.map((opt) => {
-                  const checked = field.value === opt.id;
-                  return (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={checked}
-                      onClick={() =>
-                        // Toggle-off the selected chip; otherwise select it.
-                        field.onChange(checked ? undefined : opt.id)
-                      }
-                      className={cn(
-                        "inline-flex items-center rounded-chip border px-3 py-2 text-[13px] font-semibold transition-colors",
-                        checked
-                          ? "border-brand bg-brand/8 text-ink-strong"
-                          : "border-hairline bg-surface-card text-ink-muted hover:border-hairline-strong hover:text-ink-strong",
-                      )}
-                    >
-                      {opt.name}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-            <p className="text-[12px] text-ink-subtle">Select one</p>
-          </>
-        )}
+            </>
+          );
+        }}
       />
     </Field>
   );

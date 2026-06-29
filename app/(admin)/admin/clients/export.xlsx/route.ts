@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import { aliasedTable, asc, eq, getTableColumns, inArray } from "drizzle-orm";
+import { asc, eq, getTableColumns, inArray } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth/current";
 import { db } from "@/lib/db";
 import { clientContacts, clients, employees, masterOptions } from "@/db/schema";
@@ -22,33 +22,36 @@ export async function GET(): Promise<Response> {
     return new Response("Forbidden", { status: 403 });
   }
 
-  // ── 1. Fetch all clients with resolved master names ──
-  const customerType = aliasedTable(masterOptions, "customer_type");
-  const industryType = aliasedTable(masterOptions, "industry_type");
-
+  // ── 1. Fetch all clients ──
   const rows = await db
-    .select({
-      ...getTableColumns(clients),
-      customerTypeName: customerType.name,
-      industryTypeName: industryType.name,
-    })
+    .select({ ...getTableColumns(clients) })
     .from(clients)
-    .leftJoin(customerType, eq(customerType.id, clients.customerTypeId))
-    .leftJoin(industryType, eq(industryType.id, clients.industryTypeId))
     .orderBy(asc(clients.name));
 
-  // ── 2. Collect all unique product-type IDs + resolve names in one batch ──
-  const allProductTypeIds = [
-    ...new Set(rows.flatMap((r) => r.productTypeIds ?? [])),
+  // ── 2. Collect all unique master-option IDs (customer / industry / product
+  //       types all reference master_options) + resolve names in one batch ──
+  const allTypeIds = [
+    ...new Set(
+      rows.flatMap((r) => [
+        ...(r.customerTypeIds ?? []),
+        ...(r.industryTypeIds ?? []),
+        ...(r.productTypeIds ?? []),
+      ]),
+    ),
   ];
-  const productTypeNameMap = new Map<string, string>();
-  if (allProductTypeIds.length > 0) {
-    const ptRows = await db
+  const typeNameMap = new Map<string, string>();
+  if (allTypeIds.length > 0) {
+    const optRows = await db
       .select({ id: masterOptions.id, name: masterOptions.name })
       .from(masterOptions)
-      .where(inArray(masterOptions.id, allProductTypeIds));
-    for (const pt of ptRows) productTypeNameMap.set(pt.id, pt.name);
+      .where(inArray(masterOptions.id, allTypeIds));
+    for (const o of optRows) typeNameMap.set(o.id, o.name);
   }
+  const joinNames = (ids: string[] | null | undefined): string =>
+    (ids ?? [])
+      .map((id) => typeNameMap.get(id))
+      .filter((n): n is string => n !== undefined)
+      .join(", ");
 
   // ── 3. Collect all unique sales-person IDs + resolve names in one batch ──
   const allSpIds = [
@@ -135,10 +138,9 @@ export async function GET(): Promise<Response> {
     const primaryContactName = contact
       ? [contact.firstName, contact.lastName].filter(Boolean).join(" ")
       : "";
-    const productTypeNames = (r.productTypeIds ?? [])
-      .map((id) => productTypeNameMap.get(id))
-      .filter((n): n is string => n !== undefined)
-      .join(", ");
+    const customerTypeNames = joinNames(r.customerTypeIds);
+    const industryTypeNames = joinNames(r.industryTypeIds);
+    const productTypeNames = joinNames(r.productTypeIds);
     const tags = (r.tags ?? []).join(", ");
     const salesPersonName = r.kycSalesPersonId
       ? (salesPersonNameMap.get(r.kycSalesPersonId) ?? "")
@@ -160,8 +162,8 @@ export async function GET(): Promise<Response> {
       r.clientCode ?? "",
       r.name,
       r.isActive ? "Active" : "Inactive",
-      r.customerTypeName ?? "",
-      r.industryTypeName ?? "",
+      customerTypeNames,
+      industryTypeNames,
       productTypeNames,
       tags,
       r.city ?? "",

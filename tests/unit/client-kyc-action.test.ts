@@ -75,8 +75,8 @@ const CLIENT_UUID = "44444444-4444-4444-8444-444444444444";
 
 const baseInput = {
   name: "Acme Carbides",
-  customerTypeId: TYPE_UUID,
-  industryTypeId: TYPE_UUID,
+  customerTypeIds: [TYPE_UUID],
+  industryTypeIds: [TYPE_UUID],
   productTypeIds: [TYPE_UUID],
   export: false,
   currency: "INR" as const,
@@ -110,6 +110,9 @@ describe("createClientKyc", () => {
     const clientInsert = insertCalls.find((v) => "name" in v);
     expect(clientInsert).toMatchObject({
       name: "Acme Carbides",
+      customerTypeIds: [TYPE_UUID],
+      industryTypeIds: [TYPE_UUID],
+      // Legacy singular column mirrored to the first selection.
       customerTypeId: TYPE_UUID,
       industryTypeId: TYPE_UUID,
       productTypeIds: [TYPE_UUID],
@@ -147,6 +150,7 @@ describe("createClientKyc", () => {
     // Client KYC fields land as an update; contact fields update the primary row.
     const clientUpdate = updateCalls.find((v) => "kycMeetingStart" in v);
     expect(clientUpdate).toMatchObject({
+      customerTypeIds: [TYPE_UUID],
       customerTypeId: TYPE_UUID,
       city: "Nashik",
       kycMeetingStart: "10:30",

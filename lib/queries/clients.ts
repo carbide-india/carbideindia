@@ -143,8 +143,8 @@ export interface ClientAutofill {
 export interface ClientEditValues {
   name: string;
   clientCode?: string;
-  customerTypeId?: string;
-  industryTypeId?: string;
+  customerTypeIds: string[];
+  industryTypeIds: string[];
   productTypeIds: string[];
   state: string;
   city: string;
@@ -256,8 +256,8 @@ export async function getClientForEdit(
   return {
     name: row.name,
     clientCode: row.clientCode ?? undefined,
-    customerTypeId: row.customerTypeId ?? undefined,
-    industryTypeId: row.industryTypeId ?? undefined,
+    customerTypeIds: row.customerTypeIds ?? [],
+    industryTypeIds: row.industryTypeIds ?? [],
     productTypeIds: row.productTypeIds ?? [],
     state: row.state ?? "",
     city: row.city ?? "",
@@ -325,10 +325,10 @@ export async function getClientForEdit(
  * read-only views. Admin-only caller.
  */
 export interface ClientRecord extends Client {
-  /** Resolved name for `customerTypeId` (null if unset or master deleted). */
-  customerTypeName: string | null;
-  /** Resolved name for `industryTypeId` (null if unset or master deleted). */
-  industryTypeName: string | null;
+  /** Resolved names for each id in `customerTypeIds` (empty array if unset). */
+  customerTypeNames: string[];
+  /** Resolved names for each id in `industryTypeIds` (empty array if unset). */
+  industryTypeNames: string[];
   /** Resolved names for each id in `productTypeIds` (empty array if unset). */
   productTypeNames: string[];
   /** Full name of the KYC sales person employee (null if unset or deleted). */
@@ -344,37 +344,37 @@ export interface ClientRecord extends Client {
 export async function getClientRecord(
   clientId: string,
 ): Promise<ClientRecord | null> {
-  // ── 1. Core client row + resolved type names (two left joins on masterOptions) ──
-  const customerType = aliasedTable(masterOptions, "customer_type");
-  const industryType = aliasedTable(masterOptions, "industry_type");
-
+  // ── 1. Core client row ──
   const [row] = await db
-    .select({
-      ...getTableColumns(clients),
-      customerTypeName: customerType.name,
-      industryTypeName: industryType.name,
-    })
+    .select()
     .from(clients)
-    .leftJoin(customerType, eq(customerType.id, clients.customerTypeId))
-    .leftJoin(industryType, eq(industryType.id, clients.industryTypeId))
     .where(eq(clients.id, clientId))
     .limit(1);
 
   if (!row) return null;
 
-  // ── 2. Resolve product type names (batch lookup, preserves order) ──
-  let productTypeNames: string[] = [];
-  if (row.productTypeIds && row.productTypeIds.length > 0) {
-    const ptRows = await db
+  // ── 2. Resolve customer / industry / product type names in one batch ──
+  //     (each array preserves its stored order). All three reference the same
+  //     master_options table, so a single lookup keyed by id covers them.
+  const customerTypeIds = row.customerTypeIds ?? [];
+  const industryTypeIds = row.industryTypeIds ?? [];
+  const productTypeIds = row.productTypeIds ?? [];
+  const allTypeIds = [
+    ...new Set([...customerTypeIds, ...industryTypeIds, ...productTypeIds]),
+  ];
+  const typeNameById = new Map<string, string>();
+  if (allTypeIds.length > 0) {
+    const optRows = await db
       .select({ id: masterOptions.id, name: masterOptions.name })
       .from(masterOptions)
-      .where(inArray(masterOptions.id, row.productTypeIds));
-    // Preserve the stored order.
-    const nameById = new Map(ptRows.map((r) => [r.id, r.name]));
-    productTypeNames = row.productTypeIds
-      .map((id) => nameById.get(id))
-      .filter((n): n is string => n !== undefined);
+      .where(inArray(masterOptions.id, allTypeIds));
+    for (const o of optRows) typeNameById.set(o.id, o.name);
   }
+  const resolveNames = (ids: string[]): string[] =>
+    ids.map((id) => typeNameById.get(id)).filter((n): n is string => n !== undefined);
+  const customerTypeNames = resolveNames(customerTypeIds);
+  const industryTypeNames = resolveNames(industryTypeIds);
+  const productTypeNames = resolveNames(productTypeIds);
 
   // ── 3. Sales person name ──
   let salesPersonName: string | null = null;
@@ -407,8 +407,8 @@ export async function getClientRecord(
 
   return {
     ...row,
-    customerTypeName: row.customerTypeName ?? null,
-    industryTypeName: row.industryTypeName ?? null,
+    customerTypeNames,
+    industryTypeNames,
     productTypeNames,
     salesPersonName,
     contacts,

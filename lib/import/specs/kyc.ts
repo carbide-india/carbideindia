@@ -4,8 +4,8 @@ export const kycImportSpec: ImportSpec = {
   formKey: "kyc", title: "Client", basePath: "/admin/clients",
   fields: [
     { key: "name", header: "Company Name", type: "text", required: true, example: "Acme Ltd", maxLen: 160 },
-    { key: "customerTypeId", header: "Customer Type", type: "ref", ref: { kind: "customerType", allowCreate: true }, example: "OEM" },
-    { key: "industryTypeId", header: "Industry Type", type: "ref", ref: { kind: "industryType", allowCreate: true }, example: "Automotive" },
+    { key: "customerTypeIds", header: "Customer Type", type: "refMulti", ref: { kind: "customerType", allowCreate: true }, example: "OEM" },
+    { key: "industryTypeIds", header: "Industry Type", type: "refMulti", ref: { kind: "industryType", allowCreate: true }, example: "Automotive" },
     { key: "productTypeIds", header: "Product Types", type: "refMulti", ref: { kind: "productType", allowCreate: true }, example: "Inserts, Rods" },
     { key: "kycSalesPersonId", header: "Sales Person", type: "ref", ref: { kind: "employee" }, example: "Piyush Bagde" },
     { key: "state", header: "State", type: "text", maxLen: 80 },

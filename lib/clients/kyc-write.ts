@@ -31,8 +31,11 @@ type Kyc = CreateClientKycParsed;
  */
 export function buildKycClientPatch(v: Kyc): Partial<ClientInsert> {
   return {
-    customerTypeId: v.customerTypeId ?? null,
-    industryTypeId: v.industryTypeId ?? null,
+    customerTypeIds: v.customerTypeIds ?? null,
+    industryTypeIds: v.industryTypeIds ?? null,
+    // Mirror the legacy singular columns to the FIRST selected id (back-compat).
+    customerTypeId: v.customerTypeIds?.[0] ?? null,
+    industryTypeId: v.industryTypeIds?.[0] ?? null,
     productTypeIds: v.productTypeIds ?? null,
     state: v.state ?? null,
     city: v.city ?? null,

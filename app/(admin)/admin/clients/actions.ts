@@ -38,8 +38,8 @@ import { findActiveDuplicateClient } from "@/lib/clients/dedup";
 // contactFirstName / additionalContacts are stored in client_contacts — not here.
 const AUDITED_CLIENT_FIELDS = [
   "name",
-  "customerTypeId",
-  "industryTypeId",
+  "customerTypeIds",
+  "industryTypeIds",
   "productTypeIds",
   "gstin",
   "panNo",
@@ -442,8 +442,8 @@ export async function adminUpdateClientKyc(
   // Field-level diff audit: build before/after snapshots keyed by audited fields.
   const beforeSnapshot: Record<string, unknown> = {
     name: client.name,
-    customerTypeId: client.customerTypeId,
-    industryTypeId: client.industryTypeId,
+    customerTypeIds: client.customerTypeIds,
+    industryTypeIds: client.industryTypeIds,
     productTypeIds: client.productTypeIds,
     gstin: client.gstin,
     panNo: client.panNo,
@@ -477,8 +477,8 @@ export async function adminUpdateClientKyc(
   };
   const afterSnapshot: Record<string, unknown> = {
     name: v.name,
-    customerTypeId: v.customerTypeId ?? null,
-    industryTypeId: v.industryTypeId ?? null,
+    customerTypeIds: v.customerTypeIds ?? null,
+    industryTypeIds: v.industryTypeIds ?? null,
     productTypeIds: v.productTypeIds ?? null,
     gstin: v.gstin ?? null,
     panNo: v.panNo ?? null,
