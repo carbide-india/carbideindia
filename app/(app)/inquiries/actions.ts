@@ -6,7 +6,7 @@ import type { z } from "zod";
 import { db } from "@/lib/db";
 import { inquiries, inquiryItems, clients, clientContacts, masterOptions, type NewInquiry } from "@/db/schema";
 import { productRowsForInquiry } from "@/lib/inquiries/product-rows";
-import { requireUser } from "@/lib/auth/current";
+import { requireUser, requireAdmin } from "@/lib/auth/current";
 import { ENQUIRY_STATUSES, type EnquiryStatus } from "@/db/enums";
 import {
   CreateInquirySchema,
@@ -350,6 +350,64 @@ export async function setEnquiryStatusBulk(
   } catch (err) {
     console.error("[setEnquiryStatusBulk] failed", err);
     return { ok: false, error: "Could not update the statuses. Please try again." };
+  }
+  revalidatePath("/inquiries");
+  return { ok: true };
+}
+
+/**
+ * Archive an enquiry — drops it off the /inquiries register (the list query
+ * filters `is_archived = false`) without destroying any data. The detail page
+ * still loads an archived SM if visited directly, and it can be unarchived.
+ */
+export async function archiveInquiry(id: string): Promise<ActionResult> {
+  await requireUser();
+  if (!isUuid(id)) return { ok: false, error: "Invalid inquiry id." };
+  try {
+    await db
+      .update(inquiries)
+      .set({ isArchived: true, updatedAt: new Date() })
+      .where(eq(inquiries.id, id));
+  } catch (err) {
+    console.error("[archiveInquiry] failed", err);
+    return { ok: false, error: "Could not archive the enquiry. Please try again." };
+  }
+  revalidatePath("/inquiries");
+  revalidatePath(`/inquiries/${id}`);
+  return { ok: true };
+}
+
+/** Restore an archived enquiry back onto the register. */
+export async function unarchiveInquiry(id: string): Promise<ActionResult> {
+  await requireUser();
+  if (!isUuid(id)) return { ok: false, error: "Invalid inquiry id." };
+  try {
+    await db
+      .update(inquiries)
+      .set({ isArchived: false, updatedAt: new Date() })
+      .where(eq(inquiries.id, id));
+  } catch (err) {
+    console.error("[unarchiveInquiry] failed", err);
+    return { ok: false, error: "Could not restore the enquiry. Please try again." };
+  }
+  revalidatePath("/inquiries");
+  revalidatePath(`/inquiries/${id}`);
+  return { ok: true };
+}
+
+/**
+ * Hard-delete an enquiry (admin only). The inquiry_items children cascade-
+ * delete via their FK. Intentionally destructive — there is no undo. Use
+ * archiveInquiry for the everyday "get it off my list" case.
+ */
+export async function deleteInquiry(id: string): Promise<ActionResult> {
+  await requireAdmin();
+  if (!isUuid(id)) return { ok: false, error: "Invalid inquiry id." };
+  try {
+    await db.delete(inquiries).where(eq(inquiries.id, id));
+  } catch (err) {
+    console.error("[deleteInquiry] failed", err);
+    return { ok: false, error: "Could not delete the enquiry. Please try again." };
   }
   revalidatePath("/inquiries");
   return { ok: true };

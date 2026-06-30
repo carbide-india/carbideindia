@@ -15,7 +15,7 @@ import {
   INQUIRY_COUNTRIES,
 } from "@/db/enums";
 import { CreateInquirySchema } from "@/lib/validators/inquiry";
-import { createInquiry } from "@/app/(app)/inquiries/actions";
+import { createInquiry, updateInquiry } from "@/app/(app)/inquiries/actions";
 import { fireToast } from "@/lib/toast";
 import { Select } from "@/components/ui/select";
 import { INDIA_STATES, citiesForState } from "@/lib/data/india-states-cities";
@@ -46,6 +46,13 @@ interface Props {
   shapeProfiles: Record<string, ShapeConfig>;
   /** Current employee — preselected as the assigned sales person. */
   defaultSalesPersonId: string;
+  /**
+   * Edit mode: when set, the form prefills from `initialValues`, hides the
+   * ProductsSection (products link to costings/quotes and are not edited
+   * here), and submits via `updateInquiry` instead of `createInquiry`.
+   */
+  editInquiryId?: string;
+  initialValues?: Partial<InquiryFormValues>;
 }
 
 /** Local YYYY-MM-DD for the date input's default (today, user's timezone). */
@@ -75,7 +82,10 @@ export function InquiryForm({
   conditions,
   shapeProfiles,
   defaultSalesPersonId,
+  editInquiryId,
+  initialValues,
 }: Props) {
+  const isEdit = editInquiryId !== undefined;
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
   const [serverError, setServerError] = React.useState<string | null>(null);
@@ -136,6 +146,9 @@ export function InquiryForm({
           quantityUom: "Nos",
         },
       ],
+      // Edit mode prefills header/client/checklist/meta fields (products are
+      // not editable here, so the array default above stays unused).
+      ...initialValues,
     },
   });
 
@@ -175,15 +188,29 @@ export function InquiryForm({
 
   const submit = handleSubmit((values) => {
     setServerError(null);
+    // <input type="date"> gives YYYY-MM-DD; pin to noon UTC so timezone
+    // wrap-arounds can't land the enquiry on the wrong day.
+    const enquiryDate = values.enquiryDate
+      ? new Date(`${values.enquiryDate}T12:00:00.000Z`).toISOString()
+      : undefined;
+
     startTransition(async () => {
-      const res = await createInquiry({
-        ...values,
-        // <input type="date"> gives YYYY-MM-DD; pin to noon UTC so timezone
-        // wrap-arounds can't land the enquiry on the wrong day.
-        enquiryDate: values.enquiryDate
-          ? new Date(`${values.enquiryDate}T12:00:00.000Z`).toISOString()
-          : undefined,
-      });
+      if (isEdit) {
+        // Products are not edited here (they link to costings/quotes), and the
+        // update schema rejects the `products` key — drop it from the patch.
+        const { products: _products, ...rest } = values;
+        const res = await updateInquiry(editInquiryId, { ...rest, enquiryDate });
+        if (!res.ok) {
+          setServerError(res.error);
+          fireToast({ message: res.error, type: "error" });
+          return;
+        }
+        fireToast({ message: "Enquiry updated.", type: "success" });
+        router.push(`/inquiries/${editInquiryId}`);
+        return;
+      }
+
+      const res = await createInquiry({ ...values, enquiryDate });
       if (!res.ok) {
         setServerError(res.error);
         fireToast({ message: res.error, type: "error" });
@@ -205,9 +232,11 @@ export function InquiryForm({
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-6" noValidate>
-      <p className="text-[13px] text-ink-subtle -mb-1">
-        SM number is assigned automatically on save.
-      </p>
+      {!isEdit && (
+        <p className="text-[13px] text-ink-subtle -mb-1">
+          SM number is assigned automatically on save.
+        </p>
+      )}
 
       {/* ── 1 · Client ───────────────────────────────────────────────── */}
       <SectionCard
@@ -518,16 +547,20 @@ export function InquiryForm({
       </SectionCard>
 
       {/* ── 3 · Products ─────────────────────────────────────────────── */}
-      <ProductsSection
-        control={control}
-        register={register}
-        watch={watch}
-        setValue={setValue}
-        grades={grades}
-        tolerances={tolerances}
-        conditions={conditions}
-        shapeProfiles={shapeProfiles}
-      />
+      {/* Products are hidden in edit mode — they link to costings/quotes and
+          are managed from the SM Repo, not re-synced on enquiry edits. */}
+      {!isEdit && (
+        <ProductsSection
+          control={control}
+          register={register}
+          watch={watch}
+          setValue={setValue}
+          grades={grades}
+          tolerances={tolerances}
+          conditions={conditions}
+          shapeProfiles={shapeProfiles}
+        />
+      )}
 
       {/* ── 4 · Checklist ────────────────────────────────────────────── */}
       <ChecklistSection
@@ -602,7 +635,13 @@ export function InquiryForm({
             letterSpacing: "0.005em",
           }}
         >
-          {pending ? "Creating…" : "Create Enquiry"}
+          {pending
+            ? isEdit
+              ? "Updating…"
+              : "Creating…"
+            : isEdit
+              ? "Update Enquiry"
+              : "Create Enquiry"}
         </button>
       </div>
     </form>

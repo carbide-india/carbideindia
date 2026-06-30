@@ -607,6 +607,8 @@ export const inquiries = pgTable(
     feasibilityCheckedById: uuid("feasibility_checked_by_id").references(() => employees.id, { onDelete: "set null" }),
     feasibilityStatus: feasibilityStatusEnum("feasibility_status").notNull().default("not_started"),
 
+    isArchived: boolean("is_archived").notNull().default(false),
+
     createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -615,6 +617,7 @@ export const inquiries = pgTable(
     index("inquiries_status_idx").on(t.enquiryStatus, t.enquiryDate),
     index("inquiries_company_idx").on(t.companyName),
     index("inquiries_sales_person_idx").on(t.assignedSalesPersonId),
+    index("inquiries_archived_idx").on(t.isArchived),
   ],
 );
 export type Inquiry = typeof inquiries.$inferSelect;

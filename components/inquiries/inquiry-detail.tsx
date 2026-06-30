@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
-import { ExternalLink, ArrowLeft, Plus } from "lucide-react";
+import { ExternalLink, ArrowLeft, Plus, MoreVertical, Pencil, Archive, Trash2 } from "lucide-react";
 import {
   CHECK_STATE_LABELS,
   ENQUIRY_STATUSES,
@@ -18,7 +18,12 @@ import {
   type CostingDoneStatus,
 } from "@/db/enums";
 import type { Inquiry, InquiryItem } from "@/db/schema";
-import { setEnquiryStatus, generateItemForInquiryItem } from "@/app/(app)/inquiries/actions";
+import {
+  setEnquiryStatus,
+  generateItemForInquiryItem,
+  archiveInquiry,
+  deleteInquiry,
+} from "@/app/(app)/inquiries/actions";
 import type { EmployeeOption } from "@/lib/queries/employees";
 import { formatDate } from "@/lib/format";
 import { fireToast } from "@/lib/toast";
@@ -53,6 +58,7 @@ interface Props {
   employees: EmployeeOption[];
   masterNames: MasterNames;
   products: ProductRow[];
+  isAdmin: boolean;
 }
 
 /**
@@ -60,15 +66,47 @@ interface Props {
  * sidebar (per the transcript: status lives beside the record, not inside
  * the form), Primary Feasibility below.
  */
-export function InquiryDetail({ inquiry, employees, masterNames, products }: Props) {
+export function InquiryDetail({ inquiry, employees, masterNames, products, isAdmin }: Props) {
   const router = useRouter();
   const [, startTransition] = React.useTransition();
+  const [lifecyclePending, startLifecycle] = React.useTransition();
   const [generatingId, setGeneratingId] = React.useState<string | null>(null);
 
   const salesPerson =
     employees.find((e) => e.id === inquiry.assignedSalesPersonId)?.name ?? null;
   const createdBy =
     employees.find((e) => e.id === inquiry.createdById)?.name ?? null;
+
+  function handleArchive() {
+    startLifecycle(async () => {
+      const res = await archiveInquiry(inquiry.id);
+      if (res.ok) {
+        fireToast({ message: `Enquiry ${inquiry.smNumber} archived`, type: "success" });
+        router.push("/inquiries" as Route);
+      } else {
+        fireToast({ message: res.error, type: "error" });
+      }
+    });
+  }
+
+  function handleDelete() {
+    if (
+      !window.confirm(
+        `Delete enquiry ${inquiry.smNumber}? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    startLifecycle(async () => {
+      const res = await deleteInquiry(inquiry.id);
+      if (res.ok) {
+        fireToast({ message: `Enquiry ${inquiry.smNumber} deleted`, type: "success" });
+        router.push("/inquiries" as Route);
+      } else {
+        fireToast({ message: res.error, type: "error" });
+      }
+    });
+  }
 
   function handleGenerateItem(productId: string) {
     setGeneratingId(productId);
@@ -137,12 +175,50 @@ export function InquiryDetail({ inquiry, employees, masterNames, products }: Pro
             <Plus size={14} strokeWidth={2.6} />
             New Enquiry
           </Link>
+          <KebabMenu
+            inquiryId={inquiry.id}
+            isAdmin={isAdmin}
+            busy={lifecyclePending}
+            onArchive={handleArchive}
+            onDelete={handleDelete}
+          />
         </div>
       </header>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr] items-start">
-        {/* ── Main column ─────────────────────────────────────────────── */}
-        <div className="flex flex-col gap-6 min-w-0">
+      {/* ── Meta strip ──────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-start gap-x-8 gap-y-4 rounded-section border border-hairline bg-surface-card px-5 py-4">
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
+            Enquiry Status
+          </span>
+          <StatusPicker
+            value={inquiry.enquiryStatus}
+            options={ENQUIRY_STATUSES}
+            labels={ENQUIRY_STATUS_LABELS}
+            tones={ENQUIRY_STATUS_COLORS}
+            onPick={(next) => setEnquiryStatus(inquiry.id, next)}
+            ariaLabel="Enquiry status"
+          />
+        </div>
+        <MetaItem label="Sales Person" value={salesPerson ?? "Not allocated"} />
+        <MetaItem label="Created" value={formatDate(inquiry.createdAt)} />
+        {createdBy && <MetaItem label="Created By" value={createdBy} />}
+        <MetaItem label="Last Updated" value={formatDate(inquiry.updatedAt)} />
+        {inquiry.smFolderLink && (
+          <a
+            href={inquiry.smFolderLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 self-center rounded-pill border border-hairline px-4 py-2 text-[13px] font-bold text-ink-strong hover:bg-surface-soft transition-colors"
+          >
+            <ExternalLink size={14} />
+            SM Folder
+          </a>
+        )}
+      </div>
+
+      {/* ── Full-width content ──────────────────────────────────────── */}
+      <div className="flex flex-col gap-6 min-w-0">
           <ReadCard title="Client">
             <InfoGrid
               rows={[
@@ -311,39 +387,6 @@ export function InquiryDetail({ inquiry, employees, masterNames, products }: Pro
           </ReadCard>
 
           <FeasibilityPanel inquiry={inquiry} employees={employees} />
-        </div>
-
-        {/* ── Sticky sidebar — the transcript's "task sidebar" ─────────── */}
-        <aside className="lg:sticky lg:top-24 flex flex-col gap-4 rounded-section border border-hairline bg-surface-card p-5">
-          <div className="flex flex-col gap-2">
-            <span className="text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
-              Enquiry Status
-            </span>
-            <StatusPicker
-              value={inquiry.enquiryStatus}
-              options={ENQUIRY_STATUSES}
-              labels={ENQUIRY_STATUS_LABELS}
-              tones={ENQUIRY_STATUS_COLORS}
-              onPick={(next) => setEnquiryStatus(inquiry.id, next)}
-              ariaLabel="Enquiry status"
-            />
-          </div>
-          <SidebarRow label="Sales Person" value={salesPerson ?? "Not allocated"} />
-          <SidebarRow label="Created" value={formatDate(inquiry.createdAt)} />
-          {createdBy && <SidebarRow label="Created By" value={createdBy} />}
-          <SidebarRow label="Last Updated" value={formatDate(inquiry.updatedAt)} />
-          {inquiry.smFolderLink && (
-            <a
-              href={inquiry.smFolderLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-pill border border-hairline px-4 py-2 text-[13px] font-bold text-ink-strong hover:bg-surface-soft transition-colors"
-            >
-              <ExternalLink size={14} />
-              SM Folder
-            </a>
-          )}
-        </aside>
       </div>
     </div>
   );
@@ -385,7 +428,7 @@ function InfoGrid({ rows }: { rows: ReadonlyArray<readonly [string, string | nul
   const visible = rows.filter(([, v]) => v !== null && v !== undefined && v !== "");
   if (visible.length === 0) return null;
   return (
-    <dl className="grid grid-cols-1 gap-x-8 gap-y-2.5 sm:grid-cols-2">
+    <dl className="grid grid-cols-1 gap-x-8 gap-y-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {visible.map(([label, value]) => (
         <div key={label} className="flex flex-col gap-0.5">
           <dt className="text-[12px] font-bold text-ink-subtle">{label}</dt>
@@ -396,13 +439,114 @@ function InfoGrid({ rows }: { rows: ReadonlyArray<readonly [string, string | nul
   );
 }
 
-function SidebarRow({ label, value }: { label: string; value: string }) {
+/** One label-over-value cell in the top meta strip. */
+function MetaItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col gap-0.5">
+    <div className="flex flex-col gap-1.5">
       <span className="text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
         {label}
       </span>
       <span className="text-[14px] font-semibold text-ink-strong">{value}</span>
+    </div>
+  );
+}
+
+/**
+ * Lightweight header kebab popover — absolute-positioned card that closes on
+ * outside-click and Escape. Edit / Archive always; Delete is admin-only.
+ */
+function KebabMenu({
+  inquiryId,
+  isAdmin,
+  busy,
+  onArchive,
+  onDelete,
+}: {
+  inquiryId: string;
+  isAdmin: boolean;
+  busy: boolean;
+  onArchive: () => void;
+  onDelete: () => void;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!open) return;
+    function onClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const itemClass =
+    "flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-[13px] font-semibold text-ink-strong hover:bg-surface-soft transition-colors disabled:opacity-50";
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        aria-label="More actions"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex h-9 w-9 items-center justify-center rounded-pill border border-hairline text-ink-muted hover:bg-surface-soft hover:text-ink-strong transition-colors"
+      >
+        <MoreVertical size={16} strokeWidth={2.4} />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-11 z-20 w-48 overflow-hidden rounded-section border border-hairline bg-surface-card py-1.5 shadow-lg"
+        >
+          <Link
+            href={`/inquiries/${inquiryId}/edit` as Route}
+            role="menuitem"
+            className={itemClass}
+            onClick={() => setOpen(false)}
+          >
+            <Pencil size={15} strokeWidth={2.2} />
+            Edit
+          </Link>
+          <button
+            type="button"
+            role="menuitem"
+            disabled={busy}
+            onClick={() => {
+              setOpen(false);
+              onArchive();
+            }}
+            className={itemClass}
+          >
+            <Archive size={15} strokeWidth={2.2} />
+            Archive
+          </button>
+          {isAdmin && (
+            <button
+              type="button"
+              role="menuitem"
+              disabled={busy}
+              onClick={() => {
+                setOpen(false);
+                onDelete();
+              }}
+              className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-[13px] font-semibold transition-colors hover:bg-surface-soft disabled:opacity-50"
+              style={{ color: "var(--color-red-deep)" }}
+            >
+              <Trash2 size={15} strokeWidth={2.2} />
+              Delete
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
