@@ -288,7 +288,7 @@ export function KycForm({
           : `Client ${values.name} onboarded.`,
         type: "success",
       });
-      router.push("/admin/clients" as Route);
+      router.push("/clients" as Route);
       router.refresh();
     });
   });

@@ -1,45 +1,12 @@
-import { notFound } from "next/navigation";
-import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth/current";
-import { getClientRecord } from "@/lib/queries/clients";
-import { getClientDocuments } from "@/lib/queries/client-documents";
-import { getAuditLog } from "@/lib/queries/audit";
-import { ClientRecord } from "@/components/admin/client-record";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
+// Client records moved to `/clients/[id]` (out of the admin panel). Redirect
+// stub so old bookmarks / links don't 404.
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export default async function AdminClientRecordRedirect({ params }: PageProps) {
   const { id } = await params;
-  if (!UUID_RE.test(id)) return { title: "Client — Carbide India" };
-  const record = await getClientRecord(id);
-  return {
-    title: record ? `${record.name} — Carbide India` : "Client — Carbide India",
-  };
-}
-
-export default async function ClientRecordPage({ params }: PageProps) {
-  await requireAdmin();
-  const { id } = await params;
-  if (!UUID_RE.test(id)) notFound();
-
-  const [record, documents, auditEntries] = await Promise.all([
-    getClientRecord(id),
-    getClientDocuments(id),
-    getAuditLog("client", id),
-  ]);
-
-  if (!record) notFound();
-
-  return (
-    <div>
-      <ClientRecord record={record} documents={documents} auditEntries={auditEntries} />
-    </div>
-  );
+  redirect(`/clients/${id}`);
 }

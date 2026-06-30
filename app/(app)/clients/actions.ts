@@ -277,7 +277,7 @@ export async function createClientKyc(
     // Mirror the admin clients actions: drop the cached picker payload and
     // refresh the register view.
     updateTag(CACHE_TAGS.clients);
-    revalidatePath("/admin/clients");
+    revalidatePath("/clients");
     return { ok: true, id: clientId };
   } catch (err) {
     console.error("[createClientKyc] failed", err);
@@ -324,6 +324,6 @@ export async function updateClientKyc(
     return { ok: false, error: "Could not save the client. Please try again." };
   }
   updateTag(CACHE_TAGS.clients);
-  revalidatePath("/admin/clients");
+  revalidatePath("/clients");
   return { ok: true };
 }

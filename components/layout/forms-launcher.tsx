@@ -74,7 +74,7 @@ const ACTIVE_CARDS: ActiveCard[] = [
     Icon: BadgeCheck,
     desc: "Onboard a client — types, address, contact, meeting.",
     href: "/clients/new" as Route,
-    registerHref: "/admin/clients" as Route,
+    registerHref: "/clients" as Route,
   },
   {
     name: "Sample Register",

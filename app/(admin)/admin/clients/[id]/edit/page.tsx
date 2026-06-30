@@ -1,62 +1,12 @@
-import { notFound } from "next/navigation";
-import { requireAdmin } from "@/lib/auth/current";
-import { listMasterOptions } from "@/lib/queries/masters";
-import { listEmployeeOptions } from "@/lib/queries/employees";
-import { getClientForEdit } from "@/lib/queries/clients";
-import { getClientDocuments } from "@/lib/queries/client-documents";
-import { KycForm } from "@/components/clients/kyc-form";
-import { BackLink } from "@/components/ui/back-link";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
+// Client edit moved to `/clients/[id]/edit` (out of the admin panel). Redirect
+// stub so old bookmarks / links don't 404.
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-export default async function EditClientPage({ params }: PageProps) {
-  await requireAdmin();
+export default async function AdminClientEditRedirect({ params }: PageProps) {
   const { id } = await params;
-
-  const [client, customerTypes, industryTypes, productTypes, employees, documents] =
-    await Promise.all([
-      getClientForEdit(id),
-      listMasterOptions("customer_type"),
-      listMasterOptions("industry_type"),
-      listMasterOptions("product_type"),
-      listEmployeeOptions(),
-      getClientDocuments(id),
-    ]);
-
-  if (!client) notFound();
-
-  // clientCode is now returned by getClientForEdit (read-only display only).
-  const clientCode = client.clientCode;
-
-  return (
-    <div>
-      <header className="mb-6">
-        <div className="mb-4">
-          <BackLink href="/admin/clients" label="Client Master" />
-        </div>
-        <div className="text-[10px] uppercase tracking-[0.18em] text-ink-subtle font-bold">
-          Admin · Edit Client
-        </div>
-        <h1 className="text-display-lg text-ink-strong mt-1">{client.name}</h1>
-        <p className="text-body-lg text-ink-subtle mt-1">
-          Edit every detail of this client — company, contact, meeting and
-          business cards. Option lists are managed in Admin &#8594; Masters.
-        </p>
-      </header>
-      <KycForm
-        customerTypes={customerTypes}
-        industryTypes={industryTypes}
-        productTypes={productTypes}
-        employees={employees}
-        editClientId={id}
-        initialValues={client}
-        clientCode={clientCode}
-        documents={documents}
-      />
-    </div>
-  );
+  redirect(`/clients/${id}/edit`);
 }

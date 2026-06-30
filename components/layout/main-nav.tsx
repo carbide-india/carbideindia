@@ -74,10 +74,10 @@ export function MainNav({ activeTasks, isAdmin, variant }: Props) {
       {/* Client Master — admin-only roster of clients. */}
       {isAdmin && (
         <MainNavPill
-          href={"/admin/clients" as Route}
+          href={"/clients" as Route}
           label="Client Master"
           Icon={Building2}
-          active={isActive("/admin/clients")}
+          active={isActive("/clients")}
           variant={variant}
         />
       )}

@@ -92,8 +92,8 @@ export async function saveClientDocument(input: {
   }
   if (!inserted) return { ok: false, error: "Insert returned no row" };
 
-  revalidatePath(`/admin/clients/${input.clientId}`);
-  revalidatePath(`/admin/clients/${input.clientId}/edit`);
+  revalidatePath(`/clients/${input.clientId}`);
+  revalidatePath(`/clients/${input.clientId}/edit`);
   return { ok: true, id: inserted.id };
 }
 
@@ -117,8 +117,8 @@ export async function deleteClientDocument(documentId: string): Promise<Result> 
   await db.delete(documents).where(eq(documents.id, documentId));
 
   if (doc.clientId) {
-    revalidatePath(`/admin/clients/${doc.clientId}`);
-    revalidatePath(`/admin/clients/${doc.clientId}/edit`);
+    revalidatePath(`/clients/${doc.clientId}`);
+    revalidatePath(`/clients/${doc.clientId}/edit`);
   }
   return { ok: true };
 }

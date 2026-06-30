@@ -1,5 +1,5 @@
 import "server-only";
-import { aliasedTable, and, asc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
+import { aliasedTable, and, asc, eq, getTableColumns, inArray } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import {
@@ -7,7 +7,6 @@ import {
   clients,
   employees,
   masterOptions,
-  tasks,
   type Client,
   type ClientContact,
   type ClientAddress,
@@ -76,28 +75,91 @@ export const listClientOptions = unstable_cache(
   { tags: [CACHE_TAGS.clients], revalidate: 600 },
 );
 
-export interface ClientWithCount extends Client {
-  /** Tasks whose Client Name (tasks.title) matches this client, case-insensitive. */
-  taskCount: number;
+/**
+ * One client row shaped for the MNC-grade Client Master register (`/clients`).
+ * Carries the display fields the table + KPI cards need, with customer/industry
+ * master ids already resolved to names (same lookup the record page uses). The
+ * "primary" GSTIN is the client row's own `gstin` column.
+ */
+export interface ClientRegisterRow {
+  id: string;
+  name: string;
+  clientCode: string | null;
+  city: string | null;
+  state: string | null;
+  gstin: string | null;
+  customerTypeNames: string[];
+  industryTypeNames: string[];
+  creditDays: number | null;
+  isExport: boolean | null;
+  isActive: boolean;
+  createdAt: Date;
 }
 
 /**
- * Every client (active + inactive) plus a count of tasks filed under it.
- * Used by the /admin/clients management table. Sorted alphabetically to
- * match how the picker presents them.
+ * Every client (active + inactive) shaped for the register table. Resolves
+ * customer/industry type master ids → names in one batched lookup (the same
+ * approach `getClientRecord` uses). Alphabetical, locale-aware. Admin-only
+ * caller (the register route is `requireAdmin`-gated).
  */
-export async function listClientsWithCounts(): Promise<ClientWithCount[]> {
+export async function listClientsForRegister(): Promise<ClientRegisterRow[]> {
   const rows = await db
     .select({
-      ...getTableColumns(clients),
-      taskCount: sql<number>`count(${tasks.id})::int`,
+      id: clients.id,
+      name: clients.name,
+      clientCode: clients.clientCode,
+      city: clients.city,
+      state: clients.state,
+      gstin: clients.gstin,
+      customerTypeIds: clients.customerTypeIds,
+      industryTypeIds: clients.industryTypeIds,
+      creditDays: clients.creditDays,
+      isExport: clients.export,
+      isActive: clients.isActive,
+      createdAt: clients.createdAt,
     })
-    .from(clients)
-    .leftJoin(tasks, sql`lower(${tasks.title}) = lower(${clients.name})`)
-    .groupBy(clients.id);
-  return rows.sort((a, b) =>
-    a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
-  );
+    .from(clients);
+
+  // Batch-resolve every referenced customer/industry type id → name.
+  const allTypeIds = [
+    ...new Set(
+      rows.flatMap((r) => [
+        ...(r.customerTypeIds ?? []),
+        ...(r.industryTypeIds ?? []),
+      ]),
+    ),
+  ];
+  const typeNameById = new Map<string, string>();
+  if (allTypeIds.length > 0) {
+    const optRows = await db
+      .select({ id: masterOptions.id, name: masterOptions.name })
+      .from(masterOptions)
+      .where(inArray(masterOptions.id, allTypeIds));
+    for (const o of optRows) typeNameById.set(o.id, o.name);
+  }
+  const resolveNames = (ids: string[] | null): string[] =>
+    (ids ?? [])
+      .map((id) => typeNameById.get(id))
+      .filter((n): n is string => n !== undefined);
+
+  return rows
+    .map((r) => ({
+      id: r.id,
+      name: r.name,
+      clientCode: r.clientCode,
+      city: r.city,
+      state: r.state,
+      gstin: r.gstin,
+      customerTypeNames: resolveNames(r.customerTypeIds),
+      industryTypeNames: resolveNames(r.industryTypeIds),
+      creditDays: r.creditDays,
+      isExport: r.isExport,
+      isActive: r.isActive,
+      createdAt: r.createdAt,
+    }))
+    .sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+    );
 }
 
 export interface ClientAutofill {

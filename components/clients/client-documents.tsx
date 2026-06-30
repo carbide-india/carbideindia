@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Upload, FileText, Download, Trash2 } from "lucide-react";
 import { upload } from "@vercel/blob/client";
-import { saveClientDocument, deleteClientDocument } from "@/app/(admin)/admin/clients/document-actions";
+import { saveClientDocument, deleteClientDocument } from "@/app/(app)/clients/document-actions";
 import {
   MAX_DOCUMENT_BYTES,
   safeDocumentName,

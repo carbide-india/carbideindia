@@ -55,7 +55,7 @@ export function ClientRecord({ record, documents, auditEntries }: Props) {
       {/* ── Breadcrumb ─────────────────────────────────────────────────── */}
       <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-[13px]">
         <Link
-          href={"/admin/clients" as Route}
+          href={"/clients" as Route}
           className="inline-flex items-center gap-1.5 font-semibold text-ink-muted hover:text-ink-strong transition-colors"
         >
           <ArrowLeft size={14} strokeWidth={2.4} />
@@ -103,7 +103,7 @@ export function ClientRecord({ record, documents, auditEntries }: Props) {
         </div>
         {/* Edit button */}
         <Link
-          href={`/admin/clients/${record.id}/edit` as Route}
+          href={`/clients/${record.id}/edit` as Route}
           className="inline-flex items-center gap-1.5 h-9 rounded-lg border border-hairline px-3 text-[13px] font-semibold text-ink-soft hover:border-brand hover:text-brand transition-colors"
         >
           <Pencil size={15} strokeWidth={2.2} />

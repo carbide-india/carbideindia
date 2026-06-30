@@ -77,7 +77,7 @@ type ActionResult<T = unknown> =
   | { ok: false; error: string };
 
 function revalidateClientSurfaces() {
-  revalidatePath("/admin/clients");
+  revalidatePath("/clients");
   revalidatePath("/tasks/new");
   revalidatePath("/tasks");
   revalidatePath("/");
@@ -536,7 +536,7 @@ export async function adminUpdateClientKyc(
   }
 
   revalidateClientSurfaces();
-  revalidatePath(`/admin/clients/${client.id}/edit`);
+  revalidatePath(`/clients/${client.id}/edit`);
   return { ok: true };
 }
 

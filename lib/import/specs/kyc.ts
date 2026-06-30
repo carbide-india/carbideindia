@@ -1,7 +1,7 @@
 import type { ImportSpec } from "@/lib/import/engine/spec";
 
 export const kycImportSpec: ImportSpec = {
-  formKey: "kyc", title: "Client", basePath: "/admin/clients",
+  formKey: "kyc", title: "Client", basePath: "/clients",
   fields: [
     { key: "name", header: "Company Name", type: "text", required: true, example: "Acme Ltd", maxLen: 160 },
     { key: "customerTypeIds", header: "Customer Type", type: "refMulti", ref: { kind: "customerType", allowCreate: true }, example: "OEM" },
