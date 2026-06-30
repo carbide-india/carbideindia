@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { inquiries, inquiryItems, items, employees, type Inquiry } from "@/db/schema";
 import type { EnquiryStatus, FeasibilityStatus } from "@/db/enums";
@@ -31,7 +31,9 @@ export interface InquiryFilters {
 export async function listInquiries(
   filters: InquiryFilters = {},
 ): Promise<InquiryListItem[]> {
-  const conds = [];
+  // Archived enquiries drop off the register (the detail page can still load
+  // one directly, and it can be unarchived).
+  const conds: Array<SQL | undefined> = [eq(inquiries.isArchived, false)];
   if (filters.status) {
     conds.push(eq(inquiries.enquiryStatus, filters.status));
   }
@@ -142,6 +144,63 @@ export async function getNextSmNumber(): Promise<number> {
   if (!row) return 9579;
   const last = Number(row.last_value);
   return row.is_called ? last + 1 : last;
+}
+
+/**
+ * Shape a loaded inquiry row into the enquiry form's input fields for edit
+ * mode. Covers only the header / client / checklist / meta fields the edit
+ * form shows — products (inquiry_items) are NOT edited here (they link to
+ * costings/quotes), so the form hides its ProductsSection in edit mode.
+ *
+ * Conventions match the form's defaultValues: numeric columns are strings or
+ * undefined (not `null`), optional text nulls fold to `""`, and the date is a
+ * local YYYY-MM-DD string for the `<input type="date">`.
+ */
+export function getInquiryEditValues(inq: Inquiry) {
+  const numOrUndef = (v: string | null): number | undefined =>
+    v == null || v === "" ? undefined : Number(v);
+  const localIsoDate = (d: Date): string => {
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${d.getFullYear()}-${m}-${day}`;
+  };
+  return {
+    clientMode: "new" as const,
+    clientId: inq.clientId ?? undefined,
+    enquiryDate: localIsoDate(inq.enquiryDate),
+    priority: inq.priority,
+    source: inq.source ?? undefined,
+    companyName: inq.companyName,
+    export: inq.export ?? undefined,
+    currency: inq.currency,
+    country: inq.country,
+    state: inq.state ?? "",
+    city: inq.city ?? "",
+    addressLine1: inq.addressLine1 ?? "",
+    addressLine2: inq.addressLine2 ?? "",
+    addressLine3: inq.addressLine3 ?? "",
+    addressLine4: inq.addressLine4 ?? "",
+    pinCode: inq.pinCode ?? "",
+    contactFirstName: inq.contactFirstName ?? "",
+    contactLastName: inq.contactLastName ?? "",
+    contactNo: inq.contactNo ?? "",
+    contactEmail: inq.contactEmail ?? "",
+    ccEmails: inq.ccEmails ?? "",
+    productDescription: inq.productDescription,
+    quantityStatus: inq.quantityStatus ?? undefined,
+    quantityNos: numOrUndef(inq.quantityNos),
+    quantityUom: inq.quantityUom,
+    docsGiven: inq.docsGiven ?? [],
+    shapeDimensionCheck: inq.shapeDimensionCheck ?? undefined,
+    gradeCheck: inq.gradeCheck ?? undefined,
+    toleranceCheck: inq.toleranceCheck ?? undefined,
+    conditionCheck: inq.conditionCheck ?? undefined,
+    sampleReceived: inq.sampleReceived ?? undefined,
+    dimensionNotes: inq.dimensionNotes ?? "",
+    smFolderLink: inq.smFolderLink ?? "",
+    enquiryNotes: inq.enquiryNotes ?? "",
+    assignedSalesPersonId: inq.assignedSalesPersonId ?? undefined,
+  };
 }
 
 /** All product rows for a given inquiry, ordered by sort_order. Includes itemCode from the linked Item (nullable). */
