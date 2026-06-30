@@ -223,7 +223,7 @@ function ReadCard({ title, children }: { title: string; children: React.ReactNod
       className="bg-surface-card rounded-section border border-hairline p-7 max-md:p-6"
       style={{ boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)" }}
     >
-      <h2 className="mb-5 pb-3 border-b border-hairline text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
+      <h2 className="mb-5 pb-3 border-b border-hairline text-[13px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
         {title}
       </h2>
       {children}
@@ -239,13 +239,13 @@ function InfoGrid({
   const visible = rows.filter(([, v]) => v !== null && v !== undefined && v !== "");
   if (visible.length === 0) return null;
   return (
-    <dl className="grid grid-cols-1 gap-x-10 gap-y-5 sm:grid-cols-2">
+    <dl className="grid grid-cols-1 gap-x-10 gap-y-6 sm:grid-cols-2">
       {visible.map(([label, value]) => (
         <div key={label} className="flex flex-col gap-1">
-          <dt className="text-[11px] uppercase tracking-[0.08em] font-bold text-ink-subtle">
+          <dt className="text-[12px] uppercase tracking-[0.08em] font-bold text-ink-subtle">
             {label}
           </dt>
-          <dd className="text-[15px] leading-snug text-ink-strong break-words">{value}</dd>
+          <dd className="text-[17px] leading-snug text-ink-strong font-medium break-words">{value}</dd>
         </div>
       ))}
     </dl>

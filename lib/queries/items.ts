@@ -22,6 +22,22 @@ export interface ItemListItem {
   gradeName: string | null;
   conditionName: string | null;
   toleranceName: string | null;
+  smNumber: string | null;
+  custDrawingNo: string | null;
+  qty: string | null;
+  sizeCode: string | null;
+  outerDia: string | null;
+  innerDia: string | null;
+  length: string | null;
+  width: string | null;
+  thickness: string | null;
+  dimensionNotes: string | null;
+  altUom: string | null;
+  altUomConversion: string | null;
+  gradeCustomer: string | null;
+  gradeNameForCust: string | null;
+  partDescription1: string | null;
+  updatedAt: Date;
 }
 
 /**
@@ -53,6 +69,22 @@ export async function listItems(): Promise<ItemListItem[]> {
       gradeName: grade.name,
       conditionName: condition.name,
       toleranceName: tolerance.name,
+      smNumber: items.smNumber,
+      custDrawingNo: items.custDrawingNo,
+      qty: items.qty,
+      sizeCode: items.sizeCode,
+      outerDia: items.outerDia,
+      innerDia: items.innerDia,
+      length: items.length,
+      width: items.width,
+      thickness: items.thickness,
+      dimensionNotes: items.dimensionNotes,
+      altUom: items.altUom,
+      altUomConversion: items.altUomConversion,
+      gradeCustomer: items.gradeCustomer,
+      gradeNameForCust: items.gradeNameForCust,
+      partDescription1: items.partDescription1,
+      updatedAt: items.updatedAt,
     })
     .from(items)
     .leftJoin(shape, eq(items.shapeId, shape.id))

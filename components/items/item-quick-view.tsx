@@ -58,33 +58,64 @@ export function ItemQuickView({ item, isAdmin, onClose }: Props) {
     }
   }
 
-  const classification = [
-    item.shapeName,
-    item.gradeName,
-    item.toleranceName,
-    item.conditionName,
-  ]
-    .filter((v): v is string => Boolean(v))
-    .join(" · ");
+  const dimensions = composeDimensions(item);
 
-  const taxUnits = [
-    item.hsnCode ? `HSN ${item.hsnCode}` : null,
-    item.uom ? `UoM ${item.uom}` : null,
-  ]
-    .filter((v): v is string => Boolean(v))
-    .join(" · ");
+  const altUomValue =
+    item.altUom && item.altUomConversion
+      ? `${item.altUom} (1 = ${item.altUomConversion} ${item.uom ?? "base"})`
+      : item.altUom;
 
-  const rows: Array<[string, React.ReactNode]> = [
-    ["Customer", item.customerName],
-    ["Product", item.custProductName],
-    ["Classification", classification || null],
-    ["Tax & Units", taxUnits || null],
-    ["Part No", item.partNo],
-    ["Drawing Rev", item.drawingRevisionNo],
-    [
-      "Costing Type",
-      item.costingType ? COSTING_TYPE_LABELS[item.costingType] : null,
-    ],
+  const sections: Section[] = [
+    {
+      title: "Classification",
+      rows: [
+        ["Shape", item.shapeName],
+        ["Grade (Internal)", item.gradeName],
+        ["Tolerance", item.toleranceName],
+        ["Condition", item.conditionName],
+        ["Size Code", item.sizeCode],
+        [
+          "Costing Type",
+          item.costingType ? COSTING_TYPE_LABELS[item.costingType] : null,
+        ],
+      ],
+    },
+    {
+      title: "Dimensions",
+      rows: [
+        ["Dimensions", dimensions],
+        ["Dimension Notes", item.dimensionNotes],
+      ],
+    },
+    {
+      title: "Customer / Product",
+      rows: [
+        ["Customer", item.customerName],
+        ["SM Number", item.smNumber],
+        ["Product", item.custProductName],
+        ["Drawing No", item.custDrawingNo],
+        ["Drawing Rev", item.drawingRevisionNo],
+        ["Quantity", item.qty],
+        ["Grade (Customer)", item.gradeCustomer],
+        ["Grade Name for Customer", item.gradeNameForCust],
+      ],
+    },
+    {
+      title: "Tax & Units",
+      rows: [
+        ["HSN Code", item.hsnCode],
+        ["Unit of Measure", item.uom],
+        ["Alt UoM", altUomValue],
+      ],
+    },
+    {
+      title: "Part",
+      rows: [
+        ["Part No", item.partNo],
+        ["Description 1", item.partDescription1],
+      ],
+      hidden: !item.partNo && !item.partDescription1,
+    },
   ];
 
   return (
@@ -93,22 +124,22 @@ export function ItemQuickView({ item, isAdmin, onClose }: Props) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl rounded-2xl bg-white shadow-xl"
+        className="w-[min(92vw,720px)] max-w-2xl max-h-[88vh] overflow-y-auto rounded-2xl bg-white shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-hairline px-6 py-5">
+        <div className="flex items-start justify-between gap-4 border-b border-hairline px-7 pt-7 pb-5">
           <div>
-            <div className="text-[10px] uppercase tracking-[0.18em] font-bold text-ink-subtle">
+            <div className="text-[11px] uppercase tracking-[0.18em] font-bold text-ink-subtle">
               Item Master
             </div>
             <h2
-              className="mt-0.5 text-2xl font-bold text-ink-strong"
+              className="mt-1 text-[26px] leading-tight font-bold text-ink-strong break-all"
               style={{ fontFamily: "var(--font-mono)" }}
             >
               {item.itemCode}
             </h2>
             <span
-              className={`mt-1 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${
+              className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${
                 item.isActive
                   ? "bg-[var(--color-green-bg)] text-[var(--color-green-deep)]"
                   : "bg-[rgba(15,23,42,0.05)] text-ink-subtle"
@@ -127,20 +158,13 @@ export function ItemQuickView({ item, isAdmin, onClose }: Props) {
           </button>
         </div>
 
-        <dl className="grid grid-cols-1 gap-x-8 gap-y-3 px-6 py-5 sm:grid-cols-2">
-          {rows
-            .filter(([, v]) => v != null && v !== "")
-            .map(([label, value]) => (
-              <div key={label}>
-                <dt className="text-[11px] uppercase tracking-wide font-semibold text-ink-subtle">
-                  {label}
-                </dt>
-                <dd className="mt-0.5 text-[14px] text-ink-strong">{value}</dd>
-              </div>
-            ))}
-        </dl>
+        <div className="flex flex-col gap-7 px-7 py-7">
+          {sections.map((section) => (
+            <QuickViewSection key={section.title} section={section} />
+          ))}
+        </div>
 
-        <div className="flex flex-wrap justify-end gap-2 border-t border-hairline px-6 py-4">
+        <div className="flex flex-wrap justify-end gap-2 border-t border-hairline px-7 py-4">
           {isAdmin && (
             <button
               type="button"
@@ -172,5 +196,55 @@ export function ItemQuickView({ item, isAdmin, onClose }: Props) {
         </div>
       </div>
     </div>
+  );
+}
+
+/* ── Helpers ─────────────────────────────────────────────────────────── */
+
+interface Section {
+  title: string;
+  rows: ReadonlyArray<readonly [string, string | null | undefined]>;
+  hidden?: boolean;
+}
+
+function composeDimensions(
+  item: Pick<
+    ItemListItem,
+    "outerDia" | "innerDia" | "length" | "width" | "thickness"
+  >,
+): string | null {
+  const parts: string[] = [];
+  if (item.outerDia) parts.push(`OD ${item.outerDia}`);
+  if (item.innerDia) parts.push(`ID ${item.innerDia}`);
+  if (item.length) parts.push(`L ${item.length}`);
+  if (item.width) parts.push(`W ${item.width}`);
+  if (item.thickness) parts.push(`T ${item.thickness}`);
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
+function QuickViewSection({ section }: { section: Section }) {
+  if (section.hidden) return null;
+  const visible = section.rows.filter(
+    ([, v]) => v !== null && v !== undefined && v !== "",
+  );
+  if (visible.length === 0) return null;
+  return (
+    <section>
+      <h3 className="mb-4 pb-2 border-b border-hairline text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
+        {section.title}
+      </h3>
+      <dl className="grid grid-cols-2 gap-x-8 gap-y-4">
+        {visible.map(([label, value]) => (
+          <div key={label} className="flex flex-col gap-1">
+            <dt className="text-[12px] uppercase tracking-wide font-semibold text-ink-subtle">
+              {label}
+            </dt>
+            <dd className="text-[16px] leading-snug text-ink-strong font-medium break-words">
+              {value}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
   );
 }
