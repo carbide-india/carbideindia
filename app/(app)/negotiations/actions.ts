@@ -158,6 +158,73 @@ export async function createNegotiation(
   };
 }
 
+type SyncResult =
+  | { ok: true; added: number }
+  | { ok: false; error: string };
+
+/**
+ * Append products that were added to the linked enquiry AFTER this negotiation
+ * was created. Negotiations snapshot their lines at creation, so a later-added
+ * product is otherwise stranded. This inserts ONLY the missing lines (matched
+ * by inquiryItemId) and never touches existing ones. User-triggered; never
+ * auto-runs.
+ */
+export async function syncProductsFromEnquiry(
+  recordId: string,
+): Promise<SyncResult> {
+  await requireUser();
+  if (!isUuid(recordId)) return { ok: false, error: "Invalid negotiation id." };
+
+  try {
+    const [record] = await db
+      .select({ id: negotiations.id, inquiryId: negotiations.inquiryId })
+      .from(negotiations)
+      .where(eq(negotiations.id, recordId))
+      .limit(1);
+    if (!record) return { ok: false, error: "Negotiation not found." };
+    if (!record.inquiryId) {
+      return { ok: false, error: "This record isn't linked to an enquiry." };
+    }
+
+    const seeds = await getInquiryItemSeeds(record.inquiryId);
+
+    const existing = await db
+      .select({
+        inquiryItemId: negotiationItems.inquiryItemId,
+        sortOrder: negotiationItems.sortOrder,
+      })
+      .from(negotiationItems)
+      .where(eq(negotiationItems.negotiationId, recordId));
+
+    const present = new Set(
+      existing
+        .map((r) => r.inquiryItemId)
+        .filter((v): v is string => v !== null),
+    );
+    const missing = seeds.filter((s) => !present.has(s.inquiryItemId));
+    if (missing.length === 0) return { ok: true, added: 0 };
+
+    const maxSort = existing.reduce((m, r) => Math.max(m, r.sortOrder), -1);
+    const rows = missing.map((s, i) => ({
+      negotiationId: recordId,
+      inquiryItemId: s.inquiryItemId,
+      itemId: s.itemId,
+      sortOrder: maxSort + 1 + i,
+      custProductName: s.custProductName,
+      qty: s.qty,
+      finalCost: s.finalCost,
+    }));
+    await db.insert(negotiationItems).values(rows);
+
+    revalidatePath("/negotiations");
+    revalidatePath(`/negotiations/${recordId}`);
+    return { ok: true, added: missing.length };
+  } catch (err) {
+    console.error("[syncProductsFromEnquiry:negotiation] failed", err);
+    return { ok: false, error: "Could not add the products. Please try again." };
+  }
+}
+
 export async function updateNegotiation(
   id: string,
   input: UpdateNegotiationInput,

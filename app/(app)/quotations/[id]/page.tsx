@@ -4,11 +4,13 @@ import { requireUser } from "@/lib/auth/current";
 import { getQuotationById } from "@/lib/queries/quotations";
 import { getInquiryById } from "@/lib/queries/inquiries";
 import { listEmployeeOptions } from "@/lib/queries/employees";
-import { getQuotationItems } from "@/lib/queries/quotes";
+import { getQuotationItems, getInquiryItemSeeds } from "@/lib/queries/quotes";
 import {
   QuotationDetail,
   type QuotationInquiryLink,
 } from "@/components/quotations/quotation-detail";
+import { SyncProductsBanner } from "@/components/pipeline/sync-products-banner";
+import { syncProductsFromEnquiry } from "@/app/(app)/quotations/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -38,13 +40,17 @@ export default async function QuotationDetailPage({ params }: PageProps) {
   const quotation = await getQuotationById(id);
   if (!quotation) notFound();
 
-  // The linked enquiry (SM repo) supplies the header SM chip + number.
-  const [employees, inquiry, lines] = await Promise.all([
+  // The linked enquiry (SM repo) supplies the header SM chip + number, and the
+  // seed list lets us flag products added to the enquiry after this quote.
+  const [employees, inquiry, lines, seeds] = await Promise.all([
     listEmployeeOptions(),
     quotation.inquiryId
       ? getInquiryById(quotation.inquiryId)
       : Promise.resolve(null),
     getQuotationItems(quotation.id),
+    quotation.inquiryId
+      ? getInquiryItemSeeds(quotation.inquiryId)
+      : Promise.resolve([]),
   ]);
 
   const inquiryLink: QuotationInquiryLink | null = inquiry
@@ -55,8 +61,19 @@ export default async function QuotationDetailPage({ params }: PageProps) {
       }
     : null;
 
+  const presentIds = new Set(
+    lines.map((l) => l.inquiryItemId).filter((v): v is string => v !== null),
+  );
+  const missingCount = seeds.filter((s) => !presentIds.has(s.inquiryItemId)).length;
+
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6">
+      <SyncProductsBanner
+        missingCount={missingCount}
+        recordId={quotation.id}
+        recordLabel="quotation"
+        syncAction={syncProductsFromEnquiry}
+      />
       <QuotationDetail
         quotation={quotation}
         employees={employees}

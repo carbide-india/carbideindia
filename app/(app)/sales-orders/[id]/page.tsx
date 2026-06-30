@@ -4,10 +4,13 @@ import { requireUser } from "@/lib/auth/current";
 import { getSalesOrderById, getSalesOrderItems } from "@/lib/queries/sales-orders";
 import { getInquiryById } from "@/lib/queries/inquiries";
 import { listEmployeeOptions } from "@/lib/queries/employees";
+import { getInquiryItemSeeds } from "@/lib/queries/quotes";
 import {
   SoDetail,
   type SalesOrderInquiryLink,
 } from "@/components/sales-orders/so-detail";
+import { SyncProductsBanner } from "@/components/pipeline/sync-products-banner";
+import { syncProductsFromEnquiry } from "@/app/(app)/sales-orders/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -37,13 +40,17 @@ export default async function SalesOrderDetailPage({ params }: PageProps) {
   const salesOrder = await getSalesOrderById(id);
   if (!salesOrder) notFound();
 
-  // The linked enquiry (SM repo) supplies the header SM chip + number.
-  const [employees, inquiry, lines] = await Promise.all([
+  // The linked enquiry (SM repo) supplies the header SM chip + number, and the
+  // seed list lets us flag products added to the enquiry after this sales order.
+  const [employees, inquiry, lines, seeds] = await Promise.all([
     listEmployeeOptions(),
     salesOrder.inquiryId
       ? getInquiryById(salesOrder.inquiryId)
       : Promise.resolve(null),
     getSalesOrderItems(salesOrder.id),
+    salesOrder.inquiryId
+      ? getInquiryItemSeeds(salesOrder.inquiryId)
+      : Promise.resolve([]),
   ]);
 
   const inquiryLink: SalesOrderInquiryLink | null = inquiry
@@ -54,8 +61,19 @@ export default async function SalesOrderDetailPage({ params }: PageProps) {
       }
     : null;
 
+  const presentIds = new Set(
+    lines.map((l) => l.inquiryItemId).filter((v): v is string => v !== null),
+  );
+  const missingCount = seeds.filter((s) => !presentIds.has(s.inquiryItemId)).length;
+
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6">
+      <SyncProductsBanner
+        missingCount={missingCount}
+        recordId={salesOrder.id}
+        recordLabel="sales order"
+        syncAction={syncProductsFromEnquiry}
+      />
       <SoDetail
         salesOrder={salesOrder}
         employees={employees}

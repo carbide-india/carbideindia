@@ -159,6 +159,72 @@ export async function createSalesOrder(
   };
 }
 
+type SyncResult =
+  | { ok: true; added: number }
+  | { ok: false; error: string };
+
+/**
+ * Append products that were added to the linked enquiry AFTER this sales order
+ * was created. Sales orders snapshot their lines at creation, so a later-added
+ * product is otherwise stranded. This inserts ONLY the missing lines (matched
+ * by inquiryItemId) and never touches existing ones. User-triggered; never
+ * auto-runs. (Sales orders carry no finalCost — that seed field is dropped.)
+ */
+export async function syncProductsFromEnquiry(
+  recordId: string,
+): Promise<SyncResult> {
+  await requireUser();
+  if (!isUuid(recordId)) return { ok: false, error: "Invalid sales order id." };
+
+  try {
+    const [record] = await db
+      .select({ id: salesOrders.id, inquiryId: salesOrders.inquiryId })
+      .from(salesOrders)
+      .where(eq(salesOrders.id, recordId))
+      .limit(1);
+    if (!record) return { ok: false, error: "Sales order not found." };
+    if (!record.inquiryId) {
+      return { ok: false, error: "This record isn't linked to an enquiry." };
+    }
+
+    const seeds = await getInquiryItemSeeds(record.inquiryId);
+
+    const existing = await db
+      .select({
+        inquiryItemId: salesOrderItems.inquiryItemId,
+        sortOrder: salesOrderItems.sortOrder,
+      })
+      .from(salesOrderItems)
+      .where(eq(salesOrderItems.salesOrderId, recordId));
+
+    const present = new Set(
+      existing
+        .map((r) => r.inquiryItemId)
+        .filter((v): v is string => v !== null),
+    );
+    const missing = seeds.filter((s) => !present.has(s.inquiryItemId));
+    if (missing.length === 0) return { ok: true, added: 0 };
+
+    const maxSort = existing.reduce((m, r) => Math.max(m, r.sortOrder), -1);
+    const rows = missing.map((s, i) => ({
+      salesOrderId: recordId,
+      inquiryItemId: s.inquiryItemId,
+      itemId: s.itemId,
+      sortOrder: maxSort + 1 + i,
+      custProductName: s.custProductName,
+      qty: s.qty,
+    }));
+    await db.insert(salesOrderItems).values(rows);
+
+    revalidatePath("/sales-orders");
+    revalidatePath(`/sales-orders/${recordId}`);
+    return { ok: true, added: missing.length };
+  } catch (err) {
+    console.error("[syncProductsFromEnquiry:salesOrder] failed", err);
+    return { ok: false, error: "Could not add the products. Please try again." };
+  }
+}
+
 export async function updateSalesOrder(
   id: string,
   input: UpdateSalesOrderInput,
