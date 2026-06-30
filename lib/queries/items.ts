@@ -134,3 +134,82 @@ export async function getItemById(id: string): Promise<ItemDetail | null> {
 
   return row ?? null;
 }
+
+/**
+ * Item shaped for the edit form's input fields (mirrors `ItemFormValues`).
+ * Numeric DB columns come back as strings — that's fine, the form's zod coerces
+ * them. Nulls fold to "" / undefined so RHF's controlled inputs stay happy.
+ */
+export interface ItemEditValues {
+  shapeId?: string;
+  internalGradeId?: string;
+  toleranceId?: string;
+  conditionId?: string;
+  sizeCode?: string;
+  costingType?: NonNullable<Item["costingType"]>;
+  gradeCustomer: string;
+  gradeNameForCust: string;
+  outerDia?: string;
+  innerDia?: string;
+  length?: string;
+  width?: string;
+  thickness?: string;
+  dimensionNotes: string;
+  hsnCode: string;
+  uom: string;
+  altUom: string;
+  altUomConversion?: string;
+  partNo: string;
+  partDescription1: string;
+  partDescription2: string;
+  partDescription3: string;
+  partDescription4: string;
+  partTag: string;
+  customerName: string;
+  smNumber: string;
+  custProductName: string;
+  custDrawingNo: string;
+  drawingRevisionNo: string;
+  qty?: string;
+}
+
+export async function getItemForEdit(id: string): Promise<ItemEditValues | null> {
+  const item = await getItemById(id);
+  if (!item) return null;
+
+  const str = (v: string | null): string | undefined => (v ?? undefined);
+  const text = (v: string | null): string => v ?? "";
+
+  return {
+    shapeId: item.shapeId ?? undefined,
+    internalGradeId: item.internalGradeId ?? undefined,
+    toleranceId: item.toleranceId ?? undefined,
+    conditionId: item.conditionId ?? undefined,
+    sizeCode: str(item.sizeCode),
+    costingType: item.costingType ?? undefined,
+    gradeCustomer: text(item.gradeCustomer),
+    gradeNameForCust: text(item.gradeNameForCust),
+    outerDia: str(item.outerDia),
+    innerDia: str(item.innerDia),
+    length: str(item.length),
+    width: str(item.width),
+    thickness: str(item.thickness),
+    dimensionNotes: text(item.dimensionNotes),
+    hsnCode: text(item.hsnCode),
+    uom: item.uom ?? "Nos",
+    altUom: text(item.altUom),
+    altUomConversion: str(item.altUomConversion),
+    partNo: text(item.partNo),
+    partDescription1: text(item.partDescription1),
+    partDescription2: text(item.partDescription2),
+    partDescription3: text(item.partDescription3),
+    partDescription4: text(item.partDescription4),
+    partTag: text(item.partTag),
+    customerName: text(item.customerName),
+    smNumber: text(item.smNumber),
+    custProductName: text(item.custProductName),
+    custDrawingNo: text(item.custDrawingNo),
+    drawingRevisionNo: text(item.drawingRevisionNo),
+    qty: str(item.qty),
+  };
+}

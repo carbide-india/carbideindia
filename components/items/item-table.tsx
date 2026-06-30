@@ -152,6 +152,7 @@ export function ItemTable({ rows }: Props) {
       getRowId={(r) => r.id}
       columns={columns}
       getOpenHref={(r) => `/items/${r.id}` as Route}
+      getEditHref={(r) => `/items/${r.id}/edit` as Route}
       exportFilename="item-master"
       emptyTitle="No items yet — create the first one."
       emptyHint="Each item gets a unique internal code assembled from shape, grade and size."

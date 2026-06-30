@@ -1,4 +1,7 @@
 import * as React from "react";
+import Link from "next/link";
+import type { Route } from "next";
+import { Pencil } from "lucide-react";
 import { COSTING_TYPE_LABELS } from "@/db/enums";
 import { formatDate } from "@/lib/format";
 import type { ItemDetail as ItemDetailType } from "@/lib/queries/items";
@@ -60,13 +63,22 @@ export function ItemDetail({ item, auditEntries, documents, isAdmin }: Props) {
             )}
           </p>
         </div>
-        {isAdmin && (
-          <ItemStatusControl
-            itemId={item.id}
-            itemCode={item.itemCode}
-            isActive={item.isActive}
-          />
-        )}
+        <div className="flex items-center gap-3">
+          <Link
+            href={`/items/${item.id}/edit` as Route}
+            className="inline-flex items-center gap-1.5 h-9 rounded-lg border border-hairline px-3 text-[13px] font-semibold text-ink-soft hover:border-brand hover:text-brand transition-colors"
+          >
+            <Pencil size={15} strokeWidth={2.2} />
+            Edit
+          </Link>
+          {isAdmin && (
+            <ItemStatusControl
+              itemId={item.id}
+              itemCode={item.itemCode}
+              isActive={item.isActive}
+            />
+          )}
+        </div>
       </header>
 
       {/* ── Cards ──────────────────────────────────────────────────── */}

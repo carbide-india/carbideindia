@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
 import { COSTING_TYPES, COSTING_TYPE_LABELS } from "@/db/enums";
 import { CreateItemSchema } from "@/lib/validators/item";
-import { createItem } from "@/app/(app)/items/actions";
+import { createItem, updateItem } from "@/app/(app)/items/actions";
 import { fireToast } from "@/lib/toast";
 import { Select } from "@/components/ui/select";
 import { Field } from "@/components/inquiries/form-field";
@@ -34,6 +34,10 @@ interface Props {
   sizes: MasterOptionWithCode[];
   /** Per-shape dimension config keyed by shape id (forms/masters redesign). */
   shapeProfiles: Record<string, ShapeConfig>;
+  /** When set, the form edits this item in place instead of creating a new one. */
+  editItemId?: string;
+  /** Prefill values for edit mode — shaped like the form's input fields. */
+  initialValues?: Partial<ItemFormValues>;
 }
 
 /** Size-class options — shown alongside the auto-derived value so user can override. */
@@ -61,7 +65,10 @@ export function ItemForm({
   // sizes is used for the sizeCodeById lookup map (live preview dep)
   sizes,
   shapeProfiles,
+  editItemId,
+  initialValues,
 }: Props) {
+  const isEdit = Boolean(editItemId);
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
   const [serverError, setServerError] = React.useState<string | null>(null);
@@ -116,6 +123,8 @@ export function ItemForm({
       hsnCode: "",
       uom: "Nos",
       altUom: "",
+      // Edit mode prefill — overrides the empty defaults field-by-field.
+      ...initialValues,
     },
   });
 
@@ -211,6 +220,17 @@ export function ItemForm({
   const submit = handleSubmit((values) => {
     setServerError(null);
     startTransition(async () => {
+      if (isEdit && editItemId) {
+        const res = await updateItem(editItemId, values);
+        if (!res.ok) {
+          setServerError(res.error);
+          fireToast({ message: res.error, type: "error" });
+          return;
+        }
+        fireToast({ message: "Item updated.", type: "success" });
+        router.push(`/items/${editItemId}` as Route);
+        return;
+      }
       const res = await createItem(values);
       if (!res.ok) {
         setServerError(res.error);
@@ -575,7 +595,7 @@ export function ItemForm({
             letterSpacing: "0.005em",
           }}
         >
-          {pending ? "Creating…" : "Create Item"}
+          {pending ? "Saving…" : isEdit ? "Update Item" : "Create Item"}
         </button>
       </div>
     </form>

@@ -230,10 +230,168 @@ export async function createItem(input: CreateItemInput): Promise<Result> {
   }
 }
 
-type ToggleResult = { ok: true } | { ok: false; error: string };
+type UpdateResult =
+  | { ok: true; id: string; itemCode: string }
+  | { ok: false; error: string };
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Update an existing Item in place. The classification + dimensions can change,
+ * so both the dedup fingerprint and the internal item code are recomputed — but
+ * the serial (`seq`) is REUSED so the code stays stable in its serial slot. If
+ * the new fingerprint collides with a DIFFERENT existing item, the edit is
+ * rejected (we never merge two serials). Admin/sales-floor open (requireUser).
+ */
+export async function updateItem(
+  id: string,
+  input: CreateItemInput,
+): Promise<UpdateResult> {
+  const me = await requireUser();
+  if (!UUID_RE.test(id)) return { ok: false, error: "Invalid item id." };
+
+  const parsed = CreateItemSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+  const v = parsed.data;
+
+  // Load the existing row (need its seq to keep the serial stable).
+  const [current] = await db
+    .select({ id: items.id, seq: items.seq })
+    .from(items)
+    .where(eq(items.id, id))
+    .limit(1);
+  if (!current) return { ok: false, error: "Item not found." };
+
+  const dims = {
+    outerDia: numOrNull(v.outerDia), innerDia: numOrNull(v.innerDia),
+    length: numOrNull(v.length), width: numOrNull(v.width), thickness: numOrNull(v.thickness),
+  };
+
+  // Enforce the selected shape's required dimensions (same rule as createItem).
+  if (v.shapeId) {
+    const [shapeRow] = await db
+      .select({ config: masterOptions.config })
+      .from(masterOptions)
+      .where(eq(masterOptions.id, v.shapeId))
+      .limit(1);
+    if (shapeRow) {
+      const cfg = resolveShapeConfig(shapeRow.config);
+      const missing = requiredDims(cfg).filter((f) => dims[f] == null);
+      if (missing.length > 0) {
+        return {
+          ok: false,
+          error: `Missing required dimension(s) for this shape: ${missing.map((f) => DIM_LABELS[f]).join(", ")}.`,
+        };
+      }
+    }
+  }
+
+  const dedupKey = itemDedupKey({
+    shapeId: v.shapeId, internalGradeId: v.internalGradeId,
+    conditionId: v.conditionId, toleranceId: v.toleranceId, ...dims,
+  });
+
+  // Reject if another item already carries this fingerprint (would duplicate).
+  const [clash] = await db
+    .select({ id: items.id })
+    .from(items)
+    .where(eq(items.dedupKey, dedupKey))
+    .limit(1);
+  if (clash && clash.id !== id) {
+    return { ok: false, error: "An identical item already exists." };
+  }
+
+  // Resolve the masters' codes (grade code == its name, e.g. CIF06).
+  const refIds = [v.shapeId, v.internalGradeId, v.conditionId, v.toleranceId].filter(
+    (x): x is string => Boolean(x),
+  );
+  const codeById = new Map<string, { name: string; code: string | null }>();
+  if (refIds.length) {
+    const rows = await db
+      .select({ id: masterOptions.id, name: masterOptions.name, code: masterOptions.code })
+      .from(masterOptions)
+      .where(inArray(masterOptions.id, refIds));
+    for (const r of rows) codeById.set(r.id, { name: r.name, code: r.code });
+  }
+  const codeOf = (refId?: string) =>
+    refId ? (codeById.get(refId)?.code ?? codeById.get(refId)?.name ?? "") : "";
+
+  const dimList = [dims.outerDia, dims.innerDia, dims.length, dims.width, dims.thickness]
+    .filter((d): d is number => d !== null);
+  const sizeCode = v.sizeCode || (dimList.length ? deriveSizeCode(dimList) : "");
+
+  // Recompute the code reusing the EXISTING serial (stable slot, fresh spec).
+  const itemCode = buildItemCode({
+    sizeCode: sizeCode || "X",
+    seq: current.seq,
+    shapeCode: codeOf(v.shapeId),
+    gradeCode: codeOf(v.internalGradeId),
+    conditionCode: codeOf(v.conditionId),
+    toleranceCode: codeOf(v.toleranceId),
+    dims: dimList,
+  });
+
+  try {
+    await db
+      .update(items)
+      .set({
+        itemCode, dedupKey,
+        smNumber: v.smNumber ?? null,
+        customerName: v.customerName ?? null,
+        custProductName: v.custProductName ?? null,
+        custDrawingNo: v.custDrawingNo ?? null,
+        drawingRevisionNo: v.drawingRevisionNo ?? null,
+        qty: v.qty != null ? String(v.qty) : null,
+        sizeCode: sizeCode || null,
+        shapeId: v.shapeId ?? null,
+        internalGradeId: v.internalGradeId ?? null,
+        toleranceId: v.toleranceId ?? null,
+        conditionId: v.conditionId ?? null,
+        gradeCustomer: v.gradeCustomer ?? null,
+        gradeNameForCust: v.gradeNameForCust ?? null,
+        outerDia: dims.outerDia != null ? String(dims.outerDia) : null,
+        innerDia: dims.innerDia != null ? String(dims.innerDia) : null,
+        length: dims.length != null ? String(dims.length) : null,
+        width: dims.width != null ? String(dims.width) : null,
+        thickness: dims.thickness != null ? String(dims.thickness) : null,
+        dimensionNotes: v.dimensionNotes ?? null,
+        partNo: v.partNo ?? null,
+        partDescription1: v.partDescription1 ?? null,
+        partDescription2: v.partDescription2 ?? null,
+        partDescription3: v.partDescription3 ?? null,
+        partDescription4: v.partDescription4 ?? null,
+        partTag: v.partTag ?? null,
+        costingType: v.costingType ?? null,
+        hsnCode: v.hsnCode ?? null,
+        uom: v.uom ?? "Nos",
+        altUom: v.altUom ?? null,
+        altUomConversion: v.altUomConversion != null ? String(v.altUomConversion) : null,
+        updatedAt: new Date(),
+      })
+      .where(eq(items.id, id));
+  } catch (err) {
+    console.error("[updateItem] failed", err);
+    return { ok: false, error: "Could not save the item. Please try again." };
+  }
+
+  await recordAudit({
+    entityType: "item",
+    entityId: id,
+    entityLabel: itemCode,
+    action: "update",
+    actorId: me.id,
+    actorName: me.name,
+    summary: "Item updated",
+  });
+  revalidatePath("/items");
+  revalidatePath(`/items/${id}`);
+  return { ok: true, id, itemCode };
+}
+
+type ToggleResult = { ok: true } | { ok: false; error: string };
 
 /**
  * Deactivate an item (ERP Phase 4 governance — deactivate-only). Items are
