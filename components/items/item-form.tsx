@@ -15,7 +15,6 @@ import { Field } from "@/components/inquiries/form-field";
 import { FoldingSection, useFoldingForm } from "@/components/forms/folding-section";
 import { buildItemCode, deriveSizeCode } from "@/lib/item-master/item-code";
 import type { MasterOptionWithCode } from "@/lib/queries/masters";
-import type { InquiryOption } from "@/lib/queries/inquiries";
 import {
   DIM_FIELDS,
   DIM_LABELS,
@@ -33,7 +32,6 @@ interface Props {
   tolerances: MasterOptionWithCode[];
   conditions: MasterOptionWithCode[];
   sizes: MasterOptionWithCode[];
-  inquiries: InquiryOption[];
   /** Per-shape dimension config keyed by shape id (forms/masters redesign). */
   shapeProfiles: Record<string, ShapeConfig>;
 }
@@ -52,8 +50,8 @@ const SIZE_CODE_OPTIONS = [
 ];
 
 /**
- * Item form — live code preview, optional enquiry auto-fill, and all
- * classification + dimension + part-description fields.
+ * Item form — live code preview plus all classification + dimension +
+ * part-description fields.
  */
 export function ItemForm({
   shapes,
@@ -62,7 +60,6 @@ export function ItemForm({
   conditions,
   // sizes is used for the sizeCodeById lookup map (live preview dep)
   sizes,
-  inquiries,
   shapeProfiles,
 }: Props) {
   const router = useRouter();
@@ -154,9 +151,7 @@ export function ItemForm({
   // validation on Continue. All item fields are optional client-side (the
   // server enforces shape-required dims), so Continue mostly just advances.
   const SECTION_FIELDS: string[][] = [
-    ["inquiryId", "smNumber", "customerName", "custProductName", "custDrawingNo", "drawingRevisionNo", "qty"],
-    ["shapeId", "internalGradeId", "toleranceId", "conditionId", "sizeCode", "costingType", "gradeCustomer", "gradeNameForCust"],
-    ["outerDia", "innerDia", "length", "width", "thickness", "dimensionNotes"],
+    ["shapeId", "internalGradeId", "toleranceId", "conditionId", "sizeCode", "costingType", "gradeCustomer", "gradeNameForCust", "outerDia", "innerDia", "length", "width", "thickness", "dimensionNotes"],
     ["hsnCode", "uom", "altUom", "altUomConversion"],
     ["partNo", "partDescription1", "partDescription2", "partDescription3", "partDescription4", "partTag"],
   ];
@@ -213,15 +208,6 @@ export function ItemForm({
   // Replace the "00000" seq placeholder with "(auto)" for display.
   const displayCode = previewCode.replace("-00000-", "-(auto)-");
 
-  /** When user selects an enquiry, auto-fill the snapshot fields. */
-  function applyInquiryFill(inquiryId: string) {
-    const inq = inquiries.find((i) => i.id === inquiryId);
-    if (!inq) return;
-    setValue("inquiryId", inq.id);
-    setValue("smNumber", inq.smNumber);
-    setValue("customerName", inq.companyName);
-  }
-
   const submit = handleSubmit((values) => {
     setServerError(null);
     startTransition(async () => {
@@ -261,71 +247,12 @@ export function ItemForm({
         </span>
       </div>
 
-      {/* ── 1 · Source ───────────────────────────────────────────── */}
+      {/* ── 1 · Classification ───────────────────────────────────── */}
       <FoldingSection
         ctl={fold}
         index={0}
-        title="Source"
-        fields={SECTION_FIELDS[0]!}
-        hint="Optional — pick a source to auto-fill customer and SM number."
-        summary={watch("smNumber") || watch("customerName") || "No source linked"}
-      >
-        <Field id="item-inquiry" label="From Source" labelOnly>
-          <Controller
-            control={control}
-            name="inquiryId"
-            render={({ field }) => (
-              <Select
-                id="item-inquiry"
-                value={field.value ?? ""}
-                onValueChange={(v) => {
-                  field.onChange(v || undefined);
-                  if (v) applyInquiryFill(v);
-                }}
-                placeholder="Select an enquiry…"
-                searchable
-                searchPlaceholder="Search by SM number or company…"
-                options={[
-                  { value: "", label: "— None —" },
-                  ...inquiries.map((i) => ({
-                    value: i.id,
-                    label: `${i.smNumber} — ${i.companyName}`,
-                  })),
-                ]}
-              />
-            )}
-          />
-        </Field>
-
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-          <Field id="item-sm" label="SM Number">
-            <input
-              id="item-sm"
-              type="text"
-              className="nt-input"
-              placeholder="e.g. SM9600"
-              {...register("smNumber")}
-            />
-          </Field>
-          <Field id="item-customer" label="Customer Name">
-            <input
-              id="item-customer"
-              type="text"
-              className="nt-input"
-              placeholder="Company name"
-              {...register("customerName")}
-            />
-          </Field>
-        </div>
-
-      </FoldingSection>
-
-      {/* ── 2 · Classification ───────────────────────────────────── */}
-      <FoldingSection
-        ctl={fold}
-        index={1}
         title="Classification"
-        fields={SECTION_FIELDS[1]!}
+        fields={SECTION_FIELDS[0]!}
         hint="These fields drive the internal item code — required for the code to be meaningful."
         summary={displayCode}
       >
@@ -349,7 +276,44 @@ export function ItemForm({
               )}
             />
           </Field>
+        </div>
 
+        {/* Dimensions — appear inline right after Shape, driven by it. */}
+        <div className="grid grid-cols-3 gap-4 max-md:grid-cols-2 max-sm:grid-cols-1">
+          {DIM_FIELDS.map((f) => {
+            const rule = shapeConfig.dims[f];
+            if (rule === "hidden") return null;
+            return (
+              <Field
+                key={f}
+                id={`item-${f}`}
+                label={`${DIM_LABELS[f]} (mm)${rule === "required" ? " *" : ""}`}
+              >
+                <input
+                  id={`item-${f}`}
+                  type="number"
+                  min={0}
+                  step="any"
+                  className="nt-input"
+                  placeholder="0.00"
+                  {...register(f)}
+                />
+              </Field>
+            );
+          })}
+        </div>
+        <Field id="item-dim-notes" label="Dimension Notes">
+          <textarea
+            id="item-dim-notes"
+            rows={2}
+            className="nt-input resize-y"
+            style={{ fontWeight: 400 }}
+            placeholder="Special notes about dimensions…"
+            {...register("dimensionNotes")}
+          />
+        </Field>
+
+        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
           <Field id="item-grade" label="Internal Grade" labelOnly>
             <Controller
               control={control}
@@ -472,59 +436,12 @@ export function ItemForm({
         </div>
       </FoldingSection>
 
-      {/* ── 3 · Dimensions (right after Shape, driven by it) ─────── */}
+      {/* ── 2 · Tax & Units ──────────────────────────────────────── */}
       <FoldingSection
         ctl={fold}
-        index={2}
-        title="Dimensions"
-        fields={SECTION_FIELDS[2]!}
-        hint={
-          watchedShapeId
-            ? "Only the dimensions this shape uses are shown. Required fields are marked *."
-            : "All values in mm. Pick a Shape above to show only the dimensions it needs."
-        }
-      >
-        <div className="grid grid-cols-3 gap-4 max-md:grid-cols-2 max-sm:grid-cols-1">
-          {DIM_FIELDS.map((f) => {
-            const rule = shapeConfig.dims[f];
-            if (rule === "hidden") return null;
-            return (
-              <Field
-                key={f}
-                id={`item-${f}`}
-                label={`${DIM_LABELS[f]} (mm)${rule === "required" ? " *" : ""}`}
-              >
-                <input
-                  id={`item-${f}`}
-                  type="number"
-                  min={0}
-                  step="any"
-                  className="nt-input"
-                  placeholder="0.00"
-                  {...register(f)}
-                />
-              </Field>
-            );
-          })}
-        </div>
-        <Field id="item-dim-notes" label="Dimension Notes">
-          <textarea
-            id="item-dim-notes"
-            rows={2}
-            className="nt-input resize-y"
-            style={{ fontWeight: 400 }}
-            placeholder="Special notes about dimensions…"
-            {...register("dimensionNotes")}
-          />
-        </Field>
-      </FoldingSection>
-
-      {/* ── 4 · Tax & Units ──────────────────────────────────────── */}
-      <FoldingSection
-        ctl={fold}
-        index={3}
+        index={1}
         title="Tax & Units"
-        fields={SECTION_FIELDS[3]!}
+        fields={SECTION_FIELDS[1]!}
         hint="HSN code (GST) and the unit of measure. Alt UoM lets you record a secondary unit and its conversion to the base UoM."
         summary={watch("hsnCode") ? `HSN ${watch("hsnCode")} · ${watch("uom") ?? "Nos"}` : (watch("uom") ?? "Nos")}
       >
@@ -569,12 +486,12 @@ export function ItemForm({
         </div>
       </FoldingSection>
 
-      {/* ── 4 · Part Details ──────────────────────────────────────── */}
+      {/* ── 3 · Part Details ──────────────────────────────────────── */}
       <FoldingSection
         ctl={fold}
-        index={4}
+        index={2}
         title="Part Details"
-        fields={SECTION_FIELDS[4]!}
+        fields={SECTION_FIELDS[2]!}
         hint="Part number, tag, and up to four description lines for quotation inserts."
         hideContinue
       >

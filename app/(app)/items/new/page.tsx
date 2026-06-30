@@ -4,21 +4,19 @@ import { ItemForm } from "@/components/items/item-form";
 import { BackLink } from "@/components/ui/back-link";
 import { requireUser } from "@/lib/auth/current";
 import { listMasterOptionsWithCode, getShapeProfiles } from "@/lib/queries/masters";
-import { listInquiryOptions } from "@/lib/queries/inquiries";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewItemPage() {
   await requireUser();
 
-  const [shapes, grades, tolerances, conditions, sizes, inquiries, shapeProfiles] =
+  const [shapes, grades, tolerances, conditions, sizes, shapeProfiles] =
     await Promise.all([
       listMasterOptionsWithCode("shape"),
       listMasterOptionsWithCode("internal_grade"),
       listMasterOptionsWithCode("tolerance"),
       listMasterOptionsWithCode("condition"),
       listMasterOptionsWithCode("size"),
-      listInquiryOptions(),
       getShapeProfiles(),
     ]);
 
@@ -57,7 +55,6 @@ export default async function NewItemPage() {
           tolerances={tolerances}
           conditions={conditions}
           sizes={sizes}
-          inquiries={inquiries}
           shapeProfiles={shapeProfiles.byId}
         />
       </main>
