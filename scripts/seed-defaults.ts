@@ -130,6 +130,8 @@ const MASTER_SEEDS: Record<MasterKind, string[]> = {
     "Cylinder - Reg", "H. Cylinder - Reg", "Flat - Reg",
     "Cylinder - Spl", "H. Cylinder - Spl", "Flat - Spl",
   ],
+  dispatch_condition: ["Sintered", "Green", "Soft", "HIP"],
+  pressing_type: ["Manual", "Auto", "Isostatic", "Extrusion"],
   tolerance: [
     "CID06",
     "CID06(CID07)",

@@ -237,6 +237,9 @@ export const MASTER_KINDS = [
   // assemble the internal item code.
   "size",
   "shape",
+  // Job Card (2026-06-30): production work-order masters.
+  "dispatch_condition",
+  "pressing_type",
 ] as const;
 export type MasterKind = (typeof MASTER_KINDS)[number];
 
@@ -258,6 +261,8 @@ export const MASTER_KIND_LABELS: Record<MasterKind, string> = {
   condition: "Condition",
   size: "Size",
   shape: "Shape",
+  dispatch_condition: "Dispatch Condition",
+  pressing_type: "Pressing Type",
 };
 
 // ── Inquiry module (Phase 2) — option lists from Manan's sheet ──

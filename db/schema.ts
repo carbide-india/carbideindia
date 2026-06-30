@@ -1097,6 +1097,81 @@ export const projectMembers = pgTable(
   (t) => [primaryKey({ columns: [t.projectNodeId, t.employeeId] })],
 );
 
+// ── Job Card (production work order — 2026-06-30) ───────────────────────────
+// The core production entity (legacy ERP has 12,500+). Mostly free-text +
+// numeric snapshots taken at issue time; optional links back to the sales
+// order, client and item it was raised from. Governance pattern mirrors
+// items/sales_orders (deactivate-only: is_active=false + deleted_at).
+export const jobCards = pgTable(
+  "job_cards",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // User-entered work-order number (e.g. "8191A"). Unique case-insensitively
+    // via the lower() expression index below.
+    jobCardNo: text("job_card_no").notNull(),
+    jobCardDate: timestamp("job_card_date", { withTimezone: true }),
+    oaNo: text("oa_no"), // Order Acknowledgement no.
+
+    // Optional links + snapshots (snapshots survive source edits/deletes).
+    salesOrderId: uuid("sales_order_id").references(() => salesOrders.id, { onDelete: "set null" }),
+    clientId: uuid("client_id").references(() => clients.id, { onDelete: "set null" }),
+    customerName: text("customer_name"),
+    itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
+    productCode: text("product_code"), // snapshot of item_code
+    productName: text("product_name"),
+
+    diaSize: text("dia_size"),
+    punchSize: text("punch_size"),
+    proposedSize: text("proposed_size"),
+
+    gradeName: text("grade_name"),
+    gradeColour: text("grade_colour"),
+
+    deliveryDate: timestamp("delivery_date", { withTimezone: true }),
+
+    weight: numeric("weight"),
+    heightMin: numeric("height_min"),
+    heightMax: numeric("height_max"),
+    orderQuantity: numeric("order_quantity"),
+    plannedQtyToPress: numeric("planned_qty_to_press"),
+
+    dispatchConditionId: uuid("dispatch_condition_id").references(() => masterOptions.id, { onDelete: "set null" }),
+    toleranceId: uuid("tolerance_id").references(() => masterOptions.id, { onDelete: "set null" }),
+    pressingTypeId: uuid("pressing_type_id").references(() => masterOptions.id, { onDelete: "set null" }),
+
+    ypNo: text("yp_no"),
+    supportSizeTop: text("support_size_top"),
+    supportSizeBottom: text("support_size_bottom"),
+
+    makeSampleForSintering: boolean("make_sample_for_sintering"),
+    outsource: boolean("outsource"),
+    supplierVendorName: text("supplier_vendor_name"),
+    process: text("process"),
+
+    prevWeight: numeric("prev_weight"),
+    prevPressure: text("prev_pressure"),
+    prevGradeName: text("prev_grade_name"),
+
+    remarks: text("remarks"),
+
+    // Governance (deactivate-only lifecycle).
+    isActive: boolean("is_active").notNull().default(true),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+
+    createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("job_cards_job_card_no_uidx").on(sql`lower(${t.jobCardNo})`),
+    index("job_cards_client_idx").on(t.clientId),
+    index("job_cards_item_idx").on(t.itemId),
+    index("job_cards_active_idx").on(t.isActive),
+  ],
+);
+export type JobCard = typeof jobCards.$inferSelect;
+export type NewJobCard = typeof jobCards.$inferInsert;
+
 /**
  * Document library (Manan #27/#28). The catalogue for files stored as
  * private Vercel Blob objects under the `documents/` pathname prefix
@@ -1116,6 +1191,7 @@ export const documents = pgTable(
     taskId: uuid("task_id").references(() => tasks.id, { onDelete: "set null" }),
     clientId: uuid("client_id").references(() => clients.id, { onDelete: "cascade" }),
     itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
+    jobCardId: uuid("job_card_id").references(() => jobCards.id, { onDelete: "set null" }),
     uploadedById: uuid("uploaded_by_id").references(() => employees.id, {
       onDelete: "set null",
     }),
@@ -1127,6 +1203,7 @@ export const documents = pgTable(
     index("documents_task_idx").on(t.taskId),
     index("documents_client_idx").on(t.clientId),
     index("documents_item_idx").on(t.itemId),
+    index("documents_job_card_idx").on(t.jobCardId),
   ],
 );
 
