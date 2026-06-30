@@ -1,6 +1,6 @@
 "use client";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ListTodo, CalendarDays, FolderKanban, SquareKanban, CalendarCheck, Boxes, Layers, Building2 } from "lucide-react";
+import { LayoutDashboard, ListTodo, CalendarDays, FolderKanban, SquareKanban, CalendarCheck, Boxes, Layers, Building2, ClipboardList } from "lucide-react";
 import type { Route } from "next";
 import { MainNavPill } from "./main-nav-pill";
 import { FormsLauncher } from "./forms-launcher";
@@ -61,6 +61,14 @@ export function MainNav({ activeTasks, isAdmin, variant }: Props) {
         label="Item Master"
         Icon={Boxes}
         active={isActive("/items")}
+        variant={variant}
+      />
+      {/* Job Cards — production work order, open to the whole floor. */}
+      <MainNavPill
+        href={"/job-cards" as Route}
+        label="Job Cards"
+        Icon={ClipboardList}
+        active={isActive("/job-cards")}
         variant={variant}
       />
       {/* Client Master — admin-only roster of clients. */}
