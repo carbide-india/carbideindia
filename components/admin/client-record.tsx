@@ -77,9 +77,6 @@ export function ClientRecord({ record, documents, auditEntries }: Props) {
           <p className="text-[12px] uppercase tracking-[0.18em] font-bold text-ink-subtle">
             Client Master · Record
           </p>
-          {record.clientCode && (
-            <p className="font-mono text-[15px] text-ink-muted mt-0.5">{record.clientCode}</p>
-          )}
           <h1 className="text-[36px] font-bold leading-tight tracking-tight text-ink-strong mt-1">
             {record.name}
           </h1>
@@ -117,8 +114,8 @@ export function ClientRecord({ record, documents, auditEntries }: Props) {
       {/* ── Cards ──────────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-6">
 
-        {/* 1. Identity */}
-        <ReadCard title="Identity">
+        {/* 1. Business Profile */}
+        <ReadCard title="Business Profile">
           <InfoGrid
             rows={[
               [
@@ -210,12 +207,6 @@ export function ClientRecord({ record, documents, auditEntries }: Props) {
                     ) : (
                       <p className="text-[13px] text-ink-subtle">No address on file</p>
                     )}
-                    {addr.gstin && (
-                      <p className="text-[13px] text-ink-soft">
-                        <span className="font-semibold text-ink-subtle">GSTIN</span>{" "}
-                        <span className="font-mono">{addr.gstin}</span>
-                      </p>
-                    )}
                     {addr.notes && (
                       <p className="text-[13px] text-ink-muted break-words">
                         {addr.notes}
@@ -248,7 +239,7 @@ export function ClientRecord({ record, documents, auditEntries }: Props) {
                   <div key={contact.id} className="flex flex-col gap-1">
                     <div className="flex items-center gap-2">
                       <span className="text-[14px] font-semibold text-ink-strong">
-                        {fullName}
+                        {fullName || "Not Available"}
                       </span>
                       {contact.isPrimary && (
                         <span

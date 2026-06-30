@@ -826,6 +826,9 @@ export function KycForm({
         <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
           <Field id="kyc-payterms" label="Payment Terms">
             <input id="kyc-payterms" type="text" className="nt-input" {...register("paymentTerms")} />
+            <p className="mt-1 text-[12px] text-ink-subtle">
+              Payment structure — e.g. 50% advance, 50% on delivery
+            </p>
           </Field>
           <Field id="kyc-freight" label="Freight Charges">
             <input id="kyc-freight" type="text" className="nt-input" {...register("freightCharges")} />
@@ -840,6 +843,9 @@ export function KycForm({
               placeholder="e.g. 30"
               {...register("creditDays", { setValueAs: toOptionalNumber })}
             />
+            <p className="mt-1 text-[12px] text-ink-subtle">
+              Net days to pay after invoice / dispatch
+            </p>
           </Field>
           <Field id="kyc-creditlimit" label="Credit Limit">
             <input
@@ -851,6 +857,9 @@ export function KycForm({
               placeholder="e.g. 500000"
               {...register("creditLimit", { setValueAs: toOptionalNumber })}
             />
+            <p className="mt-1 text-[12px] text-ink-subtle">
+              Maximum outstanding allowed for this client
+            </p>
           </Field>
           <Field id="kyc-transporter" label="Transporter">
             <input
@@ -913,7 +922,16 @@ export function KycForm({
                 <input id={`kyc-bank${idx}-branch`} type="text" className="nt-input" placeholder="e.g. Ambad, Nashik" {...register(`bankAccounts.${idx}.branch`)} />
               </Field>
               <Field id={`kyc-bank${idx}-holder`} label="Account Holder">
-                <input id={`kyc-bank${idx}-holder`} type="text" className="nt-input" placeholder="Name on the account" {...register(`bankAccounts.${idx}.accountHolder`)} />
+                <input id={`kyc-bank${idx}-holder`} type="text" className="nt-input" placeholder={watch("name") || "Name on the account"} {...register(`bankAccounts.${idx}.accountHolder`)} />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setValue(`bankAccounts.${idx}.accountHolder`, watch("name") ?? "")
+                  }
+                  className="self-start text-[12px] font-semibold text-ink-subtle hover:text-ink-strong transition-colors"
+                >
+                  &#8627; Same as company
+                </button>
               </Field>
               <Field id={`kyc-bank${idx}-type`} label="Account Type">
                 <input id={`kyc-bank${idx}-type`} type="text" className="nt-input" placeholder="e.g. Current / Savings" {...register(`bankAccounts.${idx}.accountType`)} />
