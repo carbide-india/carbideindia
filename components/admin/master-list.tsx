@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import * as Tabs from "@radix-ui/react-tabs";
 import { useQueryState } from "nuqs";
+import { Layers } from "lucide-react";
 import { fireToast } from "@/lib/toast";
 import {
   createMasterOption,
@@ -12,10 +12,17 @@ import {
 } from "@/app/(admin)/admin/masters/actions";
 import { MASTER_KINDS, MASTER_KIND_LABELS, type MasterKind } from "@/db/enums";
 import type { MasterOption } from "@/db/schema";
+import { WorkbenchPanel } from "@/components/workbench/workbench-panel";
+import { WorkbenchActions } from "@/components/workbench/workbench-actions";
+import {
+  WorkbenchTable,
+  type WbColumn,
+} from "@/components/workbench/workbench-table";
 import {
   DIM_FIELDS,
   DIM_LABELS,
   resolveShapeConfig,
+  defaultShapeConfig,
   type DimRule,
   type ShapeConfig,
 } from "@/lib/masters/shape-config";
@@ -37,115 +44,380 @@ const PENDING_DATA_KINDS: ReadonlySet<MasterKind> = new Set([
   "tolerance",
 ]);
 
+const BLANK_DIMS = defaultShapeConfig().dims;
+
 export function MasterList({ items }: Props) {
-  const [kind, setKind] = useQueryState("kind", {
+  const [kindRaw, setKind] = useQueryState("kind", {
     defaultValue: "customer_type",
     parse: (v): MasterKind =>
       (MASTER_KINDS as readonly string[]).includes(v)
         ? (v as MasterKind)
         : "customer_type",
   });
-  const [editing, setEditing] = useState<MasterOption | null>(null);
+  const kind = kindRaw as MasterKind;
+
+  // Form state. selectedId === null => "new"; otherwise "edit".
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [sortOrder, setSortOrder] = useState<number>(100);
+  const [active, setActive] = useState<boolean>(true);
+  const [dims, setDims] = useState<ShapeConfig["dims"]>(BLANK_DIMS);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, startSaving] = useTransition();
+
+  const isShape = kind === "shape";
+
+  const rows = useMemo(() => items.filter((o) => o.kind === kind), [items, kind]);
+  const activeCount = rows.filter((o) => o.isActive).length;
+
+  const selected = useMemo(
+    () => (selectedId ? (rows.find((o) => o.id === selectedId) ?? null) : null),
+    [rows, selectedId],
+  );
+
+  function resetForm() {
+    setSelectedId(null);
+    setName("");
+    setSortOrder(100);
+    setActive(true);
+    setDims(BLANK_DIMS);
+    setError(null);
+  }
+
+  // Reset the form whenever the active kind tab changes.
+  useEffect(() => {
+    resetForm();
+  }, [kind]);
+
+  function loadRow(o: MasterOption) {
+    setSelectedId(o.id);
+    setName(o.name);
+    setSortOrder(o.sortOrder);
+    setActive(o.isActive);
+    setDims(resolveShapeConfig(o.config).dims);
+    setError(null);
+  }
+
+  function onSave() {
+    setError(null);
+    const trimmed = name.trim();
+    if (!trimmed) {
+      setError("Name is required.");
+      return;
+    }
+
+    startSaving(async () => {
+      if (!selected) {
+        // CREATE
+        const res = await createMasterOption({ kind, name: trimmed, sortOrder });
+        if (!res.ok) {
+          setError(res.error ?? "Something went wrong");
+          return;
+        }
+        fireToast({ message: `${trimmed} created.` });
+        resetForm();
+        return;
+      }
+
+      // UPDATE — only send changed fields.
+      const patch: {
+        name?: string;
+        sortOrder?: number;
+        isActive?: boolean;
+        config?: ShapeConfig;
+      } = {};
+      if (trimmed !== selected.name) patch.name = trimmed;
+      if (sortOrder !== selected.sortOrder) patch.sortOrder = sortOrder;
+      if (active !== selected.isActive) patch.isActive = active;
+      if (isShape) {
+        const original = resolveShapeConfig(selected.config).dims;
+        if (JSON.stringify(dims) !== JSON.stringify(original)) {
+          patch.config = { dims };
+        }
+      }
+
+      if (Object.keys(patch).length === 0) {
+        setError("No changes to save.");
+        return;
+      }
+
+      const res = await updateMasterOption(selected.id, patch);
+      if (!res.ok) {
+        setError(res.error ?? "Something went wrong");
+        return;
+      }
+      fireToast({ message: `${trimmed} updated.` });
+      resetForm();
+    });
+  }
+
+  function onDeactivate() {
+    if (!selected) return;
+    setError(null);
+    startSaving(async () => {
+      const res = await updateMasterOption(selected.id, { isActive: false });
+      if (!res.ok) {
+        setError(res.error ?? "Something went wrong");
+        return;
+      }
+      fireToast({ message: `${selected.name} deactivated.` });
+      resetForm();
+    });
+  }
+
+  const columns: WbColumn<MasterOption>[] = [
+    {
+      key: "name",
+      header: "Name",
+      cell: (o) => <span className="font-medium text-ink-strong">{o.name}</span>,
+      filterValue: (o) => o.name,
+      sortValue: (o) => o.name.toLowerCase(),
+    },
+    {
+      key: "sortOrder",
+      header: "Sort",
+      align: "right",
+      cell: (o) => <span className="tabular-nums text-ink-soft">{o.sortOrder}</span>,
+      sortValue: (o) => o.sortOrder,
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (o) => <StatusChip active={o.isActive} />,
+      filterValue: (o) => (o.isActive ? "Active" : "Inactive"),
+      sortValue: (o) => (o.isActive ? 0 : 1),
+    },
+  ];
 
   return (
-    <>
-      <Tabs.Root value={kind} onValueChange={(v) => setKind(v as MasterKind)}>
-        <Tabs.List
-          className="mb-8 flex flex-wrap gap-2"
-          aria-label="Master kinds"
-        >
-          {MASTER_KINDS.map((k) => {
-            const active = kind === k;
-            const count = items.filter((o) => o.kind === k).length;
-            return (
-              <Tabs.Trigger
-                key={k}
-                value={k}
-                className="group inline-flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand)] focus-visible:ring-offset-2"
+    <div className="space-y-6">
+      {/* Kind tabs */}
+      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Master kinds">
+        {MASTER_KINDS.map((k) => {
+          const isActiveTab = kind === k;
+          const count = items.filter((o) => o.kind === k).length;
+          return (
+            <button
+              key={k}
+              type="button"
+              role="tab"
+              aria-selected={isActiveTab}
+              onClick={() => setKind(k)}
+              className="group inline-flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand)] focus-visible:ring-offset-2"
+              style={
+                isActiveTab
+                  ? { background: "var(--color-brand)", color: "#fff" }
+                  : {
+                      background: "var(--color-surface-card)",
+                      color: "var(--color-ink-soft)",
+                      border: "1px solid var(--color-hairline)",
+                    }
+              }
+            >
+              {MASTER_KIND_LABELS[k]}
+              <span
+                className="inline-flex min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-bold tabular-nums"
                 style={
-                  active
-                    ? { background: "var(--color-brand)", color: "#fff" }
+                  isActiveTab
+                    ? { background: "rgba(255,255,255,0.22)", color: "#fff" }
                     : {
-                        background: "var(--color-surface-card)",
-                        color: "var(--color-ink-soft)",
-                        border: "1px solid var(--color-hairline)",
+                        background: "var(--color-surface-soft)",
+                        color: "var(--color-ink-subtle)",
                       }
                 }
               >
-                {MASTER_KIND_LABELS[k]}
-                <span
-                  className="inline-flex min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-bold tabular-nums"
-                  style={
-                    active
-                      ? { background: "rgba(255,255,255,0.22)", color: "#fff" }
-                      : { background: "var(--color-surface-soft)", color: "var(--color-ink-subtle)" }
-                  }
-                >
-                  {count}
-                </span>
-              </Tabs.Trigger>
-            );
-          })}
-        </Tabs.List>
-        {MASTER_KINDS.map((k) => {
-          const rows = items.filter((o) => o.kind === k);
-          return (
-            <Tabs.Content key={k} value={k} forceMount hidden={kind !== k}>
-              <div className="mb-5 flex items-end justify-between gap-4 flex-wrap">
-                <div>
-                  <h2 className="text-[18px] font-bold tracking-tight text-ink-strong">
-                    {MASTER_KIND_LABELS[k]}
-                  </h2>
-                  <p className="mt-0.5 text-[13px] text-ink-subtle tabular-nums">
-                    {rows.length} {rows.length === 1 ? "option" : "options"} ·{" "}
-                    {rows.filter((o) => o.isActive).length} active
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <BulkCreateMasterDialog kind={k} />
-                  <CreateMasterDialog kind={k} />
-                </div>
-              </div>
-              {rows.length === 0 ? (
-                <EmptyState kind={k} />
-              ) : (
-                <div
-                  className="overflow-hidden rounded-section border border-hairline bg-surface-card"
-                  style={{ boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)" }}
-                >
-                  <table className="w-full text-[15px]">
-                    <thead>
-                      <tr
-                        className="text-left text-[12px] uppercase tracking-[0.08em] text-ink-subtle font-bold border-b border-hairline"
-                        style={{ background: "var(--color-surface-soft)" }}
-                      >
-                        <th className="px-5 py-4">Name</th>
-                        <th className="px-5 py-4 tabular-nums">Sort</th>
-                        <th className="px-5 py-4">Status</th>
-                        <th className="px-5 py-4 text-right">
-                          <span className="sr-only">Actions</span>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rows.map((o, i) => (
-                        <MasterRow
-                          key={o.id}
-                          option={o}
-                          rowIndex={i}
-                          onEdit={() => setEditing(o)}
-                        />
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </Tabs.Content>
+                {count}
+              </span>
+            </button>
           );
         })}
-      </Tabs.Root>
-      <EditMasterDialog option={editing} onClose={() => setEditing(null)} />
-    </>
+      </div>
+
+      {/* Entry form */}
+      <WorkbenchPanel
+        title={`${selected ? "Edit" : "New"} ${MASTER_KIND_LABELS[kind]} Option`}
+        icon={<Layers size={17} strokeWidth={2.2} />}
+      >
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-start gap-4">
+            <div className="min-w-[260px] flex-1">
+              <label className="block text-[13px] font-semibold text-ink-strong mb-1.5">
+                Name
+              </label>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={80}
+                placeholder={`${MASTER_KIND_LABELS[kind]} name`}
+                className="nt-input w-full"
+              />
+            </div>
+            <div className="w-32">
+              <label className="block text-[13px] font-semibold text-ink-strong mb-1.5">
+                Sort Order
+              </label>
+              <input
+                type="number"
+                min={0}
+                max={9999}
+                value={sortOrder}
+                onChange={(e) => setSortOrder(Number(e.target.value))}
+                className="nt-input w-full tabular-nums"
+              />
+            </div>
+            <div className="w-40">
+              <label className="block text-[13px] font-semibold text-ink-strong mb-1.5">
+                Active
+              </label>
+              <div className="inline-flex rounded-chip border border-hairline-strong overflow-hidden">
+                {[
+                  { v: true, label: "Yes" },
+                  { v: false, label: "No" },
+                ].map((opt) => (
+                  <button
+                    key={opt.label}
+                    type="button"
+                    onClick={() => setActive(opt.v)}
+                    aria-pressed={active === opt.v}
+                    className={`h-[38px] px-4 text-[13px] font-semibold transition-colors ${
+                      active === opt.v
+                        ? "bg-[var(--color-brand)] text-white"
+                        : "bg-surface-card text-ink-soft hover:bg-surface-soft"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              {!selected ? (
+                <p className="mt-1 text-[11.5px] text-ink-subtle">
+                  New options are created active.
+                </p>
+              ) : null}
+            </div>
+          </div>
+
+          {isShape ? (
+            <div className="rounded-chip border border-hairline bg-surface-soft p-4">
+              <label className="block text-[13px] font-semibold text-ink-strong">
+                Dimension matrix
+              </label>
+              <p
+                className="mt-1 text-[12px] text-ink-subtle"
+                style={{ lineHeight: 1.5 }}
+              >
+                Controls which dimension inputs the Item &amp; Enquiry forms show
+                for this shape.{" "}
+                {selected ? null : "Select a shape below to edit its matrix."}
+              </p>
+              <div className="mt-3 divide-y divide-hairline rounded-chip border border-hairline bg-surface-card">
+                {DIM_FIELDS.map((d) => (
+                  <div
+                    key={d}
+                    className="flex items-center justify-between gap-3 px-3 py-2.5"
+                  >
+                    <span className="text-[13px] font-medium text-ink-strong">
+                      {DIM_LABELS[d]}
+                    </span>
+                    <div className="inline-flex rounded-chip border border-hairline-strong overflow-hidden">
+                      {DIM_RULES.map((r) => (
+                        <button
+                          key={r}
+                          type="button"
+                          disabled={!selected}
+                          onClick={() => setDims((prev) => ({ ...prev, [d]: r }))}
+                          aria-pressed={dims[d] === r}
+                          className={`px-3 py-1.5 text-[12px] font-semibold transition-colors disabled:opacity-50 ${
+                            dims[d] === r
+                              ? "bg-[var(--color-brand)] text-white"
+                              : "bg-surface-card text-ink-soft hover:bg-surface-soft"
+                          }`}
+                        >
+                          {DIM_RULE_LABELS[r]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {error ? (
+            <div
+              role="alert"
+              className="rounded-chip border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-[13px] text-[#B71C1C]"
+            >
+              {error}
+            </div>
+          ) : null}
+
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            <WorkbenchActions
+              onClear={resetForm}
+              onSave={onSave}
+              onDelete={selected ? onDeactivate : undefined}
+              saving={saving}
+              deleteLabel="Deactivate"
+              className="flex-1"
+            />
+            <BulkCreateMasterDialog kind={kind} />
+          </div>
+        </div>
+      </WorkbenchPanel>
+
+      {/* List */}
+      <div>
+        <div className="mb-3 flex items-end justify-between gap-4 flex-wrap">
+          <div>
+            <h2 className="text-[16px] font-bold tracking-tight text-ink-strong">
+              {MASTER_KIND_LABELS[kind]}
+            </h2>
+            <p className="mt-0.5 text-[13px] text-ink-subtle tabular-nums">
+              {rows.length} {rows.length === 1 ? "option" : "options"} ·{" "}
+              {activeCount} active
+            </p>
+          </div>
+        </div>
+        {rows.length === 0 ? (
+          <EmptyState kind={kind} />
+        ) : (
+          <WorkbenchTable<MasterOption>
+            rows={rows}
+            columns={columns}
+            getRowId={(o) => o.id}
+            onRowClick={loadRow}
+            emptyText="No options match the filters."
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StatusChip({ active }: { active: boolean }) {
+  return active ? (
+    <span
+      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold"
+      style={{ background: "var(--color-green-bg)", color: "var(--color-green-deep)" }}
+    >
+      <span
+        className="h-1.5 w-1.5 rounded-full"
+        style={{ background: "var(--color-green)" }}
+      />
+      Active
+    </span>
+  ) : (
+    <span
+      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold"
+      style={{ background: "rgba(15, 23, 42, 0.05)", color: "var(--color-ink-subtle)" }}
+    >
+      <span
+        className="h-1.5 w-1.5 rounded-full"
+        style={{ background: "var(--color-ink-subtle)" }}
+      />
+      Inactive
+    </span>
   );
 }
 
@@ -163,198 +435,14 @@ function EmptyState({ kind }: { kind: MasterKind }) {
           ? "No entries yet — data expected from Alok sir."
           : `No ${MASTER_KIND_LABELS[kind]} options yet`}
       </p>
-      <p className="text-[14px] text-ink-subtle mt-2 max-w-sm mx-auto" style={{ lineHeight: 1.5 }}>
-        Add the first one with the button above. It then shows up in the{" "}
+      <p
+        className="text-[14px] text-ink-subtle mt-2 max-w-sm mx-auto"
+        style={{ lineHeight: 1.5 }}
+      >
+        Add the first one with the form above. It then shows up in the{" "}
         {MASTER_KIND_LABELS[kind]} dropdown on the KYC / inquiry forms.
       </p>
     </div>
-  );
-}
-
-function MasterRow({
-  option,
-  rowIndex,
-  onEdit,
-}: {
-  option: MasterOption;
-  rowIndex: number;
-  onEdit: () => void;
-}) {
-  const [pending, startTransition] = useTransition();
-
-  function toggleActive() {
-    startTransition(async () => {
-      const res = await updateMasterOption(option.id, { isActive: !option.isActive });
-      if (!res.ok) {
-        fireToast({ message: res.error });
-        return;
-      }
-      fireToast({
-        message: option.isActive
-          ? `${option.name} deactivated.`
-          : `${option.name} reactivated.`,
-      });
-    });
-  }
-
-  return (
-    <tr
-      className="border-b border-hairline last:border-b-0 transition-colors hover:bg-surface-soft"
-      style={{ background: rowIndex % 2 === 1 ? "rgba(15, 23, 42, 0.012)" : undefined }}
-    >
-      <td className="px-5 py-4 text-ink-strong font-medium">{option.name}</td>
-      <td className="px-5 py-4 tabular-nums text-ink-soft">{option.sortOrder}</td>
-      <td className="px-5 py-4">
-        {option.isActive ? (
-          <span
-            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold"
-            style={{ background: "var(--color-green-bg)", color: "var(--color-green-deep)" }}
-          >
-            <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--color-green)" }} />
-            Active
-          </span>
-        ) : (
-          <span
-            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold"
-            style={{ background: "rgba(15, 23, 42, 0.05)", color: "var(--color-ink-subtle)" }}
-          >
-            <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--color-ink-subtle)" }} />
-            Inactive
-          </span>
-        )}
-      </td>
-      <td className="px-5 py-4 text-right">
-        <div className="inline-flex items-center gap-1">
-          <button
-            type="button"
-            onClick={onEdit}
-            className="rounded-md px-3 py-1.5 text-[13px] font-semibold text-ink-soft hover:bg-surface-soft hover:text-ink-strong transition-colors"
-          >
-            Edit
-          </button>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={toggleActive}
-            className="rounded-md px-3 py-1.5 text-[13px] font-semibold text-ink-soft hover:bg-surface-soft hover:text-ink-strong transition-colors disabled:opacity-50"
-          >
-            {option.isActive ? "Deactivate" : "Reactivate"}
-          </button>
-        </div>
-      </td>
-    </tr>
-  );
-}
-
-function CreateMasterDialog({ kind }: { kind: MasterKind }) {
-  const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [sortOrder, setSortOrder] = useState<number>(100);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
-
-  function reset() {
-    setName("");
-    setSortOrder(100);
-    setError(null);
-  }
-
-  function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    startTransition(async () => {
-      const res = await createMasterOption({ kind, name: name.trim(), sortOrder });
-      if (!res.ok) {
-        setError(res.error ?? "Something went wrong");
-        return;
-      }
-      fireToast({ message: `${name.trim()} created.` });
-      reset();
-      setOpen(false);
-    });
-  }
-
-  return (
-    <Dialog.Root
-      open={open}
-      onOpenChange={(o) => {
-        setOpen(o);
-        if (!o) reset();
-      }}
-    >
-      <Dialog.Trigger asChild>
-        <button
-          className="inline-flex h-10 items-center rounded-lg px-4 text-[14px] font-semibold text-white shadow-sm transition-opacity hover:opacity-95"
-          style={{ background: "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))" }}
-        >
-          + New option
-        </button>
-      </Dialog.Trigger>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/30 z-[90]" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-[100] -translate-x-1/2 -translate-y-1/2 w-full max-w-md rounded-xl bg-white border border-[#E2E8F0] p-6 shadow-lg max-h-[calc(100dvh-32px)] overflow-y-auto">
-          <Dialog.Title className="font-serif text-xl text-[#0F172A] mb-1">
-            New option · {MASTER_KIND_LABELS[kind]}
-          </Dialog.Title>
-          <Dialog.Description className="text-[15px] text-[#64748B] mb-4" style={{ lineHeight: 1.5 }}>
-            This appears in the {MASTER_KIND_LABELS[kind]} dropdown on the KYC /
-            inquiry forms.
-          </Dialog.Description>
-          <form onSubmit={onSubmit} className="space-y-4">
-            <Field label="Name">
-              <input
-                required
-                autoFocus
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                maxLength={80}
-                className="w-full rounded-md border border-[#CBD5E1] px-3.5 py-2.5 text-[15px]"
-              />
-            </Field>
-            <Field
-              label="Sort order"
-              hint="Lower numbers appear first when sort ties. Default 100."
-            >
-              <input
-                type="number"
-                min={0}
-                max={9999}
-                value={sortOrder}
-                onChange={(e) => setSortOrder(Number(e.target.value))}
-                className="w-28 rounded-md border border-[#CBD5E1] px-3.5 py-2.5 text-[15px] tabular-nums"
-              />
-            </Field>
-            {error && (
-              <div
-                role="alert"
-                className="rounded-md border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-[14px] text-[#B71C1C]"
-              >
-                {error}
-              </div>
-            )}
-            <div className="flex justify-end gap-2 pt-2">
-              <Dialog.Close asChild>
-                <button
-                  type="button"
-                  className="px-4 py-2.5 text-[14px] font-medium text-[#64748B]"
-                  disabled={pending}
-                >
-                  Cancel
-                </button>
-              </Dialog.Close>
-              <button
-                type="submit"
-                disabled={pending}
-                className="rounded-md py-2.5 px-5 text-[14px] font-medium text-white disabled:opacity-50"
-                style={{ background: "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))" }}
-              >
-                {pending ? "Creating…" : "Create"}
-              </button>
-            </div>
-          </form>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
   );
 }
 
@@ -416,7 +504,8 @@ function BulkCreateMasterDialog({ kind }: { kind: MasterKind }) {
     >
       <Dialog.Trigger asChild>
         <button
-          className="inline-flex h-10 items-center rounded-lg border border-hairline bg-surface-card px-4 text-[14px] font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand"
+          type="button"
+          className="inline-flex h-10 items-center rounded-chip border border-hairline-strong bg-surface-card px-4 text-[14px] font-medium text-ink-soft transition-colors hover:border-brand/40 hover:text-ink-strong"
         >
           Bulk add
         </button>
@@ -427,7 +516,10 @@ function BulkCreateMasterDialog({ kind }: { kind: MasterKind }) {
           <Dialog.Title className="font-serif text-xl text-[#0F172A] mb-1">
             Bulk add · {MASTER_KIND_LABELS[kind]}
           </Dialog.Title>
-          <Dialog.Description className="text-[15px] text-[#64748B] mb-4" style={{ lineHeight: 1.5 }}>
+          <Dialog.Description
+            className="text-[15px] text-[#64748B] mb-4"
+            style={{ lineHeight: 1.5 }}
+          >
             Paste many values at once. Duplicates (existing or repeated) are
             skipped automatically.
           </Dialog.Description>
@@ -445,18 +537,18 @@ function BulkCreateMasterDialog({ kind }: { kind: MasterKind }) {
                 className="w-full rounded-md border border-[#CBD5E1] px-3.5 py-2.5 text-[14px] font-mono resize-y max-h-[40vh]"
               />
               <p className="mt-1.5 text-[13px] text-[#94A3B8] tabular-nums">
-                {rawCount} {rawCount === 1 ? "value" : "values"} ·{" "}
-                {parsedCount} after removing blanks/dupes
+                {rawCount} {rawCount === 1 ? "value" : "values"} · {parsedCount}{" "}
+                after removing blanks/dupes
               </p>
             </div>
-            {error && (
+            {error ? (
               <div
                 role="alert"
                 className="rounded-md border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-[14px] text-[#B71C1C]"
               >
                 {error}
               </div>
-            )}
+            ) : null}
             <div className="flex justify-end gap-2 pt-2">
               <Dialog.Close asChild>
                 <button
@@ -471,7 +563,10 @@ function BulkCreateMasterDialog({ kind }: { kind: MasterKind }) {
                 type="submit"
                 disabled={pending || parsedCount === 0}
                 className="rounded-md py-2.5 px-5 text-[14px] font-medium text-white disabled:opacity-50"
-                style={{ background: "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))" }}
+                style={{
+                  background:
+                    "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
+                }}
               >
                 {pending
                   ? "Adding…"
@@ -484,194 +579,5 @@ function BulkCreateMasterDialog({ kind }: { kind: MasterKind }) {
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
-  );
-}
-
-function EditMasterDialog({
-  option,
-  onClose,
-}: {
-  option: MasterOption | null;
-  onClose: () => void;
-}) {
-  const [name, setName] = useState(option?.name ?? "");
-  const [sortOrder, setSortOrder] = useState<number>(option?.sortOrder ?? 100);
-  const [dims, setDims] = useState<ShapeConfig["dims"]>(
-    () => resolveShapeConfig(option?.config).dims,
-  );
-  const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
-
-  const isShape = option?.kind === "shape";
-
-  useEffect(() => {
-    setName(option?.name ?? "");
-    setSortOrder(option?.sortOrder ?? 100);
-    setDims(resolveShapeConfig(option?.config).dims);
-    setError(null);
-  }, [option?.id, option?.name, option?.sortOrder, option?.config]);
-
-  function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!option) return;
-    setError(null);
-
-    const patch: {
-      name?: string;
-      sortOrder?: number;
-      config?: ShapeConfig;
-    } = {};
-    const trimmedName = name.trim();
-    if (trimmedName !== option.name) patch.name = trimmedName;
-    if (sortOrder !== option.sortOrder) patch.sortOrder = sortOrder;
-    if (isShape) {
-      const original = resolveShapeConfig(option.config).dims;
-      if (JSON.stringify(dims) !== JSON.stringify(original)) {
-        patch.config = { dims };
-      }
-    }
-
-    if (Object.keys(patch).length === 0) {
-      setError("No changes to save.");
-      return;
-    }
-
-    startTransition(async () => {
-      const res = await updateMasterOption(option.id, patch);
-      if (!res.ok) {
-        setError(res.error ?? "Something went wrong");
-        return;
-      }
-      fireToast({ message: `${trimmedName} updated.` });
-      onClose();
-    });
-  }
-
-  return (
-    <Dialog.Root open={option !== null} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/30 z-[90]" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-[100] -translate-x-1/2 -translate-y-1/2 w-full max-w-md rounded-xl bg-white border border-[#E2E8F0] p-6 shadow-lg max-h-[calc(100dvh-32px)] overflow-y-auto">
-          <Dialog.Title className="font-serif text-xl text-[#0F172A] mb-1">
-            Edit option
-          </Dialog.Title>
-          <Dialog.Description className="text-[15px] text-[#64748B] mb-4">
-            Renaming updates the {option ? MASTER_KIND_LABELS[option.kind] : ""}{" "}
-            value everywhere it is referenced.
-          </Dialog.Description>
-          <form onSubmit={onSubmit} className="space-y-4">
-            <div>
-              <label className="block text-[14px] font-semibold text-[#0F172A] mb-1.5">
-                Name
-              </label>
-              <input
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                maxLength={80}
-                className="w-full rounded-md border border-[#CBD5E1] px-3.5 py-2.5 text-[15px]"
-              />
-            </div>
-            <div>
-              <label className="block text-[14px] font-semibold text-[#0F172A] mb-1.5">
-                Sort order
-              </label>
-              <input
-                type="number"
-                min={0}
-                max={9999}
-                value={sortOrder}
-                onChange={(e) => setSortOrder(Number(e.target.value))}
-                className="w-28 rounded-md border border-[#CBD5E1] px-3.5 py-2.5 text-[15px] tabular-nums"
-              />
-            </div>
-            {isShape && (
-              <div className="rounded-lg border border-hairline bg-surface-soft p-4">
-                <label className="block text-[14px] font-semibold text-[#0F172A]">
-                  Dimension matrix
-                </label>
-                <p className="mt-1 text-[12.5px] text-[#64748B]" style={{ lineHeight: 1.5 }}>
-                  Controls which dimension inputs the Item &amp; Enquiry forms
-                  show for this shape.
-                </p>
-                <div className="mt-3 divide-y divide-hairline rounded-lg border border-hairline bg-white">
-                  {DIM_FIELDS.map((d) => (
-                    <div key={d} className="flex items-center justify-between gap-3 px-3 py-2.5">
-                      <span className="text-[13.5px] font-medium text-[#0F172A]">
-                        {DIM_LABELS[d]}
-                      </span>
-                      <div className="inline-flex rounded-md border border-[#CBD5E1] overflow-hidden">
-                        {DIM_RULES.map((r) => (
-                          <button
-                            key={r}
-                            type="button"
-                            onClick={() => setDims((prev) => ({ ...prev, [d]: r }))}
-                            aria-pressed={dims[d] === r}
-                            className={`px-3 py-1.5 text-[12px] font-semibold transition-colors ${
-                              dims[d] === r
-                                ? "bg-[#3F3F94] text-white"
-                                : "bg-white text-[#64748B] hover:bg-[#F1F5F9]"
-                            }`}
-                          >
-                            {DIM_RULE_LABELS[r]}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {error && (
-              <div
-                role="alert"
-                className="rounded-md border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-[14px] text-[#B71C1C]"
-              >
-                {error}
-              </div>
-            )}
-            <div className="flex justify-end gap-2 pt-2">
-              <Dialog.Close asChild>
-                <button
-                  type="button"
-                  className="px-4 py-2.5 text-[14px] font-medium text-[#64748B]"
-                  disabled={pending}
-                >
-                  Cancel
-                </button>
-              </Dialog.Close>
-              <button
-                type="submit"
-                disabled={pending}
-                className="rounded-md py-2.5 px-5 text-[14px] font-medium text-white disabled:opacity-50"
-                style={{ background: "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))" }}
-              >
-                {pending ? "Saving…" : "Save"}
-              </button>
-            </div>
-          </form>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
-  );
-}
-
-function Field({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label className="block text-[14px] font-semibold text-[#0F172A] mb-1.5">
-        {label}
-      </label>
-      {children}
-      {hint && <p className="mt-1.5 text-[13px] text-[#94A3B8]">{hint}</p>}
-    </div>
   );
 }
