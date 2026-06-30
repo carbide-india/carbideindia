@@ -160,6 +160,7 @@ export function ItemTable({ rows, isAdmin }: Props) {
         onRowOpen={(r) => setQuickView(r)}
         getEditHref={(r) => `/items/${r.id}/edit` as Route}
         exportFilename="item-master"
+        showExport={false}
         emptyTitle="No items yet — create the first one."
         emptyHint="Each item gets a unique internal code assembled from shape, grade and size."
       />

@@ -128,6 +128,12 @@ export interface RegisterDataTableProps<TRow> {
   filters?: FilterConfig<TRow>[];
   /** Base filename for CSV export (date is appended; ".csv" added automatically). */
   exportFilename: string;
+  /**
+   * Show the toolbar Export (CSV of visible columns) button. Default true.
+   * Set false for registers that ship a dedicated server-side export instead
+   * (e.g. Item Master's "Export to Excel" xlsx route), to avoid a duplicate.
+   */
+  showExport?: boolean;
   bulkAction?: BulkActionConfig;
   emptyTitle: string;
   emptyHint?: string;
@@ -173,6 +179,7 @@ export function RegisterDataTable<TRow>({
   getEditHref,
   filters = [],
   exportFilename,
+  showExport = true,
   bulkAction,
   emptyTitle,
   emptyHint,
@@ -543,15 +550,17 @@ export function RegisterDataTable<TRow>({
         <div className="ml-auto flex items-center gap-2">
           <DensityToggle value={density} onChange={setDensity} />
           <ColumnsMenu table={table} columns={columns} />
-          <button
-            type="button"
-            onClick={exportAll}
-            disabled={totalFiltered === 0}
-            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-pill text-[13px] font-bold border border-hairline bg-surface-card text-ink-soft hover:border-hairline-strong hover:text-ink-strong transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <Download size={14} strokeWidth={2.2} />
-            Export
-          </button>
+          {showExport && (
+            <button
+              type="button"
+              onClick={exportAll}
+              disabled={totalFiltered === 0}
+              className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-pill text-[13px] font-bold border border-hairline bg-surface-card text-ink-soft hover:border-hairline-strong hover:text-ink-strong transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Download size={14} strokeWidth={2.2} />
+              Export
+            </button>
+          )}
         </div>
       </div>
 
