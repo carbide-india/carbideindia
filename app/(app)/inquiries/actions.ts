@@ -169,15 +169,34 @@ export async function createInquiry(
         .returning({ id: inquiries.id, smNumber: inquiries.smNumber });
       if (!row) throw new Error("inquiries insert returned no row");
 
+      let productIds: string[] = [];
       if (productRows.length) {
-        await tx.insert(inquiryItems).values(productRows.map((r) => ({ inquiryId: row.id, ...r })));
+        const inserted = await tx
+          .insert(inquiryItems)
+          .values(productRows.map((r) => ({ inquiryId: row.id, ...r })))
+          .returning({ id: inquiryItems.id });
+        productIds = inserted.map((r) => r.id);
       }
 
-      return row;
+      return { row, productIds };
     });
 
     revalidatePath("/inquiries");
-    return { ok: true, id: created.id, smNumber: created.smNumber };
+
+    // Auto-register each product in the Item Master (dedup-safe). Best-effort:
+    // a product that's fully specified gets its item code immediately; one that's
+    // still missing a shape-required dimension simply keeps the manual
+    // "Generate item code" button on the SM detail page. We never fail the
+    // enquiry over item generation — the enquiry is already committed.
+    for (const productId of created.productIds) {
+      try {
+        await generateItemForInquiryItem(productId);
+      } catch (genErr) {
+        console.error("[createInquiry] auto item generation failed", productId, genErr);
+      }
+    }
+
+    return { ok: true, id: created.row.id, smNumber: created.row.smNumber };
   } catch (err) {
     console.error("[createInquiry] failed", err);
     return { ok: false, error: "Could not create the inquiry. Please try again." };
