@@ -24,6 +24,27 @@ export interface JobCardListItem {
   dispatchConditionName: string | null;
   pressingTypeName: string | null;
   toleranceName: string | null;
+  // Raw editable fields so a row click can re-hydrate the whole form (not just
+  // the snapshot text) — otherwise saving an edit could blank these.
+  clientId: string | null;
+  itemId: string | null;
+  dispatchConditionId: string | null;
+  toleranceId: string | null;
+  pressingTypeId: string | null;
+  weight: string | null;
+  heightMin: string | null;
+  heightMax: string | null;
+  ypNo: string | null;
+  supportSizeTop: string | null;
+  supportSizeBottom: string | null;
+  makeSampleForSintering: boolean | null;
+  outsource: boolean | null;
+  supplierVendorName: string | null;
+  process: string | null;
+  prevWeight: string | null;
+  prevPressure: string | null;
+  prevGradeName: string | null;
+  remarks: string | null;
   isActive: boolean;
   createdAt: Date;
 }
@@ -58,6 +79,25 @@ export async function listJobCards(): Promise<JobCardListItem[]> {
       dispatchConditionName: dispatch.name,
       pressingTypeName: pressing.name,
       toleranceName: tolerance.name,
+      clientId: jobCards.clientId,
+      itemId: jobCards.itemId,
+      dispatchConditionId: jobCards.dispatchConditionId,
+      toleranceId: jobCards.toleranceId,
+      pressingTypeId: jobCards.pressingTypeId,
+      weight: jobCards.weight,
+      heightMin: jobCards.heightMin,
+      heightMax: jobCards.heightMax,
+      ypNo: jobCards.ypNo,
+      supportSizeTop: jobCards.supportSizeTop,
+      supportSizeBottom: jobCards.supportSizeBottom,
+      makeSampleForSintering: jobCards.makeSampleForSintering,
+      outsource: jobCards.outsource,
+      supplierVendorName: jobCards.supplierVendorName,
+      process: jobCards.process,
+      prevWeight: jobCards.prevWeight,
+      prevPressure: jobCards.prevPressure,
+      prevGradeName: jobCards.prevGradeName,
+      remarks: jobCards.remarks,
       isActive: jobCards.isActive,
       createdAt: jobCards.createdAt,
     })

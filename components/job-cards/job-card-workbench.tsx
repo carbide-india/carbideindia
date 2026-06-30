@@ -190,15 +190,14 @@ export function JobCardWorkbench({ rows, picker, isAdmin }: Props) {
   function loadRow(row: JobCardListItem) {
     setError(null);
     setSelectedId(row.id);
+    const yn = (b: boolean | null): string => (b === true ? "yes" : b === false ? "no" : "");
     setForm({
       jobCardNo: row.jobCardNo,
       jobCardDate: toDateInput(row.jobCardDate),
       oaNo: row.oaNo ?? "",
-      // Client/item links aren't returned on the register row — keep the
-      // snapshot text; re-pick a customer/product to relink if needed.
-      clientId: "",
+      clientId: row.clientId ?? "",
       customerName: row.customerName ?? "",
-      itemId: "",
+      itemId: row.itemId ?? "",
       productCode: row.productCode ?? "",
       productName: row.productName ?? "",
       diaSize: row.diaSize ?? "",
@@ -207,25 +206,25 @@ export function JobCardWorkbench({ rows, picker, isAdmin }: Props) {
       gradeName: row.gradeName ?? "",
       gradeColour: row.gradeColour ?? "",
       deliveryDate: toDateInput(row.deliveryDate),
-      weight: "",
-      heightMin: "",
-      heightMax: "",
+      weight: row.weight ?? "",
+      heightMin: row.heightMin ?? "",
+      heightMax: row.heightMax ?? "",
       orderQuantity: row.orderQuantity ?? "",
-      dispatchConditionId: "",
+      dispatchConditionId: row.dispatchConditionId ?? "",
       plannedQtyToPress: row.plannedQtyToPress ?? "",
-      toleranceId: "",
-      ypNo: "",
-      supportSizeTop: "",
-      supportSizeBottom: "",
-      pressingTypeId: "",
-      makeSampleForSintering: "",
-      outsource: "",
-      supplierVendorName: "",
-      process: "",
-      prevWeight: "",
-      prevPressure: "",
-      prevGradeName: "",
-      remarks: "",
+      toleranceId: row.toleranceId ?? "",
+      ypNo: row.ypNo ?? "",
+      supportSizeTop: row.supportSizeTop ?? "",
+      supportSizeBottom: row.supportSizeBottom ?? "",
+      pressingTypeId: row.pressingTypeId ?? "",
+      makeSampleForSintering: yn(row.makeSampleForSintering),
+      outsource: yn(row.outsource),
+      supplierVendorName: row.supplierVendorName ?? "",
+      process: row.process ?? "",
+      prevWeight: row.prevWeight ?? "",
+      prevPressure: row.prevPressure ?? "",
+      prevGradeName: row.prevGradeName ?? "",
+      remarks: row.remarks ?? "",
     });
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "smooth" });
