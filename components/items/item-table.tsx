@@ -9,12 +9,14 @@ import {
   RegisterDataTable,
   type RegisterColumn,
 } from "@/components/registers/register-data-table";
+import { ItemQuickView } from "@/components/items/item-quick-view";
 import type { ItemListItem } from "@/lib/queries/items";
 
 export const NEW_ITEM_ROUTE = "/items/new" as Route;
 
 interface Props {
   rows: ItemListItem[];
+  isAdmin: boolean;
 }
 
 /**
@@ -22,7 +24,9 @@ interface Props {
  * Columns: Item Code, Customer, Product, Part No, HSN, UoM, Drawing Rev,
  * Costing Type, Created.
  */
-export function ItemTable({ rows }: Props) {
+export function ItemTable({ rows, isAdmin }: Props) {
+  const [quickView, setQuickView] = React.useState<ItemListItem | null>(null);
+
   const columns = React.useMemo<RegisterColumn<ItemListItem>[]>(
     () => [
       {
@@ -146,16 +150,26 @@ export function ItemTable({ rows }: Props) {
   );
 
   return (
-    <RegisterDataTable<ItemListItem>
-      tableKey="items"
-      rows={rows}
-      getRowId={(r) => r.id}
-      columns={columns}
-      getOpenHref={(r) => `/items/${r.id}` as Route}
-      getEditHref={(r) => `/items/${r.id}/edit` as Route}
-      exportFilename="item-master"
-      emptyTitle="No items yet — create the first one."
-      emptyHint="Each item gets a unique internal code assembled from shape, grade and size."
-    />
+    <>
+      <RegisterDataTable<ItemListItem>
+        tableKey="items"
+        rows={rows}
+        getRowId={(r) => r.id}
+        columns={columns}
+        getOpenHref={(r) => `/items/${r.id}` as Route}
+        onRowOpen={(r) => setQuickView(r)}
+        getEditHref={(r) => `/items/${r.id}/edit` as Route}
+        exportFilename="item-master"
+        emptyTitle="No items yet — create the first one."
+        emptyHint="Each item gets a unique internal code assembled from shape, grade and size."
+      />
+      {quickView && (
+        <ItemQuickView
+          item={quickView}
+          isAdmin={isAdmin}
+          onClose={() => setQuickView(null)}
+        />
+      )}
+    </>
   );
 }

@@ -117,6 +117,13 @@ export interface RegisterDataTableProps<TRow> {
   getRowId: (row: TRow) => string;
   columns: RegisterColumn<TRow>[];
   getOpenHref: (row: TRow) => Route;
+  /**
+   * When provided, opening a row (row click / open affordance) calls this
+   * instead of navigating to getOpenHref — used by registers that show an
+   * instant quick-view popup (e.g. Item Master). When omitted, behavior is
+   * unchanged (navigates via getOpenHref).
+   */
+  onRowOpen?: (row: TRow) => void;
   getEditHref?: (row: TRow) => Route;
   filters?: FilterConfig<TRow>[];
   /** Base filename for CSV export (date is appended; ".csv" added automatically). */
@@ -162,6 +169,7 @@ export function RegisterDataTable<TRow>({
   getRowId,
   columns,
   getOpenHref,
+  onRowOpen,
   getEditHref,
   filters = [],
   exportFilename,
@@ -329,13 +337,14 @@ export function RegisterDataTable<TRow>({
       cell: ({ row }) => (
         <RowActions
           openHref={getOpenHref(row.original)}
+          onOpen={onRowOpen ? () => onRowOpen(row.original) : undefined}
           editHref={getEditHref?.(row.original)}
         />
       ),
     };
 
     return [select, ...body, actions];
-  }, [columns, getOpenHref, getEditHref]);
+  }, [columns, getOpenHref, onRowOpen, getEditHref]);
 
   // -- TanStack table instance ------------------------------------------------
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -650,6 +659,10 @@ export function RegisterDataTable<TRow>({
                       // (checkbox, links, action buttons).
                       const t = e.target as HTMLElement;
                       if (t.closest("button, a, input, select, [role='checkbox']")) return;
+                      if (onRowOpen) {
+                        onRowOpen(row.original);
+                        return;
+                      }
                       router.push(href);
                     }}
                   >
@@ -740,22 +753,42 @@ export function RegisterDataTable<TRow>({
 
 function RowActions({
   openHref,
+  onOpen,
   editHref,
 }: {
   openHref: Route;
+  /** When provided, the open affordance is a button that calls this (quick-view) instead of a navigating link. */
+  onOpen?: () => void;
   editHref?: Route;
 }) {
+  const openClasses =
+    "inline-flex size-7 items-center justify-center rounded-lg border border-hairline bg-surface-card text-ink-soft hover:border-brand hover:text-brand transition-all";
   return (
     <span className="inline-flex items-center gap-1 opacity-0 transition-opacity group-hover/row:opacity-100 focus-within:opacity-100">
-      <Link
-        href={openHref}
-        aria-label="Open"
-        title="Open"
-        className="inline-flex size-7 items-center justify-center rounded-lg border border-hairline bg-surface-card text-ink-soft hover:border-brand hover:text-brand transition-all"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <ArrowUpRight size={15} strokeWidth={2.4} />
-      </Link>
+      {onOpen ? (
+        <button
+          type="button"
+          aria-label="Open"
+          title="Open"
+          className={openClasses}
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpen();
+          }}
+        >
+          <ArrowUpRight size={15} strokeWidth={2.4} />
+        </button>
+      ) : (
+        <Link
+          href={openHref}
+          aria-label="Open"
+          title="Open"
+          className={openClasses}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <ArrowUpRight size={15} strokeWidth={2.4} />
+        </Link>
+      )}
       {editHref && (
         <Link
           href={editHref}

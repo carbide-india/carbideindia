@@ -11,7 +11,7 @@ import { BackLink } from "@/components/ui/back-link";
 export const dynamic = "force-dynamic";
 
 export default async function ItemsPage() {
-  await requireUser();
+  const me = await requireUser();
 
   const rows = await listItems();
 
@@ -74,7 +74,7 @@ export default async function ItemsPage() {
             </Link>
           </div>
         </header>
-        <ItemTable rows={rows} />
+        <ItemTable rows={rows} isAdmin={me.isAdmin} />
       </main>
       <DashboardFooter />
     </>
