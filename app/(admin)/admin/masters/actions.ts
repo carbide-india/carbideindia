@@ -4,8 +4,18 @@ import { revalidatePath, updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { masterOptions, settingsEvents } from "@/db/schema";
+import {
+  masterOptions,
+  settingsEvents,
+  items,
+  inquiries,
+  inquiryItems,
+  jobCards,
+  clients,
+} from "@/db/schema";
 import { requireAdmin } from "@/lib/auth/current";
+import { recordAudit } from "@/lib/audit/record";
+import { MASTER_KIND_LABELS } from "@/db/enums";
 import {
   CreateMasterSchema,
   BulkCreateMasterSchema,
@@ -227,6 +237,105 @@ export async function updateMasterOption(
   } catch (err) {
     console.error("[updateMasterOption] audit write failed", err);
   }
+
+  revalidateMasterSurfaces();
+  return { ok: true };
+}
+
+/**
+ * Hard-delete a master option — ONLY when it is referenced nowhere. If any
+ * record in the DB points at this option (scalar FKs or the client array
+ * columns), we refuse and tell the admin to deactivate it instead. This keeps
+ * the delete safe even though the FKs are `on delete set null` (which would
+ * otherwise silently blank live records).
+ */
+export async function deleteMasterOption(masterId: string): Promise<ActionResult> {
+  const me = await requireAdmin();
+
+  const parsedId = MasterIdSchema.safeParse(masterId);
+  if (!parsedId.success) {
+    return { ok: false, error: parsedId.error.issues[0]?.message ?? "Invalid id" };
+  }
+  const id = parsedId.data;
+
+  const option = await db.query.masterOptions.findFirst({
+    where: eq(masterOptions.id, id),
+  });
+  if (!option) return { ok: false, error: "Master option not found" };
+
+  let refs = 0;
+  try {
+    const counts = await Promise.all([
+      // items
+      db.$count(items, eq(items.shapeId, id)),
+      db.$count(items, eq(items.internalGradeId, id)),
+      db.$count(items, eq(items.toleranceId, id)),
+      db.$count(items, eq(items.conditionId, id)),
+      // inquiries
+      db.$count(inquiries, eq(inquiries.gradeId, id)),
+      db.$count(inquiries, eq(inquiries.toleranceId, id)),
+      db.$count(inquiries, eq(inquiries.conditionId, id)),
+      // inquiryItems
+      db.$count(inquiryItems, eq(inquiryItems.gradeId, id)),
+      db.$count(inquiryItems, eq(inquiryItems.toleranceId, id)),
+      db.$count(inquiryItems, eq(inquiryItems.conditionId, id)),
+      // jobCards
+      db.$count(jobCards, eq(jobCards.dispatchConditionId, id)),
+      db.$count(jobCards, eq(jobCards.toleranceId, id)),
+      db.$count(jobCards, eq(jobCards.pressingTypeId, id)),
+      // clients — scalar FKs
+      db.$count(clients, eq(clients.customerTypeId, id)),
+      db.$count(clients, eq(clients.industryTypeId, id)),
+      // clients — array columns (SQL array containment)
+      db.$count(clients, sql`${clients.customerTypeIds} @> ARRAY[${id}]::uuid[]`),
+      db.$count(clients, sql`${clients.industryTypeIds} @> ARRAY[${id}]::uuid[]`),
+      db.$count(clients, sql`${clients.productTypeIds} @> ARRAY[${id}]::uuid[]`),
+    ]);
+    refs = counts.reduce((sum, n) => sum + n, 0);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: `DB: ${msg}` };
+  }
+
+  if (refs > 0) {
+    return {
+      ok: false,
+      error: `In use by ${refs} record(s) — deactivate it instead.`,
+    };
+  }
+
+  try {
+    await db.delete(masterOptions).where(eq(masterOptions.id, id));
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: `DB: ${msg}` };
+  }
+
+  try {
+    await db.insert(settingsEvents).values({
+      scope: "master",
+      targetId: option.id,
+      actorId: me.id,
+      eventType: "deleted",
+      fromValue: {
+        kind: option.kind,
+        name: option.name,
+        sortOrder: option.sortOrder,
+      },
+    });
+  } catch (err) {
+    console.error("[deleteMasterOption] audit write failed", err);
+  }
+
+  await recordAudit({
+    entityType: "master_option",
+    entityId: option.id,
+    entityLabel: option.name,
+    action: "delete",
+    actorId: me.id,
+    actorName: me.name,
+    summary: `${MASTER_KIND_LABELS[option.kind]} "${option.name}" deleted`,
+  });
 
   revalidateMasterSurfaces();
   return { ok: true };

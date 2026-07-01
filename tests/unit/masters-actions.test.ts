@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+// deleteMasterOption imports @/lib/audit/record which `import "server-only"`;
+// neutralise it so the module loads outside a real server component.
+vi.mock("server-only", () => ({}));
+
 const requireAdmin = vi.fn();
 vi.mock("@/lib/auth/current", () => ({ requireAdmin }));
 

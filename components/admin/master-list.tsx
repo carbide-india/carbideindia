@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useQueryState } from "nuqs";
-import { Layers } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Layers, Pencil, Power, RotateCcw, Trash2 } from "lucide-react";
 import { fireToast } from "@/lib/toast";
 import {
   createMasterOption,
   createMasterOptionsBulk,
   updateMasterOption,
+  deleteMasterOption,
 } from "@/app/(admin)/admin/masters/actions";
 import { MASTER_KINDS, MASTER_KIND_LABELS, type MasterKind } from "@/db/enums";
 import type { MasterOption } from "@/db/schema";
@@ -47,6 +49,11 @@ const PENDING_DATA_KINDS: ReadonlySet<MasterKind> = new Set([
 const BLANK_DIMS = defaultShapeConfig().dims;
 
 export function MasterList({ items }: Props) {
+  const router = useRouter();
+  const formRef = useRef<HTMLDivElement>(null);
+  const [rowBusyId, setRowBusyId] = useState<string | null>(null);
+  const [rowPending, startRowAction] = useTransition();
+
   const [kindRaw, setKind] = useQueryState("kind", {
     defaultValue: "customer_type",
     parse: (v): MasterKind =>
@@ -165,6 +172,44 @@ export function MasterList({ items }: Props) {
     });
   }
 
+  // ── Per-row actions (discoverable Edit / toggle / Delete on every row) ──
+
+  function onRowEdit(o: MasterOption) {
+    loadRow(o);
+    // Bring the form (above the table) back into view for editing.
+    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function onRowToggleActive(o: MasterOption) {
+    const next = !o.isActive;
+    setRowBusyId(o.id);
+    startRowAction(async () => {
+      const res = await updateMasterOption(o.id, { isActive: next });
+      setRowBusyId(null);
+      if (!res.ok) {
+        fireToast({ type: "error", message: res.error ?? "Something went wrong" });
+        return;
+      }
+      fireToast({ message: `${o.name} ${next ? "reactivated" : "deactivated"}.` });
+      router.refresh();
+    });
+  }
+
+  function onRowDelete(o: MasterOption) {
+    if (!window.confirm(`Delete "${o.name}"? This cannot be undone.`)) return;
+    setRowBusyId(o.id);
+    startRowAction(async () => {
+      const res = await deleteMasterOption(o.id);
+      setRowBusyId(null);
+      if (!res.ok) {
+        fireToast({ type: "error", message: res.error ?? "Something went wrong" });
+        return;
+      }
+      fireToast({ message: "Deleted." });
+      router.refresh();
+    });
+  }
+
   const columns: WbColumn<MasterOption>[] = [
     {
       key: "name",
@@ -186,6 +231,20 @@ export function MasterList({ items }: Props) {
       cell: (o) => <StatusChip active={o.isActive} />,
       filterValue: (o) => (o.isActive ? "Active" : "Inactive"),
       sortValue: (o) => (o.isActive ? 0 : 1),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      align: "right",
+      cell: (o) => (
+        <RowActions
+          option={o}
+          busy={rowPending && rowBusyId === o.id}
+          onEdit={onRowEdit}
+          onToggleActive={onRowToggleActive}
+          onDelete={onRowDelete}
+        />
+      ),
     },
   ];
 
@@ -234,6 +293,7 @@ export function MasterList({ items }: Props) {
       </div>
 
       {/* Entry form */}
+      <div ref={formRef}>
       <WorkbenchPanel
         title={`${selected ? "Edit" : "New"} ${MASTER_KIND_LABELS[kind]} Option`}
         icon={<Layers size={17} strokeWidth={2.2} />}
@@ -365,6 +425,7 @@ export function MasterList({ items }: Props) {
           </div>
         </div>
       </WorkbenchPanel>
+      </div>
 
       {/* List */}
       <div>
@@ -391,6 +452,71 @@ export function MasterList({ items }: Props) {
           />
         )}
       </div>
+    </div>
+  );
+}
+
+function RowActions({
+  option,
+  busy,
+  onEdit,
+  onToggleActive,
+  onDelete,
+}: {
+  option: MasterOption;
+  busy: boolean;
+  onEdit: (o: MasterOption) => void;
+  onToggleActive: (o: MasterOption) => void;
+  onDelete: (o: MasterOption) => void;
+}) {
+  const btn =
+    "inline-flex h-7 w-7 items-center justify-center rounded-chip border border-hairline bg-surface-card text-ink-soft transition-colors hover:border-brand/40 hover:text-ink-strong disabled:opacity-40 disabled:cursor-not-allowed";
+  return (
+    <div className="inline-flex items-center justify-end gap-1.5">
+      <button
+        type="button"
+        aria-label="Edit"
+        title="Edit"
+        disabled={busy}
+        onClick={(e) => {
+          e.stopPropagation();
+          onEdit(option);
+        }}
+        className={btn}
+      >
+        <Pencil size={14} strokeWidth={2.2} />
+      </button>
+      <button
+        type="button"
+        aria-label={option.isActive ? "Deactivate" : "Reactivate"}
+        title={option.isActive ? "Deactivate" : "Reactivate"}
+        disabled={busy}
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleActive(option);
+        }}
+        className={btn}
+      >
+        {option.isActive ? (
+          <Power size={14} strokeWidth={2.2} />
+        ) : (
+          <RotateCcw size={14} strokeWidth={2.2} />
+        )}
+      </button>
+      <button
+        type="button"
+        aria-label="Delete"
+        title="Delete"
+        disabled={busy}
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(option);
+        }}
+        className={btn}
+        style={{ color: "var(--color-red)" }}
+      >
+        <Trash2 size={14} strokeWidth={2.2} />
+      </button>
     </div>
   );
 }
