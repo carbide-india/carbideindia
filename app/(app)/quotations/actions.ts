@@ -18,7 +18,7 @@ import {
   type CreateQuotationInput,
   type UpdateQuotationInput,
 } from "@/lib/validators/quotation";
-import { quoteLineRows } from "@/lib/quotations/line-rows";
+import { quoteLineRows, quoteLineInsert } from "@/lib/quotations/line-rows";
 
 /**
  * Quotation (Quote Master) server actions — Phase 4 write path.
@@ -129,7 +129,11 @@ export async function createQuotation(
           .returning({ id: quotations.id });
         if (!r) throw new Error("quotations insert returned no row");
         if (lineRows.length) {
-          await tx.insert(quotationItems).values(lineRows.map((x) => ({ quotationId: r.id, ...x })));
+          // Insert only the KEPT line columns — the spec/customer-ask mirrors are
+          // dropped (migration 0036); spec reads through items via item_id.
+          await tx
+            .insert(quotationItems)
+            .values(lineRows.map((x) => ({ quotationId: r.id, ...quoteLineInsert(x) })));
         }
         return r;
       });
@@ -200,18 +204,14 @@ export async function syncProductsFromEnquiry(
     if (missing.length === 0) return { ok: true, added: 0 };
 
     const maxSort = existing.reduce((m, r) => Math.max(m, r.sortOrder), -1);
+    // Only the KEPT line columns — spec/customer-ask mirrors are dropped
+    // (migration 0036); they read through items/inquiry_item downstream.
     const rows = missing.map((s, i) => ({
       quotationId: recordId,
       inquiryItemId: s.inquiryItemId,
       itemId: s.itemId,
       sortOrder: maxSort + 1 + i,
-      custProductName: s.custProductName,
-      custDrawingNo: s.custDrawingNo,
-      drawingRevisionNo: s.drawingRevisionNo,
       qty: s.qty,
-      gradeCustomer: s.gradeCustomer,
-      tolerance: s.tolerance,
-      condition: s.condition,
       finalCost: s.finalCost,
     }));
     await db.insert(quotationItems).values(rows);
@@ -255,10 +255,12 @@ export async function updateQuotation(
     return { ok: false, error: "Could not save the quotation. Please try again." };
   }
 
-  // Mirror line-#1 per-line subset into quotation_items (sortOrder = 0).
+  // Mirror line-#1 per-line subset into quotation_items (sortOrder = 0). Only
+  // the KEPT transactional columns — the spec/customer-ask mirrors are dropped
+  // (migration 0036) and now read through items/inquiry_item, so they are no
+  // longer synced onto the line.
   const LINE1_KEYS = [
-    "custProductName", "custDrawingNo", "drawingRevisionNo", "qty",
-    "gradeCustomer", "gradeNameForCust", "tolerance", "condition", "partNo",
+    "qty",
     "finalCost", "negotiation", "quotePrice",
     "developmentTime", "deliveryTime", "validity",
   ] as const;

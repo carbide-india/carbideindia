@@ -5,7 +5,7 @@ import { and, count, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { negotiations, negotiationItems, type NewNegotiation } from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
-import { negotiationLineRows } from "@/lib/negotiations/line-rows";
+import { negotiationLineRows, negotiationLineInsert } from "@/lib/negotiations/line-rows";
 import {
   getQuoteAutofill,
   getQuotationAutofill,
@@ -131,7 +131,11 @@ export async function createNegotiation(
           .returning({ id: negotiations.id });
         if (!r) throw new Error("negotiations insert returned no row");
         if (lineRows.length) {
-          await tx.insert(negotiationItems).values(lineRows.map((x) => ({ negotiationId: r.id, ...x })));
+          // Only the KEPT line columns — spec/customer-ask mirrors are dropped
+          // (migration 0036); spec reads through items via item_id.
+          await tx
+            .insert(negotiationItems)
+            .values(lineRows.map((x) => ({ negotiationId: r.id, ...negotiationLineInsert(x) })));
         }
         return r;
       });
@@ -205,12 +209,13 @@ export async function syncProductsFromEnquiry(
     if (missing.length === 0) return { ok: true, added: 0 };
 
     const maxSort = existing.reduce((m, r) => Math.max(m, r.sortOrder), -1);
+    // Only the KEPT line columns — the spec/customer-ask mirror is dropped
+    // (migration 0036); it reads through items/inquiry_item downstream.
     const rows = missing.map((s, i) => ({
       negotiationId: recordId,
       inquiryItemId: s.inquiryItemId,
       itemId: s.itemId,
       sortOrder: maxSort + 1 + i,
-      custProductName: s.custProductName,
       qty: s.qty,
       finalCost: s.finalCost,
     }));
@@ -255,9 +260,11 @@ export async function updateNegotiation(
     return { ok: false, error: "Could not save the negotiation. Please try again." };
   }
 
-  // Mirror line-#1 per-line subset into negotiation_items (sortOrder = 0).
+  // Mirror line-#1 per-line subset into negotiation_items (sortOrder = 0). Only
+  // the KEPT transactional columns — the spec/customer-ask mirrors (custProductName,
+  // partNo) are dropped (migration 0036) and read through items/inquiry_item.
   const LINE1_KEYS = [
-    "custProductName", "qty", "partNo",
+    "qty",
     "finalCost", "negotiation", "quotePrice",
     "developmentTime", "deliveryTime", "validity",
   ] as const;

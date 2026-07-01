@@ -11,7 +11,7 @@ import {
   getInquiryItemSeeds,
   type QuoteLineSeed,
 } from "@/lib/queries/quotes";
-import { soLineRows } from "@/lib/sales-orders/line-rows";
+import { soLineRows, soLineInsert } from "@/lib/sales-orders/line-rows";
 import {
   CreateSalesOrderSchema,
   UpdateSalesOrderSchema,
@@ -135,7 +135,11 @@ export async function createSalesOrder(
           .returning({ id: salesOrders.id });
         if (!r) throw new Error("salesOrders insert returned no row");
         if (lineRows.length) {
-          await tx.insert(salesOrderItems).values(lineRows.map((x) => ({ salesOrderId: r.id, ...x })));
+          // Only the KEPT line columns — spec/customer-ask mirrors are dropped
+          // (migration 0036); spec reads through items via item_id.
+          await tx
+            .insert(salesOrderItems)
+            .values(lineRows.map((x) => ({ salesOrderId: r.id, ...soLineInsert(x) })));
         }
         return r;
       });
@@ -206,12 +210,13 @@ export async function syncProductsFromEnquiry(
     if (missing.length === 0) return { ok: true, added: 0 };
 
     const maxSort = existing.reduce((m, r) => Math.max(m, r.sortOrder), -1);
+    // Only the KEPT line columns — the spec/customer-ask mirror is dropped
+    // (migration 0036); it reads through items/inquiry_item downstream.
     const rows = missing.map((s, i) => ({
       salesOrderId: recordId,
       inquiryItemId: s.inquiryItemId,
       itemId: s.itemId,
       sortOrder: maxSort + 1 + i,
-      custProductName: s.custProductName,
       qty: s.qty,
     }));
     await db.insert(salesOrderItems).values(rows);
@@ -259,9 +264,11 @@ export async function updateSalesOrder(
     return { ok: false, error: "Could not save the sales order. Please try again." };
   }
 
-  // Mirror line-#1 per-line subset into sales_order_items (sortOrder = 0).
+  // Mirror line-#1 per-line subset into sales_order_items (sortOrder = 0). Only
+  // the KEPT transactional columns — the spec/customer-ask mirrors (custProductName,
+  // partNo) are dropped (migration 0036) and read through items/inquiry_item.
   const LINE1_KEYS = [
-    "custProductName", "qty", "partNo",
+    "qty",
     "quotePrice",
     "developmentTime", "deliveryTime", "validity",
   ] as const;

@@ -929,21 +929,27 @@ export const quotationItems = pgTable(
     inquiryItemId: uuid("inquiry_item_id").references(() => inquiryItems.id, { onDelete: "set null" }),
     itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
     sortOrder: integer("sort_order").notNull().default(0),
-    custProductName: text("cust_product_name"),
-    custDrawingNo: text("cust_drawing_no"),
-    drawingRevisionNo: text("drawing_revision_no"),
+    // SPEC / customer-ask mirror columns REMOVED in ERP Phase 6 (migration 0036):
+    // cust_product_name, cust_drawing_no, drawing_revision_no, grade_customer,
+    // grade_name_for_cust, tolerance, condition, part_no. Spec resolves
+    // read-through from `items` via item_id; customer-ask via the provenance
+    // inquiry_item (lib/flow/spec-resolve.ts). Only transactional facts remain.
     qty: numeric("qty"),
-    gradeCustomer: text("grade_customer"),
-    gradeNameForCust: text("grade_name_for_cust"),
-    tolerance: text("tolerance"),
-    condition: text("condition"),
-    partNo: text("part_no"),
     finalCost: numeric("final_cost"),
     negotiation: numeric("negotiation"),
     quotePrice: numeric("quote_price"),
     developmentTime: text("development_time"),
     deliveryTime: text("delivery_time"),
     validity: text("validity"),
+    // Legal commercial snapshot (ERP Phase 6 — migration 0035, §2.4). NULL while
+    // the quotation is a draft (drafts read through live); frozen ONLY at the
+    // sent transition by the Phase-8 handler. `unitPrice` = the price the
+    // counterparty relied on; `specSnapshot` = the frozen spec jsonb for legal
+    // PDF reproduction so a later re-classification never alters a sent quote.
+    unitPrice: numeric("unit_price"),
+    specSnapshot: jsonb("spec_snapshot"),
+    frozenAt: timestamp("frozen_at", { withTimezone: true }),
+    frozenBy: uuid("frozen_by"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -992,15 +998,24 @@ export const negotiationItems = pgTable(
     quotationItemId: uuid("quotation_item_id").references(() => quotationItems.id, { onDelete: "set null" }),
     itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
     sortOrder: integer("sort_order").notNull().default(0),
-    custProductName: text("cust_product_name"),
+    // SPEC / customer-ask mirror columns REMOVED in ERP Phase 6 (migration 0036):
+    // cust_product_name, part_no. Resolved read-through from items (item_id) +
+    // provenance inquiry_item. Only transactional facts remain.
     qty: numeric("qty"),
-    partNo: text("part_no"),
     finalCost: numeric("final_cost"),
     negotiation: numeric("negotiation"),
     quotePrice: numeric("quote_price"),
     developmentTime: text("development_time"),
     deliveryTime: text("delivery_time"),
     validity: text("validity"),
+    // Legal commercial snapshot (ERP Phase 6 — migration 0035, §2.4). NULL until
+    // the negotiation round is agreed (verbal_yes); the agreed `unitPrice` is a
+    // fact of that round. `specSnapshot`/`frozenAt`/`frozenBy` mirror the quote
+    // line's freeze shape so all commercial lines share one snapshot contract.
+    unitPrice: numeric("unit_price"),
+    specSnapshot: jsonb("spec_snapshot"),
+    frozenAt: timestamp("frozen_at", { withTimezone: true }),
+    frozenBy: uuid("frozen_by"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -1051,13 +1066,23 @@ export const salesOrderItems = pgTable(
     quotationItemId: uuid("quotation_item_id").references(() => quotationItems.id, { onDelete: "set null" }),
     itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
     sortOrder: integer("sort_order").notNull().default(0),
-    custProductName: text("cust_product_name"),
+    // SPEC / customer-ask mirror columns REMOVED in ERP Phase 6 (migration 0036):
+    // cust_product_name, part_no. Resolved read-through from items (item_id) +
+    // provenance inquiry_item. Only transactional facts remain.
     qty: numeric("qty"),
-    partNo: text("part_no"),
     quotePrice: numeric("quote_price"),
     developmentTime: text("development_time"),
     deliveryTime: text("delivery_time"),
     validity: text("validity"),
+    // Legal commercial snapshot (ERP Phase 6 — migration 0035, §2.4). NULL until
+    // the SO is confirmed; the order is a contract so price, spec AND the ordered
+    // quantity are frozen at confirmation. `qtyOrdered` is the SO line's legit
+    // qty snapshot (distinct from the JC release qty on job_cards.qty_ordered).
+    unitPrice: numeric("unit_price"),
+    specSnapshot: jsonb("spec_snapshot"),
+    qtyOrdered: numeric("qty_ordered"),
+    frozenAt: timestamp("frozen_at", { withTimezone: true }),
+    frozenBy: uuid("frozen_by"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

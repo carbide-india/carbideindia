@@ -246,6 +246,20 @@
       "when": 1782915358233,
       "tag": "0034_item_id_not_null",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1782925630269,
+      "tag": "0035_legal_snapshot_cols",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1782925831933,
+      "tag": "0036_drop_spec_mirrors",
+      "breakpoints": true
     }
   ]
 }

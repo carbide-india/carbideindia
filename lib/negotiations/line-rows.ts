@@ -37,6 +37,43 @@ export interface BuiltNegotiationLine {
   itemId: string | null;
 }
 
+/**
+ * The subset INSERTED onto `negotiation_items` (ERP Phase 6 — migration 0036).
+ * The spec/customer-ask MIRROR columns (custProductName, partNo) are DROPPED —
+ * resolved read-through from items (spec-resolve) + the provenance inquiry_item.
+ * Only transactional facts + the FK spine remain on the line.
+ */
+export interface NegotiationLineInsert {
+  sortOrder: number;
+  qty: string | null;
+  finalCost: string | null;
+  negotiation: string | null;
+  quotePrice: string | null;
+  developmentTime: string | null;
+  deliveryTime: string | null;
+  validity: string | null;
+  inquiryItemId: string | null;
+  quotationItemId: string | null;
+  itemId: string | null;
+}
+
+/** Project a built line to the kept `negotiation_items` insert columns. */
+export function negotiationLineInsert(l: BuiltNegotiationLine): NegotiationLineInsert {
+  return {
+    sortOrder: l.sortOrder,
+    qty: l.qty,
+    finalCost: l.finalCost,
+    negotiation: l.negotiation,
+    quotePrice: l.quotePrice,
+    developmentTime: l.developmentTime,
+    deliveryTime: l.deliveryTime,
+    validity: l.validity,
+    inquiryItemId: l.inquiryItemId,
+    quotationItemId: l.quotationItemId,
+    itemId: l.itemId,
+  };
+}
+
 /** Build the negotiation_items rows for a negotiation. Prefers lines[]; otherwise
  *  synthesises one row from the legacy flat product fields (back-compat with
  *  the bulk importer + any caller that still sends a single product). */

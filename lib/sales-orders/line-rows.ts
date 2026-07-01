@@ -33,6 +33,39 @@ export interface BuiltSoLine {
   itemId: string | null;
 }
 
+/**
+ * The subset INSERTED onto `sales_order_items` (ERP Phase 6 — migration 0036).
+ * The spec/customer-ask MIRROR columns (custProductName, partNo) are DROPPED —
+ * resolved read-through from items (spec-resolve) + the provenance inquiry_item.
+ * Only transactional facts + the FK spine remain on the line.
+ */
+export interface SoLineInsert {
+  sortOrder: number;
+  qty: string | null;
+  quotePrice: string | null;
+  developmentTime: string | null;
+  deliveryTime: string | null;
+  validity: string | null;
+  inquiryItemId: string | null;
+  quotationItemId: string | null;
+  itemId: string | null;
+}
+
+/** Project a built line to the kept `sales_order_items` insert columns. */
+export function soLineInsert(l: BuiltSoLine): SoLineInsert {
+  return {
+    sortOrder: l.sortOrder,
+    qty: l.qty,
+    quotePrice: l.quotePrice,
+    developmentTime: l.developmentTime,
+    deliveryTime: l.deliveryTime,
+    validity: l.validity,
+    inquiryItemId: l.inquiryItemId,
+    quotationItemId: l.quotationItemId,
+    itemId: l.itemId,
+  };
+}
+
 /** Build the sales_order_items rows for a sales order. Prefers lines[]; otherwise
  *  synthesises one row from the legacy flat product fields (back-compat with
  *  the bulk importer + any caller that still sends a single product).

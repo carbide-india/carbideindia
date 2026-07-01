@@ -48,6 +48,46 @@ export interface BuiltQuoteLine {
   itemId: string | null;
 }
 
+/**
+ * The subset of a built line that is actually INSERTED onto `quotation_items`
+ * (ERP Phase 6 — migration 0036). The spec/customer-ask MIRROR columns
+ * (custProductName, custDrawingNo, drawingRevisionNo, gradeCustomer,
+ * gradeNameForCust, tolerance, condition, partNo) are DROPPED — spec resolves
+ * read-through from `items` via item_id, customer-ask via the provenance
+ * inquiry_item (lib/flow/spec-resolve.ts). Only transactional facts + the FK
+ * spine remain on the line. The header's line-#1 mirror is fed from the full
+ * BuiltQuoteLine separately and is out of scope for this drop.
+ */
+export interface QuoteLineInsert {
+  sortOrder: number;
+  qty: string | null;
+  finalCost: string | null;
+  negotiation: string | null;
+  quotePrice: string | null;
+  developmentTime: string | null;
+  deliveryTime: string | null;
+  validity: string | null;
+  inquiryItemId: string | null;
+  itemId: string | null;
+}
+
+/** Project a built line to the kept `quotation_items` insert columns (no spec
+ *  mirrors — those read through items/inquiry_item post-migration-0036). */
+export function quoteLineInsert(l: BuiltQuoteLine): QuoteLineInsert {
+  return {
+    sortOrder: l.sortOrder,
+    qty: l.qty,
+    finalCost: l.finalCost,
+    negotiation: l.negotiation,
+    quotePrice: l.quotePrice,
+    developmentTime: l.developmentTime,
+    deliveryTime: l.deliveryTime,
+    validity: l.validity,
+    inquiryItemId: l.inquiryItemId,
+    itemId: l.itemId,
+  };
+}
+
 /** Build the quotation_items rows for a quotation. Prefers lines[]; otherwise
  *  synthesises one row from the legacy flat product fields (back-compat with
  *  the bulk importer + any caller that still sends a single product). */

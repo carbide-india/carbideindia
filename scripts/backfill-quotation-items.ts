@@ -1,11 +1,19 @@
 /** One quotation_items row per existing quotation, from its legacy product columns.
- *  Idempotent: skips quotations that already have any quotation_items row. */
+ *  Idempotent: skips quotations that already have any quotation_items row.
+ *
+ *  HISTORICAL (Phase 4-era). As of ERP Phase 6 (migration 0036) the spec /
+ *  customer-ask MIRROR columns (cust_product_name, cust_drawing_no,
+ *  drawing_revision_no, grade_customer, grade_name_for_cust, tolerance,
+ *  condition, part_no) are DROPPED from quotation_items — spec now reads through
+ *  `items` via item_id and customer-ask via the provenance inquiry_item. This
+ *  legacy backfill therefore only seeds the KEPT transactional columns; it does
+ *  NOT set item_id (that is the job of scripts/backfill-item-master.ts). Kept
+ *  runnable only so an old DB missing quotation_items rows can still be seeded. */
 import postgres from "postgres";
 const sql = postgres(process.env.DATABASE_URL!, { prepare: false });
 async function main() {
   const rows = await sql`
-    SELECT q.id, q.cust_product_name, q.cust_drawing_no, q.drawing_revision_no, q.qty,
-           q.grade_customer, q.grade_name_for_cust, q.tolerance, q.condition, q.part_no,
+    SELECT q.id, q.qty,
            q.final_cost, q.negotiation, q.quote_price, q.development_time, q.delivery_time,
            q.validity
     FROM quotations q
@@ -13,12 +21,10 @@ async function main() {
   let n = 0;
   for (const r of rows) {
     await sql`INSERT INTO quotation_items
-      (quotation_id, sort_order, cust_product_name, cust_drawing_no, drawing_revision_no, qty,
-       grade_customer, grade_name_for_cust, tolerance, condition, part_no,
+      (quotation_id, sort_order, qty,
        final_cost, negotiation, quote_price, development_time, delivery_time, validity)
-      VALUES (${r.id}, 0, ${r.cust_product_name}, ${r.cust_drawing_no}, ${r.drawing_revision_no},
-       ${r.qty}, ${r.grade_customer}, ${r.grade_name_for_cust}, ${r.tolerance}, ${r.condition},
-       ${r.part_no}, ${r.final_cost}, ${r.negotiation}, ${r.quote_price},
+      VALUES (${r.id}, 0, ${r.qty},
+       ${r.final_cost}, ${r.negotiation}, ${r.quote_price},
        ${r.development_time}, ${r.delivery_time}, ${r.validity})`;
     n++;
   }
