@@ -22,11 +22,24 @@
  * NOTE: default is DRY. Pass --apply to write. This is a data op the controller
  * runs after human go — do not run it as part of the build gate.
  */
+import Module from "node:module";
 import { and, eq, isNull, sql as dsql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { inquiries, inquiryItems, masterOptions } from "@/db/schema";
-import { syncProductToItem, type ItemSpec } from "@/lib/item-master/sync";
+import type { ItemSpec } from "@/lib/item-master/sync";
 import { normalizeShapeName } from "@/lib/masters/shape-normalize";
+
+// This maintenance script pulls in the server-side Item-Sync module, which (like
+// the rest of lib/) declares `import "server-only"` — that throws when required
+// outside an RSC/server-action context. Stub it (and client-only) at the module
+// loader so the shared sync path can be reused here, then dynamic-import sync.
+type ModLoad = (request: string, parent: unknown, isMain: boolean) => unknown;
+const _mod = Module as unknown as { _load: ModLoad };
+const _origLoad = _mod._load;
+_mod._load = ((request: string, parent: unknown, isMain: boolean) =>
+  request === "server-only" || request === "client-only"
+    ? {}
+    : _origLoad(request, parent, isMain)) as ModLoad;
 
 const APPLY = process.argv.includes("--apply");
 const DRY = !APPLY;
@@ -38,6 +51,8 @@ const toNum = (v: string | null): number | null => {
 };
 
 async function main() {
+  const { syncProductToItem, missingRequiredDims } = await import("@/lib/item-master/sync");
+
   // Build shape-name → shapeId map once (active shape masters).
   const shapeMasters = await db
     .select({ id: masterOptions.id, name: masterOptions.name })
@@ -96,7 +111,6 @@ async function main() {
 
     if (DRY) {
       // Classify without writing: emulate the contract's active/draft decision.
-      const { missingRequiredDims } = await import("@/lib/item-master/sync");
       const missing = await missingRequiredDims(db, spec);
       if (missing.length) {
         console.log(`WOULD DRAFT ${label} (missing:${missing.join(",")})`);

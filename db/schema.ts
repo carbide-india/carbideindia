@@ -644,9 +644,12 @@ export const inquiryItems = pgTable(
     conditionId: uuid("condition_id").references(() => masterOptions.id, { onDelete: "set null" }),
     quantityNos: numeric("quantity_nos"),
     quantityUom: text("quantity_uom").notNull().default("Nos"),
-    // FK to the Item / Product Master (Phase B). onDelete: set null so deleting
-    // an item leaves the inquiry line intact, just unlinked.
-    itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
+    // FK to the Item / Product Master. SSOT invariant I1 (ERP Phase 4, migration
+    // 0034): every product line ALWAYS carries an item_id (a reused/created Item,
+    // possibly a draft), written in the same tx as the line. onDelete: restrict —
+    // an Item that is referenced by a product can never be deleted (merges
+    // repoint, they never blind-delete).
+    itemId: uuid("item_id").references(() => items.id, { onDelete: "restrict" }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

@@ -216,14 +216,17 @@ export async function createInquiry(
         // An incomplete spec does NOT roll back — it becomes a draft Item; only
         // a real DB error rolls back (we never commit a product with no Item).
         for (const r of productRows) {
-          const [line] = await tx
-            .insert(inquiryItems)
-            .values({ inquiryId: row.id, ...r })
-            .returning({ id: inquiryItems.id });
-          if (!line) throw new Error("inquiry_items insert returned no row");
+          // Pre-generate the line id so the Item-Sync Contract can run BEFORE the
+          // insert — the line is then inserted WITH its item_id in a single
+          // statement. This satisfies the `inquiry_items.item_id NOT NULL`
+          // invariant (I1): a plain NOT NULL column is checked at insert time and
+          // cannot be deferred, so an insert-then-update pattern would fail.
+          const lineId = crypto.randomUUID();
           const spec = await specFromLine(tx, r);
-          const res = await syncProductToItem(tx, spec, line.id, { id: me.id, name: me.name });
-          await tx.update(inquiryItems).set({ itemId: res.itemId, updatedAt: new Date() }).where(eq(inquiryItems.id, line.id));
+          const res = await syncProductToItem(tx, spec, lineId, { id: me.id, name: me.name });
+          await tx
+            .insert(inquiryItems)
+            .values({ id: lineId, inquiryId: row.id, ...r, itemId: res.itemId });
         }
       }
 
