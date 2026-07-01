@@ -236,11 +236,68 @@ async function seedShapeConfigs(): Promise<void> {
   console.log(`shape configs seeded: ${n}`);
 }
 
+// Roles (ERP redesign — Phase 1). The seven canonical pipeline actors. `admin`
+// implies every role in the enforcement layer (lib/auth/roles.ts). Order here
+// is the display sort_order (× 10).
+const ROLE_SEEDS: { name: string; label: string }[] = [
+  { name: "sales", label: "Sales" },
+  { name: "costing", label: "Costing" },
+  { name: "production", label: "Production" },
+  { name: "qc", label: "QC" },
+  { name: "dispatch", label: "Dispatch" },
+  { name: "accounts", label: "Accounts" },
+  { name: "admin", label: "Admin" },
+];
+
+/**
+ * Upsert the 7 roles (idempotent by name — existing rows keep their label/order
+ * untouched) and data-fill the `admin` role onto every active/is_admin employee
+ * that doesn't already have it. Re-runnable: both steps are insert-if-missing.
+ */
+async function seedRoles(): Promise<void> {
+  for (const [i, r] of ROLE_SEEDS.entries()) {
+    await db.execute(sql`
+      INSERT INTO roles (name, label, sort_order)
+      VALUES (${r.name}, ${r.label}, ${(i + 1) * 10})
+      ON CONFLICT (name) DO NOTHING
+    `);
+  }
+  const roleRows = (await db.execute(
+    sql`SELECT count(*)::int AS n FROM roles`,
+  )) as unknown as { n: number }[];
+  console.log(`roles: seeded — ${roleRows[0]?.n ?? 0} rows present`);
+
+  // Data-fill: grant the `admin` role to every admin employee lacking it. The
+  // NOT EXISTS guard + the (employee_id, role_id) unique index make this a
+  // no-op on re-run.
+  await db.execute(sql`
+    INSERT INTO employee_roles (employee_id, role_id)
+    SELECT e.id, r.id
+    FROM employees e
+    CROSS JOIN roles r
+    WHERE r.name = 'admin'
+      AND e.is_admin = true
+      AND e.is_active = true
+      AND NOT EXISTS (
+        SELECT 1 FROM employee_roles er
+        WHERE er.employee_id = e.id AND er.role_id = r.id
+      )
+  `);
+  const grantRows = (await db.execute(sql`
+    SELECT count(*)::int AS n
+    FROM employee_roles er
+    JOIN roles r ON r.id = er.role_id
+    WHERE r.name = 'admin'
+  `)) as unknown as { n: number }[];
+  console.log(`employee_roles[admin]: ${grantRows[0]?.n ?? 0} grant(s) present`);
+}
+
 async function main(): Promise<void> {
   await seedStatusSettings();
   await seedOrgSettings();
   await seedMasterOptions();
   await seedShapeConfigs();
+  await seedRoles();
   console.log("seed-defaults: done");
 }
 

@@ -1733,6 +1733,89 @@ export const attendanceLogs = pgTable(
   ],
 );
 
+/**
+ * Roles (ERP redesign — Phase 1). The seven canonical actors of the sales →
+ * production pipeline: `sales, costing, production, qc, dispatch, accounts,
+ * admin`. Seeded (idempotent, by name) via `scripts/seed-defaults.ts`. Admin
+ * implies every role in the enforcement layer (`lib/auth/roles.ts`).
+ *
+ * ADDITIVE / non-breaking: until a person is granted rows in `employee_roles`,
+ * `userRoles()` falls back to `["admin"]` when `employees.is_admin` is true, so
+ * nothing in the pre-rollout app changes.
+ */
+export const roles = pgTable(
+  "roles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull().unique(),
+    label: text("label").notNull(),
+    sortOrder: integer("sort_order").notNull().default(100),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("roles_sort_idx").on(t.sortOrder, t.name)],
+);
+
+/**
+ * Employee ↔ role grants (many-to-many). Mirrors the `employee_departments`
+ * join style. A missing row-set means "fall back to is_admin" (see roles doc);
+ * the data-fill in seed-defaults grants every admin the `admin` role.
+ */
+export const employeeRoles = pgTable(
+  "employee_roles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    employeeId: uuid("employee_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "cascade" }),
+    roleId: uuid("role_id")
+      .notNull()
+      .references(() => roles.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("employee_roles_employee_role_uidx").on(t.employeeId, t.roleId),
+    index("employee_roles_employee_idx").on(t.employeeId),
+    index("employee_roles_role_idx").on(t.roleId),
+  ],
+);
+
+/**
+ * Saved views (ERP redesign — Phase 1 backend; the SavedViews bar UI lands in
+ * Phase 3). A per-employee (optionally shared) named bundle of filters/sort/
+ * columns for a register module ("items", "clients", "enquiries", …). `config`
+ * is opaque jsonb the consuming register interprets.
+ */
+export const savedViews = pgTable(
+  "saved_views",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    employeeId: uuid("employee_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "cascade" }),
+    module: text("module").notNull(),
+    name: text("name").notNull(),
+    config: jsonb("config").notNull().default({}),
+    isShared: boolean("is_shared").notNull().default(false),
+    sortOrder: integer("sort_order").notNull().default(100),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("saved_views_module_employee_idx").on(t.module, t.employeeId),
+  ],
+);
+
 export type Employee = typeof employees.$inferSelect;
 export type NewEmployee = typeof employees.$inferInsert;
 export type Task = typeof tasks.$inferSelect;
@@ -1775,3 +1858,9 @@ export type AchievementEarned = typeof achievementsEarned.$inferSelect;
 export type NewAchievementEarned = typeof achievementsEarned.$inferInsert;
 export type AttendanceLog = typeof attendanceLogs.$inferSelect;
 export type NewAttendanceLog = typeof attendanceLogs.$inferInsert;
+export type Role = typeof roles.$inferSelect;
+export type NewRole = typeof roles.$inferInsert;
+export type EmployeeRole = typeof employeeRoles.$inferSelect;
+export type NewEmployeeRole = typeof employeeRoles.$inferInsert;
+export type SavedView = typeof savedViews.$inferSelect;
+export type NewSavedView = typeof savedViews.$inferInsert;
