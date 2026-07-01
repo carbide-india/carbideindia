@@ -24,6 +24,8 @@
     "verify:env": "tsx --env-file=.env.local scripts/verify-env.ts",
     "bootstrap-admin": "tsx --env-file=.env.bootstrap scripts/bootstrap-admin.ts",
     "import:legacy": "tsx --env-file=.env.local scripts/import-legacy.ts",
+    "ssot-lint": "tsx scripts/ci/ssot-lint.ts",
+    "report:shapes": "tsx --env-file=.env.local scripts/report-unresolvable-shapes.ts",
     "gen:icons": "python scripts/gen-pwa-icons.py",
     "db:migrate:legacy-drizzle-kit": "node --env-file=.env.local node_modules/drizzle-kit/bin.cjs migrate",
     "start:lan": "next start -H 0.0.0.0 -p 3000"

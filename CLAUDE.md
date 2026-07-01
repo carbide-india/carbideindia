@@ -66,5 +66,5 @@ Copy `.env.example` → `.env.local`. Required: `DATABASE_URL` (Neon pooled), `N
 - Don't run document uploads through server actions — body limits. Use the existing client-upload flow.
 - `pnpm build` needs a structurally-valid `DATABASE_URL` (placeholder works; it's parsed, not connected).
 - Tests are load-flaky; `--maxWorkers=4` before chasing ghosts.
-- Migrations are squashed to a single `0000_*` init — never edit migration SQL by hand without also keeping `drizzle-kit generate` at "no changes" parity.
+- Migrations are **append-only and sequential** (`0000_*` … `00NN_*`, currently through 0028) — NOT squashed to a single init. Never edit an already-applied migration SQL by hand; add a new numbered migration instead. `drizzle-kit generate` must always stay at "no changes" parity against `db/schema.ts` (the single source of truth).
 - `db/enums.ts` keeps deprecated task statuses (follow_up_1/2/3, cancelled, transferred, need_help) for data compat — they're filtered from UI, don't remove.
