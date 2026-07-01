@@ -2058,3 +2058,80 @@ select.nt-input {
 .nav-scroll::-webkit-scrollbar-thumb:hover {
   background: color-mix(in srgb, var(--color-brand) 55%, transparent);
 }
+
+/* ────────────────────────────────────────────────────────────────────
+   ERP redesign — Phase 3 UX primitives
+   Drawer / overlay motion + AppShell semantic tokens. Additive; used only
+   by components/erp/* (AppShell, ContextDrawer) and the Item Workspace.
+   ──────────────────────────────────────────────────────────────────── */
+
+/* Right context drawer — the ContextDrawer sheet width. Clamped per §12.2. */
+:root {
+  --drawer-width: clamp(420px, 34vw, 560px);
+}
+
+@keyframes erpDrawerIn {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+@keyframes erpDrawerOut {
+  from { transform: translateX(0); }
+  to   { transform: translateX(100%); }
+}
+@keyframes erpOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes erpOverlayOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+.erp-drawer-overlay[data-state="open"] {
+  animation: erpOverlayIn 200ms ease-out;
+}
+.erp-drawer-overlay[data-state="closed"] {
+  animation: erpOverlayOut 160ms ease-in forwards;
+}
+.erp-drawer-content[data-state="open"] {
+  animation: erpDrawerIn 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.erp-drawer-content[data-state="closed"] {
+  animation: erpDrawerOut 200ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erp-drawer-overlay[data-state],
+  .erp-drawer-content[data-state] {
+    animation: none !important;
+  }
+}
+
+/* AppShell nav-rail item — icon+label row, active = brand tint. */
+@utility erp-rail-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 10px;
+  color: var(--color-ink-muted);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.005em;
+  white-space: nowrap;
+  transition: background 160ms ease, color 160ms ease;
+  cursor: pointer;
+}
+@utility erp-rail-item {
+  &:hover {
+    background: rgba(15, 23, 42, 0.04);
+    color: var(--color-ink-strong);
+  }
+}
+@utility erp-rail-item-active {
+  background: var(--vp-cyan-tint);
+  color: var(--color-brand-deep);
+  box-shadow: inset 2px 0 0 var(--color-brand);
+}

@@ -44,17 +44,9 @@ export function GlobalSearch() {
     placeholderData: (prev) => prev,
   });
 
-  // ⌘K / Ctrl+K toggles the palette from anywhere.
-  React.useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        setOpen((o) => !o);
-      }
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, []);
+  // NOTE: the ⌘K / Ctrl+K binding moved to the app-wide CommandPalette (ERP
+  // Phase 3) so there is a single keyboard owner. This header box stays a
+  // mouse-first instant-search surface, opened by clicking its button.
 
   React.useEffect(() => {
     if (open) setQuery("");

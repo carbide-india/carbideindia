@@ -4,7 +4,8 @@ import { requireUser } from "@/lib/auth/current";
 import { getItemById } from "@/lib/queries/items";
 import { getItemDocuments } from "@/lib/queries/item-documents";
 import { getAuditLog } from "@/lib/queries/audit";
-import { ItemDetail } from "@/components/items/item-detail";
+import { getItemStageCounts, stageFromCounts } from "@/lib/queries/item-stage";
+import { ItemWorkspace } from "@/components/erp/item-workspace";
 
 export const dynamic = "force-dynamic";
 
@@ -29,21 +30,24 @@ export default async function ItemDetailPage({ params }: PageProps) {
   const { id } = await params;
   if (!UUID_RE.test(id)) notFound();
 
-  const [item, auditEntries, documents] = await Promise.all([
+  const [item, auditEntries, documents, counts] = await Promise.all([
     getItemById(id),
     getAuditLog("item", id),
     getItemDocuments(id),
+    getItemStageCounts(id),
   ]);
   if (!item) notFound();
 
+  const stageIndex = stageFromCounts(counts, item.status);
+
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
-      <ItemDetail
-        item={item}
-        auditEntries={auditEntries}
-        documents={documents}
-        isAdmin={me.isAdmin}
-      />
-    </main>
+    <ItemWorkspace
+      item={item}
+      auditEntries={auditEntries}
+      documents={documents}
+      counts={counts}
+      stageIndex={stageIndex}
+      isAdmin={me.isAdmin}
+    />
   );
 }

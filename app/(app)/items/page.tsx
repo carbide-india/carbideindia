@@ -6,6 +6,8 @@ import { DashboardFooter } from "@/components/layout/footer";
 import { ItemTable, NEW_ITEM_ROUTE } from "@/components/items/item-table";
 import { requireUser } from "@/lib/auth/current";
 import { listItems } from "@/lib/queries/items";
+import { listSavedViews } from "@/lib/views/saved-views";
+import { SavedViewsBar } from "@/components/erp/saved-views-bar";
 import { BackLink } from "@/components/ui/back-link";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +15,10 @@ export const dynamic = "force-dynamic";
 export default async function ItemsPage() {
   const me = await requireUser();
 
-  const rows = await listItems();
+  const [rows, savedViews] = await Promise.all([
+    listItems(),
+    listSavedViews("items", me.id),
+  ]);
 
   return (
     <>
@@ -74,6 +79,11 @@ export default async function ItemsPage() {
             </Link>
           </div>
         </header>
+        {/* Saved-views bar (ERP Phase 3 primitive) — minimal non-disruptive
+            demo. Full register wiring (apply config via nuqs) lands Phase 9. */}
+        <div className="mb-5">
+          <SavedViewsBar module="items" views={savedViews} />
+        </div>
         <ItemTable rows={rows} isAdmin={me.isAdmin} />
       </main>
       <DashboardFooter />
