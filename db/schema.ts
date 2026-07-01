@@ -740,6 +740,16 @@ export const items = pgTable(
     // where is_active else archived. `superseded` reserved for merge-with-history.
     status: itemStatusEnum("status").notNull().default("active"),
 
+    // Item-Sync Contract (ERP Phase 4 — migration 0033). A draft Item is a
+    // real, dedup-keyed, searchable row created for an incomplete product spec
+    // (shape null OR a shape-required dimension missing). `draftReason` records
+    // the gap as "missing:<field,...>" (e.g. "missing:shape" | "missing:outerDia,length");
+    // `completedAt` is stamped when the row becomes/starts active. Both nullable
+    // and additive — the item_id NOT NULL constraint is a SEPARATE later migration
+    // applied only after the total backfill fills every inquiry_items.item_id.
+    draftReason: text("draft_reason"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+
     // Governance (ERP Phase 4): deactivate-only lifecycle. Items are never
     // hard-deleted; is_active=false + deleted_at marks a retired item.
     isActive: boolean("is_active").notNull().default(true),
