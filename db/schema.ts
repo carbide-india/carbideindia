@@ -644,9 +644,12 @@ export const inquiryItems = pgTable(
     conditionId: uuid("condition_id").references(() => masterOptions.id, { onDelete: "set null" }),
     quantityNos: numeric("quantity_nos"),
     quantityUom: text("quantity_uom").notNull().default("Nos"),
-    // FK to the Item / Product Master (Phase B). onDelete: set null so deleting
-    // an item leaves the inquiry line intact, just unlinked.
-    itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
+    // FK to the Item / Product Master. SSOT invariant I1 (ERP Phase 4, migration
+    // 0034): every product line ALWAYS carries an item_id (a reused/created Item,
+    // possibly a draft), written in the same tx as the line. onDelete: restrict —
+    // an Item that is referenced by a product can never be deleted (merges
+    // repoint, they never blind-delete).
+    itemId: uuid("item_id").references(() => items.id, { onDelete: "restrict" }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -739,6 +742,16 @@ export const items = pgTable(
     // this phase; the cutover to `status` happens in Phase 6. Backfilled active
     // where is_active else archived. `superseded` reserved for merge-with-history.
     status: itemStatusEnum("status").notNull().default("active"),
+
+    // Item-Sync Contract (ERP Phase 4 — migration 0033). A draft Item is a
+    // real, dedup-keyed, searchable row created for an incomplete product spec
+    // (shape null OR a shape-required dimension missing). `draftReason` records
+    // the gap as "missing:<field,...>" (e.g. "missing:shape" | "missing:outerDia,length");
+    // `completedAt` is stamped when the row becomes/starts active. Both nullable
+    // and additive — the item_id NOT NULL constraint is a SEPARATE later migration
+    // applied only after the total backfill fills every inquiry_items.item_id.
+    draftReason: text("draft_reason"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
 
     // Governance (ERP Phase 4): deactivate-only lifecycle. Items are never
     // hard-deleted; is_active=false + deleted_at marks a retired item.

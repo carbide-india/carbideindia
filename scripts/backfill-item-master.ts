@@ -1,45 +1,87 @@
 /**
- * One-time backfill: generate Item Master items for enquiry products created
- * before auto-registration existed (and never manually generated). Mirrors
- * `generateItemForInquiryItem` (field mapping) + `createItem` (dedup, code
- * assembly, insert) using the SAME pure helpers so codes match the app exactly.
- * Skips products with no shape master or a missing shape-required dimension.
+ * TOTAL Item-Master backfill (ERP redesign — Phase 4, §3.8).
  *
- * Run:  npx tsx --env-file=.env.local scripts/backfill-item-master.ts
- * Dry:  npx tsx --env-file=.env.local scripts/backfill-item-master.ts --dry
+ * Replaces the old skip-logic backfill: it processes EVERY `inquiry_items` row
+ * where `item_id IS NULL` through the SHARED Item-Sync Contract path
+ * (`syncProductToItem`), so legacy and new rows get identical treatment:
+ *   - complete spec        → active Item (dedup-reuse or create);
+ *   - incomplete / unresolved shape → draft Item (draft:<lineId>);
+ * then writes item_id back onto the line. Nothing is silently skipped.
+ *
+ * Legacy shape TEXT is resolved to a shape master via
+ * `normalizeShapeName` → active shape master name, so historical free-text
+ * ("cyl", "flat spl", …) maps to the canonical six before syncing. A line whose
+ * shape can't be resolved (or is null) still produces a DRAFT (never skipped).
+ *
+ * READ-ONLY until the controller runs it. Idempotent (only touches item_id IS
+ * NULL rows; re-runs dedup-reuse). Prints created / reused / draft / skipped.
+ *
+ * Run:  npx tsx --env-file=.env.local scripts/backfill-item-master.ts --apply
+ * Dry:  npx tsx --env-file=.env.local scripts/backfill-item-master.ts          (default)
+ *
+ * NOTE: default is DRY. Pass --apply to write. This is a data op the controller
+ * runs after human go — do not run it as part of the build gate.
  */
-import { and, eq, inArray, isNotNull, isNull, sql as dsql } from "drizzle-orm";
+import Module from "node:module";
+import { and, eq, isNull, sql as dsql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { inquiries, inquiryItems, items, masterOptions } from "@/db/schema";
-import { itemDedupKey } from "@/lib/item-master/dedup";
-import { buildItemCode, deriveSizeCode } from "@/lib/item-master/item-code";
-import { resolveShapeConfig, requiredDims, DIM_LABELS } from "@/lib/masters/shape-config";
+import { inquiries, inquiryItems, masterOptions } from "@/db/schema";
+import type { ItemSpec } from "@/lib/item-master/sync";
+import { normalizeShapeName } from "@/lib/masters/shape-normalize";
 
-const DRY = process.argv.includes("--dry");
+// This maintenance script pulls in the server-side Item-Sync module, which (like
+// the rest of lib/) declares `import "server-only"` — that throws when required
+// outside an RSC/server-action context. Stub it (and client-only) at the module
+// loader so the shared sync path can be reused here, then dynamic-import sync.
+type ModLoad = (request: string, parent: unknown, isMain: boolean) => unknown;
+const _mod = Module as unknown as { _load: ModLoad };
+const _origLoad = _mod._load;
+_mod._load = ((request: string, parent: unknown, isMain: boolean) =>
+  request === "server-only" || request === "client-only"
+    ? {}
+    : _origLoad(request, parent, isMain)) as ModLoad;
+
+const APPLY = process.argv.includes("--apply");
+const DRY = !APPLY;
+
 const toNum = (v: string | null): number | null => {
   if (v == null || v === "") return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 };
-const strOrNull = (n: number | null): string | null => (n != null ? String(n) : null);
 
 async function main() {
+  const { syncProductToItem, missingRequiredDims } = await import("@/lib/item-master/sync");
+
+  // Build shape-name → shapeId map once (active shape masters).
+  const shapeMasters = await db
+    .select({ id: masterOptions.id, name: masterOptions.name })
+    .from(masterOptions)
+    .where(and(eq(masterOptions.kind, "shape"), eq(masterOptions.isActive, true)));
+  const shapeIdByName = new Map<string, string>();
+  for (const s of shapeMasters) shapeIdByName.set(s.name.trim().toLowerCase(), s.id);
+
+  /** Resolve a legacy shape TEXT → active shape master id via normalizeShapeName. */
+  const resolveShapeId = (shapeText: string | null): string | null => {
+    if (!shapeText) return null;
+    // Exact active-master match first (already-canonical rows).
+    const exact = shapeIdByName.get(shapeText.trim().toLowerCase());
+    if (exact) return exact;
+    const canon = normalizeShapeName(shapeText);
+    if (!canon) return null;
+    return shapeIdByName.get(canon.trim().toLowerCase()) ?? null;
+  };
+
   const rows = await db
     .select({
       id: inquiryItems.id,
-      inquiryId: inquiryItems.inquiryId,
       smNumber: inquiries.smNumber,
-      companyName: inquiries.companyName,
-      createdById: inquiries.createdById,
       custProductName: inquiryItems.custProductName,
-      custDrawingNo: inquiryItems.custDrawingNo,
-      drawingRevisionNo: inquiryItems.drawingRevisionNo,
-      quantityNos: inquiryItems.quantityNos,
       shape: inquiryItems.shape,
       gradeId: inquiryItems.gradeId,
+      gradeCustomer: inquiryItems.gradeCustomer,
       toleranceId: inquiryItems.toleranceId,
       conditionId: inquiryItems.conditionId,
-      gradeCustomer: inquiryItems.gradeCustomer,
       outerDia: inquiryItems.outerDia,
       innerDia: inquiryItems.innerDia,
       length: inquiryItems.length,
@@ -49,96 +91,69 @@ async function main() {
     })
     .from(inquiryItems)
     .innerJoin(inquiries, eq(inquiries.id, inquiryItems.inquiryId))
-    .where(and(isNull(inquiryItems.itemId), isNotNull(inquiryItems.shape)));
+    .where(isNull(inquiryItems.itemId));
 
-  let created = 0, reused = 0, skipped = 0;
+  let created = 0, reused = 0, draft = 0, skipped = 0;
 
   for (const r of rows) {
     const label = `${r.smNumber} "${r.custProductName ?? "-"}"`;
-    if (!r.shape) { skipped++; continue; }
-
-    const [shapeRow] = await db
-      .select({ id: masterOptions.id, config: masterOptions.config })
-      .from(masterOptions)
-      .where(and(eq(masterOptions.kind, "shape"), eq(masterOptions.name, r.shape)))
-      .limit(1);
-    if (!shapeRow) { console.log(`SKIP ${label}: shape "${r.shape}" is not a master option`); skipped++; continue; }
-    const shapeId = shapeRow.id;
-
-    const dims = {
+    const shapeId = resolveShapeId(r.shape);
+    const spec: ItemSpec = {
+      shapeId,
+      internalGradeId: r.gradeId,
+      toleranceId: r.toleranceId,
+      conditionId: r.conditionId,
+      gradeCustomer: r.gradeCustomer,
       outerDia: toNum(r.outerDia), innerDia: toNum(r.innerDia),
       length: toNum(r.length), width: toNum(r.width), thickness: toNum(r.thickness),
+      dimensionNotes: r.dimensionNotes,
     };
-    const cfg = resolveShapeConfig(shapeRow.config);
-    const missing = requiredDims(cfg).filter((f) => dims[f] == null);
-    if (missing.length > 0) {
-      console.log(`SKIP ${label}: missing required dim(s) ${missing.map((f) => DIM_LABELS[f]).join(", ")}`);
-      skipped++; continue;
+
+    if (DRY) {
+      // Classify without writing: emulate the contract's active/draft decision.
+      const missing = await missingRequiredDims(db, spec);
+      if (missing.length) {
+        console.log(`WOULD DRAFT ${label} (missing:${missing.join(",")})`);
+        draft++;
+      } else {
+        console.log(`WOULD SYNC  ${label} (shape ${r.shape ?? "-"})`);
+        created++;
+      }
+      continue;
     }
 
-    const dedupKey = itemDedupKey({
-      shapeId, internalGradeId: r.gradeId, conditionId: r.conditionId, toleranceId: r.toleranceId, ...dims,
-    });
-
-    const [existing] = await db
-      .select({ id: items.id, itemCode: items.itemCode })
-      .from(items)
-      .where(eq(items.dedupKey, dedupKey))
-      .limit(1);
-    if (existing) {
-      if (!DRY) await db.update(inquiryItems).set({ itemId: existing.id, updatedAt: new Date() }).where(eq(inquiryItems.id, r.id));
-      console.log(`LINK ${label}: reused ${existing.itemCode}`);
-      reused++; continue;
+    try {
+      const res = await db.transaction(async (tx) => {
+        const sync = await syncProductToItem(tx, spec, r.id);
+        await tx.update(inquiryItems).set({ itemId: sync.itemId, updatedAt: new Date() }).where(eq(inquiryItems.id, r.id));
+        return sync;
+      });
+      if (res.status === "draft") {
+        console.log(`DRAFT  ${label}: ${res.itemCode} (missing:${res.missing.join(",")})`);
+        draft++;
+      } else if (res.reused) {
+        console.log(`LINK   ${label}: reused ${res.itemCode}`);
+        reused++;
+      } else {
+        console.log(`CREATE ${label}: ${res.itemCode}`);
+        created++;
+      }
+    } catch (err) {
+      console.error(`SKIP   ${label}: error`, err);
+      skipped++;
     }
-
-    const refIds = [shapeId, r.gradeId, r.conditionId, r.toleranceId].filter((x): x is string => Boolean(x));
-    const codeById = new Map<string, { name: string; code: string | null }>();
-    if (refIds.length) {
-      const mrows = await db
-        .select({ id: masterOptions.id, name: masterOptions.name, code: masterOptions.code })
-        .from(masterOptions)
-        .where(inArray(masterOptions.id, refIds));
-      for (const m of mrows) codeById.set(m.id, { name: m.name, code: m.code });
-    }
-    const codeOf = (id?: string | null) => (id ? (codeById.get(id)?.code ?? codeById.get(id)?.name ?? "") : "");
-
-    const dimList = [dims.outerDia, dims.innerDia, dims.length, dims.width, dims.thickness].filter((d): d is number => d !== null);
-    const sizeCode = dimList.length ? deriveSizeCode(dimList) : "";
-
-    if (DRY) { console.log(`WOULD CREATE ${label} (shape ${r.shape})`); created++; continue; }
-
-    const seqRows = (await db.execute(dsql`SELECT nextval('item_seq_seq')::int AS seq`)) as unknown as { seq: number }[];
-    const seq = Number(seqRows[0]?.seq ?? 0);
-    const itemCode = buildItemCode({
-      sizeCode: sizeCode || "X", seq,
-      shapeCode: codeOf(shapeId), gradeCode: codeOf(r.gradeId),
-      conditionCode: codeOf(r.conditionId), toleranceCode: codeOf(r.toleranceId), dims: dimList,
-    });
-
-    const [ins] = await db
-      .insert(items)
-      .values({
-        seq, itemCode, dedupKey,
-        inquiryId: r.inquiryId, smNumber: r.smNumber,
-        customerName: r.companyName, custProductName: r.custProductName,
-        custDrawingNo: r.custDrawingNo, drawingRevisionNo: r.drawingRevisionNo,
-        qty: r.quantityNos, sizeCode: sizeCode || null,
-        shapeId, internalGradeId: r.gradeId, toleranceId: r.toleranceId, conditionId: r.conditionId,
-        gradeCustomer: r.gradeCustomer,
-        outerDia: strOrNull(dims.outerDia), innerDia: strOrNull(dims.innerDia),
-        length: strOrNull(dims.length), width: strOrNull(dims.width), thickness: strOrNull(dims.thickness),
-        dimensionNotes: r.dimensionNotes, uom: "Nos", createdById: r.createdById,
-      })
-      .onConflictDoNothing({ target: items.dedupKey })
-      .returning({ id: items.id, itemCode: items.itemCode });
-
-    if (!ins) { console.log(`SKIP ${label}: dedup race, already exists`); skipped++; continue; }
-    await db.update(inquiryItems).set({ itemId: ins.id, updatedAt: new Date() }).where(eq(inquiryItems.id, r.id));
-    console.log(`CREATE ${label}: ${ins.itemCode}`);
-    created++;
   }
 
-  console.log(`\n${DRY ? "[dry-run] " : ""}done. created=${created} reused=${reused} skipped=${skipped}`);
+  // Residual check (informational in this script; the NOT-NULL migration is the
+  // hard gate applied separately after this backfill).
+  const remainingRows = (await db.execute(
+    dsql`SELECT count(*)::int AS remaining FROM inquiry_items WHERE item_id IS NULL`,
+  )) as unknown as { remaining: number }[];
+  const remaining = remainingRows[0]?.remaining ?? 0;
+
+  console.log(
+    `\n${DRY ? "[dry-run] " : ""}done. created=${created} reused=${reused} draft=${draft} skipped=${skipped} | inquiry_items with null item_id remaining: ${remaining}`,
+  );
   process.exit(0);
 }
 

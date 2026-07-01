@@ -232,6 +232,20 @@
       "when": 1782910333111,
       "tag": "0032_where_used_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1782912486558,
+      "tag": "0033_item_draft_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1782915358233,
+      "tag": "0034_item_id_not_null",
+      "breakpoints": true
     }
   ]
 }

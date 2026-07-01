@@ -5,7 +5,8 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import type { z } from "zod";
 import { db } from "@/lib/db";
 import { inquiries, inquiryItems, clients, clientContacts, masterOptions, type NewInquiry } from "@/db/schema";
-import { productRowsForInquiry } from "@/lib/inquiries/product-rows";
+import { productRowsForInquiry, type BuiltProductRow } from "@/lib/inquiries/product-rows";
+import { syncProductToItem, type ItemSpec, type DbOrTx } from "@/lib/item-master/sync";
 import { requireUser, requireAdmin } from "@/lib/auth/current";
 import { ENQUIRY_STATUSES, type EnquiryStatus } from "@/db/enums";
 import {
@@ -55,6 +56,45 @@ function stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
 /** `enquiryDate` is a free string in the validator — guard before `new Date`. */
 function isParseableDate(s: string): boolean {
   return !Number.isNaN(new Date(s).getTime());
+}
+
+/** Parse a numeric string column (null/"" → null). */
+function toNum(v: string | null | undefined): number | null {
+  if (v == null || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Resolve an inquiry_items.shape TEXT value (e.g. "Cylinder - Reg") to a
+ * master_options uuid of kind 'shape'. Returns null when unmatched (a shapeless
+ * spec → draft Item, per the contract). Tx-aware.
+ */
+async function resolveShapeId(tx: DbOrTx, shapeText: string | null | undefined): Promise<string | null> {
+  if (!shapeText) return null;
+  const [shapeRow] = await tx
+    .select({ id: masterOptions.id })
+    .from(masterOptions)
+    .where(and(eq(masterOptions.kind, "shape"), eq(masterOptions.name, shapeText)))
+    .limit(1);
+  return shapeRow?.id ?? null;
+}
+
+/**
+ * Build the SSOT-clean ItemSpec from a built inquiry_items product row (shape
+ * TEXT + string dims). No customer/qty/sm fields — those never reach `items`.
+ */
+async function specFromLine(tx: DbOrTx, r: BuiltProductRow): Promise<ItemSpec> {
+  return {
+    shapeId: await resolveShapeId(tx, r.shape),
+    internalGradeId: r.gradeId,
+    toleranceId: r.toleranceId,
+    conditionId: r.conditionId,
+    gradeCustomer: r.gradeCustomer,
+    outerDia: toNum(r.outerDia), innerDia: toNum(r.innerDia),
+    length: toNum(r.length), width: toNum(r.width), thickness: toNum(r.thickness),
+    dimensionNotes: r.dimensionNotes,
+  };
 }
 
 export async function createInquiry(
@@ -169,32 +209,32 @@ export async function createInquiry(
         .returning({ id: inquiries.id, smNumber: inquiries.smNumber });
       if (!row) throw new Error("inquiries insert returned no row");
 
-      let productIds: string[] = [];
       if (productRows.length) {
-        const inserted = await tx
-          .insert(inquiryItems)
-          .values(productRows.map((r) => ({ inquiryId: row.id, ...r })))
-          .returning({ id: inquiryItems.id });
-        productIds = inserted.map((r) => r.id);
+        // Insert lines one at a time so we can run the Item-Sync Contract for
+        // each INSIDE this transaction (§3.5): every committed product line
+        // already carries an item_id (a reused/created Item, possibly a draft).
+        // An incomplete spec does NOT roll back — it becomes a draft Item; only
+        // a real DB error rolls back (we never commit a product with no Item).
+        for (const r of productRows) {
+          // Pre-generate the line id so the Item-Sync Contract can run BEFORE the
+          // insert — the line is then inserted WITH its item_id in a single
+          // statement. This satisfies the `inquiry_items.item_id NOT NULL`
+          // invariant (I1): a plain NOT NULL column is checked at insert time and
+          // cannot be deferred, so an insert-then-update pattern would fail.
+          const lineId = crypto.randomUUID();
+          const spec = await specFromLine(tx, r);
+          const res = await syncProductToItem(tx, spec, lineId, { id: me.id, name: me.name });
+          await tx
+            .insert(inquiryItems)
+            .values({ id: lineId, inquiryId: row.id, ...r, itemId: res.itemId });
+        }
       }
 
-      return { row, productIds };
+      return { row };
     });
 
     revalidatePath("/inquiries");
-
-    // Auto-register each product in the Item Master (dedup-safe). Best-effort:
-    // a product that's fully specified gets its item code immediately; one that's
-    // still missing a shape-required dimension simply keeps the manual
-    // "Generate item code" button on the SM detail page. We never fail the
-    // enquiry over item generation — the enquiry is already committed.
-    for (const productId of created.productIds) {
-      try {
-        await generateItemForInquiryItem(productId);
-      } catch (genErr) {
-        console.error("[createInquiry] auto item generation failed", productId, genErr);
-      }
-    }
+    revalidatePath("/items");
 
     return { ok: true, id: created.row.id, smNumber: created.row.smNumber };
   } catch (err) {
@@ -207,8 +247,16 @@ export async function updateInquiry(
   id: string,
   input: UpdateInquiryInput,
 ): Promise<ActionResult> {
-  // NOTE (Phase A): edits update only the legacy single-product columns; inquiry_items are NOT synced here — product editing arrives in Phase B.
-  await requireUser();
+  // Item-Sync boundary (§3.5): the enquiry edit form does NOT edit products
+  // today, so this action only patches the header + legacy single-product
+  // columns. As a forward-safe net, after the header write we RE-SYNC each
+  // still-present inquiry_items line (re-run syncProductToItem and relink
+  // item_id if the fingerprint drifted). We deliberately DO NOT delete/reinsert
+  // inquiry_items lines and DO NOT touch costings — a wholesale delete/reinsert
+  // would cascade-destroy per-line costings/quote links. If the form never
+  // edits products, the re-sync is a harmless no-op (fingerprint unchanged →
+  // dedup reuse → same item_id).
+  const me = await requireUser();
   if (!isUuid(id)) return { ok: false, error: "Invalid inquiry id." };
   const parsed = UpdateInquirySchema.safeParse(input);
   if (!parsed.success) {
@@ -242,16 +290,57 @@ export async function updateInquiry(
   if (thickness !== undefined) patch.thickness = String(thickness);
 
   try {
-    await db
-      .update(inquiries)
-      .set({ ...patch, updatedAt: new Date() })
-      .where(eq(inquiries.id, id));
+    await db.transaction(async (tx) => {
+      await tx
+        .update(inquiries)
+        .set({ ...patch, updatedAt: new Date() })
+        .where(eq(inquiries.id, id));
+
+      // Forward-safe re-sync of EXISTING lines only (no delete/reinsert). Relink
+      // item_id when the spec fingerprint drifted; audit on relink. Does not
+      // touch costings.
+      const lines = await tx
+        .select({
+          id: inquiryItems.id,
+          itemId: inquiryItems.itemId,
+          custProductName: inquiryItems.custProductName,
+          custDrawingNo: inquiryItems.custDrawingNo,
+          drawingRevisionNo: inquiryItems.drawingRevisionNo,
+          shape: inquiryItems.shape,
+          outerDia: inquiryItems.outerDia, innerDia: inquiryItems.innerDia,
+          length: inquiryItems.length, width: inquiryItems.width, thickness: inquiryItems.thickness,
+          dimensionNotes: inquiryItems.dimensionNotes,
+          gradeId: inquiryItems.gradeId, gradeCustomer: inquiryItems.gradeCustomer,
+          toleranceId: inquiryItems.toleranceId, conditionId: inquiryItems.conditionId,
+          quantityNos: inquiryItems.quantityNos, quantityUom: inquiryItems.quantityUom,
+        })
+        .from(inquiryItems)
+        .where(eq(inquiryItems.inquiryId, id));
+
+      for (const line of lines) {
+        const spec: ItemSpec = {
+          shapeId: await resolveShapeId(tx, line.shape),
+          internalGradeId: line.gradeId,
+          toleranceId: line.toleranceId,
+          conditionId: line.conditionId,
+          gradeCustomer: line.gradeCustomer,
+          outerDia: toNum(line.outerDia), innerDia: toNum(line.innerDia),
+          length: toNum(line.length), width: toNum(line.width), thickness: toNum(line.thickness),
+          dimensionNotes: line.dimensionNotes,
+        };
+        const res = await syncProductToItem(tx, spec, line.id, { id: me.id, name: me.name });
+        if (res.itemId !== line.itemId) {
+          await tx.update(inquiryItems).set({ itemId: res.itemId, updatedAt: new Date() }).where(eq(inquiryItems.id, line.id));
+        }
+      }
+    });
   } catch (err) {
     console.error("[updateInquiry] failed", err);
     return { ok: false, error: "Could not save the inquiry. Please try again." };
   }
   revalidatePath("/inquiries");
   revalidatePath(`/inquiries/${id}`);
+  revalidatePath("/items");
   return { ok: true };
 }
 
@@ -437,91 +526,55 @@ type GenerateItemResult =
 export async function generateItemForInquiryItem(
   inquiryItemId: string,
 ): Promise<GenerateItemResult> {
-  await requireUser();
+  const me = await requireUser();
   if (!isUuid(inquiryItemId)) return { ok: false, error: "Invalid product id." };
 
   try {
-    // Load the inquiry_item joined to its parent inquiry for smNumber + companyName.
-    const [row] = await db
-      .select({
-        inquiryId: inquiryItems.inquiryId,
-        smNumber: inquiries.smNumber,
-        companyName: inquiries.companyName,
-        shape: inquiryItems.shape,
-        gradeId: inquiryItems.gradeId,
-        toleranceId: inquiryItems.toleranceId,
-        conditionId: inquiryItems.conditionId,
-        custProductName: inquiryItems.custProductName,
-        custDrawingNo: inquiryItems.custDrawingNo,
-        drawingRevisionNo: inquiryItems.drawingRevisionNo,
-        gradeCustomer: inquiryItems.gradeCustomer,
-        quantityNos: inquiryItems.quantityNos,
-        outerDia: inquiryItems.outerDia,
-        innerDia: inquiryItems.innerDia,
-        length: inquiryItems.length,
-        width: inquiryItems.width,
-        thickness: inquiryItems.thickness,
-        dimensionNotes: inquiryItems.dimensionNotes,
-        itemId: inquiryItems.itemId,
-      })
-      .from(inquiryItems)
-      .innerJoin(inquiries, eq(inquiries.id, inquiryItems.inquiryId))
-      .where(eq(inquiryItems.id, inquiryItemId))
-      .limit(1);
-
-    if (!row) return { ok: false, error: "Product not found." };
-
-    // Resolve shape TEXT → master_options uuid of kind 'shape'.
-    let shapeId: string | undefined;
-    if (row.shape) {
-      const [shapeRow] = await db
-        .select({ id: masterOptions.id })
-        .from(masterOptions)
-        .where(and(eq(masterOptions.kind, "shape"), eq(masterOptions.name, row.shape)))
+    // Thin wrapper over the shared Item-Sync Contract (§3.5): load the line and
+    // run syncProductToItem inside a transaction (reuse/create — never rejects an
+    // incomplete spec; it produces a draft), then relink item_id. Keeps the
+    // SM-detail "Generate item code" button working through the single writer.
+    const result = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .select({
+          id: inquiryItems.id,
+          inquiryId: inquiryItems.inquiryId,
+          itemId: inquiryItems.itemId,
+          shape: inquiryItems.shape,
+          gradeId: inquiryItems.gradeId,
+          gradeCustomer: inquiryItems.gradeCustomer,
+          toleranceId: inquiryItems.toleranceId,
+          conditionId: inquiryItems.conditionId,
+          outerDia: inquiryItems.outerDia, innerDia: inquiryItems.innerDia,
+          length: inquiryItems.length, width: inquiryItems.width, thickness: inquiryItems.thickness,
+          dimensionNotes: inquiryItems.dimensionNotes,
+        })
+        .from(inquiryItems)
+        .where(eq(inquiryItems.id, inquiryItemId))
         .limit(1);
-      shapeId = shapeRow?.id;
-    }
+      if (!row) return { notFound: true as const };
 
-    // Parse numeric string columns → numbers (null/"" → undefined).
-    const toNum = (v: string | null | undefined): number | undefined => {
-      if (v == null || v === "") return undefined;
-      const n = Number(v);
-      return Number.isFinite(n) ? n : undefined;
-    };
-
-    const { createItem } = await import("@/app/(app)/items/actions");
-    const result = await createItem({
-      inquiryId: row.inquiryId,
-      smNumber: row.smNumber,
-      customerName: row.companyName ?? undefined,
-      custProductName: row.custProductName ?? undefined,
-      custDrawingNo: row.custDrawingNo ?? undefined,
-      drawingRevisionNo: row.drawingRevisionNo ?? undefined,
-      qty: toNum(row.quantityNos),
-      shapeId,
-      internalGradeId: row.gradeId ?? undefined,
-      toleranceId: row.toleranceId ?? undefined,
-      conditionId: row.conditionId ?? undefined,
-      gradeCustomer: row.gradeCustomer ?? undefined,
-      outerDia: toNum(row.outerDia),
-      innerDia: toNum(row.innerDia),
-      length: toNum(row.length),
-      width: toNum(row.width),
-      thickness: toNum(row.thickness),
-      dimensionNotes: row.dimensionNotes ?? undefined,
+      const spec: ItemSpec = {
+        shapeId: await resolveShapeId(tx, row.shape),
+        internalGradeId: row.gradeId,
+        toleranceId: row.toleranceId,
+        conditionId: row.conditionId,
+        gradeCustomer: row.gradeCustomer,
+        outerDia: toNum(row.outerDia), innerDia: toNum(row.innerDia),
+        length: toNum(row.length), width: toNum(row.width), thickness: toNum(row.thickness),
+        dimensionNotes: row.dimensionNotes,
+      };
+      const sync = await syncProductToItem(tx, spec, row.id, { id: me.id, name: me.name });
+      if (sync.itemId !== row.itemId) {
+        await tx.update(inquiryItems).set({ itemId: sync.itemId, updatedAt: new Date() }).where(eq(inquiryItems.id, row.id));
+      }
+      return { inquiryId: row.inquiryId, itemCode: sync.itemCode, reused: sync.reused };
     });
 
-    if (!result.ok) return { ok: false, error: result.error };
+    if ("notFound" in result) return { ok: false, error: "Product not found." };
 
-    // Write item_id back to this inquiry_items row.
-    await db
-      .update(inquiryItems)
-      .set({ itemId: result.id, updatedAt: new Date() })
-      .where(eq(inquiryItems.id, inquiryItemId));
-
-    revalidatePath(`/inquiries/${row.inquiryId}`);
+    revalidatePath(`/inquiries/${result.inquiryId}`);
     revalidatePath("/items");
-
     return { ok: true, itemCode: result.itemCode, reused: result.reused };
   } catch (err) {
     console.error("[generateItemForInquiryItem] failed", err);

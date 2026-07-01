@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+// createInquiry now imports the Item-Sync contract (lib/item-master/sync.ts),
+// which `import "server-only"` and pulls in the audit recorder — neutralise both
+// so the action loads outside a real server component.
+vi.mock("server-only", () => ({}));
+vi.mock("@/lib/audit/record", () => ({ recordAudit: vi.fn(async () => {}) }));
+
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn(), updateTag: vi.fn() }));
 
 // Recorders, hoisted so the vi.mock factory below can close over them.
@@ -22,16 +28,22 @@ vi.mock("@/lib/db", () => {
   const insert = vi.fn(() => ({
     values: (v: Record<string, unknown>) => {
       insertCalls.push(v);
-      return {
+      const chain = {
+        onConflictDoNothing: () => chain,
         returning: () => {
           if ("productDescription" in v) {
             return Promise.resolve([{ id: "inq-1", smNumber: "SM9579" }]);
           }
           if ("firstName" in v) return Promise.resolve([{ id: "contact-1" }]);
+          // inquiry_items line insert (per-product, inside the tx).
+          if ("sortOrder" in v && "quantityUom" in v) return Promise.resolve([{ id: "line-1" }]);
+          // items insert (the Item-Sync contract's draft/active create).
+          if ("dedupKey" in v) return Promise.resolve([{ id: "item-1", itemCode: "DRAFT-1" }]);
           return Promise.resolve([{ id: "client-new-1" }]);
         },
         then: (resolve: (v: unknown) => unknown) => resolve(undefined),
       };
+      return chain;
     },
   }));
   const update = vi.fn(() => ({
@@ -42,13 +54,16 @@ vi.mock("@/lib/db", () => {
   }));
   const select = vi.fn(() => {
     selectState.calls += 1;
-    return {
-      from: () => ({
-        where: () => ({ limit: () => Promise.resolve(selectState.rows) }),
-      }),
+    const terminal = {
+      for: () => terminal,
+      limit: () => Promise.resolve(selectState.rows),
+      then: (resolve: (v: unknown) => unknown) => Promise.resolve(selectState.rows).then(resolve),
     };
+    return { from: () => ({ where: () => terminal }) };
   });
-  const txDb = { insert, update, select };
+  // The Item-Sync contract draws nextval('item_seq_seq') via tx.execute.
+  const execute = vi.fn(async () => [{ seq: 10001 }]);
+  const txDb = { insert, update, select, execute };
   return {
     db: {
       insert,
@@ -167,12 +182,11 @@ describe("createInquiry", () => {
     });
     expect(res).toMatchObject({ ok: true, id: "inq-1", smNumber: "SM9579" });
 
-    expect(selectState.calls).toBe(0);
-    // The inquiry header insert is an object; the per-product inquiry_items
-    // insert pushes an array — assert on the header row only.
-    const headerInserts = insertCalls.filter((c) => !Array.isArray(c));
-    expect(headerInserts).toHaveLength(1);
-    const inquiryInsert = headerInserts[0];
+    // Old-client mode skips the client upsert entirely: no clients/contacts
+    // insert (the only selects now come from the per-product Item-Sync path).
+    expect(insertCalls.find((v) => "name" in v)).toBeUndefined();
+    expect(insertCalls.find((v) => "firstName" in v)).toBeUndefined();
+    const inquiryInsert = insertCalls.find((v) => "productDescription" in v);
     expect(inquiryInsert?.clientId).toBe(VALID_UUID);
     expect(inquiryInsert?.companyName).toBe("Acme Carbides");
   });

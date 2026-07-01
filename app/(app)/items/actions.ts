@@ -8,6 +8,7 @@ import { requireUser, requireAdmin } from "@/lib/auth/current";
 import { CreateItemSchema, type CreateItemInput } from "@/lib/validators/item";
 import { itemDedupKey } from "@/lib/item-master/dedup";
 import { buildItemCode, deriveSizeCode } from "@/lib/item-master/item-code";
+import { specColumns, resolvedShortCodes, type ItemSpec } from "@/lib/item-master/sync";
 import { recordAudit } from "@/lib/audit/record";
 import { resolveShapeConfig, requiredDims, DIM_LABELS } from "@/lib/masters/shape-config";
 
@@ -129,36 +130,46 @@ export async function createItem(input: CreateItemInput): Promise<Result> {
     .limit(1);
   if (existing) return { ok: true, id: existing.id, itemCode: existing.itemCode, reused: true };
 
-  // Resolve the masters' codes (grade code == its name, e.g. CIF06).
-  const refIds = [v.shapeId, v.internalGradeId, v.conditionId, v.toleranceId].filter(
-    (x): x is string => Boolean(x),
-  );
-  const codeById = new Map<string, { name: string; code: string | null }>();
-  if (refIds.length) {
-    const rows = await db
-      .select({ id: masterOptions.id, name: masterOptions.name, code: masterOptions.code })
-      .from(masterOptions)
-      .where(inArray(masterOptions.id, refIds));
-    for (const r of rows) codeById.set(r.id, { name: r.name, code: r.code });
-  }
-  const codeOf = (id?: string) => (id ? (codeById.get(id)?.code ?? codeById.get(id)?.name ?? "") : "");
+  // The SSOT-clean spec (shape/grade/tolerance/condition/dims/hsn/uom/part).
+  const spec: ItemSpec = {
+    shapeId: v.shapeId ?? null,
+    internalGradeId: v.internalGradeId ?? null,
+    toleranceId: v.toleranceId ?? null,
+    conditionId: v.conditionId ?? null,
+    gradeCustomer: v.gradeCustomer ?? null,
+    gradeNameForCust: v.gradeNameForCust ?? null,
+    outerDia: dims.outerDia, innerDia: dims.innerDia,
+    length: dims.length, width: dims.width, thickness: dims.thickness,
+    dimensionNotes: v.dimensionNotes ?? null,
+    sizeCode: v.sizeCode ?? null,
+    hsnCode: v.hsnCode ?? null,
+    uom: v.uom ?? null,
+    altUom: v.altUom ?? null,
+    altUomConversion: v.altUomConversion ?? null,
+    partNo: v.partNo ?? null,
+    partDescription1: v.partDescription1 ?? null,
+    partDescription2: v.partDescription2 ?? null,
+    partDescription3: v.partDescription3 ?? null,
+    partDescription4: v.partDescription4 ?? null,
+    partTag: v.partTag ?? null,
+  };
 
+  // Assemble the item code from shared helpers (single serial draw so seq &
+  // code never diverge). resolvedShortCodes reuses the same master-code lookup
+  // as the sync contract.
+  const codes = await resolvedShortCodes(db, spec);
   const dimList = [dims.outerDia, dims.innerDia, dims.length, dims.width, dims.thickness]
     .filter((d): d is number => d !== null);
   const sizeCode = v.sizeCode || (dimList.length ? deriveSizeCode(dimList) : "");
-
-  // Draw the next serial ONCE, then assemble the code AND insert with the same
-  // value (the items.seq column has a nextval default, but we always supply seq
-  // explicitly so the stored serial matches the one baked into item_code).
   const seqRows = (await db.execute(sql`SELECT nextval('item_seq_seq')::int AS seq`)) as unknown as { seq: number }[];
   const seq = Number(seqRows[0]?.seq ?? 0);
   const itemCode = buildItemCode({
     sizeCode: sizeCode || "X",
     seq,
-    shapeCode: codeOf(v.shapeId),
-    gradeCode: codeOf(v.internalGradeId),
-    conditionCode: codeOf(v.conditionId),
-    toleranceCode: codeOf(v.toleranceId),
+    shapeCode: codes.shapeCode,
+    gradeCode: codes.gradeCode,
+    conditionCode: codes.conditionCode,
+    toleranceCode: codes.toleranceCode,
     dims: dimList,
   });
 
@@ -167,6 +178,11 @@ export async function createItem(input: CreateItemInput): Promise<Result> {
       .insert(items)
       .values({
         seq, itemCode, dedupKey,
+        status: "active",
+        completedAt: new Date(),
+        // Manual New-Item form / import still record the customer/qty/sm
+        // snapshot on the row (legacy provenance columns, dropped in Phase 6).
+        // These are NOT part of the SSOT-clean specColumns payload.
         inquiryId: v.inquiryId ?? null,
         smNumber: v.smNumber ?? null,
         customerName: v.customerName ?? null,
@@ -174,31 +190,9 @@ export async function createItem(input: CreateItemInput): Promise<Result> {
         custDrawingNo: v.custDrawingNo ?? null,
         drawingRevisionNo: v.drawingRevisionNo ?? null,
         qty: v.qty != null ? String(v.qty) : null,
-        sizeCode: sizeCode || null,
-        shapeId: v.shapeId ?? null,
-        internalGradeId: v.internalGradeId ?? null,
-        toleranceId: v.toleranceId ?? null,
-        conditionId: v.conditionId ?? null,
-        gradeCustomer: v.gradeCustomer ?? null,
-        gradeNameForCust: v.gradeNameForCust ?? null,
-        outerDia: dims.outerDia != null ? String(dims.outerDia) : null,
-        innerDia: dims.innerDia != null ? String(dims.innerDia) : null,
-        length: dims.length != null ? String(dims.length) : null,
-        width: dims.width != null ? String(dims.width) : null,
-        thickness: dims.thickness != null ? String(dims.thickness) : null,
-        dimensionNotes: v.dimensionNotes ?? null,
-        partNo: v.partNo ?? null,
-        partDescription1: v.partDescription1 ?? null,
-        partDescription2: v.partDescription2 ?? null,
-        partDescription3: v.partDescription3 ?? null,
-        partDescription4: v.partDescription4 ?? null,
-        partTag: v.partTag ?? null,
         costingType: v.costingType ?? null,
-        hsnCode: v.hsnCode ?? null,
-        uom: v.uom ?? "Nos",
-        altUom: v.altUom ?? null,
-        altUomConversion: v.altUomConversion != null ? String(v.altUomConversion) : null,
         createdById: me.id,
+        ...specColumns(spec),
       })
       .onConflictDoNothing({ target: items.dedupKey })
       .returning({ id: items.id, itemCode: items.itemCode });
