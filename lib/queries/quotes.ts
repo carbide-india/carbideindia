@@ -10,7 +10,16 @@ import {
   quotations,
   quotationItems,
   costings,
+  type QuotationItem,
 } from "@/db/schema";
+import {
+  resolveSpecsByItemId,
+  resolveCustomerAskByInquiryItemId,
+  EMPTY_SPEC,
+  EMPTY_CUSTOMER_ASK,
+  type ResolvedSpec,
+  type ResolvedCustomerAsk,
+} from "@/lib/flow/spec-resolve";
 
 /**
  * SM auto-fetch shared by the Quotation / Negotiation / Sales-Order forms.
@@ -201,11 +210,34 @@ export async function getInquiryItemSeeds(
     .orderBy(asc(inquiryItems.sortOrder));
 }
 
-/** All line items for a quotation, in sort order. */
-export async function getQuotationItems(quotationId: string) {
-  return db
+/**
+ * All line items for a quotation, in sort order, with product SPEC resolved
+ * read-through from the linked Item (§2.4). Transactional facts (qty, prices,
+ * timeline) stay on the line; the product-describing fields
+ * (custProductName / partNo / gradeCustomer / gradeNameForCust / tolerance /
+ * condition / drawing) are sourced from `items` via `item_id` and overlaid onto
+ * the row so consumers render the canonical spec, not the drifted mirror.
+ */
+export type QuotationLineWithSpec = QuotationItem & {
+  spec: ResolvedSpec;
+  ask: ResolvedCustomerAsk;
+};
+
+export async function getQuotationItems(
+  quotationId: string,
+): Promise<QuotationLineWithSpec[]> {
+  const rows = await db
     .select()
     .from(quotationItems)
     .where(eq(quotationItems.quotationId, quotationId))
     .orderBy(asc(quotationItems.sortOrder));
+  const [specs, asks] = await Promise.all([
+    resolveSpecsByItemId(rows.map((r) => r.itemId)),
+    resolveCustomerAskByInquiryItemId(rows.map((r) => r.inquiryItemId)),
+  ]);
+  return rows.map((r) => ({
+    ...r,
+    spec: (r.itemId && specs.get(r.itemId)) || EMPTY_SPEC,
+    ask: (r.inquiryItemId && asks.get(r.inquiryItemId)) || EMPTY_CUSTOMER_ASK,
+  }));
 }

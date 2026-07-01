@@ -55,12 +55,12 @@ export async function GET(): Promise<Response> {
       hsnCode: items.hsnCode,
       uom: items.uom,
       altUom: items.altUom,
-      customerName: items.customerName,
-      smNumber: items.smNumber,
-      custProductName: items.custProductName,
+      customerName: items.originCustomerName,
+      smNumber: items.originSmNumber,
+      custProductName: items.originCustProductName,
       custDrawingNo: items.custDrawingNo,
       drawingRevisionNo: items.drawingRevisionNo,
-      qty: items.qty,
+      qty: items.originQty,
       createdAt: items.createdAt,
     })
     .from(items)

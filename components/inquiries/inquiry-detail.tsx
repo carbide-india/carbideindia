@@ -17,7 +17,8 @@ import {
   type CheckState,
   type CostingDoneStatus,
 } from "@/db/enums";
-import type { Inquiry, InquiryItem } from "@/db/schema";
+import type { Inquiry } from "@/db/schema";
+import type { InquiryItemRow } from "@/lib/queries/inquiries";
 import {
   setEnquiryStatus,
   generateItemForInquiryItem,
@@ -43,12 +44,13 @@ interface MasterNames {
   condition: string | null;
 }
 
-/** An inquiry_items row with resolved master names, linked item code, and chosen costing summary. */
-export type ProductRow = InquiryItem & {
-  gradeName: string | null;
-  toleranceName: string | null;
-  conditionName: string | null;
-  itemCode: string | null;
+/**
+ * An inquiry product line (spec already resolved read-through from the linked
+ * Item inside getInquiryItems) plus the chosen-costing summary overlaid by the
+ * page. `gradeName`/`toleranceName`/`conditionName`/`shapeName`/dims come from
+ * the Item, not the line's raw-entry buffer (§2.4).
+ */
+export type ProductRow = InquiryItemRow & {
   costingFinalCost: string | null;
   costingDoneStatus: CostingDoneStatus | null;
 };
@@ -306,7 +308,7 @@ export function InquiryDetail({ inquiry, employees, masterNames, products, isAdm
                           ["Product Name", p.custProductName],
                           ["Drawing No", p.custDrawingNo],
                           ["Drawing Rev", p.drawingRevisionNo],
-                          ["Shape", p.shape],
+                          ["Shape", p.shapeName],
                           ["Dimensions", composeDimensions(p)],
                           ["Dimension Notes", p.dimensionNotes],
                           ["Grade (Internal)", p.gradeName],
@@ -396,7 +398,7 @@ export function InquiryDetail({ inquiry, employees, masterNames, products, isAdm
 
 /** Compose present dimension fields into a compact string like "OD 12 · ID 8 · L 100". */
 function composeDimensions(
-  p: Pick<InquiryItem, "outerDia" | "innerDia" | "length" | "width" | "thickness">,
+  p: Pick<InquiryItemRow, "outerDia" | "innerDia" | "length" | "width" | "thickness">,
 ): string | null {
   const parts: string[] = [];
   if (p.outerDia) parts.push(`OD ${p.outerDia}`);

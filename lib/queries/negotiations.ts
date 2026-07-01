@@ -1,8 +1,22 @@
 import "server-only";
 import { and, asc, desc, eq, ilike, or } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { negotiations, negotiationItems, employees, type Negotiation } from "@/db/schema";
+import {
+  negotiations,
+  negotiationItems,
+  employees,
+  type Negotiation,
+  type NegotiationItem,
+} from "@/db/schema";
 import type { NegotiationStatus } from "@/db/enums";
+import {
+  resolveSpecsByItemId,
+  resolveCustomerAskByInquiryItemId,
+  EMPTY_SPEC,
+  EMPTY_CUSTOMER_ASK,
+  type ResolvedSpec,
+  type ResolvedCustomerAsk,
+} from "@/lib/flow/spec-resolve";
 
 /** One row of the /negotiations register table. */
 export interface NegotiationListItem {
@@ -73,11 +87,31 @@ export async function getNegotiationById(
   return row ?? null;
 }
 
-/** All line items for a negotiation, in sort order. */
-export async function getNegotiationItems(negotiationId: string) {
-  return db
+/**
+ * All line items for a negotiation, in sort order, with product SPEC resolved
+ * read-through from the linked Item (§2.4). Prices / qty / timeline stay on the
+ * line; the product-describing fields come from `items` via `item_id`.
+ */
+export type NegotiationLineWithSpec = NegotiationItem & {
+  spec: ResolvedSpec;
+  ask: ResolvedCustomerAsk;
+};
+
+export async function getNegotiationItems(
+  negotiationId: string,
+): Promise<NegotiationLineWithSpec[]> {
+  const rows = await db
     .select()
     .from(negotiationItems)
     .where(eq(negotiationItems.negotiationId, negotiationId))
     .orderBy(asc(negotiationItems.sortOrder));
+  const [specs, asks] = await Promise.all([
+    resolveSpecsByItemId(rows.map((r) => r.itemId)),
+    resolveCustomerAskByInquiryItemId(rows.map((r) => r.inquiryItemId)),
+  ]);
+  return rows.map((r) => ({
+    ...r,
+    spec: (r.itemId && specs.get(r.itemId)) || EMPTY_SPEC,
+    ask: (r.inquiryItemId && asks.get(r.inquiryItemId)) || EMPTY_CUSTOMER_ASK,
+  }));
 }

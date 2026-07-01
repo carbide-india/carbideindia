@@ -150,7 +150,7 @@ export function ItemWorkspace({
     { label: "Costing Type", value: item.costingType ? COSTING_TYPE_LABELS[item.costingType] : null },
     { label: "Grade (Customer)", value: item.gradeCustomer, snapshot: true },
     { label: "Grade Name for Customer", value: item.gradeNameForCust, snapshot: true },
-    { label: "Quantity (as recorded)", value: item.qty, mono: true, snapshot: true },
+    { label: "Quantity (as recorded)", value: item.originQty, mono: true, snapshot: true },
   ];
 
   const manufacturingFields: DetailField[] = [
@@ -164,9 +164,9 @@ export function ItemWorkspace({
   ];
 
   const provenanceFields: DetailField[] = [
-    { label: "Origin Customer", value: item.customerName, snapshot: true },
-    { label: "Origin SM Number", value: item.smNumber, mono: true, snapshot: true },
-    { label: "Origin Product Name", value: item.custProductName, snapshot: true },
+    { label: "Origin Customer", value: item.originCustomerName, snapshot: true },
+    { label: "Origin SM Number", value: item.originSmNumber, mono: true, snapshot: true },
+    { label: "Origin Product Name", value: item.originCustProductName, snapshot: true },
     { label: "Origin Drawing No", value: item.custDrawingNo, snapshot: true },
     { label: "Drawing Revision", value: item.drawingRevisionNo, snapshot: true },
     { label: "Created", value: formatDate(item.createdAt) },

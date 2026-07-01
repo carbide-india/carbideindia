@@ -6,7 +6,8 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { ArrowLeft, ArrowUpRight, Loader2, Plus } from "lucide-react";
-import type { SalesOrder, SalesOrderItem } from "@/db/schema";
+import type { SalesOrder } from "@/db/schema";
+import type { SalesOrderLineWithSpec } from "@/lib/queries/sales-orders";
 import {
   setSalesOrderSent,
   updateSalesOrder,
@@ -28,7 +29,7 @@ interface Props {
   salesOrder: SalesOrder;
   employees: EmployeeOption[];
   inquiryLink: SalesOrderInquiryLink | null;
-  lines: SalesOrderItem[];
+  lines: SalesOrderLineWithSpec[];
 }
 
 const SO_SENT_OPTIONS = [
@@ -525,22 +526,26 @@ function SidebarRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function SoLineCard({ line, lineNo }: { line: SalesOrderItem; lineNo: number }) {
+function SoLineCard({ line, lineNo }: { line: SalesOrderLineWithSpec; lineNo: number }) {
+  // Product name read-through from the provenance inquiry line; part no from the
+  // linked Item spec (§2.4). Price / qty / timeline stay the line's own facts.
+  const ask = line.ask;
+  const spec = line.spec;
   return (
     <div className="rounded-xl border border-hairline bg-surface-soft px-4 py-4 flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <span className="text-[11px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
           Line {lineNo}
         </span>
-        {line.custProductName && (
+        {ask.custProductName && (
           <span className="text-[13.5px] font-semibold text-ink-strong">
-            {line.custProductName}
+            {ask.custProductName}
           </span>
         )}
       </div>
       <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
         <LineStat label="Qty" value={line.qty ?? "—"} />
-        <LineStat label="Part No" value={line.partNo ?? "—"} />
+        <LineStat label="Part No" value={spec.partNo ?? "—"} />
       </div>
       <div className="grid grid-cols-1 gap-4 border-t border-hairline pt-3 max-md:grid-cols-1">
         <ReadStat label="Quote Price" value={money(line.quotePrice)} emphasis />

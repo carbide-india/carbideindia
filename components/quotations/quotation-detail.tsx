@@ -11,7 +11,8 @@ import {
   COSTING_DONE_STATUS_LABELS,
   COSTING_DONE_STATUS_COLORS,
 } from "@/db/enums";
-import type { Quotation, QuotationItem } from "@/db/schema";
+import type { Quotation } from "@/db/schema";
+import type { QuotationLineWithSpec } from "@/lib/queries/quotes";
 import {
   setQuotationStatus,
   updateQuotation,
@@ -34,7 +35,7 @@ interface Props {
   quotation: Quotation;
   employees: EmployeeOption[];
   inquiryLink: QuotationInquiryLink | null;
-  lines: QuotationItem[];
+  lines: QuotationLineWithSpec[];
 }
 
 const QUOTE_SENT_OPTIONS = [
@@ -476,31 +477,35 @@ function SidebarRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function QuotedLineCard({ line, lineNo }: { line: QuotationItem; lineNo: number }) {
+function QuotedLineCard({ line, lineNo }: { line: QuotationLineWithSpec; lineNo: number }) {
+  // Spec fields resolved read-through from the linked Item (§2.4); prices / qty
+  // / timeline remain the line's own transactional facts.
+  const spec = line.spec;
+  const ask = line.ask;
   return (
     <div className="rounded-xl border border-hairline bg-surface-soft px-4 py-4 flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <span className="text-[11px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
           Line {lineNo}
         </span>
-        {line.custProductName && (
+        {ask.custProductName && (
           <span className="text-[13.5px] font-semibold text-ink-strong">
-            {line.custProductName}
+            {ask.custProductName}
           </span>
         )}
       </div>
       <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
         <LineStat label="Qty" value={line.qty ?? "—"} />
-        <LineStat label="Part No" value={line.partNo ?? "—"} />
-        <LineStat label="Grade (Cust)" value={line.gradeCustomer ?? "—"} />
-        <LineStat label="Grade Name" value={line.gradeNameForCust ?? "—"} />
-        <LineStat label="Tolerance" value={line.tolerance ?? "—"} />
-        <LineStat label="Condition" value={line.condition ?? "—"} />
-        {line.custDrawingNo && (
-          <LineStat label="Drawing No" value={line.custDrawingNo} />
+        <LineStat label="Part No" value={spec.partNo ?? "—"} />
+        <LineStat label="Grade (Cust)" value={spec.gradeCustomer ?? "—"} />
+        <LineStat label="Grade Name" value={spec.gradeNameForCust ?? "—"} />
+        <LineStat label="Tolerance" value={spec.toleranceName ?? "—"} />
+        <LineStat label="Condition" value={spec.conditionName ?? "—"} />
+        {ask.custDrawingNo && (
+          <LineStat label="Drawing No" value={ask.custDrawingNo} />
         )}
-        {line.drawingRevisionNo && (
-          <LineStat label="Rev" value={line.drawingRevisionNo} />
+        {ask.drawingRevisionNo && (
+          <LineStat label="Rev" value={ask.drawingRevisionNo} />
         )}
       </div>
       <div className="grid grid-cols-3 gap-4 border-t border-hairline pt-3 max-md:grid-cols-1">

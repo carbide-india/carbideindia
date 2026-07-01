@@ -54,11 +54,11 @@ export function ItemDetail({ item, auditEntries, documents, isAdmin }: Props) {
                 <span className="mx-2 text-ink-subtle">·</span>
               </>
             )}
-            {item.customerName ?? "—"}
-            {item.smNumber && (
+            {item.originCustomerName ?? "—"}
+            {item.originSmNumber && (
               <>
                 <span className="mx-2 text-ink-subtle">·</span>
-                <span className="font-mono">{item.smNumber}</span>
+                <span className="font-mono">{item.originSmNumber}</span>
               </>
             )}
           </p>
@@ -130,12 +130,12 @@ export function ItemDetail({ item, auditEntries, documents, isAdmin }: Props) {
         <ReadCard title="Customer / Source">
           <InfoGrid
             rows={[
-              ["Customer Name", item.customerName],
-              ["SM Number", item.smNumber],
-              ["Customer Product Name", item.custProductName],
+              ["Customer Name", item.originCustomerName],
+              ["SM Number", item.originSmNumber],
+              ["Customer Product Name", item.originCustProductName],
               ["Drawing No", item.custDrawingNo],
               ["Drawing Revision", item.drawingRevisionNo],
-              ["Quantity", item.qty],
+              ["Quantity", item.originQty],
               ["Grade (Customer)", item.gradeCustomer],
               ["Grade Name for Customer", item.gradeNameForCust],
             ]}

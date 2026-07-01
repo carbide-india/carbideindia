@@ -3,6 +3,7 @@ import { and, asc, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { inquiries, inquiryItems, items, employees, type Inquiry } from "@/db/schema";
 import type { EnquiryStatus, FeasibilityStatus } from "@/db/enums";
+import { specMasterAliases } from "@/lib/flow/spec-resolve";
 
 /** One row of the /inquiries register table. */
 export interface InquiryListItem {
@@ -203,8 +204,45 @@ export function getInquiryEditValues(inq: Inquiry) {
   };
 }
 
-/** All product rows for a given inquiry, ordered by sort_order. Includes itemCode from the linked Item (nullable). */
-export async function getInquiryItems(inquiryId: string) {
+/** An inquiry product line with its SPEC resolved read-through from the Item. */
+export interface InquiryItemRow {
+  id: string;
+  inquiryId: string;
+  sortOrder: number;
+  // Customer-scoped ASK (single-sourced on inquiry_items — §2.5 KEEP).
+  custProductName: string | null;
+  custDrawingNo: string | null;
+  drawingRevisionNo: string | null;
+  gradeCustomer: string | null;
+  quantityNos: string | null;
+  quantityUom: string;
+  itemId: string;
+  createdAt: Date;
+  updatedAt: Date;
+  // Product SPEC resolved from the linked Item (+ master names) — read-through.
+  itemCode: string | null;
+  shapeName: string | null;
+  gradeName: string | null;
+  toleranceName: string | null;
+  conditionName: string | null;
+  outerDia: string | null;
+  innerDia: string | null;
+  length: string | null;
+  width: string | null;
+  thickness: string | null;
+  dimensionNotes: string | null;
+}
+
+/**
+ * All product rows for a given inquiry, ordered by sort_order, with product SPEC
+ * resolved READ-THROUGH from the linked Item (§2.4): shape / grade / tolerance /
+ * condition NAMES, dimensions, size + item code all come from `items` via
+ * `item_id` (+ four master aliases), NOT from the inquiry line's raw-entry
+ * buffer columns. The customer-scoped ask (product name / drawing / qty /
+ * customer grade) stays sourced from inquiry_items where it is single-sourced.
+ */
+export async function getInquiryItems(inquiryId: string): Promise<InquiryItemRow[]> {
+  const m = specMasterAliases();
   return db
     .select({
       id: inquiryItems.id,
@@ -213,26 +251,31 @@ export async function getInquiryItems(inquiryId: string) {
       custProductName: inquiryItems.custProductName,
       custDrawingNo: inquiryItems.custDrawingNo,
       drawingRevisionNo: inquiryItems.drawingRevisionNo,
-      shape: inquiryItems.shape,
-      outerDia: inquiryItems.outerDia,
-      innerDia: inquiryItems.innerDia,
-      length: inquiryItems.length,
-      width: inquiryItems.width,
-      thickness: inquiryItems.thickness,
-      dimensionNotes: inquiryItems.dimensionNotes,
-      gradeId: inquiryItems.gradeId,
       gradeCustomer: inquiryItems.gradeCustomer,
-      toleranceId: inquiryItems.toleranceId,
-      conditionId: inquiryItems.conditionId,
       quantityNos: inquiryItems.quantityNos,
       quantityUom: inquiryItems.quantityUom,
       itemId: inquiryItems.itemId,
       createdAt: inquiryItems.createdAt,
       updatedAt: inquiryItems.updatedAt,
+      // Read-through spec from the linked Item + master names.
       itemCode: items.itemCode,
+      shapeName: m.shape.name,
+      gradeName: m.grade.name,
+      toleranceName: m.tolerance.name,
+      conditionName: m.condition.name,
+      outerDia: items.outerDia,
+      innerDia: items.innerDia,
+      length: items.length,
+      width: items.width,
+      thickness: items.thickness,
+      dimensionNotes: items.dimensionNotes,
     })
     .from(inquiryItems)
     .leftJoin(items, eq(items.id, inquiryItems.itemId))
+    .leftJoin(m.shape, eq(items.shapeId, m.shape.id))
+    .leftJoin(m.grade, eq(items.internalGradeId, m.grade.id))
+    .leftJoin(m.tolerance, eq(items.toleranceId, m.tolerance.id))
+    .leftJoin(m.condition, eq(items.conditionId, m.condition.id))
     .where(eq(inquiryItems.inquiryId, inquiryId))
     .orderBy(asc(inquiryItems.sortOrder));
 }

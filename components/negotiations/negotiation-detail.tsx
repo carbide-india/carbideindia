@@ -11,7 +11,8 @@ import {
   NEGOTIATION_STATUS_LABELS,
   NEGOTIATION_STATUS_COLORS,
 } from "@/db/enums";
-import type { Negotiation, NegotiationItem } from "@/db/schema";
+import type { Negotiation } from "@/db/schema";
+import type { NegotiationLineWithSpec } from "@/lib/queries/negotiations";
 import {
   setNegotiationStatus,
   updateNegotiation,
@@ -34,7 +35,7 @@ interface Props {
   negotiation: Negotiation;
   employees: EmployeeOption[];
   inquiryLink: NegotiationInquiryLink | null;
-  lines: NegotiationItem[];
+  lines: NegotiationLineWithSpec[];
 }
 
 /** numeric-string → ₹, em-dash when unset/unparseable. */
@@ -455,22 +456,26 @@ function SidebarRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function NegotiationLineCard({ line, lineNo }: { line: NegotiationItem; lineNo: number }) {
+function NegotiationLineCard({ line, lineNo }: { line: NegotiationLineWithSpec; lineNo: number }) {
+  // Product name read-through from the provenance inquiry line; part no from the
+  // linked Item spec (§2.4). Prices / qty / timeline stay the line's own facts.
+  const ask = line.ask;
+  const spec = line.spec;
   return (
     <div className="rounded-xl border border-hairline bg-surface-soft px-4 py-4 flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <span className="text-[11px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
           Line {lineNo}
         </span>
-        {line.custProductName && (
+        {ask.custProductName && (
           <span className="text-[13.5px] font-semibold text-ink-strong">
-            {line.custProductName}
+            {ask.custProductName}
           </span>
         )}
       </div>
       <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
         <LineStat label="Qty" value={line.qty ?? "—"} />
-        <LineStat label="Part No" value={line.partNo ?? "—"} />
+        <LineStat label="Part No" value={spec.partNo ?? "—"} />
       </div>
       <div className="grid grid-cols-3 gap-4 border-t border-hairline pt-3 max-md:grid-cols-1">
         <ReadStat label="Final Cost" value={money(line.finalCost)} />

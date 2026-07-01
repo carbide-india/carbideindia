@@ -50,14 +50,20 @@ export interface JobCardListItem {
 }
 
 /**
- * Job Card register list — joins the three master FK columns
- * (dispatch condition / pressing type / tolerance) to their names so the table
- * can render without round-trips. Newest-first; table filters client-side.
+ * Job Card register list. `customerName` / `productCode` / `gradeName` are
+ * resolved READ-THROUGH from the linked Client + Item (§2.4) — the job_cards
+ * mirror columns for those are no longer read for display. The three job-card
+ * master FKs (dispatch condition / pressing type / tolerance) resolve to their
+ * names as before. `productName`/`gradeColour`/`diaSize`/`proposedSize` remain
+ * job-card-local process fields (no Item spec source). Newest-first; the table
+ * filters client-side. The remaining raw editable columns are returned so a row
+ * click can rehydrate the workbench form (write-path round-trip).
  */
 export async function listJobCards(): Promise<JobCardListItem[]> {
   const dispatch = aliasedTable(masterOptions, "mo_dispatch");
   const pressing = aliasedTable(masterOptions, "mo_pressing");
   const tolerance = aliasedTable(masterOptions, "mo_tolerance");
+  const grade = aliasedTable(masterOptions, "mo_grade");
 
   return db
     .select({
@@ -65,13 +71,15 @@ export async function listJobCards(): Promise<JobCardListItem[]> {
       jobCardNo: jobCards.jobCardNo,
       jobCardDate: jobCards.jobCardDate,
       oaNo: jobCards.oaNo,
-      customerName: jobCards.customerName,
-      productCode: jobCards.productCode,
+      // Read-through: customer from the linked Client, product code + grade from
+      // the linked Item (falling back to nothing rather than the mirror column).
+      customerName: clients.name,
+      productCode: items.itemCode,
       productName: jobCards.productName,
       diaSize: jobCards.diaSize,
       punchSize: jobCards.punchSize,
       proposedSize: jobCards.proposedSize,
-      gradeName: jobCards.gradeName,
+      gradeName: grade.name,
       gradeColour: jobCards.gradeColour,
       deliveryDate: jobCards.deliveryDate,
       orderQuantity: jobCards.orderQuantity,
@@ -102,6 +110,9 @@ export async function listJobCards(): Promise<JobCardListItem[]> {
       createdAt: jobCards.createdAt,
     })
     .from(jobCards)
+    .leftJoin(clients, eq(jobCards.clientId, clients.id))
+    .leftJoin(items, eq(jobCards.itemId, items.id))
+    .leftJoin(grade, eq(items.internalGradeId, grade.id))
     .leftJoin(dispatch, eq(jobCards.dispatchConditionId, dispatch.id))
     .leftJoin(pressing, eq(jobCards.pressingTypeId, pressing.id))
     .leftJoin(tolerance, eq(jobCards.toleranceId, tolerance.id))
@@ -190,7 +201,9 @@ export async function getJobCardPickerData(): Promise<JobCardPickerData> {
         .select({
           id: items.id,
           itemCode: items.itemCode,
-          customerName: items.customerName,
+          // Provenance display-only "created-from" customer (origin column) —
+          // shown purely as picker context, never queried for search/usage.
+          customerName: items.originCustomerName,
           gradeName: grade.name,
           toleranceId: items.toleranceId,
           outerDia: items.outerDia,
@@ -198,7 +211,7 @@ export async function getJobCardPickerData(): Promise<JobCardPickerData> {
           length: items.length,
           width: items.width,
           thickness: items.thickness,
-          qty: items.qty,
+          qty: items.originQty,
         })
         .from(items)
         .leftJoin(grade, eq(items.internalGradeId, grade.id))

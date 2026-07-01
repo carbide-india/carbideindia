@@ -44,15 +44,12 @@ export async function commandSearch(rawQuery: string): Promise<CommandSearchResu
       .select({
         id: items.id,
         code: items.itemCode,
-        label: items.custProductName,
+        // Display-only provenance label; origin_* is never part of the search
+        // predicate (Canonical Decisions) — items are searched by item_code.
+        label: items.originCustProductName,
       })
       .from(items)
-      .where(
-        and(
-          eq(items.isActive, true),
-          or(ilike(items.itemCode, like), ilike(items.custProductName, like)),
-        ),
-      )
+      .where(and(eq(items.isActive, true), ilike(items.itemCode, like)))
       .orderBy(desc(items.createdAt))
       .limit(LIMIT),
     db

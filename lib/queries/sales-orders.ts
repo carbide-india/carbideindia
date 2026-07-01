@@ -1,7 +1,20 @@
 import "server-only";
 import { and, asc, desc, eq, ilike, or } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { salesOrders, salesOrderItems, type SalesOrder } from "@/db/schema";
+import {
+  salesOrders,
+  salesOrderItems,
+  type SalesOrder,
+  type SalesOrderItem,
+} from "@/db/schema";
+import {
+  resolveSpecsByItemId,
+  resolveCustomerAskByInquiryItemId,
+  EMPTY_SPEC,
+  EMPTY_CUSTOMER_ASK,
+  type ResolvedSpec,
+  type ResolvedCustomerAsk,
+} from "@/lib/flow/spec-resolve";
 
 /** One row of the /sales-orders register table. */
 export interface SalesOrderListItem {
@@ -63,11 +76,31 @@ export async function getSalesOrderById(
   return row ?? null;
 }
 
-/** All line items for a sales order, in sort order. */
-export async function getSalesOrderItems(salesOrderId: string) {
-  return db
+/**
+ * All line items for a sales order, in sort order, with product SPEC resolved
+ * read-through from the linked Item (§2.4). Price / qty / timeline stay on the
+ * line; product-describing fields come from `items` via `item_id`.
+ */
+export type SalesOrderLineWithSpec = SalesOrderItem & {
+  spec: ResolvedSpec;
+  ask: ResolvedCustomerAsk;
+};
+
+export async function getSalesOrderItems(
+  salesOrderId: string,
+): Promise<SalesOrderLineWithSpec[]> {
+  const rows = await db
     .select()
     .from(salesOrderItems)
     .where(eq(salesOrderItems.salesOrderId, salesOrderId))
     .orderBy(asc(salesOrderItems.sortOrder));
+  const [specs, asks] = await Promise.all([
+    resolveSpecsByItemId(rows.map((r) => r.itemId)),
+    resolveCustomerAskByInquiryItemId(rows.map((r) => r.inquiryItemId)),
+  ]);
+  return rows.map((r) => ({
+    ...r,
+    spec: (r.itemId && specs.get(r.itemId)) || EMPTY_SPEC,
+    ask: (r.inquiryItemId && asks.get(r.inquiryItemId)) || EMPTY_CUSTOMER_ASK,
+  }));
 }
