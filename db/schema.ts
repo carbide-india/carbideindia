@@ -38,6 +38,7 @@ import {
   NEGOTIATION_STATUSES,
   MEETING_PURPOSES,
   COSTING_TYPES,
+  ITEM_STATUSES,
   COSTING_ROUTES,
   COSTING_LOGICS,
   AUDIT_ACTIONS,
@@ -649,13 +650,25 @@ export const inquiryItems = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("inquiry_items_inquiry_idx").on(t.inquiryId, t.sortOrder)],
+  (t) => [
+    index("inquiry_items_inquiry_idx").on(t.inquiryId, t.sortOrder),
+    // Where-used graph fan-out (ERP Phase 2 — migration 0032).
+    index("inquiry_items_item_idx").on(t.itemId),
+  ],
 );
 export type InquiryItem = typeof inquiryItems.$inferSelect;
 export type NewInquiryItem = typeof inquiryItems.$inferInsert;
 
 // ── Item / Product Master (2026-06-17, Alok) ────────────────────
 export const costingTypeEnum = pgEnum("costing_type", COSTING_TYPES);
+
+/**
+ * Item lifecycle status (ERP Phase 2 — migration 0030). Additive alongside the
+ * existing `is_active`/`deleted_at` governance; those stay authoritative this
+ * phase (the real cutover to `status` lands in Phase 6). Backfill: active where
+ * is_active else archived. `superseded` is reserved for merge-with-history.
+ */
+export const itemStatusEnum = pgEnum("item_status", ITEM_STATUSES);
 
 /** Item serial → the "10001" in S-10001-C-… */
 export const itemSeqSeq = pgSequence("item_seq_seq", { startWith: 10001 });
@@ -721,10 +734,29 @@ export const items = pgTable(
     altUom: text("alt_uom"),
     altUomConversion: numeric("alt_uom_conversion"),
 
+    // Lifecycle status (ERP Phase 2 — migration 0030). ADDED alongside the
+    // existing is_active/deleted_at governance below — those stay authoritative
+    // this phase; the cutover to `status` happens in Phase 6. Backfilled active
+    // where is_active else archived. `superseded` reserved for merge-with-history.
+    status: itemStatusEnum("status").notNull().default("active"),
+
     // Governance (ERP Phase 4): deactivate-only lifecycle. Items are never
     // hard-deleted; is_active=false + deleted_at marks a retired item.
     isActive: boolean("is_active").notNull().default(true),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
+
+    // PROVENANCE (ERP Phase 2 — migration 0030): write-once "created-from"
+    // snapshot of the source enquiry. Backfilled from the existing
+    // inquiry_id/sm_number/enquiry_date/customer_name/cust_product_name/qty/
+    // created_by_id columns. NEVER queried for usage/dedup/search (Canonical
+    // Decisions); legacy cols dropped in Phase 6.
+    originInquiryId: uuid("origin_inquiry_id").references(() => inquiries.id, { onDelete: "set null" }),
+    originSmNumber: text("origin_sm_number"),
+    originEnquiryDate: timestamp("origin_enquiry_date", { withTimezone: true }),
+    originCustomerName: text("origin_customer_name"),
+    originCustProductName: text("origin_cust_product_name"),
+    originQty: numeric("origin_qty"),
+    originCreatedById: uuid("origin_created_by_id").references(() => employees.id, { onDelete: "set null" }),
 
     createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -735,6 +767,7 @@ export const items = pgTable(
     index("items_inquiry_idx").on(t.inquiryId),
     index("items_shape_idx").on(t.shapeId),
     index("items_active_idx").on(t.isActive),
+    index("items_status_idx").on(t.status),
   ],
 );
 export type Item = typeof items.$inferSelect;
@@ -797,6 +830,10 @@ export const costings = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     inquiryItemId: uuid("inquiry_item_id").notNull().references(() => inquiryItems.id, { onDelete: "cascade" }),
     inquiryId: uuid("inquiry_id").notNull().references(() => inquiries.id, { onDelete: "cascade" }),
+    // Per-item cost history (ERP Phase 2 — migration 0031). Nullable for now;
+    // backfilled from inquiry_items.item_id via inquiry_item_id. Becomes the
+    // canonical cost anchor (NOT NULL) in a later phase.
+    itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
     costingType: costingRouteEnum("costing_type").notNull(),
     costingLogic: costingLogicEnum("costing_logic"),
     isChosen: boolean("is_chosen").notNull().default(true),
@@ -828,7 +865,13 @@ export const costings = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("costings_inquiry_idx").on(t.inquiryId), index("costings_item_idx").on(t.inquiryItemId, t.sortOrder)],
+  (t) => [
+    index("costings_inquiry_idx").on(t.inquiryId),
+    index("costings_item_idx").on(t.inquiryItemId, t.sortOrder),
+    // Where-used graph fan-out on the new item FK (ERP Phase 2 — migration 0032).
+    // Note: `costings_item_idx` above is legacy-named on (inquiry_item_id, sort_order).
+    index("costings_item_id_idx").on(t.itemId),
+  ],
 );
 export type Costing = typeof costings.$inferSelect;
 export type NewCosting = typeof costings.$inferInsert;
@@ -891,7 +934,11 @@ export const quotationItems = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("quotation_items_quotation_idx").on(t.quotationId, t.sortOrder)],
+  (t) => [
+    index("quotation_items_quotation_idx").on(t.quotationId, t.sortOrder),
+    // Where-used graph fan-out (ERP Phase 2 — migration 0032).
+    index("quotation_items_item_idx").on(t.itemId),
+  ],
 );
 export type QuotationItem = typeof quotationItems.$inferSelect;
 export type NewQuotationItem = typeof quotationItems.$inferInsert;
@@ -944,7 +991,11 @@ export const negotiationItems = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("negotiation_items_negotiation_idx").on(t.negotiationId, t.sortOrder)],
+  (t) => [
+    index("negotiation_items_negotiation_idx").on(t.negotiationId, t.sortOrder),
+    // Where-used graph fan-out (ERP Phase 2 — migration 0032).
+    index("negotiation_items_item_idx").on(t.itemId),
+  ],
 );
 export type NegotiationItem = typeof negotiationItems.$inferSelect;
 export type NewNegotiationItem = typeof negotiationItems.$inferInsert;
@@ -997,7 +1048,11 @@ export const salesOrderItems = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("sales_order_items_so_idx").on(t.salesOrderId, t.sortOrder)],
+  (t) => [
+    index("sales_order_items_so_idx").on(t.salesOrderId, t.sortOrder),
+    // Where-used graph fan-out (ERP Phase 2 — migration 0032).
+    index("sales_order_items_item_idx").on(t.itemId),
+  ],
 );
 export type SalesOrderItem = typeof salesOrderItems.$inferSelect;
 export type NewSalesOrderItem = typeof salesOrderItems.$inferInsert;

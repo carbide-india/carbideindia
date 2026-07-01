@@ -246,6 +246,17 @@ export type MasterKind = (typeof MASTER_KINDS)[number];
 /** Item Master costing route. */
 export const COSTING_TYPES = ["inhouse", "bought_out", "both"] as const;
 export type CostingType = (typeof COSTING_TYPES)[number];
+
+// Item lifecycle status (ERP Phase 2 — migration 0030). `superseded` is
+// reserved for merge-with-history; not yet produced by any code path.
+export const ITEM_STATUSES = ["draft", "active", "archived", "superseded"] as const;
+export type ItemStatus = (typeof ITEM_STATUSES)[number];
+export const ITEM_STATUS_LABELS: Record<ItemStatus, string> = {
+  draft: "Draft",
+  active: "Active",
+  archived: "Archived",
+  superseded: "Superseded",
+};
 export const COSTING_TYPE_LABELS: Record<CostingType, string> = {
   inhouse: "In-house",
   bought_out: "Bought-out",

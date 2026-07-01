@@ -1,5 +1,5 @@
 import "server-only";
-import { aliasedTable, desc, eq } from "drizzle-orm";
+import { aliasedTable, desc, eq, getTableColumns } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { items, masterOptions } from "@/db/schema";
 import type { Item } from "@/db/schema";
@@ -110,47 +110,10 @@ export async function getItemById(id: string): Promise<ItemDetail | null> {
 
   const [row] = await db
     .select({
-      id: items.id,
-      seq: items.seq,
-      itemCode: items.itemCode,
-      dedupKey: items.dedupKey,
-      inquiryId: items.inquiryId,
-      smNumber: items.smNumber,
-      enquiryDate: items.enquiryDate,
-      customerName: items.customerName,
-      custProductName: items.custProductName,
-      custDrawingNo: items.custDrawingNo,
-      drawingRevisionNo: items.drawingRevisionNo,
-      qty: items.qty,
-      sizeCode: items.sizeCode,
-      shapeId: items.shapeId,
-      internalGradeId: items.internalGradeId,
-      toleranceId: items.toleranceId,
-      conditionId: items.conditionId,
-      gradeCustomer: items.gradeCustomer,
-      gradeNameForCust: items.gradeNameForCust,
-      outerDia: items.outerDia,
-      innerDia: items.innerDia,
-      length: items.length,
-      width: items.width,
-      thickness: items.thickness,
-      dimensionNotes: items.dimensionNotes,
-      partNo: items.partNo,
-      partDescription1: items.partDescription1,
-      partDescription2: items.partDescription2,
-      partDescription3: items.partDescription3,
-      partDescription4: items.partDescription4,
-      partTag: items.partTag,
-      costingType: items.costingType,
-      hsnCode: items.hsnCode,
-      uom: items.uom,
-      altUom: items.altUom,
-      altUomConversion: items.altUomConversion,
-      isActive: items.isActive,
-      deletedAt: items.deletedAt,
-      createdById: items.createdById,
-      createdAt: items.createdAt,
-      updatedAt: items.updatedAt,
+      // Full canonical item row (incl. Phase-2 status + write-once origin_*
+      // provenance). Spread avoids naming individual snapshot/origin columns —
+      // origin_* stay display-only and are never used for usage/dedup/search.
+      ...getTableColumns(items),
       shapeName: shape.name,
       gradeName: grade.name,
       conditionName: condition.name,
