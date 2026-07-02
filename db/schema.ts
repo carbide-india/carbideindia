@@ -1771,6 +1771,17 @@ export const orgSettings = pgTable(
     // the built-in default order. Lives here, not status_settings, because the
     // Archived column isn't a real status.
     boardColumnOrder: jsonb("board_column_order").$type<string[]>(),
+    // ERP Phase 8 — per-entity enforced-workflow feature flags. Key = a
+    // WORKFLOW_FLAG_KEY ("quotation" | "negotiation" | "sales_order" | ...);
+    // value true means `advanceStage` enforcement + form redirects are ON for
+    // that entity. Absent/false = OFF (the DEFAULT), and the app behaves exactly
+    // as pre-Phase-8 (independent New forms + free-set status dropdowns). Read
+    // server-side via lib/workflow/flags.ts; never hardcode a flag on. The empty
+    // object default means every flag defaults OFF, so the deploy is a no-op.
+    workflowFlags: jsonb("workflow_flags")
+      .notNull()
+      .$type<Record<string, boolean>>()
+      .default({}),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

@@ -1,17 +1,18 @@
 /**
- * FIRST-CUT stage derivation (ERP redesign — Phase 3).
+ * Stage derivation (ERP redesign — Phase 3, HARDENED in Phase 8).
  *
- * ⚠️ HARDENED IN PHASE 8. This module is intentionally simple: it maps whatever
- * status/flag signals are cheaply available today onto a single canonical
- * pipeline-stage index so the presentational `Stepper` has something real to
- * render on the Item Workspace. The authoritative derivation (`itemFurthestStage`
- * / `smRollupStage` fed by the enforced state machine in
- * `lib/workflow/transitions.ts`) arrives in Phase 8 and will REPLACE the guts of
- * these helpers — the exported signatures are the stable contract.
+ * This module is the SOLE AUTHORITY for pipeline state (Canonical Decisions §):
+ * the two distinctly-named public entry points are `itemFurthestStage` (the max
+ * stage across an Item's where-used — for the Item lifecycle stepper) and
+ * `smRollupStage` (the least-advanced active line — for the SM stepper). Every
+ * screen imports these; NO screen computes its own stage. The lower-level
+ * `deriveItemStage` / `deriveSmStage` remain the stable, unit-tested cores these
+ * two wrap.
  *
- * Pure + dependency-free (no DB, no imports) so it is trivially unit-testable
- * and safe to import from client OR server (the `Stepper` reads its stage
- * constants/labels; server pages call the derive helpers with cheap counts).
+ * Pure + dependency-free (no DB, no server-only) so it is trivially
+ * unit-testable and safe to import from client OR server (the `Stepper` reads
+ * its stage constants/labels; server pages call the derive helpers with cheap
+ * counts).
  */
 
 /**
@@ -154,4 +155,49 @@ export function deriveSmStage(signals: SmStageSignals): number {
   }
 
   return furthest;
+}
+
+// ── Phase 8 — the two SOLE AUTHORITIES (distinctly named per §4.6) ───────────
+
+/** A resolved stage plus its index, the shape every stepper consumes. */
+export interface ResolvedStage {
+  stage: PipelineStage;
+  index: number;
+}
+
+function resolve(index: number): ResolvedStage {
+  const clamped = Math.min(Math.max(index, 0), PIPELINE_STAGES.length - 1);
+  const stage = PIPELINE_STAGES[clamped] ?? "enquiry";
+  return { stage, index: clamped };
+}
+
+/**
+ * The FURTHEST stage any line referencing an Item has reached — the Item's
+ * lifecycle position (fan-out over where-used). Wraps {@link deriveItemStage};
+ * this is the ONE function the Item lifecycle stepper reads (§4.6). Returns the
+ * resolved stage + its index so callers never re-map.
+ */
+export function itemFurthestStage(signals: ItemStageSignals): ResolvedStage {
+  return resolve(deriveItemStage(signals));
+}
+
+/**
+ * The SM roll-up stage — the least-advanced active line drives the SM stepper.
+ * When per-line signals are available, pass the per-line furthest indices in
+ * `lineStages`; the roll-up is their MINIMUM (a multi-product SM is only as far
+ * as its laggard line, §4.1). With no per-line detail it falls back to the
+ * SM-level {@link deriveSmStage} over the header signals. This is the ONE
+ * function every SM stepper reads.
+ */
+export function smRollupStage(
+  signals: SmStageSignals & { lineStages?: ReadonlyArray<number> },
+): ResolvedStage {
+  if (signals.lineStages && signals.lineStages.length > 0) {
+    const min = signals.lineStages.reduce(
+      (m, s) => Math.min(m, s),
+      PIPELINE_STAGES.length - 1,
+    );
+    return resolve(min);
+  }
+  return resolve(deriveSmStage(signals));
 }

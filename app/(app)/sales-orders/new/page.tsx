@@ -6,11 +6,16 @@ import { listInquiryOptions } from "@/lib/queries/inquiries";
 import { listQuotationOptions } from "@/lib/queries/quotes";
 import { listEmployeeOptions } from "@/lib/queries/employees";
 import { BulkUploadButton } from "@/components/import/bulk-upload-button";
+import { enforcedNewGuard } from "@/components/workflow/enforced-new-guard";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewSalesOrderPage() {
   await requireUser();
+  // Phase 8 — when the Negotiation flag is ON, order_won auto-provisions the SO
+  // via advanceStage; disable this standalone form to avoid a double-provision.
+  // Flag OFF (default) ⇒ no-op, form renders as today.
+  await enforcedNewGuard("negotiation", "/sales-orders");
   const me = await getCurrentEmployee();
   const [inquiries, quotations, employees] = await Promise.all([
     listInquiryOptions(),

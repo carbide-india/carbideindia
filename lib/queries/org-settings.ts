@@ -31,6 +31,7 @@ const DEFAULTS: OrgSettings = {
     overdue_digest: ["email"],
   },
   boardColumnOrder: null,
+  workflowFlags: {},
   updatedAt: new Date(0),
   updatedById: null,
 };

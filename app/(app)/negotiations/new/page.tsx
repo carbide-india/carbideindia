@@ -6,11 +6,16 @@ import { listInquiryOptions } from "@/lib/queries/inquiries";
 import { listQuotationOptions } from "@/lib/queries/quotes";
 import { listEmployeeOptions } from "@/lib/queries/employees";
 import { BulkUploadButton } from "@/components/import/bulk-upload-button";
+import { enforcedNewGuard } from "@/components/workflow/enforced-new-guard";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewNegotiationPage() {
   await requireUser();
+  // Phase 8 — when the Quotation flag is ON, sending a quote auto-provisions the
+  // negotiation via advanceStage; disable this standalone form to avoid a
+  // double-provision. Flag OFF (default) ⇒ no-op, form renders as today.
+  await enforcedNewGuard("quotation", "/negotiations");
   const me = await getCurrentEmployee();
   const [inquiries, quotations, employees] = await Promise.all([
     listInquiryOptions(),

@@ -568,3 +568,30 @@ export const RM_LOT_STATUS_LABELS: Record<RmLotStatus, string> = {
  *  (Yogeshwar Engineering Pvt Ltd) is registered in Maharashtra. Kept here as a
  *  single source so lib/gst/compute.ts and any UI agree. */
 export const SELLER_STATE = "Maharashtra" as const;
+
+// ── ERP Phase 8 — enforced workflow state machine feature flags ──────────────
+// Per-entity flags gate `advanceStage` enforcement + New-form redirects. Stored
+// on org_settings.workflow_flags (jsonb map key→bool). DEFAULT OFF for every key
+// (absent === false) so the deploy is a no-op until an admin flips one ON. The
+// keys are the downstream entities whose "advance" now funnels through
+// advanceStage; the upstream stages (enquiry/feasibility/costing) keep their
+// existing status UI and are not flag-gated here.
+export const WORKFLOW_FLAG_KEYS = [
+  "quotation",
+  "negotiation",
+  "sales_order",
+  "job_card",
+  "production",
+  "dispatch",
+  "invoice",
+] as const;
+export type WorkflowFlagKey = (typeof WORKFLOW_FLAG_KEYS)[number];
+export const WORKFLOW_FLAG_LABELS: Record<WorkflowFlagKey, string> = {
+  quotation: "Quotation",
+  negotiation: "Negotiation",
+  sales_order: "Sales Order",
+  job_card: "Job Card",
+  production: "Production",
+  dispatch: "Dispatch",
+  invoice: "Invoice",
+};

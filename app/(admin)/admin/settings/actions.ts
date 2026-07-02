@@ -6,7 +6,7 @@ import { CACHE_TAGS } from "@/lib/cache-tags";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { orgSettings, settingsEvents, statusSettings } from "@/db/schema";
-import { TASK_STATUSES } from "@/db/enums";
+import { TASK_STATUSES, WORKFLOW_FLAG_KEYS, type WorkflowFlagKey } from "@/db/enums";
 import { requireAdmin } from "@/lib/auth/current";
 import { isValidColumnId } from "@/lib/kanban-columns";
 import {
@@ -185,6 +185,61 @@ export async function setBoardColumnOrder(order: string[]): Promise<ActionResult
     return { ok: false, error: `DB: ${msg}` };
   }
   revalidatePath("/tasks/kanban");
+  return { ok: true };
+}
+
+/**
+ * ERP Phase 8 — flip a single per-entity enforced-workflow feature flag on the
+ * org_settings singleton. DEFAULT OFF for every key; this is the ONLY way to
+ * turn one ON. Admin-only. Writes an audit row. Merges into the existing map so
+ * flipping one flag never clears the others.
+ */
+const SetWorkflowFlagSchema = z.object({
+  key: z.enum(WORKFLOW_FLAG_KEYS),
+  enabled: z.boolean(),
+});
+
+export async function setWorkflowFlagAction(input: {
+  key: WorkflowFlagKey;
+  enabled: boolean;
+}): Promise<ActionResult> {
+  const me = await requireAdmin();
+  const parsed = SetWorkflowFlagSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+  const { key, enabled } = parsed.data;
+
+  const before = await db.query.orgSettings.findFirst({
+    where: eq(orgSettings.id, 1),
+  });
+  const current = (before?.workflowFlags ?? {}) as Record<string, boolean>;
+  const next = { ...current, [key]: enabled };
+
+  try {
+    await db
+      .update(orgSettings)
+      .set({ workflowFlags: next, updatedAt: new Date(), updatedById: me.id })
+      .where(eq(orgSettings.id, 1));
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: `DB: ${msg}` };
+  }
+
+  try {
+    await db.insert(settingsEvents).values({
+      scope: "workflow_flags",
+      targetId: key,
+      actorId: me.id,
+      eventType: enabled ? "enabled" : "disabled",
+      fromValue: { [key]: current[key] ?? false },
+      toValue: { [key]: enabled },
+    });
+  } catch (err) {
+    console.error("[setWorkflowFlagAction] audit write failed", err);
+  }
+
+  revalidatePath("/admin/settings");
   return { ok: true };
 }
 

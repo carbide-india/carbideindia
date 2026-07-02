@@ -11,6 +11,9 @@ import {
 } from "@/components/negotiations/negotiation-detail";
 import { SyncProductsBanner } from "@/components/pipeline/sync-products-banner";
 import { syncProductsFromEnquiry } from "@/app/(app)/negotiations/actions";
+import { WorkflowStepper } from "@/components/workflow/workflow-stepper";
+import { stageIndex } from "@/lib/flow/derive-stage";
+import { isWorkflowFlagOn } from "@/lib/workflow/flags";
 
 export const dynamic = "force-dynamic";
 
@@ -66,8 +69,19 @@ export default async function NegotiationDetailPage({ params }: PageProps) {
   );
   const missingCount = seeds.filter((s) => !presentIds.has(s.inquiryItemId)).length;
 
+  // Phase 8 — pipeline stepper + flag-gated "Mark Won" CTA. Won ⇒ show SO stage.
+  const negotiationFlagOn = await isWorkflowFlagOn("negotiation");
+  const isWon = negotiation.negotiationStatus === "order_won";
+  const negStageKey = isWon ? ("sales_order" as const) : ("negotiation" as const);
+  const resolvedStage = { stage: negStageKey, index: stageIndex(negStageKey) };
+
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6">
+      <WorkflowStepper
+        resolved={resolvedStage}
+        flagOn={negotiationFlagOn && !isWon}
+        advance={{ entity: "negotiation", id: negotiation.id, label: "Mark Won" }}
+      />
       <SyncProductsBanner
         missingCount={missingCount}
         recordId={negotiation.id}

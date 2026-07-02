@@ -6,6 +6,8 @@ import { listEmployeeOptions } from "@/lib/queries/employees";
 import { listMasterOptions } from "@/lib/queries/masters";
 import { getChosenCostingsForInquiry } from "@/lib/queries/costings";
 import { InquiryDetail } from "@/components/inquiries/inquiry-detail";
+import { WorkflowStepper } from "@/components/workflow/workflow-stepper";
+import { smRollupStage } from "@/lib/flow/derive-stage";
 
 export const dynamic = "force-dynamic";
 
@@ -70,8 +72,17 @@ export default async function InquiryDetailPage({ params }: PageProps) {
     };
   });
 
+  // Phase 8 — read-only SM roll-up stepper (§4.5), fed solely by derive-stage.
+  // Cheap header signals; a full per-line roll-up lands with the Phase-9 SM
+  // workspace. Safe to render always (no advance CTA on the SM navigator).
+  const smStage = smRollupStage({
+    enquiryStatus: inquiry.enquiryStatus,
+    hasCosting: chosenCostings.length > 0,
+  });
+
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6">
+      <WorkflowStepper resolved={smStage} />
       <InquiryDetail inquiry={inquiry} employees={employees} masterNames={masterNames} products={products} isAdmin={me.isAdmin} />
     </main>
   );
