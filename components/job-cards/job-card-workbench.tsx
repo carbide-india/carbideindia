@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
-import { ClipboardList } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import type { Route } from "next";
+import { ClipboardList, Pencil } from "lucide-react";
 import { WorkbenchPanel } from "@/components/workbench/workbench-panel";
 import { WorkbenchActions } from "@/components/workbench/workbench-actions";
 import {
@@ -147,6 +148,7 @@ function flag(v: string): boolean | undefined {
 
 export function JobCardWorkbench({ rows, picker, isAdmin }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [form, setForm] = React.useState<FormState>(BLANK);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
@@ -229,6 +231,33 @@ export function JobCardWorkbench({ rows, picker, isAdmin }: Props) {
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
+  }
+
+  /**
+   * Deep-link from the record Workspace: `/job-cards?edit=<id>` hydrates the
+   * form for that row (Edit CTA on the workspace). Runs once per id change and
+   * clears the param so a refresh doesn't re-trigger it.
+   */
+  const editId = searchParams.get("edit");
+  const hydratedEditId = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!editId || hydratedEditId.current === editId) return;
+    const row = rows.find((r) => r.id === editId);
+    if (!row) return;
+    hydratedEditId.current = editId;
+    // One-shot hydration from the workspace Edit deep-link. Defer to a
+    // microtask so the state update is not applied synchronously inside the
+    // effect body, then strip the param so a refresh won't re-open the form.
+    queueMicrotask(() => {
+      loadRow(row);
+      router.replace("/job-cards" as Route, { scroll: false });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editId]);
+
+  /** Row click opens the split record Workspace (read + timeline + spec). */
+  function openWorkspace(row: JobCardListItem) {
+    router.push(`/job-cards/${row.id}` as Route);
   }
 
   function onSelectCustomer(c: JobCardPickerClient) {
@@ -399,6 +428,23 @@ export function JobCardWorkbench({ rows, picker, isAdmin }: Props) {
         key: "status",
         header: "Status",
         cell: (r) => <StatusChip active={r.isActive} />,
+      },
+      {
+        key: "edit",
+        header: "",
+        cell: (r) => (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              loadRow(r);
+            }}
+            className="inline-flex items-center gap-1 rounded-chip border border-hairline px-2 py-1 text-[11px] font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand"
+          >
+            <Pencil size={12} strokeWidth={2.2} />
+            Edit
+          </button>
+        ),
       },
     ],
     [],
@@ -676,7 +722,7 @@ export function JobCardWorkbench({ rows, picker, isAdmin }: Props) {
           rows={rows}
           columns={columns}
           getRowId={(r) => r.id}
-          onRowClick={loadRow}
+          onRowClick={openWorkspace}
           emptyText="No job cards yet — fill the form above to create one."
         />
       </WorkbenchPanel>
