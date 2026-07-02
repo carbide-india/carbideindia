@@ -5,6 +5,7 @@ import { getItemById } from "@/lib/queries/items";
 import { getItemDocuments } from "@/lib/queries/item-documents";
 import { getAuditLog } from "@/lib/queries/audit";
 import { getItemStageCounts, stageFromCounts } from "@/lib/queries/item-stage";
+import { getItemWhereUsed } from "@/lib/queries/item-where-used";
 import { ItemWorkspace } from "@/components/erp/item-workspace";
 
 export const dynamic = "force-dynamic";
@@ -30,11 +31,12 @@ export default async function ItemDetailPage({ params }: PageProps) {
   const { id } = await params;
   if (!UUID_RE.test(id)) notFound();
 
-  const [item, auditEntries, documents, counts] = await Promise.all([
+  const [item, auditEntries, documents, counts, whereUsed] = await Promise.all([
     getItemById(id),
     getAuditLog("item", id),
     getItemDocuments(id),
     getItemStageCounts(id),
+    getItemWhereUsed(id),
   ]);
   if (!item) notFound();
 
@@ -46,6 +48,7 @@ export default async function ItemDetailPage({ params }: PageProps) {
       auditEntries={auditEntries}
       documents={documents}
       counts={counts}
+      whereUsed={whereUsed}
       stageIndex={stageIndex}
       isAdmin={me.isAdmin}
     />
