@@ -13,15 +13,24 @@ export const dynamic = "force-dynamic";
 export default async function NewInquiryPage() {
   const me = await requireUser();
   const currentEmployee = await getCurrentEmployee();
-  const [clients, employees, grades, tolerances, conditions, shapeProfiles] =
+  const [clients, employees, grades, tolerances, conditions, shapes, shapeProfiles] =
     await Promise.all([
       listClientOptions(),
       listEmployeeOptions(),
       listMasterOptions("internal_grade"),
       listMasterOptions("tolerance"),
       listMasterOptions("condition"),
+      listMasterOptions("shape"),
       getShapeProfiles(),
     ]);
+
+  const pickerMasters = {
+    shapes,
+    grades,
+    tolerances,
+    conditions,
+    shapeProfilesById: shapeProfiles.byId,
+  };
 
   return (
     <>
@@ -54,6 +63,7 @@ export default async function NewInquiryPage() {
           tolerances={tolerances}
           conditions={conditions}
           shapeProfiles={shapeProfiles.byName}
+          pickerMasters={pickerMasters}
           defaultSalesPersonId={me.id}
         />
       </main>

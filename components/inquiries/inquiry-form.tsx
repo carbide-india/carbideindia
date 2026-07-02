@@ -28,6 +28,7 @@ import type { ClientAutofill, ClientOption } from "@/lib/queries/clients";
 import type { EmployeeOption } from "@/lib/queries/employees";
 import type { MasterOptionItem } from "@/lib/queries/masters";
 import type { ShapeConfig } from "@/lib/masters/shape-config";
+import type { PickerMasters } from "@/components/erp/product-picker";
 
 /** RHF holds the schema's *input* shape (pre-transform); zodResolver hands
  *  the parsed *output* (with `quantityUom` defaulted, `""` folded to
@@ -44,6 +45,11 @@ interface Props {
   conditions: MasterOptionItem[];
   /** Per-shape dimension config keyed by shape name. */
   shapeProfiles: Record<string, ShapeConfig>;
+  /**
+   * Masters for the SAP-style Material Search / create-new mini-form. Only
+   * needed in create mode (the ProductsSection is hidden on edit).
+   */
+  pickerMasters?: PickerMasters;
   /** Current employee — preselected as the assigned sales person. */
   defaultSalesPersonId: string;
   /**
@@ -81,6 +87,7 @@ export function InquiryForm({
   tolerances,
   conditions,
   shapeProfiles,
+  pickerMasters,
   defaultSalesPersonId,
   editInquiryId,
   initialValues,
@@ -549,7 +556,7 @@ export function InquiryForm({
       {/* ── 3 · Products ─────────────────────────────────────────────── */}
       {/* Products are hidden in edit mode — they link to costings/quotes and
           are managed from the SM Repo, not re-synced on enquiry edits. */}
-      {!isEdit && (
+      {!isEdit && pickerMasters && (
         <ProductsSection
           control={control}
           register={register}
@@ -559,6 +566,7 @@ export function InquiryForm({
           tolerances={tolerances}
           conditions={conditions}
           shapeProfiles={shapeProfiles}
+          pickerMasters={pickerMasters}
         />
       )}
 

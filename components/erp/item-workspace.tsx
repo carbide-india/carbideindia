@@ -12,13 +12,21 @@ import {
   ClipboardList,
   Layers,
   LayoutDashboard,
+  ArrowUpRight,
+  Factory,
 } from "lucide-react";
 import { COSTING_TYPE_LABELS } from "@/db/enums";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatInr } from "@/lib/format";
 import type { ItemDetail } from "@/lib/queries/items";
 import type { AuditEntry } from "@/lib/queries/audit";
 import type { ItemDocument } from "@/lib/queries/item-documents";
 import type { ItemStageCounts } from "@/lib/queries/item-stage";
+import type {
+  ItemWhereUsed,
+  RelatedRecord,
+  CostHistoryRow,
+  QuotePriceRow,
+} from "@/lib/queries/item-where-used";
 import { AppShell, type RailGroup } from "@/components/erp/app-shell";
 import { Stepper } from "@/components/erp/stepper";
 import { StatusPill, ITEM_STATUS_PILL, type PillTone } from "@/components/erp/status-pill";
@@ -30,16 +38,20 @@ import { ItemDocuments } from "@/components/items/item-documents";
 import { ItemStatusControl } from "@/components/items/item-status-control";
 
 /**
- * ItemWorkspace (ERP redesign — Phase 3 REFERENCE MIGRATION).
+ * ItemWorkspace (ERP redesign — Phase 3 reference, EXTENDED in Phase 9a).
  *
- * Rebuilds the Item detail page as a Workspace on the new primitives:
- *   AppShell (chrome) + WorkspaceHeader (code + StatusPill + key facts) +
- *   Stepper (fed by deriveItemStage) + Tabs (Overview / Specifications /
- *   Commercial / Manufacturing / History / Documents) using DetailGrid.
- *
- * Where-Used / Related are lightweight "coming in Phase 9" placeholders fed by
- * the cheap stage counts. A ContextDrawer instance demonstrates the peek
- * primitive (opens the same Overview/Specs facets in a right sheet).
+ * The Item as a Product-Intelligence DB: AppShell + WorkspaceHeader + lifecycle
+ * Stepper + tabs on DetailGrid, now fed by the REAL where-used graph
+ * (`getItemWhereUsed`). The Phase-3 "coming in Phase 9" placeholders are
+ * replaced with live data:
+ *   - Overview   — spec digest + reach chips + a summary rail (cost/quote/reach).
+ *   - Commercial — live cost history (costings) + quotation price history.
+ *   - Manufacturing — route/part facts + latest production order.
+ *   - Related    — every referencing SM / quote / neg / SO / job-card / invoice,
+ *                  clickable to its record.
+ *   - Where-Used — customers-using fan-out + the same related graph.
+ *   - Timeline   — a merged chronology across all referencing records.
+ * Everything clickable + linked; the ContextDrawer peek mirrors the top tabs.
  */
 
 interface ItemWorkspaceProps {
@@ -47,6 +59,7 @@ interface ItemWorkspaceProps {
   auditEntries: AuditEntry[];
   documents: ItemDocument[];
   counts: ItemStageCounts;
+  whereUsed: ItemWhereUsed;
   /** Furthest pipeline stage index (from deriveItemStage on the server). */
   stageIndex: number;
   isAdmin: boolean;
@@ -55,9 +68,7 @@ interface ItemWorkspaceProps {
 const NAV: ReadonlyArray<RailGroup> = [
   {
     label: "Product",
-    items: [
-      { href: "/items", label: "Item Master", Icon: Boxes },
-    ],
+    items: [{ href: "/items", label: "Item Master", Icon: Boxes }],
   },
   {
     label: "Sales",
@@ -84,6 +95,9 @@ type TabKey =
   | "specifications"
   | "commercial"
   | "manufacturing"
+  | "related"
+  | "whereUsed"
+  | "timeline"
   | "history"
   | "documents";
 
@@ -92,6 +106,9 @@ const TABS: ReadonlyArray<{ key: TabKey; label: string }> = [
   { key: "specifications", label: "Specifications" },
   { key: "commercial", label: "Commercial" },
   { key: "manufacturing", label: "Manufacturing" },
+  { key: "related", label: "Related" },
+  { key: "whereUsed", label: "Where-Used" },
+  { key: "timeline", label: "Timeline" },
   { key: "history", label: "History" },
   { key: "documents", label: "Documents" },
 ];
@@ -106,11 +123,19 @@ function composeDimensions(item: ItemDetail): string | null {
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
+/** ₹ from a numeric-string DB column (null-safe). */
+function inr(v: string | null): string | null {
+  if (v == null || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? formatInr(n) : null;
+}
+
 export function ItemWorkspace({
   item,
   auditEntries,
   documents,
   counts,
+  whereUsed,
   stageIndex,
   isAdmin,
 }: ItemWorkspaceProps) {
@@ -123,6 +148,12 @@ export function ItemWorkspace({
     item.altUom && item.altUomConversion
       ? `${item.altUom} (1 = ${item.altUomConversion} ${item.uom ?? "base"})`
       : item.altUom;
+
+  // Money summary — latest chosen cost + latest quote unit price.
+  const latestCost = whereUsed.costHistory.find((c) => c.isChosen) ?? whereUsed.costHistory[0];
+  const latestCostValue = latestCost ? inr(latestCost.finalCostPerPiece) : null;
+  const latestQuote = whereUsed.quotePrices[0];
+  const latestQuoteValue = latestQuote ? inr(latestQuote.unitPrice) : null;
 
   const specFields: DetailField[] = [
     { label: "Shape", value: item.shapeName },
@@ -146,13 +177,6 @@ export function ItemWorkspace({
     { label: "Costing Type", value: item.costingType ? COSTING_TYPE_LABELS[item.costingType] : null },
   ];
 
-  const commercialFields: DetailField[] = [
-    { label: "Costing Type", value: item.costingType ? COSTING_TYPE_LABELS[item.costingType] : null },
-    { label: "Grade (Customer)", value: item.gradeCustomer, snapshot: true },
-    { label: "Grade Name for Customer", value: item.gradeNameForCust, snapshot: true },
-    { label: "Quantity (as recorded)", value: item.originQty, mono: true, snapshot: true },
-  ];
-
   const manufacturingFields: DetailField[] = [
     { label: "Costing Type", value: item.costingType ? COSTING_TYPE_LABELS[item.costingType] : null },
     { label: "Part No", value: item.partNo, mono: true },
@@ -173,21 +197,20 @@ export function ItemWorkspace({
     { label: "Last Updated", value: formatDate(item.updatedAt) },
   ];
 
-  const breadcrumb = [
-    { label: "Product", href: "/items" },
-    { label: "Item Master", href: "/items" },
-    { label: item.itemCode },
-  ];
-
   const tabBody: Record<TabKey, React.ReactNode> = {
     overview: (
       <div className="flex flex-col gap-8">
         <Section title="At a glance">
           <DetailGrid fields={overviewFields} columns={3} />
         </Section>
-        <Section title="Reach" subtitle="First-cut where-used counts — full graph in Phase 9">
-          <ReachChips counts={counts} />
+        <Section title="Reach" subtitle="Everywhere this exact spec is used across the pipeline">
+          <ReachChips reach={whereUsed} />
         </Section>
+        {whereUsed.customers.length > 0 && (
+          <Section title="Customers using this spec">
+            <CustomerChips customers={whereUsed.customers} />
+          </Section>
+        )}
       </div>
     ),
     specifications: (
@@ -196,17 +219,78 @@ export function ItemWorkspace({
       </Section>
     ),
     commercial: (
-      <Section title="Commercial" subtitle="Cost/quote history arrives in Phase 9">
-        <DetailGrid fields={commercialFields} columns={2} />
-        <Placeholder>
-          Live cost history and quote/won prices (from costings + snapshots) land
-          with Item Intelligence in Phase 9.
-        </Placeholder>
-      </Section>
+      <div className="flex flex-col gap-8">
+        <Section
+          title="Cost history"
+          subtitle="Live from costings linked to this item — chosen first"
+        >
+          <CostHistoryTable rows={whereUsed.costHistory} />
+        </Section>
+        <Section
+          title="Quotation prices"
+          subtitle="Frozen unit price the customer saw (else the live draft price)"
+        >
+          <QuotePriceTable rows={whereUsed.quotePrices} />
+        </Section>
+      </div>
     ),
     manufacturing: (
-      <Section title="Manufacturing">
-        <DetailGrid fields={manufacturingFields} columns={2} />
+      <div className="flex flex-col gap-8">
+        <Section title="Route & part identity">
+          <DetailGrid fields={manufacturingFields} columns={2} />
+        </Section>
+        <Section title="Latest production">
+          {whereUsed.latestProduction ? (
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-hairline bg-surface-soft px-4 py-3">
+              <Factory size={16} strokeWidth={2.2} className="text-ink-subtle" />
+              <span className="font-mono text-[14px] font-bold text-ink-strong">
+                {whereUsed.latestProduction.poNo}
+              </span>
+              <StatusPill tone="blue" size="sm">
+                {whereUsed.latestProduction.status}
+              </StatusPill>
+              <span className="text-[13px] text-ink-muted">
+                Planned {whereUsed.latestProduction.qtyPlanned ?? "—"} · Produced{" "}
+                {whereUsed.latestProduction.qtyProduced ?? "—"}
+              </span>
+              <span className="ml-auto text-[12px] text-ink-subtle">
+                {formatDate(whereUsed.latestProduction.updatedAt)}
+              </span>
+            </div>
+          ) : (
+            <Empty>No production orders reference this item yet.</Empty>
+          )}
+        </Section>
+      </div>
+    ),
+    related: (
+      <Section
+        title="Related records"
+        subtitle="Every SM, quote, negotiation, sales order, job card and invoice using this item"
+      >
+        <RelatedList records={whereUsed.related} />
+      </Section>
+    ),
+    whereUsed: (
+      <div className="flex flex-col gap-8">
+        <Section title="Reach" subtitle="Single-source-of-truth fan-out over item_id">
+          <ReachChips reach={whereUsed} />
+        </Section>
+        <Section title="Customers using this spec">
+          {whereUsed.customers.length > 0 ? (
+            <CustomerList customers={whereUsed.customers} />
+          ) : (
+            <Empty>No customer has used this spec yet.</Empty>
+          )}
+        </Section>
+        <Section title="All references">
+          <RelatedList records={whereUsed.related} />
+        </Section>
+      </div>
+    ),
+    timeline: (
+      <Section title="Timeline" subtitle="Cross-flow chronology across every reference">
+        <TimelineList records={whereUsed.related} />
       </Section>
     ),
     history: (
@@ -238,43 +322,57 @@ export function ItemWorkspace({
   return (
     <AppShell
       nav={NAV}
-      breadcrumb={breadcrumb}
+      breadcrumb={[
+        { label: "Product", href: "/items" },
+        { label: "Item Master", href: "/items" },
+        { label: item.itemCode },
+      ]}
       contextBarExtra={<Stepper current={stageIndex} className="max-w-full" />}
     >
-      <div className="flex flex-col gap-6">
-        <div className="rounded-2xl border border-hairline bg-surface-card p-6 max-md:p-4" style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}>
-          {header}
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+        <div className="flex min-w-0 flex-1 flex-col gap-6">
+          <div className="rounded-2xl border border-hairline bg-surface-card p-6 max-md:p-4" style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}>
+            {header}
+          </div>
+
+          {/* Tab strip */}
+          <div className="rounded-2xl border border-hairline bg-surface-card" style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}>
+            <div role="tablist" aria-label="Item sections" className="flex items-center gap-1 overflow-x-auto border-b border-hairline px-3">
+              {TABS.map((t) => {
+                const active = t.key === tab;
+                return (
+                  <button
+                    key={t.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setTab(t.key)}
+                    className={cn(
+                      "-mb-px whitespace-nowrap border-b-2 px-3.5 py-3 text-[13px] font-semibold transition-colors",
+                      active
+                        ? "border-brand text-brand"
+                        : "border-transparent text-ink-subtle hover:text-ink-strong",
+                    )}
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="p-6 max-md:p-4">{tabBody[tab]}</div>
+          </div>
         </div>
 
-        {/* Tab strip */}
-        <div className="rounded-2xl border border-hairline bg-surface-card" style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}>
-          <div role="tablist" aria-label="Item sections" className="flex items-center gap-1 overflow-x-auto border-b border-hairline px-3">
-            {TABS.map((t) => {
-              const active = t.key === tab;
-              return (
-                <button
-                  key={t.key}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  onClick={() => setTab(t.key)}
-                  className={cn(
-                    "-mb-px whitespace-nowrap border-b-2 px-3.5 py-3 text-[13px] font-semibold transition-colors",
-                    active
-                      ? "border-brand text-brand"
-                      : "border-transparent text-ink-subtle hover:text-ink-strong",
-                  )}
-                >
-                  {t.label}
-                </button>
-              );
-            })}
-          </div>
-          <div className="p-6 max-md:p-4">{tabBody[tab]}</div>
-        </div>
+        {/* Item summary rail — identity · money · reach. */}
+        <SummaryRail
+          reach={whereUsed}
+          latestCost={latestCostValue}
+          costType={latestCost?.costingType ?? null}
+          latestQuote={latestQuoteValue}
+        />
       </div>
 
-      {/* Peek drawer — demonstrates the ContextDrawer primitive */}
+      {/* Peek drawer — mirrors the top tabs (condensed). */}
       <ContextDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
@@ -296,7 +394,12 @@ export function ItemWorkspace({
           {
             key: "overview",
             label: "Overview",
-            content: <DetailGrid fields={overviewFields} columns={1} />,
+            content: (
+              <div className="flex flex-col gap-6">
+                <DetailGrid fields={overviewFields} columns={1} />
+                <ReachChips reach={whereUsed} />
+              </div>
+            ),
           },
           {
             key: "specifications",
@@ -304,12 +407,24 @@ export function ItemWorkspace({
             content: <DetailGrid fields={specFields} columns={1} />,
           },
           {
-            key: "reach",
+            key: "commercial",
+            label: "Commercial",
+            content: (
+              <div className="flex flex-col gap-6">
+                <CostHistoryTable rows={whereUsed.costHistory} />
+                <QuotePriceTable rows={whereUsed.quotePrices} />
+              </div>
+            ),
+          },
+          {
+            key: "whereUsed",
             label: "Where-Used",
             content: (
-              <div className="flex flex-col gap-3">
-                <ReachChips counts={counts} />
-                <Placeholder>Full where-used graph arrives in Phase 9.</Placeholder>
+              <div className="flex flex-col gap-5">
+                {whereUsed.customers.length > 0 && (
+                  <CustomerList customers={whereUsed.customers} />
+                )}
+                <RelatedList records={whereUsed.related} />
               </div>
             ),
           },
@@ -389,6 +504,71 @@ function WorkspaceHeader({
   );
 }
 
+/* ── Summary rail ──────────────────────────────────────────────────────── */
+
+function SummaryRail({
+  reach,
+  latestCost,
+  costType,
+  latestQuote,
+}: {
+  reach: ItemWhereUsed;
+  latestCost: string | null;
+  costType: string | null;
+  latestQuote: string | null;
+}) {
+  return (
+    <aside className="w-full shrink-0 lg:w-[300px]">
+      <div
+        className="flex flex-col gap-5 rounded-2xl border border-hairline bg-surface-card p-5 lg:sticky lg:top-4"
+        style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}
+      >
+        <div>
+          <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-subtle">
+            Item Summary
+          </div>
+        </div>
+        <RailStat
+          label="Latest cost"
+          value={latestCost ?? "—"}
+          sub={costType ? costType.replace("_", "-") : null}
+        />
+        <RailStat label="Latest quote" value={latestQuote ?? "—"} />
+        <div className="border-t border-hairline pt-4">
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <RailCount n={reach.reach.customerCount} label="Customers" />
+            <RailCount n={reach.reach.enquiryCount} label="Enquiries" />
+            <RailCount n={reach.reach.salesOrderCount} label="Orders" />
+          </div>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function RailStat({ label, value, sub }: { label: string; value: string; sub?: string | null }) {
+  return (
+    <div>
+      <div className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-subtle">
+        {label}
+      </div>
+      <div className="mt-1 font-mono text-[20px] font-bold tabular-nums text-ink-strong">
+        {value}
+      </div>
+      {sub && <div className="text-[12px] text-ink-subtle">{sub}</div>}
+    </div>
+  );
+}
+
+function RailCount({ n, label }: { n: number; label: string }) {
+  return (
+    <div>
+      <div className="font-mono text-[18px] font-bold tabular-nums text-ink-strong">{n}</div>
+      <div className="text-[11px] text-ink-subtle">{label}</div>
+    </div>
+  );
+}
+
 /* ── Small building blocks ─────────────────────────────────────────────── */
 
 function Section({
@@ -413,22 +593,27 @@ function Section({
   );
 }
 
-function Placeholder({ children }: { children: React.ReactNode }) {
+function Empty({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mt-4 rounded-xl border border-dashed border-hairline-strong bg-surface-soft px-4 py-3 text-[13px] text-ink-subtle">
+    <div className="rounded-xl border border-dashed border-hairline-strong bg-surface-soft px-4 py-3 text-[13px] text-ink-subtle">
       {children}
     </div>
   );
 }
 
-function ReachChips({ counts }: { counts: ItemStageCounts }) {
+function ReachChips({ reach }: { reach: ItemWhereUsed }) {
+  const r = reach.reach;
   const chips: ReadonlyArray<readonly [string, number]> = [
-    ["Enquiries", counts.inquiryCount],
-    ["Costings", counts.costingCount],
-    ["Quotations", counts.quotationCount],
-    ["Negotiations", counts.negotiationCount],
-    ["Sales Orders", counts.salesOrderCount],
-    ["Job Cards", counts.jobCardCount],
+    ["Customers", r.customerCount],
+    ["Enquiries", r.enquiryCount],
+    ["Costings", r.costingCount],
+    ["Quotations", r.quotationCount],
+    ["Negotiations", r.negotiationCount],
+    ["Sales Orders", r.salesOrderCount],
+    ["Job Cards", r.jobCardCount],
+    ["Production", r.productionCount],
+    ["Dispatches", r.dispatchCount],
+    ["Invoices", r.invoiceCount],
   ];
   return (
     <div className="flex flex-wrap gap-2">
@@ -441,6 +626,218 @@ function ReachChips({ counts }: { counts: ItemStageCounts }) {
           <span className="text-ink-subtle">{label}</span>
         </span>
       ))}
+    </div>
+  );
+}
+
+function CustomerChips({ customers }: { customers: ItemWhereUsed["customers"] }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {customers.map((c) => (
+        <span
+          key={c.clientId ?? c.name}
+          className="inline-flex items-center gap-1.5 rounded-full border border-hairline bg-surface-soft px-3 py-1.5 text-[13px]"
+        >
+          <Building2 size={13} strokeWidth={2.2} className="text-ink-subtle" />
+          <span className="font-semibold text-ink-strong">{c.name}</span>
+          <span className="text-ink-subtle">· {c.enquiryCount}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function CustomerList({ customers }: { customers: ItemWhereUsed["customers"] }) {
+  return (
+    <ul className="flex flex-col divide-y divide-hairline">
+      {customers.map((c) => {
+        const inner = (
+          <span className="flex items-center gap-2.5">
+            <Building2 size={15} strokeWidth={2.1} className="shrink-0 text-ink-subtle" />
+            <span className="flex-1 font-semibold text-ink-strong">{c.name}</span>
+            <span className="text-[12px] text-ink-subtle">
+              {c.enquiryCount} {c.enquiryCount === 1 ? "enquiry" : "enquiries"}
+            </span>
+          </span>
+        );
+        return (
+          <li key={c.clientId ?? c.name} className="py-2.5 text-[14px]">
+            {c.clientId ? (
+              <Link href={`/clients/${c.clientId}` as Route} className="block hover:text-brand">
+                {inner}
+              </Link>
+            ) : (
+              inner
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+const KIND_LABELS: Record<RelatedRecord["kind"], string> = {
+  enquiry: "Enquiry",
+  quotation: "Quotation",
+  negotiation: "Negotiation",
+  sales_order: "Sales Order",
+  job_card: "Job Card",
+  invoice: "Invoice",
+};
+
+const KIND_TONES: Record<RelatedRecord["kind"], PillTone> = {
+  enquiry: "blue",
+  quotation: "purple",
+  negotiation: "amber",
+  sales_order: "green",
+  job_card: "orange",
+  invoice: "slate",
+};
+
+function RelatedRow({ r }: { r: RelatedRecord }) {
+  const inner = (
+    <span className="flex items-center gap-3">
+      <StatusPill tone={KIND_TONES[r.kind]} size="sm" hideDot>
+        {KIND_LABELS[r.kind]}
+      </StatusPill>
+      <span className="font-mono text-[13px] font-bold text-ink-strong">{r.label}</span>
+      {r.sub && <span className="truncate text-[13px] text-ink-muted">{r.sub}</span>}
+      <span className="ml-auto flex items-center gap-2 text-[12px] text-ink-subtle">
+        {r.date ? formatDate(r.date) : ""}
+        {r.href && <ArrowUpRight size={14} strokeWidth={2.2} />}
+      </span>
+    </span>
+  );
+  return (
+    <li className="py-2.5 text-[14px]">
+      {r.href ? (
+        <Link href={r.href as Route} className="block hover:text-brand">
+          {inner}
+        </Link>
+      ) : (
+        inner
+      )}
+    </li>
+  );
+}
+
+function RelatedList({ records }: { records: RelatedRecord[] }) {
+  if (records.length === 0) return <Empty>Nothing references this item yet.</Empty>;
+  return (
+    <ul className="flex flex-col divide-y divide-hairline">
+      {records.map((r) => (
+        <RelatedRow key={`${r.kind}-${r.id}`} r={r} />
+      ))}
+    </ul>
+  );
+}
+
+function TimelineList({ records }: { records: RelatedRecord[] }) {
+  if (records.length === 0) return <Empty>No events yet.</Empty>;
+  return (
+    <ol className="flex flex-col gap-0 border-l border-hairline pl-5">
+      {records.map((r) => {
+        const inner = (
+          <>
+            <span className="absolute -left-[23px] top-2 h-2 w-2 rounded-full" style={{ background: `var(--color-${KIND_TONES[r.kind]})` }} />
+            <span className="flex flex-wrap items-center gap-2">
+              <span className="text-[13px] font-semibold text-ink-strong">
+                {KIND_LABELS[r.kind]}
+              </span>
+              <span className="font-mono text-[13px] text-ink-muted">{r.label}</span>
+              {r.sub && <span className="text-[12px] text-ink-subtle">· {r.sub}</span>}
+            </span>
+            <span className="text-[12px] text-ink-subtle">{r.date ? formatDate(r.date) : ""}</span>
+          </>
+        );
+        return (
+          <li key={`${r.kind}-${r.id}`} className="relative py-2.5">
+            {r.href ? (
+              <Link href={r.href as Route} className="block hover:text-brand">
+                {inner}
+              </Link>
+            ) : (
+              inner
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function CostHistoryTable({ rows }: { rows: CostHistoryRow[] }) {
+  if (rows.length === 0) return <Empty>No costings linked to this item yet.</Empty>;
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse text-[13px]">
+        <thead>
+          <tr className="border-b border-hairline text-left text-[11px] uppercase tracking-[0.08em] text-ink-subtle">
+            <th className="py-2 pr-4 font-bold">SM</th>
+            <th className="py-2 pr-4 font-bold">Type</th>
+            <th className="py-2 pr-4 font-bold">Final cost</th>
+            <th className="py-2 pr-4 font-bold">Quote value</th>
+            <th className="py-2 pr-4 font-bold">Chosen</th>
+            <th className="py-2 font-bold">Date</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-hairline">
+          {rows.map((c) => (
+            <tr key={c.id}>
+              <td className="py-2 pr-4">
+                <Link href={`/inquiries/${c.inquiryId}` as Route} className="font-mono text-brand hover:underline">
+                  {c.smNumber ?? "—"}
+                </Link>
+              </td>
+              <td className="py-2 pr-4 text-ink-muted">{c.costingType.replace("_", "-")}</td>
+              <td className="py-2 pr-4 font-mono tabular-nums text-ink-strong">{inr(c.finalCostPerPiece) ?? "—"}</td>
+              <td className="py-2 pr-4 font-mono tabular-nums text-ink-muted">{inr(c.quoteValue) ?? "—"}</td>
+              <td className="py-2 pr-4">
+                {c.isChosen ? <StatusPill tone="green" size="sm">Chosen</StatusPill> : <span className="text-ink-subtle">—</span>}
+              </td>
+              <td className="py-2 text-ink-subtle">{formatDate(c.createdAt)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function QuotePriceTable({ rows }: { rows: QuotePriceRow[] }) {
+  if (rows.length === 0) return <Empty>No quotations reference this item yet.</Empty>;
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse text-[13px]">
+        <thead>
+          <tr className="border-b border-hairline text-left text-[11px] uppercase tracking-[0.08em] text-ink-subtle">
+            <th className="py-2 pr-4 font-bold">Quote</th>
+            <th className="py-2 pr-4 font-bold">Customer</th>
+            <th className="py-2 pr-4 font-bold">Qty</th>
+            <th className="py-2 pr-4 font-bold">Unit price</th>
+            <th className="py-2 pr-4 font-bold">Sent</th>
+            <th className="py-2 font-bold">Date</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-hairline">
+          {rows.map((qp) => (
+            <tr key={qp.quotationItemId}>
+              <td className="py-2 pr-4">
+                <Link href={`/quotations/${qp.quotationId}` as Route} className="font-mono text-brand hover:underline">
+                  {qp.quoteNo}
+                </Link>
+              </td>
+              <td className="py-2 pr-4 text-ink-muted">{qp.companyName ?? "—"}</td>
+              <td className="py-2 pr-4 font-mono tabular-nums text-ink-muted">{qp.qty ?? "—"}</td>
+              <td className="py-2 pr-4 font-mono tabular-nums text-ink-strong">{inr(qp.unitPrice) ?? "—"}</td>
+              <td className="py-2 pr-4">
+                {qp.quoteSent ? <StatusPill tone="green" size="sm">Sent</StatusPill> : <StatusPill tone="slate" size="sm">Draft</StatusPill>}
+              </td>
+              <td className="py-2 text-ink-subtle">{formatDate(qp.createdAt)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

@@ -22,6 +22,8 @@ import {
   defaultShapeConfig,
   type ShapeConfig,
 } from "@/lib/masters/shape-config";
+import { ProductPicker, type PickerMasters } from "@/components/erp/product-picker";
+import type { MaterialPrefill } from "@/app/(app)/_actions/product-picker";
 
 interface Props {
   control: Control<InquiryFormValues>;
@@ -33,6 +35,8 @@ interface Props {
   conditions: MasterOptionItem[];
   /** Per-shape dimension config keyed by shape NAME (matches the master name). */
   shapeProfiles: Record<string, ShapeConfig>;
+  /** Masters for the SAP-style Material Search / create-new mini-form. */
+  pickerMasters: PickerMasters;
 }
 
 /** Shape of one fresh, empty product card. */
@@ -70,13 +74,40 @@ export function ProductsSection({
   tolerances,
   conditions,
   shapeProfiles,
+  pickerMasters,
 }: Props) {
   const { fields, append, remove } = useFieldArray({ control, name: "products" });
+  // Per-row attached Item (from the Material Search). Keyed by field.id so it
+  // survives reorder/removal; presence pins the picker chip + drives the
+  // "attached" hint. The item_id itself is derived server-side by the existing
+  // in-tx sync (which dedups to the same item from the prefilled spec).
+  const [attached, setAttached] = React.useState<
+    Record<string, { itemId: string; itemCode: string }>
+  >({});
+
+  /** Prefill a product card's spec fields from a picked/created material. */
+  function applyPrefill(index: number, fieldId: string, p: MaterialPrefill) {
+    const set = (
+      name: Parameters<UseFormSetValue<InquiryFormValues>>[0],
+      value: Parameters<UseFormSetValue<InquiryFormValues>>[1],
+    ) => setValue(name, value, { shouldValidate: false, shouldDirty: true });
+    set(`products.${index}.shape`, p.shape ?? undefined);
+    set(`products.${index}.gradeId`, p.gradeId ?? undefined);
+    set(`products.${index}.toleranceId`, p.toleranceId ?? undefined);
+    set(`products.${index}.conditionId`, p.conditionId ?? undefined);
+    set(`products.${index}.outerDia`, p.outerDia != null ? Number(p.outerDia) : undefined);
+    set(`products.${index}.innerDia`, p.innerDia != null ? Number(p.innerDia) : undefined);
+    set(`products.${index}.length`, p.length != null ? Number(p.length) : undefined);
+    set(`products.${index}.width`, p.width != null ? Number(p.width) : undefined);
+    set(`products.${index}.thickness`, p.thickness != null ? Number(p.thickness) : undefined);
+    set(`products.${index}.dimensionNotes`, p.dimensionNotes ?? "");
+    setAttached((prev) => ({ ...prev, [fieldId]: { itemId: p.itemId, itemCode: p.itemCode } }));
+  }
 
   return (
     <SectionCard
       title="Products"
-      hint="Add every product on this enquiry — one card per product."
+      hint="Search existing materials first — pick to reuse the canonical spec, or create a new one. You can still edit the fields below."
     >
       {fields.map((field, index) => {
         // Resolve this card's shape config (which dims apply). Shape values
@@ -104,6 +135,25 @@ export function ProductsSection({
               <Trash2 size={13} strokeWidth={2.4} />
               Remove
             </button>
+          </div>
+
+          {/* SAP-style Material Search — the primary way to add a product. */}
+          <div>
+            <span className="mb-1.5 block text-[12px] font-semibold text-ink-soft">
+              Material
+            </span>
+            <ProductPicker
+              masters={pickerMasters}
+              selected={attached[field.id] ?? null}
+              onSelect={(p) => applyPrefill(index, field.id, p)}
+              onClear={() =>
+                setAttached((prev) => {
+                  const cp = { ...prev };
+                  delete cp[field.id];
+                  return cp;
+                })
+              }
+            />
           </div>
 
           <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
