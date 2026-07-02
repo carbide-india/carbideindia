@@ -44,6 +44,14 @@ import {
   AUDIT_ACTIONS,
   GST_REGISTRATION_TYPES,
   ADDRESS_TYPES,
+  PRODUCTION_ORDER_STATUSES,
+  PRODUCTION_OP_STATUSES,
+  PRODUCTION_QC_RESULTS,
+  RM_LOT_STATUSES,
+  DISPATCH_STATUSES,
+  INVOICE_STATUSES,
+  GST_SUPPLY_TYPES,
+  PAYMENT_MODES,
 } from "./enums";
 
 /**
@@ -796,6 +804,11 @@ export const samples = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     sampleDate: timestamp("sample_date", { withTimezone: true }).notNull().defaultNow(),
     inquiryId: uuid("inquiry_id").references(() => inquiries.id, { onDelete: "set null" }),
+    // Phase 7 — per-line + per-item lineage so a physical sample ties to the
+    // exact enquiry product line and its Item Master row (traceability +
+    // where-used). Both nullable + set-null; legacy samples link only inquiryId.
+    inquiryItemId: uuid("inquiry_item_id").references(() => inquiryItems.id, { onDelete: "set null" }),
+    itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
     sampleNo: text("sample_no").notNull().unique(),
     location: text("location").notNull().default("AYK Cabin"),
     responsiblePersonId: uuid("responsible_person_id").references(() => employees.id, { onDelete: "set null" }),
@@ -824,6 +837,9 @@ export const samples = pgTable(
   (t) => [
     index("samples_status_idx").on(t.sampleStatus, t.sampleDate),
     index("samples_inquiry_idx").on(t.inquiryId),
+    // Phase 7 — sample where-used on the Item + enquiry-line lineage.
+    index("samples_item_idx").on(t.itemId),
+    index("samples_inquiry_item_idx").on(t.inquiryItemId),
   ],
 );
 export type Sample = typeof samples.$inferSelect;
@@ -1032,6 +1048,11 @@ export const salesOrders = pgTable("sales_orders", {
   id: uuid("id").primaryKey().defaultRandom(),
   inquiryId: uuid("inquiry_id").notNull().references(() => inquiries.id, { onDelete: "cascade" }),
   quotationId: uuid("quotation_id").references(() => quotations.id, { onDelete: "set null" }),
+  // Phase 7 (§11 / DoD #9) — closes the negotiation→SO referential break. The
+  // SO now carries the negotiation it was won from (order_won auto-provisions a
+  // draft SO by reference in Phase 8). Nullable + set-null: legacy SOs and
+  // direct-PO SOs have no negotiation; deleting a negotiation never orphans a SO.
+  negotiationId: uuid("negotiation_id").references(() => negotiations.id, { onDelete: "set null" }),
   soNo: text("so_no").notNull().unique(),
   companyName: text("company_name"),
   enquiryDate: timestamp("enquiry_date", { withTimezone: true }),
@@ -1053,7 +1074,11 @@ export const salesOrders = pgTable("sales_orders", {
   createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [index("sales_orders_inquiry_idx").on(t.inquiryId)]);
+}, (t) => [
+  index("sales_orders_inquiry_idx").on(t.inquiryId),
+  // Phase 7 — negotiation→SO lineage lookup.
+  index("sales_orders_negotiation_idx").on(t.negotiationId),
+]);
 export type SalesOrder = typeof salesOrders.$inferSelect;
 export type NewSalesOrder = typeof salesOrders.$inferInsert;
 
@@ -1210,6 +1235,14 @@ export const jobCards = pgTable(
 
     // Optional links + snapshots (snapshots survive source edits/deletes).
     salesOrderId: uuid("sales_order_id").references(() => salesOrders.id, { onDelete: "set null" }),
+    // Phase 7 (§10.5) — line-level lineage so a JC resolves qty/customer/spec
+    // live from its SO line (not the free-text snapshots below) and walks the
+    // provenance chain back to the enquiry line. Both nullable + set-null: legacy
+    // JCs and ad-hoc production have no line lineage. `qtyOrdered` is the JC's
+    // released quantity against the SO line (partial/split releases).
+    salesOrderItemId: uuid("sales_order_item_id").references(() => salesOrderItems.id, { onDelete: "set null" }),
+    inquiryItemId: uuid("inquiry_item_id").references(() => inquiryItems.id, { onDelete: "set null" }),
+    qtyOrdered: numeric("qty_ordered"),
     clientId: uuid("client_id").references(() => clients.id, { onDelete: "set null" }),
     customerName: text("customer_name"),
     itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
@@ -1263,6 +1296,9 @@ export const jobCards = pgTable(
     index("job_cards_client_idx").on(t.clientId),
     index("job_cards_item_idx").on(t.itemId),
     index("job_cards_active_idx").on(t.isActive),
+    // Phase 7 — SO-line → JC lookup (release tracking + workspace lineage).
+    index("job_cards_so_item_idx").on(t.salesOrderItemId),
+    index("job_cards_inquiry_item_idx").on(t.inquiryItemId),
   ],
 );
 export type JobCard = typeof jobCards.$inferSelect;
@@ -1288,6 +1324,16 @@ export const documents = pgTable(
     clientId: uuid("client_id").references(() => clients.id, { onDelete: "cascade" }),
     itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
     jobCardId: uuid("job_card_id").references(() => jobCards.id, { onDelete: "set null" }),
+    // Phase 7 (§11 / §13) — polymorphic FKs to the three downstream entities so
+    // a document (PO route sheet, e-way bill, tax invoice PDF, delivery note) is
+    // filed against the record it belongs to. Forward refs (tables defined below)
+    // via the AnyPgColumn pattern. `templateVersion` records the print-template
+    // era a rendered statutory doc used, so re-rendering a historical invoice/DN
+    // never applies a modern template (§13 template versioning).
+    productionOrderId: uuid("production_order_id").references((): AnyPgColumn => productionOrders.id, { onDelete: "set null" }),
+    dispatchId: uuid("dispatch_id").references((): AnyPgColumn => dispatches.id, { onDelete: "set null" }),
+    invoiceId: uuid("invoice_id").references((): AnyPgColumn => invoices.id, { onDelete: "set null" }),
+    templateVersion: text("template_version"),
     uploadedById: uuid("uploaded_by_id").references(() => employees.id, {
       onDelete: "set null",
     }),
@@ -1300,6 +1346,9 @@ export const documents = pgTable(
     index("documents_client_idx").on(t.clientId),
     index("documents_item_idx").on(t.itemId),
     index("documents_job_card_idx").on(t.jobCardId),
+    index("documents_production_order_idx").on(t.productionOrderId),
+    index("documents_dispatch_idx").on(t.dispatchId),
+    index("documents_invoice_idx").on(t.invoiceId),
   ],
 );
 
@@ -1957,3 +2006,440 @@ export type EmployeeRole = typeof employeeRoles.$inferSelect;
 export type NewEmployeeRole = typeof employeeRoles.$inferInsert;
 export type SavedView = typeof savedViews.$inferSelect;
 export type NewSavedView = typeof savedViews.$inferInsert;
+
+// ════════════════════════════════════════════════════════════════════════════
+// Phase 7 — Production, Dispatch & Invoice/GST (the make-to-order tail, §11)
+// ADDITIVE ONLY. New downstream entities + supporting masters. Follows house
+// conventions: uuid pk defaultRandom, snake_case columns / camelCase fields,
+// created_at/updated_at, deactivate-or-set-null onDelete, seq-based human
+// numbers. Gapless FY-scoped invoice/DN numbers are allocated by
+// lib/series/next-number.ts against the doc_number_series counter table below
+// (NOT a plain sequence — gapless requires a FOR UPDATE counter row per FY).
+// ════════════════════════════════════════════════════════════════════════════
+
+export const productionOrderStatusEnum = pgEnum("production_order_status", PRODUCTION_ORDER_STATUSES);
+export const productionOpStatusEnum = pgEnum("production_op_status", PRODUCTION_OP_STATUSES);
+export const productionQcResultEnum = pgEnum("production_qc_result", PRODUCTION_QC_RESULTS);
+export const rmLotStatusEnum = pgEnum("rm_lot_status", RM_LOT_STATUSES);
+export const dispatchStatusEnum = pgEnum("dispatch_status", DISPATCH_STATUSES);
+export const invoiceStatusEnum = pgEnum("invoice_status", INVOICE_STATUSES);
+export const gstSupplyTypeEnum = pgEnum("gst_supply_type", GST_SUPPLY_TYPES);
+export const paymentModeEnum = pgEnum("payment_mode", PAYMENT_MODES);
+
+/** Human production-order number → "PO-10001". */
+export const productionOrderNoSeq = pgSequence("production_order_no_seq", { startWith: 10001 });
+
+/**
+ * §11.1 — Production order. The shop-floor work order for one SO line. Anchored
+ * on `item_id` (NOT NULL — you always make a known Item) with optional links to
+ * the SO line / job card / SO it was raised from. `scrapQty`/`yieldPct`/`actual*`
+ * are the feedback edge to costing (actuals vs estimate) — a nullable link +
+ * notes, NOT a rewrite of the costing engine.
+ */
+export const productionOrders = pgTable(
+  "production_orders",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    poNo: text("po_no").notNull().unique().default(sql`'PO-' || nextval('production_order_no_seq')`),
+    salesOrderId: uuid("sales_order_id").references(() => salesOrders.id, { onDelete: "set null" }),
+    salesOrderItemId: uuid("sales_order_item_id").references(() => salesOrderItems.id, { onDelete: "set null" }),
+    jobCardId: uuid("job_card_id").references(() => jobCards.id, { onDelete: "set null" }),
+    itemId: uuid("item_id").notNull().references(() => items.id, { onDelete: "restrict" }),
+    status: productionOrderStatusEnum("status").notNull().default("planned"),
+    qtyPlanned: numeric("qty_planned"),
+    qtyProduced: numeric("qty_produced"),
+    // Feedback-to-costing edge (§11.1). Real scrap/yield/actual RM feed the JC's
+    // "avg scrap %" + future estimates. `costingId` is the estimate this actual
+    // reconciles against (nullable — not every PO has a costing row).
+    scrapQty: numeric("scrap_qty"),
+    yieldPct: numeric("yield_pct"),
+    actualRmKg: numeric("actual_rm_kg"),
+    costingId: uuid("costing_id").references(() => costings.id, { onDelete: "set null" }),
+    costFeedbackNotes: text("cost_feedback_notes"),
+    plannedStartDate: timestamp("planned_start_date", { withTimezone: true }),
+    plannedEndDate: timestamp("planned_end_date", { withTimezone: true }),
+    actualStartDate: timestamp("actual_start_date", { withTimezone: true }),
+    actualEndDate: timestamp("actual_end_date", { withTimezone: true }),
+    notes: text("notes"),
+    isActive: boolean("is_active").notNull().default(true),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("production_orders_item_idx").on(t.itemId),
+    index("production_orders_so_idx").on(t.salesOrderId),
+    index("production_orders_so_item_idx").on(t.salesOrderItemId),
+    index("production_orders_job_card_idx").on(t.jobCardId),
+    index("production_orders_status_idx").on(t.status),
+    index("production_orders_costing_idx").on(t.costingId),
+  ],
+);
+export type ProductionOrder = typeof productionOrders.$inferSelect;
+export type NewProductionOrder = typeof productionOrders.$inferInsert;
+
+/** §11.1 — routing ops per production order (name frozen: production_ops). */
+export const productionOps = pgTable(
+  "production_ops",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    productionOrderId: uuid("production_order_id").notNull().references(() => productionOrders.id, { onDelete: "cascade" }),
+    sortOrder: integer("sort_order").notNull().default(0),
+    opName: text("op_name").notNull(),
+    workCenter: text("work_center"),
+    status: productionOpStatusEnum("status").notNull().default("pending"),
+    plannedMins: numeric("planned_mins"),
+    actualMins: numeric("actual_mins"),
+    operatorId: uuid("operator_id").references(() => employees.id, { onDelete: "set null" }),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("production_ops_order_idx").on(t.productionOrderId, t.sortOrder)],
+);
+export type ProductionOp = typeof productionOps.$inferSelect;
+export type NewProductionOp = typeof productionOps.$inferInsert;
+
+/**
+ * §11.1 — raw-material heat/batch lot (15-year traceability). One row per
+ * received lot of a grade from a supplier; `qtyRemainingKg` decrements as
+ * production_consumption rows are written.
+ */
+export const rmLots = pgTable(
+  "rm_lots",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    lotNo: text("lot_no").notNull(),
+    heatNo: text("heat_no"),
+    grade: text("grade"),
+    internalGradeId: uuid("internal_grade_id").references(() => masterOptions.id, { onDelete: "set null" }),
+    supplierName: text("supplier_name"),
+    qtyReceivedKg: numeric("qty_received_kg"),
+    qtyRemainingKg: numeric("qty_remaining_kg"),
+    unitCostPerKg: numeric("unit_cost_per_kg"),
+    receivedDate: timestamp("received_date", { withTimezone: true }),
+    status: rmLotStatusEnum("status").notNull().default("available"),
+    notes: text("notes"),
+    createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("rm_lots_lot_no_uidx").on(sql`lower(${t.lotNo})`),
+    index("rm_lots_grade_idx").on(t.internalGradeId),
+    index("rm_lots_status_idx").on(t.status),
+  ],
+);
+export type RmLot = typeof rmLots.$inferSelect;
+export type NewRmLot = typeof rmLots.$inferInsert;
+
+/** §11.1 — the lot→order RM consumption join (traceability edge). */
+export const productionConsumption = pgTable(
+  "production_consumption",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    productionOrderId: uuid("production_order_id").notNull().references(() => productionOrders.id, { onDelete: "cascade" }),
+    productionOpId: uuid("production_op_id").references(() => productionOps.id, { onDelete: "set null" }),
+    rmLotId: uuid("rm_lot_id").notNull().references(() => rmLots.id, { onDelete: "restrict" }),
+    qtyConsumedKg: numeric("qty_consumed_kg").notNull(),
+    consumedAt: timestamp("consumed_at", { withTimezone: true }).notNull().defaultNow(),
+    notes: text("notes"),
+    createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("production_consumption_order_idx").on(t.productionOrderId),
+    index("production_consumption_lot_idx").on(t.rmLotId),
+  ],
+);
+export type ProductionConsumption = typeof productionConsumption.$inferSelect;
+export type NewProductionConsumption = typeof productionConsumption.$inferInsert;
+
+/** §11.1 — per-lot / per-order QC check + result. */
+export const productionQc = pgTable(
+  "production_qc",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    productionOrderId: uuid("production_order_id").notNull().references(() => productionOrders.id, { onDelete: "cascade" }),
+    rmLotId: uuid("rm_lot_id").references(() => rmLots.id, { onDelete: "set null" }),
+    checkName: text("check_name").notNull(),
+    result: productionQcResultEnum("result").notNull().default("pending"),
+    measuredValue: text("measured_value"),
+    spec: text("spec"),
+    checkedById: uuid("checked_by_id").references(() => employees.id, { onDelete: "set null" }),
+    checkedAt: timestamp("checked_at", { withTimezone: true }),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("production_qc_order_idx").on(t.productionOrderId),
+    index("production_qc_lot_idx").on(t.rmLotId),
+  ],
+);
+export type ProductionQc = typeof productionQc.$inferSelect;
+export type NewProductionQc = typeof productionQc.$inferInsert;
+
+// ── Dispatch / Delivery Note (§11.2) ─────────────────────────────────────────
+/**
+ * §11.2 — dispatch / delivery note. `dnNo` is a GAPLESS FY-scoped number
+ * allocated by lib/series/next-number.ts at issue (NOT a plain sequence — a DN
+ * register is statutory and must be gapless per FY). Draft dispatches carry a
+ * NULL dnNo until issued. e-way-bill fields are phase-2 optional.
+ */
+export const dispatches = pgTable(
+  "dispatches",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // NULL while draft; set to the gapless FY number at the issue transition.
+    dnNo: text("dn_no").unique(),
+    fyLabel: text("fy_label"), // e.g. "2026-27" — the FY the dnNo belongs to.
+    dispatchDate: timestamp("dispatch_date", { withTimezone: true }),
+    clientId: uuid("client_id").references(() => clients.id, { onDelete: "set null" }),
+    salesOrderId: uuid("sales_order_id").references(() => salesOrders.id, { onDelete: "set null" }),
+    status: dispatchStatusEnum("status").notNull().default("draft"),
+    // Logistics.
+    vehicleNo: text("vehicle_no"),
+    transporterName: text("transporter_name"),
+    lrNo: text("lr_no"),
+    // e-Way bill (§11.2 phase-2 optional).
+    ewayBillNo: text("eway_bill_no"),
+    ewayBillDate: timestamp("eway_bill_date", { withTimezone: true }),
+    shipToAddress: text("ship_to_address"),
+    notes: text("notes"),
+    issuedAt: timestamp("issued_at", { withTimezone: true }),
+    issuedById: uuid("issued_by_id").references(() => employees.id, { onDelete: "set null" }),
+    createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("dispatches_client_idx").on(t.clientId),
+    index("dispatches_so_idx").on(t.salesOrderId),
+    index("dispatches_status_idx").on(t.status),
+    // Gapless-series lookup (per-FY max) — see lib/series/next-number.ts.
+    index("dispatches_fy_idx").on(t.fyLabel),
+  ],
+);
+export type Dispatch = typeof dispatches.$inferSelect;
+export type NewDispatch = typeof dispatches.$inferInsert;
+
+export const dispatchLines = pgTable(
+  "dispatch_lines",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    dispatchId: uuid("dispatch_id").notNull().references(() => dispatches.id, { onDelete: "cascade" }),
+    salesOrderItemId: uuid("sales_order_item_id").references(() => salesOrderItems.id, { onDelete: "set null" }),
+    itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
+    // "what shipped" traces to "what produced it" (§11.2).
+    productionOrderId: uuid("production_order_id").references(() => productionOrders.id, { onDelete: "set null" }),
+    sortOrder: integer("sort_order").notNull().default(0),
+    qtyDispatched: numeric("qty_dispatched").notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("dispatch_lines_dispatch_idx").on(t.dispatchId, t.sortOrder),
+    index("dispatch_lines_item_idx").on(t.itemId),
+    index("dispatch_lines_so_item_idx").on(t.salesOrderItemId),
+  ],
+);
+export type DispatchLine = typeof dispatchLines.$inferSelect;
+export type NewDispatchLine = typeof dispatchLines.$inferInsert;
+
+// ── Invoice / GST (§11.3) ────────────────────────────────────────────────────
+/**
+ * §11.3 — tax invoice. `invoiceNo` is a GAPLESS FY-scoped number (India
+ * statutory) allocated by lib/series/next-number.ts at the issue transition;
+ * NULL while draft. `supplyType` (intra/inter/export) is the CGST/SGST vs IGST
+ * pivot, derived from placeOfSupply vs the seller state (lib/gst/compute.ts).
+ * Header totals are COMPUTED but PERSISTED (legal, §11.3). Lines freeze at issue.
+ */
+export const invoices = pgTable(
+  "invoices",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    invoiceNo: text("invoice_no").unique(),
+    fyLabel: text("fy_label"),
+    invoiceDate: timestamp("invoice_date", { withTimezone: true }),
+    clientId: uuid("client_id").references(() => clients.id, { onDelete: "set null" }),
+    salesOrderId: uuid("sales_order_id").references(() => salesOrders.id, { onDelete: "set null" }),
+    dispatchId: uuid("dispatch_id").references(() => dispatches.id, { onDelete: "set null" }),
+    status: invoiceStatusEnum("status").notNull().default("draft"),
+    // GST determination (§11.3).
+    placeOfSupply: text("place_of_supply"),
+    sellerState: text("seller_state"),
+    supplyType: gstSupplyTypeEnum("supply_type"),
+    isInterState: boolean("is_inter_state"),
+    sellerGstin: text("seller_gstin"),
+    buyerGstin: text("buyer_gstin"),
+    // Persisted computed totals (legal). Sum of line taxable / tax / totals.
+    subTotal: numeric("sub_total"),
+    cgstTotal: numeric("cgst_total"),
+    sgstTotal: numeric("sgst_total"),
+    igstTotal: numeric("igst_total"),
+    taxTotal: numeric("tax_total"),
+    grandTotal: numeric("grand_total"),
+    roundOff: numeric("round_off"),
+    amountPaid: numeric("amount_paid").notNull().default("0"),
+    // e-invoice / IRN lifecycle (§11.3 phase-2 fields present now).
+    irn: text("irn"),
+    irnAckNo: text("irn_ack_no"),
+    irnAckDate: timestamp("irn_ack_date", { withTimezone: true }),
+    templateVersion: text("template_version"),
+    notes: text("notes"),
+    issuedAt: timestamp("issued_at", { withTimezone: true }),
+    issuedById: uuid("issued_by_id").references(() => employees.id, { onDelete: "set null" }),
+    createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("invoices_client_idx").on(t.clientId),
+    index("invoices_so_idx").on(t.salesOrderId),
+    index("invoices_status_idx").on(t.status),
+    index("invoices_fy_idx").on(t.fyLabel),
+  ],
+);
+export type Invoice = typeof invoices.$inferSelect;
+export type NewInvoice = typeof invoices.$inferInsert;
+
+/**
+ * §11.3 — invoice line, frozen at issue (§2.4). Carries the CGST/SGST/IGST rate
+ * + amount split per line. `hsnCode`/`unitPrice`/`taxRate`/`lineTotal`/
+ * `specSnapshot` are legal freezes — a statutory doc reproduces exactly forever.
+ */
+export const invoiceLines = pgTable(
+  "invoice_lines",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    invoiceId: uuid("invoice_id").notNull().references(() => invoices.id, { onDelete: "cascade" }),
+    itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
+    salesOrderItemId: uuid("sales_order_item_id").references(() => salesOrderItems.id, { onDelete: "set null" }),
+    dispatchLineId: uuid("dispatch_line_id").references(() => dispatchLines.id, { onDelete: "set null" }),
+    sortOrder: integer("sort_order").notNull().default(0),
+    // Frozen line facts (legal).
+    description: text("description"),
+    hsnCode: text("hsn_code"),
+    uom: text("uom").default("Nos"),
+    qty: numeric("qty").notNull(),
+    unitPrice: numeric("unit_price").notNull(),
+    // Taxable value = qty*unitPrice - discount (persisted, not recomputed on read).
+    discount: numeric("discount").notNull().default("0"),
+    taxableValue: numeric("taxable_value").notNull(),
+    // GST split (§11.3). Rates are % (e.g. 9 for 9%); amounts are ₹. Intra-state
+    // populates cgst+sgst (igst 0); inter-state populates igst (cgst+sgst 0).
+    taxRate: numeric("tax_rate").notNull().default("0"),
+    cgstRate: numeric("cgst_rate").notNull().default("0"),
+    cgstAmount: numeric("cgst_amount").notNull().default("0"),
+    sgstRate: numeric("sgst_rate").notNull().default("0"),
+    sgstAmount: numeric("sgst_amount").notNull().default("0"),
+    igstRate: numeric("igst_rate").notNull().default("0"),
+    igstAmount: numeric("igst_amount").notNull().default("0"),
+    lineTotal: numeric("line_total").notNull(),
+    specSnapshot: jsonb("spec_snapshot"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("invoice_lines_invoice_idx").on(t.invoiceId, t.sortOrder),
+    index("invoice_lines_item_idx").on(t.itemId),
+  ],
+);
+export type InvoiceLine = typeof invoiceLines.$inferSelect;
+export type NewInvoiceLine = typeof invoiceLines.$inferInsert;
+
+/**
+ * §11.3 — credit note against an invoice (returns / rate adjustments /
+ * cancellation). Gapless FY-scoped number like the invoice; carries its own GST
+ * split totals so a reversal is itself a compliant document.
+ */
+export const creditNotes = pgTable(
+  "credit_notes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    creditNoteNo: text("credit_note_no").unique(),
+    fyLabel: text("fy_label"),
+    invoiceId: uuid("invoice_id").references(() => invoices.id, { onDelete: "set null" }),
+    clientId: uuid("client_id").references(() => clients.id, { onDelete: "set null" }),
+    creditNoteDate: timestamp("credit_note_date", { withTimezone: true }),
+    reason: text("reason"),
+    supplyType: gstSupplyTypeEnum("supply_type"),
+    subTotal: numeric("sub_total"),
+    cgstTotal: numeric("cgst_total"),
+    sgstTotal: numeric("sgst_total"),
+    igstTotal: numeric("igst_total"),
+    taxTotal: numeric("tax_total"),
+    grandTotal: numeric("grand_total"),
+    notes: text("notes"),
+    issuedAt: timestamp("issued_at", { withTimezone: true }),
+    createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("credit_notes_invoice_idx").on(t.invoiceId),
+    index("credit_notes_client_idx").on(t.clientId),
+    index("credit_notes_fy_idx").on(t.fyLabel),
+  ],
+);
+export type CreditNote = typeof creditNotes.$inferSelect;
+export type NewCreditNote = typeof creditNotes.$inferInsert;
+
+/**
+ * §11.3 — payment / receipt recorded against an invoice. Powers the Client
+ * Workspace "Outstanding" (invoice.grand_total − Σ payments) in Phase 8/9.
+ */
+export const payments = pgTable(
+  "payments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    invoiceId: uuid("invoice_id").references(() => invoices.id, { onDelete: "set null" }),
+    clientId: uuid("client_id").references(() => clients.id, { onDelete: "set null" }),
+    amount: numeric("amount").notNull(),
+    mode: paymentModeEnum("mode").notNull().default("neft"),
+    reference: text("reference"),
+    paidAt: timestamp("paid_at", { withTimezone: true }).notNull().defaultNow(),
+    notes: text("notes"),
+    createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("payments_invoice_idx").on(t.invoiceId),
+    index("payments_client_idx").on(t.clientId),
+  ],
+);
+export type Payment = typeof payments.$inferSelect;
+export type NewPayment = typeof payments.$inferInsert;
+
+/**
+ * §11.3 — GAPLESS FY-scoped document-number counter. One row per (seriesKey, fy)
+ * — e.g. ("invoice","2026-27"), ("dn","2026-27"), ("credit_note","2026-27").
+ * lib/series/next-number.ts increments `lastValue` inside a tx with a
+ * `SELECT … FOR UPDATE` on this row, so concurrent allocations serialize and
+ * NEVER skip a number (unlike a Postgres sequence, which leaks on rollback).
+ * `prefix` + `padTo` + the current fy assemble the formatted human number.
+ */
+export const docNumberSeries = pgTable(
+  "doc_number_series",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    seriesKey: text("series_key").notNull(), // "invoice" | "dn" | "credit_note"
+    fyLabel: text("fy_label").notNull(),     // "2026-27"
+    prefix: text("prefix").notNull().default(""),
+    padTo: integer("pad_to").notNull().default(4),
+    lastValue: integer("last_value").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("doc_number_series_key_fy_uidx").on(t.seriesKey, t.fyLabel),
+  ],
+);
+export type DocNumberSeries = typeof docNumberSeries.$inferSelect;
+export type NewDocNumberSeries = typeof docNumberSeries.$inferInsert;

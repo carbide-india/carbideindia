@@ -457,3 +457,114 @@ export const ADDRESS_TYPE_LABELS: Record<AddressType, string> = {
 // text so any entity can be audited without schema churn.
 export const AUDIT_ACTIONS = ["create", "update", "delete", "restore"] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
+
+// ── Phase 7 — Production / Dispatch / Invoice (make-to-order tail) ───────────
+// All additive. New lifecycle enums for the three downstream entities plus the
+// supporting master lists. Snake_case pgEnum values; labels drive UI later.
+
+// Production order lifecycle (§11.1). `planned` → `released` (dispatched to the
+// shop floor) → `in_progress` → `completed` (all ops + QC done) → `closed`
+// (consumption/scrap reconciled, fed back to costing). `on_hold`/`cancelled`
+// are terminal-ish off-ramps kept for real-world shop states.
+export const PRODUCTION_ORDER_STATUSES = [
+  "planned",
+  "released",
+  "in_progress",
+  "on_hold",
+  "completed",
+  "closed",
+  "cancelled",
+] as const;
+export type ProductionOrderStatus = (typeof PRODUCTION_ORDER_STATUSES)[number];
+export const PRODUCTION_ORDER_STATUS_LABELS: Record<ProductionOrderStatus, string> = {
+  planned: "Planned", released: "Released", in_progress: "In Progress",
+  on_hold: "On Hold", completed: "Completed", closed: "Closed", cancelled: "Cancelled",
+};
+export const PRODUCTION_ORDER_STATUS_COLORS: Record<ProductionOrderStatus, string> = {
+  planned: "slate", released: "blue", in_progress: "amber",
+  on_hold: "stone", completed: "green", closed: "purple", cancelled: "red",
+};
+
+// Per-routing-op status (§11.1 production_ops). Deliberately mirrors the
+// STAGE_STATUSES shape but is its own enum so the two never couple.
+export const PRODUCTION_OP_STATUSES = [
+  "pending", "in_progress", "done", "skipped",
+] as const;
+export type ProductionOpStatus = (typeof PRODUCTION_OP_STATUSES)[number];
+export const PRODUCTION_OP_STATUS_LABELS: Record<ProductionOpStatus, string> = {
+  pending: "Pending", in_progress: "In Progress", done: "Done", skipped: "Skipped",
+};
+
+// Per-lot / per-order QC verdict (§11.1 production_qc). `na` = check not
+// applicable for this route (kept legal for the JC "every check pass/na" gate).
+export const PRODUCTION_QC_RESULTS = [
+  "pending", "pass", "fail", "na",
+] as const;
+export type ProductionQcResult = (typeof PRODUCTION_QC_RESULTS)[number];
+export const PRODUCTION_QC_RESULT_LABELS: Record<ProductionQcResult, string> = {
+  pending: "Pending", pass: "Pass", fail: "Fail", na: "N/A",
+};
+
+// Dispatch / delivery-note lifecycle (§11.2). A dispatch is `draft` until the
+// gapless DN number is committed at `issued`; `delivered` closes it.
+export const DISPATCH_STATUSES = [
+  "draft", "issued", "in_transit", "delivered", "cancelled",
+] as const;
+export type DispatchStatus = (typeof DISPATCH_STATUSES)[number];
+export const DISPATCH_STATUS_LABELS: Record<DispatchStatus, string> = {
+  draft: "Draft", issued: "Issued", in_transit: "In Transit",
+  delivered: "Delivered", cancelled: "Cancelled",
+};
+export const DISPATCH_STATUS_COLORS: Record<DispatchStatus, string> = {
+  draft: "slate", issued: "blue", in_transit: "amber", delivered: "green", cancelled: "red",
+};
+
+// Invoice lifecycle (§11.3). `draft` reads through live; `issued` commits the
+// gapless FY-scoped number + freezes the legal lines/totals; `paid`/`part_paid`
+// derive from payments; `cancelled` requires a credit note (India statutory).
+export const INVOICE_STATUSES = [
+  "draft", "issued", "part_paid", "paid", "cancelled",
+] as const;
+export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
+export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
+  draft: "Draft", issued: "Issued", part_paid: "Part Paid", paid: "Paid", cancelled: "Cancelled",
+};
+export const INVOICE_STATUS_COLORS: Record<InvoiceStatus, string> = {
+  draft: "slate", issued: "blue", part_paid: "amber", paid: "green", cancelled: "red",
+};
+
+// GST supply type — the intra- vs inter-state split determinant (§11.3). Seller
+// (Carbide India) is in Maharashtra; place-of-supply == Maharashtra → intra
+// (CGST+SGST), else inter (IGST). `export` = zero-rated / LUT (IGST 0 or bond).
+export const GST_SUPPLY_TYPES = ["intra_state", "inter_state", "export"] as const;
+export type GstSupplyType = (typeof GST_SUPPLY_TYPES)[number];
+export const GST_SUPPLY_TYPE_LABELS: Record<GstSupplyType, string> = {
+  intra_state: "Intra-State (CGST+SGST)", inter_state: "Inter-State (IGST)", export: "Export (Zero-rated)",
+};
+
+// Payment mode for receipts against invoices (§11.3 payments). Free-ish but
+// enum-bounded so the Client "Outstanding" rollup can group cleanly.
+export const PAYMENT_MODES = [
+  "neft", "rtgs", "upi", "cheque", "cash", "card", "adjustment", "other",
+] as const;
+export type PaymentMode = (typeof PAYMENT_MODES)[number];
+export const PAYMENT_MODE_LABELS: Record<PaymentMode, string> = {
+  neft: "NEFT", rtgs: "RTGS", upi: "UPI", cheque: "Cheque", cash: "Cash",
+  card: "Card", adjustment: "Adjustment", other: "Other",
+};
+
+// Raw-material lot status (§11.1 rm_lots — heat/batch lineage). `available` →
+// `partially_consumed` → `consumed`; `quarantined` for failed incoming QC.
+export const RM_LOT_STATUSES = [
+  "available", "partially_consumed", "consumed", "quarantined",
+] as const;
+export type RmLotStatus = (typeof RM_LOT_STATUSES)[number];
+export const RM_LOT_STATUS_LABELS: Record<RmLotStatus, string> = {
+  available: "Available", partially_consumed: "Partially Consumed",
+  consumed: "Consumed", quarantined: "Quarantined",
+};
+
+/** The seller's home state — the intra/inter-state pivot for GST. Carbide India
+ *  (Yogeshwar Engineering Pvt Ltd) is registered in Maharashtra. Kept here as a
+ *  single source so lib/gst/compute.ts and any UI agree. */
+export const SELLER_STATE = "Maharashtra" as const;
