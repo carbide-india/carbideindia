@@ -1,12 +1,17 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/current";
-import { getClientRecord } from "@/lib/queries/clients";
 import { getClientDocuments } from "@/lib/queries/client-documents";
-import { getAuditLog } from "@/lib/queries/audit";
-import { DashboardHeader } from "@/components/layout/header";
-import { DashboardFooter } from "@/components/layout/footer";
-import { ClientRecord } from "@/components/clients/client-record";
+import {
+  getClientHeader,
+  getClientKpis,
+  getClientEnquiries,
+  getClientPipeline,
+  getClientProducts,
+  getClientFinancials,
+  getClientTimeline,
+} from "@/lib/queries/client-workspace";
+import { ClientWorkspace } from "@/components/erp/client-workspace";
 
 export const dynamic = "force-dynamic";
 
@@ -20,36 +25,43 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   if (!UUID_RE.test(id)) return { title: "Client — Carbide India" };
-  const record = await getClientRecord(id);
+  const header = await getClientHeader(id);
   return {
-    title: record ? `${record.name} — Carbide India` : "Client — Carbide India",
+    title: header ? `${header.name} — Carbide India` : "Client — Carbide India",
   };
 }
 
-export default async function ClientRecordPage({ params }: PageProps) {
+export default async function ClientWorkspacePage({ params }: PageProps) {
   await requireAdmin();
   const { id } = await params;
   if (!UUID_RE.test(id)) notFound();
 
-  const [record, documents, auditEntries] = await Promise.all([
-    getClientRecord(id),
-    getClientDocuments(id),
-    getAuditLog("client", id),
-  ]);
+  // Header first — a missing client 404s before we fan out the heavy aggregates.
+  const header = await getClientHeader(id);
+  if (!header) notFound();
 
-  if (!record) notFound();
+  const [kpis, enquiries, pipeline, products, financials, timeline, documents] =
+    await Promise.all([
+      getClientKpis(id),
+      getClientEnquiries(id),
+      getClientPipeline(id),
+      getClientProducts(id),
+      getClientFinancials(id),
+      getClientTimeline(id),
+      getClientDocuments(id),
+    ]);
 
   return (
-    <>
-      <DashboardHeader generatedAt={new Date()} />
-      <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
-        <ClientRecord
-          record={record}
-          documents={documents}
-          auditEntries={auditEntries}
-        />
-      </main>
-      <DashboardFooter />
-    </>
+    <ClientWorkspace
+      header={header}
+      kpis={kpis}
+      enquiries={enquiries}
+      pipeline={pipeline}
+      products={products}
+      financials={financials}
+      timeline={timeline}
+      documents={documents}
+      isAdmin
+    />
   );
 }
