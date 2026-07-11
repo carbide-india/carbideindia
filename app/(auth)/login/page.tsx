@@ -57,7 +57,8 @@ export default async function LoginPage({ searchParams }: PageProps) {
   const { userId } = await auth();
   const me = await getCurrentEmployee();
   if (me && me.isActive) {
-    redirect("/" as Route);
+    // Post-login landing is the Hub launchpad (workflow: Login → Hub → module).
+    redirect("/hub" as Route);
   }
   const orphanedSession = Boolean(userId) && (!me || !me.isActive);
 

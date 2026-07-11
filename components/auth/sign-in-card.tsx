@@ -68,7 +68,7 @@ export function SignInCard() {
       try {
         const { error: finError } = await signIn.finalize();
         if (!finError) {
-          router.push("/");
+          router.push("/hub");
           router.refresh();
           return;
         }
@@ -145,7 +145,7 @@ export function SignInCard() {
         setError(clerkErrorMessage(finError));
         return;
       }
-      router.push("/");
+      router.push("/hub");
     } catch (err) {
       setError(clerkErrorMessage(err));
     } finally {
@@ -169,7 +169,7 @@ export function SignInCard() {
         setError(clerkErrorMessage(finError));
         return;
       }
-      router.push("/");
+      router.push("/hub");
       router.refresh();
     } catch (err) {
       setError(clerkErrorMessage(err));
