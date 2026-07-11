@@ -1,9 +1,8 @@
 "use client";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ListTodo, CalendarDays, FolderKanban, SquareKanban, CalendarCheck, Boxes, Layers, Building2, ClipboardList } from "lucide-react";
-import type { Route } from "next";
 import { MainNavPill } from "./main-nav-pill";
 import { FormsLauncher } from "./forms-launcher";
+import { moduleForPath, getModule } from "./modules";
 
 interface Props {
   activeTasks: number;
@@ -11,13 +10,23 @@ interface Props {
   variant?: "drawer";
 }
 
+/**
+ * Module-scoped primary navigation. The visible pills are ONLY the items of
+ * the module the current route belongs to (see {@link modules}) — so WMS shows
+ * work-management surfaces, Enquiries shows the sales pipeline + Forms, and
+ * Masters shows the master registries. Switching modules happens via the Hub
+ * launchpad (the logo returns there).
+ */
 export function MainNav({ activeTasks, isAdmin, variant }: Props) {
   const pathname = usePathname();
+  const mod = getModule(moduleForPath(pathname));
 
-  function isActive(href: string): boolean {
-    if (href === "/") return pathname === "/";
-    return pathname.startsWith(href);
+  function isActive(href: string, exact?: boolean): boolean {
+    if (exact || href === "/") return pathname === href;
+    return pathname === href || pathname.startsWith(href + "/");
   }
+
+  const items = mod.items.filter((it) => !it.adminOnly || isAdmin);
 
   return (
     <nav
@@ -28,92 +37,20 @@ export function MainNav({ activeTasks, isAdmin, variant }: Props) {
           : "flex items-center gap-1 2xl:gap-1.5 max-md:gap-1"
       }
     >
-      <MainNavPill
-        href={"/" as Route}
-        label="Dashboard"
-        Icon={LayoutDashboard}
-        active={isActive("/")}
-        variant={variant}      />
-      <MainNavPill
-        href={"/tasks/agenda" as Route}
-        label="My Day"
-        Icon={CalendarDays}
-        active={isActive("/tasks/agenda")}
-        variant={variant}      />
-      <MainNavPill
-        href={"/tasks" as Route}
-        label="Tasks"
-        Icon={ListTodo}
-        active={
-          isActive("/tasks") &&
-          !pathname.startsWith("/tasks/agenda") &&
-          !pathname.startsWith("/tasks/kanban")
-        }
-        count={activeTasks}
-        variant={variant}      />
-      {/* Forms — a button-pill opening the launcher modal (Enquiries,
-          KYC, Samples + Phase-4 placeholders). Register list stays at
-          /inquiries, reachable from the modal + ⌘K. */}
-      <FormsLauncher variant={variant} />
-      {/* Item Master — first-class register pill (was only in the Forms modal). */}
-      <MainNavPill
-        href={"/items" as Route}
-        label="Item Master"
-        Icon={Boxes}
-        active={isActive("/items")}
-        variant={variant}
-      />
-      {/* Job Cards — production work order, open to the whole floor. */}
-      <MainNavPill
-        href={"/job-cards" as Route}
-        label="Job Cards"
-        Icon={ClipboardList}
-        active={isActive("/job-cards")}
-        variant={variant}
-      />
-      {/* Client Master — admin-only roster of clients. */}
-      {isAdmin && (
-        <MainNavPill
-          href={"/clients" as Route}
-          label="Client Master"
-          Icon={Building2}
-          active={isActive("/clients")}
-          variant={variant}
-        />
-      )}
-      {/* Masters hub — admin-only (master data drives every form's dropdowns). */}
-      {isAdmin && (
-        <MainNavPill
-          href={"/masters" as Route}
-          label="Masters"
-          Icon={Layers}
-          active={isActive("/masters")}
-          variant={variant}
-        />
-      )}
-      {/* Kanban is an admin-only board — hidden from doers. */}
-      {isAdmin && (
-        <MainNavPill
-          href={"/tasks/kanban" as Route}
-          label="Kanban"
-          Icon={SquareKanban}
-          active={pathname.startsWith("/tasks/kanban")}
-          variant={variant}
-        />
-      )}
-      <MainNavPill
-        href={"/projects" as Route}
-        label="Projects"
-        Icon={FolderKanban}
-        active={isActive("/projects")}
-        variant={variant}      />
-      {/* Documents / Archived / Inbox live in the user menu. */}
-      <MainNavPill
-        href={"/attendance" as Route}
-        label="Attendance"
-        Icon={CalendarCheck}
-        active={isActive("/attendance")}
-        variant={variant}      />
+      {items.map((it, i) => (
+        <span key={it.href} className="contents">
+          <MainNavPill
+            href={it.href}
+            label={it.label}
+            Icon={it.Icon}
+            active={isActive(it.href, it.exact)}
+            count={it.taskCount ? activeTasks : undefined}
+            variant={variant}
+          />
+          {/* Forms launcher sits right after the module's home item (Enquiries). */}
+          {mod.hasForms && i === 0 && <FormsLauncher variant={variant} />}
+        </span>
+      ))}
     </nav>
   );
 }

@@ -44,7 +44,7 @@ export async function DashboardHeader({
 
           {/* LEFT: Carbide India logo. The image is the brand mark — no
               accompanying text wordmark, the logo already includes the name. */}
-          <a href="/" className="flex items-center shrink-0" aria-label="Carbide India home">
+          <a href="/hub" className="flex items-center shrink-0" aria-label="Carbide India hub">
             <img
               src="/brand/logo.png"
               alt="Carbide India"

@@ -67,7 +67,7 @@ export function AcceptInviteCard({ ticket }: { ticket: string }) {
         // skip straight to an active session.
         if (signUp.status === "complete") {
           await signUp.finalize();
-          router.push("/");
+          router.push("/hub");
           router.refresh();
           return;
         }

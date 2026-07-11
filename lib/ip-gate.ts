@@ -13,6 +13,21 @@
 const LOCALHOST = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
 
 /**
+ * Users who bypass the IP allowlist entirely — they may sign in and use the
+ * app from ANY IP (e.g. the owners working remotely). Checked by email after
+ * Clerk identifies the user (see middleware.ts). Lowercased for comparison.
+ */
+export const IP_BYPASS_EMAILS = new Set<string>([
+  "altus@carbideindia.com",
+  "alok@carbideindia.com",
+]);
+
+/** True if this email is allowed to bypass the IP gate on any network. */
+export function isBypassEmail(email: string | null | undefined): boolean {
+  return typeof email === "string" && IP_BYPASS_EMAILS.has(email.trim().toLowerCase());
+}
+
+/**
  * Pure allowlist check. Empty/unset list = gate disabled (every IP passes).
  * Localhost bypass applies only outside production (`opts.nodeEnv`),
  * so a misconfigured proxy that reports 127.0.0.1 fails closed in prod.

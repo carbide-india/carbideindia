@@ -17,6 +17,8 @@ dist/
 # environment
 .env
 .env*.local
+.env*.bak
+.env.local.bak
 .env.development
 .env.production
 
