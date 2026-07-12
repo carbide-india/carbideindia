@@ -4,16 +4,24 @@ import { revalidatePath } from "next/cache";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { z } from "zod";
 import { db } from "@/lib/db";
-import { inquiries, inquiryItems, clients, clientContacts, masterOptions, type NewInquiry } from "@/db/schema";
+import { inquiries, inquiryItems, inquiryItemFeasibility, clients, clientContacts, masterOptions, type NewInquiry } from "@/db/schema";
 import { productRowsForInquiry, type BuiltProductRow } from "@/lib/inquiries/product-rows";
 import { syncProductToItem, type ItemSpec, type DbOrTx } from "@/lib/item-master/sync";
 import { requireUser, requireAdmin } from "@/lib/auth/current";
-import { ENQUIRY_STATUSES, type EnquiryStatus } from "@/db/enums";
+import {
+  ENQUIRY_STATUSES,
+  type EnquiryStatus,
+  INQUIRY_PRIORITIES,
+  type InquiryPriority,
+  FEASIBILITY_STATUSES,
+  type FeasibilityStatus,
+} from "@/db/enums";
 import {
   CreateInquirySchema,
   UpdateInquirySchema,
   SetEnquiryStatusSchema,
   SaveFeasibilitySchema,
+  SaveFeasibilityFullSchema,
   SetFeasibilityStatusSchema,
   type CreateInquiryInput,
   type SaveFeasibilityInput,
@@ -181,6 +189,7 @@ export async function createInquiry(
           contactNo: v.contactNo,
           contactEmail: v.contactEmail,
           ccEmails: v.ccEmails,
+          extraContacts: v.extraContacts,
           productDescription: v.productDescription,
           quantityStatus: v.quantityStatus,
           quantityNos: p0?.quantityNos ?? undefined,
@@ -191,6 +200,7 @@ export async function createInquiry(
           toleranceCheck: v.toleranceCheck,
           conditionCheck: v.conditionCheck,
           sampleReceived: v.sampleReceived,
+          assumedValues: v.assumedValues,
           shape: p0?.shape ?? undefined,
           outerDia: p0?.outerDia ?? undefined,
           innerDia: p0?.innerDia ?? undefined,
@@ -392,6 +402,50 @@ export async function saveFeasibility(
   return { ok: true };
 }
 
+/**
+ * Save the whole primary-feasibility screen in one transaction: the SM-level
+ * fields + status on `inquiries`, and one upserted verdict row per product in
+ * `inquiry_item_feasibility`.
+ */
+export async function saveFeasibilityFull(
+  inquiryId: string,
+  input: unknown,
+): Promise<ActionResult> {
+  await requireUser();
+  if (!isUuid(inquiryId)) return { ok: false, error: "Invalid inquiry id." };
+  const parsed = SaveFeasibilityFullSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Invalid feasibility data." };
+  const { sm, status, products } = parsed.data;
+  try {
+    await db.transaction(async (tx) => {
+      const smPatch: Record<string, unknown> = { updatedAt: new Date() };
+      if (sm.feasPriority !== undefined) smPatch.feasPriority = sm.feasPriority;
+      if (sm.feasExport !== undefined) smPatch.feasExport = sm.feasExport;
+      if (sm.feasActionsList !== undefined) smPatch.feasActionsList = sm.feasActionsList;
+      if (sm.feasibilityCheckedById !== undefined) smPatch.feasibilityCheckedById = sm.feasibilityCheckedById;
+      if (status !== undefined) smPatch.feasibilityStatus = status;
+      await tx.update(inquiries).set(smPatch).where(eq(inquiries.id, inquiryId));
+
+      for (const p of products) {
+        const { inquiryItemId, ...rest } = p;
+        await tx
+          .insert(inquiryItemFeasibility)
+          .values({ inquiryItemId, ...rest })
+          .onConflictDoUpdate({
+            target: inquiryItemFeasibility.inquiryItemId,
+            set: { ...rest, updatedAt: new Date() },
+          });
+      }
+    });
+  } catch (err) {
+    console.error("[saveFeasibilityFull] failed", err);
+    return { ok: false, error: "Could not save the feasibility. Please try again." };
+  }
+  revalidatePath("/inquiries/[id]", "page");
+  revalidatePath("/enquiries/register/[id]", "page");
+  return { ok: true };
+}
+
 export async function setFeasibilityStatus(
   id: string,
   status: string,
@@ -441,6 +495,100 @@ export async function setEnquiryStatusBulk(
     return { ok: false, error: "Could not update the statuses. Please try again." };
   }
   revalidatePath("/inquiries");
+  revalidatePath("/enquiries/register");
+  return { ok: true };
+}
+
+/**
+ * Bulk-set the priority on many inquiries at once (register table's "Set
+ * priority" bulk action). Mirrors setEnquiryStatusBulk — validates the priority
+ * against the enum and the ids are UUID-shaped before a single `inArray` update.
+ */
+export async function setEnquiryPriorityBulk(
+  ids: string[],
+  priority: string,
+): Promise<ActionResult> {
+  await requireUser();
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { ok: false, error: "No rows selected." };
+  }
+  if (!ids.every(isUuid)) return { ok: false, error: "Invalid inquiry id." };
+  if (!(INQUIRY_PRIORITIES as readonly string[]).includes(priority)) {
+    return { ok: false, error: "Invalid priority" };
+  }
+  try {
+    await db
+      .update(inquiries)
+      .set({ priority: priority as InquiryPriority, updatedAt: new Date() })
+      .where(inArray(inquiries.id, ids));
+  } catch (err) {
+    console.error("[setEnquiryPriorityBulk] failed", err);
+    return { ok: false, error: "Could not update the priorities. Please try again." };
+  }
+  revalidatePath("/inquiries");
+  revalidatePath("/enquiries/register");
+  return { ok: true };
+}
+
+/**
+ * Bulk-assign a sales person to many inquiries at once (register table's "Assign
+ * sales person" bulk action). Mirrors setEnquiryStatusBulk — validates the
+ * employee id is UUID-shaped (along with every inquiry id) before a single
+ * `inArray` update.
+ */
+export async function assignEnquirySalesPersonBulk(
+  ids: string[],
+  employeeId: string,
+): Promise<ActionResult> {
+  await requireUser();
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { ok: false, error: "No rows selected." };
+  }
+  if (!ids.every(isUuid)) return { ok: false, error: "Invalid inquiry id." };
+  if (!isUuid(employeeId)) return { ok: false, error: "Invalid employee id." };
+  try {
+    await db
+      .update(inquiries)
+      .set({ assignedSalesPersonId: employeeId, updatedAt: new Date() })
+      .where(inArray(inquiries.id, ids));
+  } catch (err) {
+    console.error("[assignEnquirySalesPersonBulk] failed", err);
+    return { ok: false, error: "Could not assign the sales person. Please try again." };
+  }
+  revalidatePath("/inquiries");
+  revalidatePath("/enquiries/register");
+  return { ok: true };
+}
+
+/**
+ * Bulk-set the feasibility status on many inquiries at once (register table's
+ * "Set feasibility" bulk action). Mirrors setEnquiryStatusBulk — validates the
+ * status against the enum and the ids are UUID-shaped before a single `inArray`
+ * update.
+ */
+export async function setFeasibilityStatusBulk(
+  ids: string[],
+  status: string,
+): Promise<ActionResult> {
+  await requireUser();
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { ok: false, error: "No rows selected." };
+  }
+  if (!ids.every(isUuid)) return { ok: false, error: "Invalid inquiry id." };
+  if (!(FEASIBILITY_STATUSES as readonly string[]).includes(status)) {
+    return { ok: false, error: "Invalid feasibility status" };
+  }
+  try {
+    await db
+      .update(inquiries)
+      .set({ feasibilityStatus: status as FeasibilityStatus, updatedAt: new Date() })
+      .where(inArray(inquiries.id, ids));
+  } catch (err) {
+    console.error("[setFeasibilityStatusBulk] failed", err);
+    return { ok: false, error: "Could not update the feasibility statuses. Please try again." };
+  }
+  revalidatePath("/inquiries");
+  revalidatePath("/enquiries/register");
   return { ok: true };
 }
 

@@ -3,6 +3,7 @@ import {
   INQUIRY_PRIORITIES, INQUIRY_SOURCES, INQUIRY_CURRENCIES, INQUIRY_COUNTRIES,
   CHECK_STATES, QUANTITY_UOMS, DOC_GIVEN_OPTIONS, INQUIRY_SHAPES,
   ENQUIRY_STATUSES, FEAS_VERDICTS, RECHECK_STATES, FEASIBILITY_STATUSES, FEAS_PRIORITIES,
+  FEAS_CHECK_VERDICTS,
 } from "@/db/enums";
 
 const Trimmed = (max: number) => z.string().trim().max(max);
@@ -52,6 +53,16 @@ const InquiryFieldsSchema = z.object({
   pinCode: OptionalText(20),
   contactFirstName: OptionalText(80), contactLastName: OptionalText(80),
   contactNo: OptionalText(40), contactEmail: OptionalText(160), ccEmails: OptionalText(500),
+  extraContacts: z
+    .array(
+      z.object({
+        firstName: OptionalText(80),
+        lastName: OptionalText(80),
+        contactNo: OptionalText(40),
+        email: OptionalText(160),
+      }),
+    )
+    .optional(),
   productDescription: Trimmed(2000).min(1, "Product description is required"),
   quantityStatus: z.enum(CHECK_STATES).optional(),
   quantityNos: z.number().positive("Quantity must be positive").optional(),
@@ -62,6 +73,15 @@ const InquiryFieldsSchema = z.object({
   toleranceCheck: z.enum(CHECK_STATES).optional(),
   conditionCheck: z.enum(CHECK_STATES).optional(),
   sampleReceived: z.boolean().optional(),
+  assumedValues: z
+    .object({
+      quantity: OptionalText(200),
+      shapeDimension: OptionalText(200),
+      grade: OptionalText(200),
+      tolerance: OptionalText(200),
+      condition: OptionalText(200),
+    })
+    .optional(),
   shape: z.enum(INQUIRY_SHAPES).optional(),
   outerDia: z.number().nonnegative().optional(), innerDia: z.number().nonnegative().optional(),
   length: z.number().nonnegative().optional(), width: z.number().nonnegative().optional(),
@@ -125,3 +145,32 @@ export const SaveFeasibilitySchema = z
 export type SaveFeasibilityInput = z.infer<typeof SaveFeasibilitySchema>;
 
 export const SetFeasibilityStatusSchema = z.object({ status: z.enum(FEASIBILITY_STATUSES) });
+
+// ── Whole primary-feasibility screen: SM-level fields + per-product verdicts ──
+const FeasProduct = z.object({
+  inquiryItemId: z.string().uuid(),
+  shapeDimVerdict: z.enum(FEAS_CHECK_VERDICTS).optional(),
+  gradeVerdict: z.enum(FEAS_CHECK_VERDICTS).optional(),
+  toleranceVerdict: z.enum(FEAS_CHECK_VERDICTS).optional(),
+  conditionVerdict: z.enum(FEAS_CHECK_VERDICTS).optional(),
+  quantityVerdict: z.enum(FEAS_CHECK_VERDICTS).optional(),
+  shapeDimNote: OptionalText(1000),
+  gradeNote: OptionalText(1000),
+  toleranceNote: OptionalText(1000),
+  conditionNote: OptionalText(1000),
+  quantityNote: OptionalText(1000),
+});
+
+export const SaveFeasibilityFullSchema = z.object({
+  sm: z
+    .object({
+      feasPriority: z.enum(FEAS_PRIORITIES).optional(),
+      feasExport: z.boolean().optional(),
+      feasActionsList: OptionalText(2000),
+      feasibilityCheckedById: z.string().uuid().optional(),
+    })
+    .strict(),
+  status: z.enum(FEASIBILITY_STATUSES).optional(),
+  products: z.array(FeasProduct),
+}).strict();
+export type SaveFeasibilityFullInput = z.infer<typeof SaveFeasibilityFullSchema>;
