@@ -426,6 +426,17 @@ export async function saveFeasibilityFull(
       if (status !== undefined) smPatch.feasibilityStatus = status;
       await tx.update(inquiries).set(smPatch).where(eq(inquiries.id, inquiryId));
 
+      const ownItems = await tx
+        .select({ id: inquiryItems.id })
+        .from(inquiryItems)
+        .where(eq(inquiryItems.inquiryId, inquiryId));
+      const ownIds = new Set(ownItems.map((r) => r.id));
+      for (const p of products) {
+        if (!ownIds.has(p.inquiryItemId)) {
+          throw new Error(`inquiry_item ${p.inquiryItemId} does not belong to inquiry ${inquiryId}`);
+        }
+      }
+
       for (const p of products) {
         const { inquiryItemId, ...rest } = p;
         await tx
