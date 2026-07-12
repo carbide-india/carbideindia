@@ -6,6 +6,7 @@ import {
   employees,
   inquiries,
   inquiryItems,
+  inquiryItemFeasibility,
   items,
   negotiationItems,
   negotiations,
@@ -13,6 +14,7 @@ import {
   quotations,
   salesOrderItems,
   salesOrders,
+  type InquiryItemFeasibility,
   type Negotiation,
   type Quotation,
   type SalesOrder,
@@ -148,7 +150,7 @@ export interface InquiryWorkspaceHeader {
 
 function truncate(v: string, max: number): string {
   const s = v.trim();
-  return s.length > max ? `${s.slice(0, max - 1)}…` : s;
+  return s.length > max ? `${s.slice(0, max - 1)}` : s;
 }
 
 function nextActionFor(stage: PipelineStage): NextAction | null {
@@ -378,6 +380,26 @@ function stageKeyFromIndex(index: number): PipelineStage {
     ] as const
   )[clamped];
   return key ?? "enquiry";
+}
+
+/* ── Per-product feasibility ───────────────────────────────────────────────── */
+
+/**
+ * Per-product feasibility rows for one SM, keyed by inquiryItemId. Products
+ * without a saved feasibility row are simply absent from the map (the panel
+ * treats absence as "not yet reviewed").
+ */
+export async function getInquiryItemFeasibility(
+  inquiryId: string,
+): Promise<Record<string, InquiryItemFeasibility>> {
+  const rows = await db
+    .select({ f: inquiryItemFeasibility })
+    .from(inquiryItemFeasibility)
+    .innerJoin(inquiryItems, eq(inquiryItemFeasibility.inquiryItemId, inquiryItems.id))
+    .where(eq(inquiryItems.inquiryId, inquiryId));
+  const map: Record<string, InquiryItemFeasibility> = {};
+  for (const { f } of rows) map[f.inquiryItemId] = f;
+  return map;
 }
 
 /* ── Product drawer bundles (Open Item ⧉ / History) ────────────────────────── */
