@@ -32,6 +32,7 @@ import {
   INQUIRY_PRIORITIES,
   INQUIRY_SOURCES,
   FEAS_PRIORITIES,
+  FEAS_CHECK_VERDICTS,
   SAMPLE_STATUSES,
   STAGE_STATUSES,
   COSTING_DONE_STATUSES,
@@ -301,14 +302,14 @@ export const employeeDepartments = pgTable(
   ],
 );
 
-/** Client codes: CL-0001, CL-0002, … */
+/** Client codes: CL-0001, CL-0002,  */
 export const clientsClientCodeSeq = pgSequence("clients_client_code_seq", { startWith: 1 });
 
 /**
  * Client list — backs the "Client Name" picker on the task forms.  Mirrors
  * the `departments` pattern: an admin/seed-managed canonical list that the
  * New Task / Edit Task dropdowns read from.  Unlike departments, ANY
- * authenticated user can append a new client inline ("+ Add new client…")
+ * authenticated user can append a new client inline ("+ Add new client")
  * while creating a task, so the insert RLS policy is open to all
  * authenticated users (see migration 0022).  We never hard-delete; flip
  * `is_active` to hide a client from the picker.
@@ -370,7 +371,7 @@ export const clients = pgTable(
     placeOfSupply: text("place_of_supply"),
     isTransporter: boolean("is_transporter").notNull().default(false),
     // ── Customer categorization (Alok 2026-06-17): open, multi-value, optional
-    //    tags — "what kind of customer he is" (Mining / Defense / Cutting …). ──
+    //    tags — "what kind of customer he is" (Mining / Defense / Cutting ). ──
     tags: text("tags").array(),
     // ── Client KYC meeting (Phase 3) — times as "HH:mm" text, sheet-true ──
     kycMeetingDate: timestamp("kyc_meeting_date", { withTimezone: true }),
@@ -468,7 +469,7 @@ export type NewClientBankAccount = typeof clientBankAccounts.$inferInsert;
  * Subjects — canonical list backing the "Subject" picker on the task forms.
  * Mirrors the `clients` pattern exactly: an admin/seed-managed list that the
  * New Task / Edit Task dropdowns read from, with an inline "+ Add new
- * subject…" affordance open to any authenticated user. Stored on the
+ * subject" affordance open to any authenticated user. Stored on the
  * free-text `tasks.subject` column; renames propagate to matching tasks.
  */
 export const subjects = pgTable(
@@ -544,8 +545,9 @@ export const recheckStateEnum = pgEnum("recheck_state", RECHECK_STATES);
 export const inquiryPriorityEnum = pgEnum("inquiry_priority", INQUIRY_PRIORITIES);
 export const inquirySourceEnum = pgEnum("inquiry_source", INQUIRY_SOURCES);
 export const feasPriorityEnum = pgEnum("feas_priority", FEAS_PRIORITIES);
+export const feasCheckVerdictEnum = pgEnum("feas_check_verdict", FEAS_CHECK_VERDICTS);
 
-/** SM numbers: SM9579, SM9580, … (observed last manual number SM9578).
+/** SM numbers: SM9579, SM9580,  (observed last manual number SM9578).
  *  Admin can re-base via setval through the admin settings action. */
 export const smNumberSeq = pgSequence("inquiries_sm_number_seq", { startWith: 9579 });
 
@@ -571,6 +573,10 @@ export const inquiries = pgTable(
     pinCode: text("pin_code"),
     contactFirstName: text("contact_first_name"), contactLastName: text("contact_last_name"),
     contactNo: text("contact_no"), contactEmail: text("contact_email"), ccEmails: text("cc_emails"),
+    // Optional additional contact people (snapshot, beyond the primary above).
+    extraContacts: jsonb("extra_contacts").$type<
+      Array<{ firstName?: string; lastName?: string; contactNo?: string; email?: string }>
+    >(),
 
     // product + checklist
     productDescription: text("product_description").notNull(),
@@ -583,6 +589,14 @@ export const inquiries = pgTable(
     toleranceCheck: checkStateEnum("tolerance_check"),
     conditionCheck: checkStateEnum("condition_check"),
     sampleReceived: boolean("sample_received"),
+    // Free-text "what we assumed" per check, filled when a check is marked Assumed.
+    assumedValues: jsonb("assumed_values").$type<{
+      quantity?: string;
+      shapeDimension?: string;
+      grade?: string;
+      tolerance?: string;
+      condition?: string;
+    }>(),
     shape: text("shape"),                                        // INQUIRY_SHAPES value
     outerDia: numeric("outer_dia"), innerDia: numeric("inner_dia"),
     length: numeric("length"), width: numeric("width"), thickness: numeric("thickness"),
@@ -670,6 +684,32 @@ export const inquiryItems = pgTable(
 export type InquiryItem = typeof inquiryItems.$inferSelect;
 export type NewInquiryItem = typeof inquiryItems.$inferInsert;
 
+// ── Per-product primary feasibility (2026-07-12): one verdict row per product ──
+export const inquiryItemFeasibility = pgTable(
+  "inquiry_item_feasibility",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    inquiryItemId: uuid("inquiry_item_id")
+      .notNull()
+      .references(() => inquiryItems.id, { onDelete: "cascade" }),
+    shapeDimVerdict: feasCheckVerdictEnum("shape_dim_verdict"),
+    gradeVerdict: feasCheckVerdictEnum("grade_verdict"),
+    toleranceVerdict: feasCheckVerdictEnum("tolerance_verdict"),
+    conditionVerdict: feasCheckVerdictEnum("condition_verdict"),
+    quantityVerdict: feasCheckVerdictEnum("quantity_verdict"),
+    shapeDimNote: text("shape_dim_note"),
+    gradeNote: text("grade_note"),
+    toleranceNote: text("tolerance_note"),
+    conditionNote: text("condition_note"),
+    quantityNote: text("quantity_note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("inquiry_item_feasibility_item_uidx").on(t.inquiryItemId)],
+);
+export type InquiryItemFeasibility = typeof inquiryItemFeasibility.$inferSelect;
+export type NewInquiryItemFeasibility = typeof inquiryItemFeasibility.$inferInsert;
+
 // ── Item / Product Master (2026-06-17, Alok) ────────────────────
 export const costingTypeEnum = pgEnum("costing_type", COSTING_TYPES);
 
@@ -681,7 +721,7 @@ export const costingTypeEnum = pgEnum("costing_type", COSTING_TYPES);
  */
 export const itemStatusEnum = pgEnum("item_status", ITEM_STATUSES);
 
-/** Item serial → the "10001" in S-10001-C-… */
+/** Item serial → the "10001" in S-10001-C- */
 export const itemSeqSeq = pgSequence("item_seq_seq", { startWith: 10001 });
 
 /**
@@ -717,7 +757,7 @@ export const items = pgTable(
     qty: numeric("qty"),
 
     // Classification (code-bearing masters) + size class.
-    sizeCode: text("size_code"),                 // S / M / L … (derived or chosen)
+    sizeCode: text("size_code"),                 // S / M / L  (derived or chosen)
     shapeId: uuid("shape_id").references(() => masterOptions.id, { onDelete: "set null" }),
     internalGradeId: uuid("internal_grade_id").references(() => masterOptions.id, { onDelete: "set null" }),
     toleranceId: uuid("tolerance_id").references(() => masterOptions.id, { onDelete: "set null" }),
@@ -1942,7 +1982,7 @@ export const employeeRoles = pgTable(
 /**
  * Saved views (ERP redesign — Phase 1 backend; the SavedViews bar UI lands in
  * Phase 3). A per-employee (optionally shared) named bundle of filters/sort/
- * columns for a register module ("items", "clients", "enquiries", …). `config`
+ * columns for a register module ("items", "clients", "enquiries", ). `config`
  * is opaque jsonb the consuming register interprets.
  */
 export const savedViews = pgTable(
@@ -1968,6 +2008,37 @@ export const savedViews = pgTable(
     index("saved_views_module_employee_idx").on(t.module, t.employeeId),
   ],
 );
+
+/**
+ * Auto-saved form drafts. A per-user store of half-filled forms (the New
+ * Enquiry form to start; `form_key` keeps it reusable for other forms). The
+ * raw react-hook-form values live in `payload` (partial, unvalidated); `label`
+ * is a derived one-line summary for the Drafts list. Deleted on final submit.
+ */
+export const formDrafts = pgTable(
+  "form_drafts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ownerId: uuid("owner_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "cascade" }),
+    formKey: text("form_key").notNull().default("enquiry"),
+    payload: jsonb("payload").notNull().default({}),
+    label: text("label"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("form_drafts_owner_form_updated_idx").on(t.ownerId, t.formKey, t.updatedAt),
+  ],
+);
+
+export type FormDraft = typeof formDrafts.$inferSelect;
+export type NewFormDraft = typeof formDrafts.$inferInsert;
 
 export type Employee = typeof employees.$inferSelect;
 export type NewEmployee = typeof employees.$inferInsert;
@@ -2432,7 +2503,7 @@ export type NewPayment = typeof payments.$inferInsert;
  * §11.3 — GAPLESS FY-scoped document-number counter. One row per (seriesKey, fy)
  * — e.g. ("invoice","2026-27"), ("dn","2026-27"), ("credit_note","2026-27").
  * lib/series/next-number.ts increments `lastValue` inside a tx with a
- * `SELECT … FOR UPDATE` on this row, so concurrent allocations serialize and
+ * `SELECT  FOR UPDATE` on this row, so concurrent allocations serialize and
  * NEVER skip a number (unlike a Postgres sequence, which leaks on rollback).
  * `prefix` + `padTo` + the current fy assemble the formatted human number.
  */

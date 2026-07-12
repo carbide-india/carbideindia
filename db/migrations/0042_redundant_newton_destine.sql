@@ -1,0 +1,1 @@
+ALTER TABLE "inquiries" ADD COLUMN "assumed_values" jsonb;

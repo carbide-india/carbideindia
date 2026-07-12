@@ -70,7 +70,7 @@ const DEPRECATED_STATUS_SET: ReadonlySet<TaskStatus> = new Set(
 );
 
 /** True for statuses retired on 2026-06-08 — use to drop them from any
- *  dynamically-built status list (filter options, kanban columns, …). */
+ *  dynamically-built status list (filter options, kanban columns, ). */
 export function isDeprecatedStatus(status: TaskStatus): boolean {
   return DEPRECATED_STATUS_SET.has(status);
 }
@@ -93,7 +93,7 @@ export type ApprovalStatus = (typeof APPROVAL_STATUSES)[number];
 
 // 28 canonical subject categories the New Task form constrains to. Free
 // text remains valid in the DB (the column is `text`) — older tasks may
-// hold values outside this list; the dropdown adds "Other…" as an escape
+// hold values outside this list; the dropdown adds "Other" as an escape
 // hatch when needed.
 // Tier-4 (2026-05-20) — recurrence options for the GCal-style scheduling
 // block on each task. Stored as text on tasks.recurrence; null/'none'
@@ -333,6 +333,16 @@ export const FEASIBILITY_STATUS_COLORS: Record<FeasibilityStatus, string> = {
 export const FEAS_PRIORITIES = ["p1", "p2", "p3", "p5_high_profile"] as const;     // sheet: 1, 2, 3, 5. High Profile
 export type FeasPriority = (typeof FEAS_PRIORITIES)[number];
 export const FEAS_PRIORITY_LABELS: Record<FeasPriority, string> = { p1: "1", p2: "2", p3: "3", p5_high_profile: "5. High Profile" };
+
+// Per-product primary-feasibility verdict (one per checked dimension).
+export const FEAS_CHECK_VERDICTS = ["feasible", "not_feasible", "need_info"] as const;
+export type FeasCheckVerdict = (typeof FEAS_CHECK_VERDICTS)[number];
+export const FEAS_CHECK_VERDICT_LABELS: Record<FeasCheckVerdict, string> = {
+  feasible: "Feasible", not_feasible: "Not feasible", need_info: "Need info",
+};
+export const FEAS_CHECK_VERDICT_TONES: Record<FeasCheckVerdict, string> = {
+  feasible: "green", not_feasible: "red", need_info: "amber",
+};
 
 // ── Sample Register (Phase 3) — option lists from Manan's sheet ──
 export const SAMPLE_LOCATIONS = ["AYK Cabin", "Display", "Jayshree", "Lab", "Other"] as const;

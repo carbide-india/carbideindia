@@ -1,0 +1,1 @@
+ALTER TABLE "inquiries" ADD COLUMN "extra_contacts" jsonb;
