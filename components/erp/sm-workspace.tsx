@@ -9,6 +9,7 @@ import {
   ArrowUpRight,
   Boxes,
   Building2,
+  ChevronRight,
   ClipboardList,
   ExternalLink,
   FileText,
@@ -30,7 +31,7 @@ import {
   NEGOTIATION_STATUS_LABELS,
   NEGOTIATION_STATUS_COLORS,
 } from "@/db/enums";
-import type { Inquiry } from "@/db/schema";
+import type { Inquiry, InquiryItemFeasibility } from "@/db/schema";
 import type { EmployeeOption } from "@/lib/queries/employees";
 import type { AuditEntry } from "@/lib/queries/audit";
 import type {
@@ -84,7 +85,15 @@ interface SmWorkspaceProps {
   inquiry: Inquiry;
   employees: EmployeeOption[];
   auditEntries: AuditEntry[];
+  itemFeasibility: Record<string, InquiryItemFeasibility>;
   isAdmin: boolean;
+  /**
+   * When true, render the cockpit WITHOUT the ERP AppShell chrome (rail +
+   * header). Used by the in-module route `/enquiries/register/[id]`, which
+   * already sits inside the Enquiries module shell. Default (false) keeps the
+   * standalone AppShell output unchanged.
+   */
+  embedded?: boolean;
 }
 
 const NAV: ReadonlyArray<RailGroup> = [
@@ -181,7 +190,9 @@ export function SmWorkspace({
   inquiry,
   employees,
   auditEntries,
+  itemFeasibility,
   isAdmin,
+  embedded,
 }: SmWorkspaceProps) {
   const [tab, setTab] = useQueryState("tab", {
     defaultValue: "overview",
@@ -230,29 +241,8 @@ export function SmWorkspace({
     { label: header.smNumber },
   ];
 
-  return (
-    <AppShell
-      nav={NAV}
-      breadcrumb={breadcrumb}
-      collapseKey="erp-sm-shell-collapsed"
-      contextBarExtra={
-        <div className="flex items-center gap-3">
-          <StatusPill tone="brand" size="sm" hideDot>
-            {header.stageLabel}
-          </StatusPill>
-          {header.nextAction && (
-            <button
-              type="button"
-              onClick={() => header.nextAction?.tab && setTab(header.nextAction.tab as TabKey)}
-              className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-brand hover:underline"
-            >
-              Next: {header.nextAction.label}
-              <ArrowUpRight size={13} strokeWidth={2.4} />
-            </button>
-          )}
-        </div>
-      }
-    >
+  const content = (
+    <>
       <div className="flex flex-col gap-6">
         {/* ── Sticky "where am I" header ─────────────────────────────── */}
         <div
@@ -396,6 +386,7 @@ export function SmWorkspace({
                 header={header}
                 inquiry={inquiry}
                 products={products}
+                itemFeasibility={itemFeasibility}
                 auditEntries={auditEntries}
                 costedCount={costedCount}
                 readyCount={readyCount}
@@ -412,8 +403,13 @@ export function SmWorkspace({
               />
             )}
             {tab === "feasibility" && (
-              <Section title="Primary Feasibility" subtitle="9-row enquiry checklist driving the Feasibility node">
-                <FeasibilityPanel inquiry={inquiry} employees={employees} />
+              <Section title="Primary Feasibility" subtitle="Per-product feasibility — verify each product before costing">
+                <FeasibilityPanel
+                  inquiry={inquiry}
+                  products={products}
+                  itemFeasibility={itemFeasibility}
+                  employees={employees}
+                />
               </Section>
             )}
             {tab === "costing" && (
@@ -462,6 +458,54 @@ export function SmWorkspace({
           onOpenChange={closeDrawer}
         />
       )}
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div className="mx-auto w-full max-w-[1400px]">
+        <nav
+          aria-label="Breadcrumb"
+          className="mb-4 flex items-center gap-1.5 text-[13px] font-semibold text-ink-subtle"
+        >
+          <Link
+            href={"/enquiries/register" as Route}
+            className="transition-colors hover:text-brand"
+          >
+            Enquiry Register
+          </Link>
+          <ChevronRight size={14} strokeWidth={2.4} className="opacity-50" />
+          <span className="text-ink-strong">{header.smNumber}</span>
+        </nav>
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <AppShell
+      nav={NAV}
+      breadcrumb={breadcrumb}
+      collapseKey="erp-sm-shell-collapsed"
+      contextBarExtra={
+        <div className="flex items-center gap-3">
+          <StatusPill tone="brand" size="sm" hideDot>
+            {header.stageLabel}
+          </StatusPill>
+          {header.nextAction && (
+            <button
+              type="button"
+              onClick={() => header.nextAction?.tab && setTab(header.nextAction.tab as TabKey)}
+              className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-brand hover:underline"
+            >
+              Next: {header.nextAction.label}
+              <ArrowUpRight size={13} strokeWidth={2.4} />
+            </button>
+          )}
+        </div>
+      }
+    >
+      {content}
     </AppShell>
   );
 }
@@ -472,6 +516,7 @@ function OverviewTab({
   header,
   inquiry,
   products,
+  itemFeasibility,
   auditEntries,
   costedCount,
   readyCount,
@@ -482,6 +527,7 @@ function OverviewTab({
   header: InquiryWorkspaceHeader;
   inquiry: Inquiry;
   products: InquiryProductCard[];
+  itemFeasibility: Record<string, InquiryItemFeasibility>;
   auditEntries: AuditEntry[];
   costedCount: number;
   readyCount: number;
@@ -489,10 +535,29 @@ function OverviewTab({
   onOpenItem: (id: string) => void;
   onGoTab: (t: TabKey) => void;
 }) {
+  // A product is feasibility-cleared only when its row exists AND all five
+  // verdicts read "feasible"; anything else (missing row, need_info,
+  // not_feasible, or an unset verdict) counts as needing review.
+  const notFeasibleCount = products.filter((p) => {
+    const f = itemFeasibility[p.id];
+    if (!f) return true;
+    return (
+      f.shapeDimVerdict !== "feasible" ||
+      f.gradeVerdict !== "feasible" ||
+      f.toleranceVerdict !== "feasible" ||
+      f.conditionVerdict !== "feasible" ||
+      f.quantityVerdict !== "feasible"
+    );
+  }).length;
+
   const blockers: string[] = [];
   if (noItemCount > 0)
     blockers.push(
       `${noItemCount} product${noItemCount === 1 ? "" : "s"} not linked to a finished Item spec`,
+    );
+  if (products.length > 0 && notFeasibleCount > 0)
+    blockers.push(
+      `${notFeasibleCount} product${notFeasibleCount === 1 ? "" : "s"} need feasibility review`,
     );
   if (products.length > 0 && costedCount < products.length)
     blockers.push(`${products.length - costedCount} product${products.length - costedCount === 1 ? "" : "s"} not costed`);
@@ -792,7 +857,7 @@ function ProductCard({
             onClick={handleGenerate}
             className="inline-flex items-center gap-1.5 rounded-lg border border-hairline px-2.5 py-1.5 text-[12px] font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand disabled:opacity-50"
           >
-            {generating ? "Generating…" : "Generate item code"}
+            {generating ? "Generating" : "Generate item code"}
           </button>
         ) : (
           <Link
