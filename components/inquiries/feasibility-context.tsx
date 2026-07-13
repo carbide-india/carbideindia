@@ -10,6 +10,14 @@ import { CHECK_STATE_LABELS, type CheckState } from "@/db/enums";
 const dash = (v: string | null | undefined) =>
   v == null || v === "" ? <span className="text-ink-subtle">—</span> : v;
 
+const ASSUMED_LABELS: Record<string, string> = {
+  quantity: "Quantity",
+  shapeDimension: "Shape & Dimension",
+  grade: "Grade",
+  tolerance: "Tolerance",
+  condition: "Condition",
+};
+
 /** Everything the enquiry captured for one product, read-only + complete. */
 export function ProductFeasibilityContext({
   product,
@@ -21,7 +29,7 @@ export function ProductFeasibilityContext({
   const assumed = (inquiry.assumedValues ?? {}) as Record<string, string | undefined>;
   const assumedChips = Object.entries(assumed)
     .filter(([, v]) => v != null && v !== "")
-    .map(([k, v]) => `${k}: ${v}`);
+    .map(([k, v]) => `${ASSUMED_LABELS[k] ?? k}: ${v}`);
   const docs = (inquiry.docsGiven ?? []) as string[];
 
   return (

@@ -119,6 +119,7 @@ function VerdictCell({
                 options={CHECK_OPTS}
                 value={value}
                 onChange={(v) => field.onChange(v)}
+                allowClear={false}
                 ariaLabel={`${label} verdict`}
               />
               {(value === "not_feasible" || value === "need_info") && (
