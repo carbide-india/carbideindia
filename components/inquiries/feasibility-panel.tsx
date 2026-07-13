@@ -16,7 +16,6 @@ import {
   FEAS_PRIORITY_LABELS,
   FEASIBILITY_STATUSES,
   FEASIBILITY_STATUS_LABELS,
-  FEASIBILITY_STATUS_COLORS,
   type FeasCheckVerdict,
   type FeasPriority,
   type FeasibilityStatus,
@@ -29,7 +28,6 @@ import { fireToast } from "@/lib/toast";
 import { Select } from "@/components/ui/select";
 import { Field, GroupHeader, SectionCard, Segmented } from "./form-field";
 import { Chip } from "./chip";
-import { StatusPicker } from "./status-picker";
 import { ProductFeasibilityContext } from "./feasibility-context";
 
 /** Per-product form slice — five verdicts + five notes, all optional. */
@@ -325,28 +323,25 @@ export function FeasibilityPanel({
 
       {/* ── Footer: status + save ────────────────────────────────────── */}
       <div className="flex items-center justify-between border-t border-hairline pt-4">
-        <div className="flex items-center gap-3">
-          <span className="text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
-            Feasibility Status
-          </span>
+        <Field id="feas-status" label="Feasibility Status" labelOnly>
           <Controller
             control={control}
             name="status"
             render={({ field }) => (
-              <StatusPicker
-                value={field.value ?? inquiry.feasibilityStatus}
-                options={FEASIBILITY_STATUSES}
-                labels={FEASIBILITY_STATUS_LABELS}
-                tones={FEASIBILITY_STATUS_COLORS}
-                onPick={async (next) => {
-                  field.onChange(next);
-                  return { ok: true };
-                }}
+              <Select
+                id="feas-status"
+                value={field.value ?? ""}
+                onValueChange={(v) => field.onChange(v || undefined)}
+                placeholder="Select"
+                options={FEASIBILITY_STATUSES.map((s) => ({
+                  value: s,
+                  label: FEASIBILITY_STATUS_LABELS[s],
+                }))}
                 ariaLabel="Feasibility status"
               />
             )}
           />
-        </div>
+        </Field>
         <button
           type="submit"
           disabled={isSubmitting}
