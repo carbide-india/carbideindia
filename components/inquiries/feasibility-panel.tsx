@@ -2,50 +2,67 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  useForm,
+  Controller,
+  type Control,
+  type UseFormRegister,
+} from "react-hook-form";
 import { Loader2 } from "lucide-react";
 import {
-  CHECK_STATE_LABELS,
-  FEAS_VERDICTS,
-  FEAS_VERDICT_LABELS,
-  RECHECK_STATES,
-  RECHECK_STATE_LABELS,
+  FEAS_CHECK_VERDICTS,
+  FEAS_CHECK_VERDICT_LABELS,
   FEAS_PRIORITIES,
   FEAS_PRIORITY_LABELS,
   FEASIBILITY_STATUSES,
   FEASIBILITY_STATUS_LABELS,
   FEASIBILITY_STATUS_COLORS,
-  type CheckState,
-  type RecheckState,
+  type FeasCheckVerdict,
+  type FeasPriority,
+  type FeasibilityStatus,
 } from "@/db/enums";
-import type { Inquiry } from "@/db/schema";
-import { saveFeasibility, setFeasibilityStatus } from "@/app/(app)/inquiries/actions";
-import { SaveFeasibilitySchema, type SaveFeasibilityInput } from "@/lib/validators/inquiry";
+import type { Inquiry, InquiryItemFeasibility } from "@/db/schema";
+import type { InquiryProductCard } from "@/lib/queries/sm-workspace";
 import type { EmployeeOption } from "@/lib/queries/employees";
+import { saveFeasibilityFull } from "@/app/(app)/inquiries/actions";
 import { fireToast } from "@/lib/toast";
 import { Select } from "@/components/ui/select";
-import { Field, SectionCard, Segmented } from "./form-field";
+import { Field, GroupHeader, SectionCard, Segmented } from "./form-field";
 import { Chip } from "./chip";
 import { StatusPicker } from "./status-picker";
+import { ProductFeasibilityContext } from "./feasibility-context";
 
-const CHECK_TONES: Record<CheckState, string> = {
-  given: "green",
-  not_given: "red",
-  assumed: "amber",
-};
+/** Per-product form slice — five verdicts + five notes, all optional. */
+interface ProductForm {
+  shapeDimVerdict?: FeasCheckVerdict;
+  gradeVerdict?: FeasCheckVerdict;
+  toleranceVerdict?: FeasCheckVerdict;
+  conditionVerdict?: FeasCheckVerdict;
+  quantityVerdict?: FeasCheckVerdict;
+  shapeDimNote?: string;
+  gradeNote?: string;
+  toleranceNote?: string;
+  conditionNote?: string;
+  quantityNote?: string;
+}
 
-const VERDICT_OPTIONS = FEAS_VERDICTS.map((v) => ({
+interface FeasForm {
+  sm: {
+    feasPriority?: FeasPriority;
+    feasExport?: boolean;
+    feasActionsList?: string;
+    feasibilityCheckedById?: string;
+  };
+  status?: FeasibilityStatus;
+  products: Record<string, ProductForm>;
+}
+
+const CHECK_OPTS = FEAS_CHECK_VERDICTS.map((v) => ({
   value: v,
-  label: FEAS_VERDICT_LABELS[v],
+  label: FEAS_CHECK_VERDICT_LABELS[v],
 }));
 
-const RECHECK_OPTIONS = RECHECK_STATES.map((v) => ({
-  value: v,
-  label: RECHECK_STATE_LABELS[v],
-}));
-
-const PRIORITY_OPTIONS = FEAS_PRIORITIES.map((v) => ({
+const PRIORITY_OPTS = FEAS_PRIORITIES.map((v) => ({
   value: v,
   label: FEAS_PRIORITY_LABELS[v],
 }));
@@ -55,153 +72,186 @@ const YES_NO = [
   { value: "no" as const, label: "No" },
 ];
 
-/** The five sheet re-checks: field pair (segmented + notes) per row. */
-const RECHECK_ROWS = [
-  { check: "feasSizeDrawingCheck", notes: "feasSizeDrawingNotes", label: "Size & Drawing" },
-  { check: "feasToleranceCheck", notes: "feasToleranceNotes", label: "Tolerance" },
-  { check: "feasGradeAppCheck", notes: "feasGradeAppNotes", label: "Grade / Application" },
-  { check: "feasQuantityCheck", notes: "feasQuantityNotes", label: "Quantity" },
-  { check: "feasConditionCheck", notes: "feasConditionNotes", label: "Condition" },
+/** The five per-product checks — key drives the RHF path, label the UI. */
+const CHECKS: { key: "shapeDim" | "grade" | "tolerance" | "condition" | "quantity"; label: string }[] = [
+  { key: "shapeDim", label: "Shape & Dimension" },
+  { key: "grade", label: "Grade" },
+  { key: "tolerance", label: "Tolerance" },
+  { key: "condition", label: "Condition" },
+  { key: "quantity", label: "Quantity" },
+];
+
+/** Verdict-column keys, used for the readiness rollup. */
+const VERDICT_KEYS = [
+  "shapeDimVerdict",
+  "gradeVerdict",
+  "toleranceVerdict",
+  "conditionVerdict",
+  "quantityVerdict",
 ] as const;
 
-interface Props {
-  inquiry: Inquiry;
-  employees: EmployeeOption[];
+/**
+ * One verdict cell: a segmented Feasible / Not feasible / Need info control,
+ * with a note input that reveals only when the verdict is a non-feasible one
+ * (Not feasible or Need info). Bound to `products.<inquiryItemId>.<key>*`.
+ */
+function VerdictCell({
+  control,
+  register,
+  base,
+  label,
+  k,
+}: {
+  control: Control<FeasForm>;
+  register: UseFormRegister<FeasForm>;
+  base: `products.${string}`;
+  label: string;
+  k: string;
+}) {
+  return (
+    <Field label={label} labelOnly>
+      <Controller
+        control={control}
+        name={`${base}.${k}Verdict` as never}
+        render={({ field }) => {
+          const value = field.value as FeasCheckVerdict | undefined;
+          return (
+            <div className="flex flex-col gap-2">
+              <Segmented
+                options={CHECK_OPTS}
+                value={value}
+                onChange={(v) => field.onChange(v)}
+                ariaLabel={`${label} verdict`}
+              />
+              {(value === "not_feasible" || value === "need_info") && (
+                <input
+                  className="nt-input"
+                  placeholder="Add a note"
+                  aria-label={`${label} note`}
+                  {...register(`${base}.${k}Note` as never)}
+                />
+              )}
+            </div>
+          );
+        }}
+      />
+    </Field>
+  );
 }
 
 /**
- * Primary Feasibility — the second stage of the SM record, per Manan's sheet:
- * the inquiry context auto-fetched read-only on top, the reviewer's verdicts
- * and five re-checks below. Notes inputs appear only once a re-check is
- * answered ("If clicked … only then notes pop up will come").
+ * Primary Feasibility — the second SM stage, per Manan's flow. An SM-level
+ * summary (priority / export / who checked / actions) sits above one card per
+ * product: the complete read-only enquiry context, then the five technical
+ * verdicts. Everything saves in one transaction via `saveFeasibilityFull`.
  */
-export function FeasibilityPanel({ inquiry, employees }: Props) {
+export function FeasibilityPanel({
+  inquiry,
+  employees,
+  products = [],
+  itemFeasibility = {},
+}: {
+  inquiry: Inquiry;
+  employees: EmployeeOption[];
+  products?: InquiryProductCard[];
+  itemFeasibility?: Record<string, InquiryItemFeasibility>;
+}) {
   const router = useRouter();
 
-  const defaults: SaveFeasibilityInput = {
-    feasShapeDimensionVerdict: inquiry.feasShapeDimensionVerdict ?? "to_check",
-    feasGradeVerdict: inquiry.feasGradeVerdict ?? "to_check",
-    feasToleranceVerdict: inquiry.feasToleranceVerdict ?? "to_check",
-    feasConditionVerdict: inquiry.feasConditionVerdict ?? "to_check",
-    feasPriority: inquiry.feasPriority ?? undefined,
-    feasExport: inquiry.feasExport ?? undefined,
-    feasSizeDrawingCheck: inquiry.feasSizeDrawingCheck,
-    feasSizeDrawingNotes: inquiry.feasSizeDrawingNotes ?? undefined,
-    feasToleranceCheck: inquiry.feasToleranceCheck,
-    feasToleranceNotes: inquiry.feasToleranceNotes ?? undefined,
-    feasGradeAppCheck: inquiry.feasGradeAppCheck,
-    feasGradeAppNotes: inquiry.feasGradeAppNotes ?? undefined,
-    feasQuantityCheck: inquiry.feasQuantityCheck,
-    feasQuantityNotes: inquiry.feasQuantityNotes ?? undefined,
-    feasConditionCheck: inquiry.feasConditionCheck,
-    feasConditionNotes: inquiry.feasConditionNotes ?? undefined,
-    feasActionsList: inquiry.feasActionsList ?? undefined,
-    feasibilityCheckedById: inquiry.feasibilityCheckedById ?? undefined,
-  };
+  const defaults = React.useMemo<FeasForm>(() => {
+    const productDefaults: Record<string, ProductForm> = {};
+    for (const p of products) {
+      const f = itemFeasibility[p.id];
+      productDefaults[p.id] = {
+        shapeDimVerdict: f?.shapeDimVerdict ?? undefined,
+        gradeVerdict: f?.gradeVerdict ?? undefined,
+        toleranceVerdict: f?.toleranceVerdict ?? undefined,
+        conditionVerdict: f?.conditionVerdict ?? undefined,
+        quantityVerdict: f?.quantityVerdict ?? undefined,
+        shapeDimNote: f?.shapeDimNote ?? undefined,
+        gradeNote: f?.gradeNote ?? undefined,
+        toleranceNote: f?.toleranceNote ?? undefined,
+        conditionNote: f?.conditionNote ?? undefined,
+        quantityNote: f?.quantityNote ?? undefined,
+      };
+    }
+    return {
+      sm: {
+        feasPriority: inquiry.feasPriority ?? undefined,
+        feasExport: inquiry.feasExport ?? undefined,
+        feasActionsList: inquiry.feasActionsList ?? undefined,
+        feasibilityCheckedById: inquiry.feasibilityCheckedById ?? undefined,
+      },
+      status: inquiry.feasibilityStatus,
+      products: productDefaults,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inquiry, products, itemFeasibility]);
 
-  const {
-    control,
-    register,
-    handleSubmit,
-    watch,
-    reset,
-    formState: { isDirty, dirtyFields, isSubmitting },
-  } = useForm<SaveFeasibilityInput>({
-    resolver: zodResolver(SaveFeasibilitySchema),
-    defaultValues: defaults,
-  });
+  const { control, register, handleSubmit, watch, formState: { isSubmitting } } =
+    useForm<FeasForm>({ defaultValues: defaults });
+
+  // Readiness rollup — a product is feasible when all five verdicts pass.
+  const watchedProducts = watch("products");
+  const feasibleCount = products.filter((p) => {
+    const v = watchedProducts?.[p.id];
+    return !!v && VERDICT_KEYS.every((k) => v[k] === "feasible");
+  }).length;
+  const allFeasible = products.length > 0 && feasibleCount === products.length;
 
   const onSubmit = handleSubmit(async (values) => {
-    // Dirty-only patch — the action's strip-undefined + no-op short-circuit
-    // handles the rest.
-    const patch = Object.fromEntries(
-      Object.keys(dirtyFields).map((k) => [k, values[k as keyof SaveFeasibilityInput]]),
-    ) as SaveFeasibilityInput;
-    if (Object.keys(patch).length === 0) return;
-    const res = await saveFeasibility(inquiry.id, patch);
+    const productsPayload = products.map((p) => ({
+      inquiryItemId: p.id,
+      ...values.products[p.id],
+    }));
+    if (values.status === "proceed_to_costing" && feasibleCount < products.length) {
+      fireToast({
+        type: "error",
+        message: "Some products aren't marked Feasible yet — proceeding anyway.",
+      });
+    }
+    const res = await saveFeasibilityFull(inquiry.id, {
+      sm: values.sm,
+      status: values.status,
+      products: productsPayload,
+    });
     if (res.ok) {
       fireToast({ message: "Feasibility saved." });
-      reset(values);
       router.refresh();
     } else {
-      fireToast({ message: res.error, type: "error" });
+      fireToast({ type: "error", message: res.error });
     }
   });
 
   return (
-    <SectionCard
-      title="Primary Feasibility"
-      hint="Auto-fetched from the enquiry — record the technical verdicts below."
-    >
-      {/* ── Context strip (read-only, auto-fetched) ─────────────────── */}
-      <div className="rounded-xl border border-hairline bg-surface-soft p-4 flex flex-col gap-3">
-        <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1 text-[13px]">
-          <span className="font-bold text-ink-strong">{inquiry.companyName}</span>
-          <span className="text-ink-muted">
-            {inquiry.quantityNos ? `${inquiry.quantityNos} ${inquiry.quantityUom}` : "Quantity —"}
-          </span>
-          <span className="text-ink-muted line-clamp-1 max-w-[48ch]">
-            {inquiry.productDescription}
-          </span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {(
-            [
-              ["Shape & Dim", inquiry.shapeDimensionCheck],
-              ["Grade", inquiry.gradeCheck],
-              ["Tolerance", inquiry.toleranceCheck],
-              ["Condition", inquiry.conditionCheck],
-            ] as const
-          ).map(([label, state]) => (
-            <span key={label} className="inline-flex items-center gap-1.5 text-[12px] text-ink-muted">
-              {label}:
-              {state ? (
-                <Chip label={CHECK_STATE_LABELS[state]} tone={CHECK_TONES[state]} />
-              ) : (
-                <span className="text-ink-subtle">—</span>
-              )}
+    <form onSubmit={onSubmit} className="flex flex-col gap-6" noValidate>
+      {/* ── SM-level summary ─────────────────────────────────────────── */}
+      <SectionCard
+        title="Feasibility"
+        inlineHint
+        hint="Verify each product can be made to the customer's spec before costing."
+      >
+        <div className="flex flex-wrap items-center gap-3">
+          <Chip
+            label={`${feasibleCount} of ${products.length} products feasible`}
+            tone={allFeasible ? "green" : "slate"}
+          />
+          {products.length > 0 && feasibleCount < products.length && (
+            <span className="text-[13px] font-semibold" style={{ color: "var(--color-amber-deep)" }}>
+              Not all products are marked Feasible yet.
             </span>
-          ))}
-        </div>
-      </div>
-
-      <form onSubmit={onSubmit} className="flex flex-col gap-5" noValidate>
-        {/* ── Verdicts on the four enquiry checks ─────────────────────── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {(
-            [
-              ["feasShapeDimensionVerdict", "Shape & Dimension"],
-              ["feasGradeVerdict", "Grade (Customer)"],
-              ["feasToleranceVerdict", "Tolerance"],
-              ["feasConditionVerdict", "Condition"],
-            ] as const
-          ).map(([name, label]) => (
-            <Field key={name} label={label}>
-              <Controller
-                control={control}
-                name={name}
-                render={({ field }) => (
-                  <Segmented
-                    options={VERDICT_OPTIONS}
-                    value={field.value}
-                    onChange={field.onChange}
-                    allowClear={false}
-                    ariaLabel={`${label} verdict`}
-                  />
-                )}
-              />
-            </Field>
-          ))}
+          )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Priority">
+        <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
+          <Field label="Priority" labelOnly>
             <Controller
               control={control}
-              name="feasPriority"
+              name="sm.feasPriority"
               render={({ field }) => (
                 <Segmented
-                  options={PRIORITY_OPTIONS}
+                  size="lg"
+                  options={PRIORITY_OPTS}
                   value={field.value}
                   onChange={field.onChange}
                   ariaLabel="Feasibility priority"
@@ -209,12 +259,13 @@ export function FeasibilityPanel({ inquiry, employees }: Props) {
               )}
             />
           </Field>
-          <Field label="Export">
+          <Field label="Export" labelOnly>
             <Controller
               control={control}
-              name="feasExport"
+              name="sm.feasExport"
               render={({ field }) => (
                 <Segmented
+                  size="lg"
                   options={YES_NO}
                   value={field.value === undefined ? undefined : field.value ? "yes" : "no"}
                   onChange={(v) => field.onChange(v === undefined ? undefined : v === "yes")}
@@ -223,117 +274,94 @@ export function FeasibilityPanel({ inquiry, employees }: Props) {
               )}
             />
           </Field>
-        </div>
-
-        {/* ── The five re-checks (notes appear once answered) ─────────── */}
-        <div className="flex flex-col gap-3">
-          <h3 className="text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
-            Feasibility Checks
-          </h3>
-          {RECHECK_ROWS.map((row) => {
-            const current = watch(row.check) as RecheckState | undefined;
-            const showNotes = current !== undefined && current !== "not_done";
-            return (
-              <div
-                key={row.check}
-                className="flex flex-col gap-2 rounded-xl border border-hairline p-3 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <span className="text-[14px] font-bold text-ink-strong min-w-[160px]">
-                  {row.label}
-                </span>
-                <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-                  <Controller
-                    control={control}
-                    name={row.check}
-                    render={({ field }) => (
-                      <Segmented
-                        options={RECHECK_OPTIONS}
-                        value={field.value}
-                        onChange={field.onChange}
-                        allowClear={false}
-                        ariaLabel={`${row.label} check`}
-                      />
-                    )}
-                  />
-                  {showNotes && (
-                    <input
-                      type="text"
-                      placeholder="Notes…"
-                      className="nt-input sm:max-w-[280px]"
-                      aria-label={`${row.label} notes`}
-                      {...register(row.notes)}
-                    />
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field id="feas-actions" label="Actions List">
-            <textarea
-              id="feas-actions"
-              rows={3}
-              placeholder="Actions to take…"
-              className="nt-input"
-              {...register("feasActionsList")}
-            />
-          </Field>
-          <Field id="feas-checked-by" label="Feasibility Checked By">
+          <Field id="feas-checked-by" label="Checked By" labelOnly>
             <Controller
               control={control}
-              name="feasibilityCheckedById"
+              name="sm.feasibilityCheckedById"
               render={({ field }) => (
                 <Select
                   id="feas-checked-by"
                   value={field.value ?? ""}
                   onValueChange={(v) => field.onChange(v === "" ? undefined : v)}
-                  placeholder="Select…"
+                  placeholder="Select"
                   options={employees.map((e) => ({ value: e.id, label: e.name }))}
+                  ariaLabel="Feasibility checked by"
                 />
               )}
             />
           </Field>
         </div>
 
-        <div className="flex items-center justify-between border-t border-hairline pt-4">
-          <div className="flex items-center gap-3">
-            <span className="text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
-              Feasibility Status
-            </span>
-            <StatusPicker
-              value={inquiry.feasibilityStatus}
-              options={FEASIBILITY_STATUSES}
-              labels={FEASIBILITY_STATUS_LABELS}
-              tones={FEASIBILITY_STATUS_COLORS}
-              onPick={(next) => setFeasibilityStatus(inquiry.id, next)}
-              onConfirmed={(next) => {
-                if (next === "proceed_to_costing") {
-                  fireToast({
-                    message: "Marked for costing — Costing module arrives in Phase 3.",
-                    type: "info",
-                  });
-                }
-              }}
-              ariaLabel="Feasibility status"
-            />
+        <Field id="feas-actions" label="Actions List">
+          <textarea
+            id="feas-actions"
+            rows={3}
+            placeholder="Actions to take"
+            className="nt-input"
+            {...register("sm.feasActionsList")}
+          />
+        </Field>
+      </SectionCard>
+
+      {/* ── One card per product ─────────────────────────────────────── */}
+      {products.map((p, i) => (
+        <SectionCard key={p.id}>
+          <GroupHeader n={i + 1} label={p.custProductName || p.itemCode || "Product"} />
+          <ProductFeasibilityContext product={p} inquiry={inquiry} />
+          <div className="grid grid-cols-5 gap-3 max-lg:grid-cols-3 max-md:grid-cols-1">
+            {CHECKS.map((c) => (
+              <VerdictCell
+                key={c.key}
+                control={control}
+                register={register}
+                base={`products.${p.id}`}
+                label={c.label}
+                k={c.key}
+              />
+            ))}
           </div>
-          <button
-            type="submit"
-            disabled={!isDirty || isSubmitting}
-            className="inline-flex items-center gap-2 rounded-pill px-5 py-2.5 text-[14px] font-bold text-white transition-opacity disabled:opacity-50"
-            style={{
-              background: "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
-            }}
-          >
-            {isSubmitting && (
-              <Loader2 size={14} style={{ animation: "spinFast 0.8s linear infinite" }} />
+        </SectionCard>
+      ))}
+
+      {/* ── Footer: status + save ────────────────────────────────────── */}
+      <div className="flex items-center justify-between border-t border-hairline pt-4">
+        <div className="flex items-center gap-3">
+          <span className="text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
+            Feasibility Status
+          </span>
+          <Controller
+            control={control}
+            name="status"
+            render={({ field }) => (
+              <StatusPicker
+                value={field.value ?? inquiry.feasibilityStatus}
+                options={FEASIBILITY_STATUSES}
+                labels={FEASIBILITY_STATUS_LABELS}
+                tones={FEASIBILITY_STATUS_COLORS}
+                onPick={async (next) => {
+                  field.onChange(next);
+                  return { ok: true };
+                }}
+                ariaLabel="Feasibility status"
+              />
             )}
-            Save Feasibility
-          </button>
+          />
         </div>
-      </form>
-    </SectionCard>
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="inline-flex items-center gap-2 rounded-pill px-5 py-2.5 text-[14px] text-white transition-opacity disabled:opacity-50"
+          style={{
+            background: "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
+            fontWeight: 800,
+          }}
+        >
+          {isSubmitting && (
+            <Loader2 size={14} style={{ animation: "spinFast 0.8s linear infinite" }} />
+          )}
+          Save Feasibility
+        </button>
+      </div>
+    </form>
   );
 }
