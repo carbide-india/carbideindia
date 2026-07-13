@@ -264,7 +264,7 @@ export function SettingsForm({ current }: Props) {
               boxShadow: "0 8px 22px -10px rgba(63, 63, 148, 0.55)",
             }}
           >
-            {pending ? "Saving…" : "Save settings"}
+            {pending ? "Saving" : "Save settings"}
           </button>
         </div>
       </div>

@@ -25,7 +25,7 @@ function clerkErrorMessage(err: unknown): string {
 /**
  * Invitation acceptance card — the landing for a Clerk email invitation link.
  *
- * Clerk redirects the clicked invite to `${siteUrl()}/login?__clerk_ticket=…`;
+ * Clerk redirects the clicked invite to `${siteUrl()}/login?__clerk_ticket=`;
  * the login page hands that ticket here. On mount we consume the ticket
  * (`signUp.ticket`) which attaches the already-verified invite email, then the
  * employee picks a password (`signUp.password`) and `signUp.finalize()` drops
@@ -155,7 +155,7 @@ export function AcceptInviteCard({ ticket }: { ticket: string }) {
         </h2>
         <p className="mt-1.5 text-[14px]" style={{ color: "#78716C" }}>
           {phase === "validating"
-            ? "Checking your invitation…"
+            ? "Checking your invitation"
             : phase === "fatal"
               ? "This invite link can't be used."
               : email
@@ -177,7 +177,7 @@ export function AcceptInviteCard({ ticket }: { ticket: string }) {
         {phase === "validating" && (
           <div className="mt-8 flex items-center gap-3 text-[14px]" style={{ color: "#57534E" }}>
             <Loader2 size={18} className="animate-spin" style={{ color: NAVY }} />
-            One moment…
+            One moment
           </div>
         )}
 
@@ -251,7 +251,7 @@ export function AcceptInviteCard({ ticket }: { ticket: string }) {
               className="group relative flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-lg px-5 text-[12px] text-white transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60"
               style={{ ...mono, background: NAVY }}
             >
-              <span>{pending ? "Setting up…" : "Set password & continue"}</span>
+              <span>{pending ? "Setting up" : "Set password & continue"}</span>
               <span className="absolute right-5 top-1/2 -translate-y-1/2 inline-flex">
                 {pending ? (
                   <Loader2 size={16} className="animate-spin" />

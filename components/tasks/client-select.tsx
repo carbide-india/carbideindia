@@ -26,7 +26,7 @@ interface Props {
  * "Client Name" picker — a fully-styled searchable combobox. The dropdown is a
  * portalled Radix Popover so it floats cleanly above the form (no overlap with
  * the fields below, no clipping inside the dialog's scroll). Type to filter,
- * ↑/↓ + Enter to pick, Tab to confirm + move on, and a "+ Add new client…" row
+ * ↑/↓ + Enter to pick, Tab to confirm + move on, and a "+ Add new client" row
  * that flips the control into an inline add input.
  */
 export function ClientSelect({
@@ -36,7 +36,7 @@ export function ClientSelect({
   id,
   required,
   className,
-  placeholder = "Select a client…",
+  placeholder = "Select a client",
   onFocus,
   onBlur,
 }: Props) {
@@ -274,7 +274,7 @@ export function ClientSelect({
                 setHi(0);
               }}
               onKeyDown={searchKeyDown}
-              placeholder="Search clients…"
+              placeholder="Search clients"
               className="w-full bg-transparent outline-none py-2.5"
               style={{ fontSize: 15, fontWeight: 600, color: "var(--color-ink-strong)" }}
             />
@@ -320,7 +320,7 @@ export function ClientSelect({
             }}
           >
             <Plus size={16} strokeWidth={2.6} />
-            Add new client…
+            Add new client
           </li>
         </ul>
       </PopoverContent>

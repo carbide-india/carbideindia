@@ -18,7 +18,7 @@ export type IntegrationStatus = {
 function mask(v: string | undefined): string | null {
   if (!v) return null;
   if (v.length <= 8) return "••••";
-  return `${v.slice(0, 4)}…${v.slice(-4)}`;
+  return `${v.slice(0, 4)}${v.slice(-4)}`;
 }
 
 async function deliveryStats(channel: NotificationChannel) {
@@ -59,7 +59,7 @@ export const getIntegrationHealth = cache(
     out.push({
       channel: "push",
       connected: !!vapidPub && subCount > 0,
-      maskedKey: vapidPub ? `${vapidPub.slice(0, 6)}…` : null,
+      maskedKey: vapidPub ? `${vapidPub.slice(0, 6)}` : null,
       ...pushStats,
     });
 

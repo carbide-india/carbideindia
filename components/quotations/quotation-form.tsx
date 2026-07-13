@@ -26,6 +26,7 @@ import {
   MiniField,
   SectionCard,
   Segmented,
+  GroupHeader,
 } from "@/components/inquiries/form-field";
 
 /** RHF holds the schema's *input* shape (pre-transform); zodResolver hands the
@@ -160,6 +161,8 @@ export function QuotationForm({ inquiries }: Props) {
             drawingRevisionNo: s.drawingRevisionNo ?? "",
             qty: s.qty != null ? Number(s.qty) : undefined,
             gradeCustomer: s.gradeCustomer ?? "",
+            gradeNameForCust: s.gradeNameForCust ?? "",
+            partNo: s.partNo ?? "",
             tolerance: s.tolerance ?? "",
             condition: s.condition ?? "",
             finalCost: s.finalCost != null ? Number(s.finalCost) : undefined,
@@ -205,37 +208,51 @@ export function QuotationForm({ inquiries }: Props) {
       <SectionCard
         title="Linked Enquiry"
         hint="Pick the SM this quote belongs to -- its company, product and grade are auto-fetched and editable below."
+        inlineHint
       >
-        <Field label="Enquiry (SM)" labelOnly required>
-          <Controller
-            control={control}
-            name="inquiryId"
-            render={({ field }) => (
-              <Select
-                value={field.value ?? ""}
-                onValueChange={(v) => void onPickInquiry(v || undefined)}
-                placeholder="Select an enquiry..."
-                searchPlaceholder="Search SM number or company..."
-                searchable
-                ariaLabel="Linked enquiry"
-                options={inquiries.map((o) => ({
-                  value: o.id,
-                  label: `${o.smNumber} — ${o.companyName}`,
-                }))}
-              />
-            )}
-          />
-        </Field>
+        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1 items-start">
+          <Field label="Enquiry (SM)" labelOnly required>
+            <Controller
+              control={control}
+              name="inquiryId"
+              render={({ field }) => (
+                <Select
+                  value={field.value ?? ""}
+                  onValueChange={(v) => void onPickInquiry(v || undefined)}
+                  placeholder="Select an enquiry..."
+                  searchPlaceholder="Search SM number or company..."
+                  searchable
+                  ariaLabel="Linked enquiry"
+                  options={inquiries.map((o) => ({
+                    value: o.id,
+                    label: `${o.smNumber} — ${o.companyName}`,
+                  }))}
+                />
+              )}
+            />
+          </Field>
+
+          <Field id="qt-no" label="Quote No">
+            <input
+              id="qt-no"
+              type="text"
+              className="nt-input"
+              placeholder="Auto-numbers <SM>-Q01 — leave blank"
+              style={{ fontFamily: "var(--font-mono)", fontSize: 13.5 }}
+              {...register("quoteNo")}
+            />
+          </Field>
+        </div>
 
         {(snapshot || autofetching) && (
-          <div className="flex flex-col gap-3 rounded-xl border border-hairline bg-surface-soft px-4 py-3">
-            <div className="flex flex-wrap items-start gap-x-8 gap-y-2">
+          <div className="rounded-xl border border-hairline bg-surface-soft px-4 py-3">
+            <div className="grid grid-cols-6 gap-4 max-lg:grid-cols-3 max-md:grid-cols-2">
               <Caption label="Company">
-                {autofetching ? "..." : snapshot?.companyName ?? "—"}
+                {autofetching ? "—" : snapshot?.companyName ?? "—"}
               </Caption>
               <Caption label="Enquiry Date">
                 {autofetching
-                  ? "..."
+                  ? "—"
                   : snapshot?.enquiryDate
                     ? formatDate(new Date(snapshot.enquiryDate))
                     : "—"}
@@ -243,54 +260,42 @@ export function QuotationForm({ inquiries }: Props) {
               {snapshot?.salesPersonName && (
                 <Caption label="Sales Person">{snapshot.salesPersonName}</Caption>
               )}
+              {!autofetching && snapshot && (
+                <SmDetailFields snapshot={snapshot} />
+              )}
             </div>
-            {!autofetching && snapshot && <SmDetailsRow snapshot={snapshot} />}
           </div>
         )}
-
-        <Field id="qt-no" label="Quote No">
-          <input
-            id="qt-no"
-            type="text"
-            className="nt-input"
-            placeholder="Leave blank to auto-number"
-            style={{ fontFamily: "var(--font-mono)", fontSize: 13.5 }}
-            {...register("quoteNo")}
-          />
-          <p className="text-[12.5px] text-ink-subtle">
-            Quote No auto-numbers as{" "}
-            <span style={{ fontFamily: "var(--font-mono)" }}>&lt;SM&gt;-Q01</span>{" "}
-            — leave blank.
-          </p>
-        </Field>
       </SectionCard>
 
       {/* 2. Products & Pricing (per-line repeatable editor) */}
       <SectionCard
         title="Products & Pricing"
         hint="One line per product -- prefilled from the enquiry; add pricing per line."
+        inlineHint
       >
         {fields.map((field, index) => (
           <div
             key={field.id}
-            className="flex flex-col gap-5 rounded-section border border-hairline p-5"
+            className="flex flex-col gap-4 rounded-section border border-hairline p-5"
             style={{ background: "var(--color-surface-soft)" }}
           >
             {/* Card header */}
-            <div className="flex items-center justify-between">
-              <h3 className="text-[13px] font-bold text-ink-strong">
-                Line {index + 1}
-              </h3>
-              <button
-                type="button"
-                onClick={() => remove(index)}
-                disabled={fields.length === 1}
-                className="inline-flex items-center gap-1.5 rounded-chip border border-hairline px-3 py-1.5 text-[12.5px] font-semibold text-ink-muted transition-colors hover:border-hairline-strong hover:text-ink-strong disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <Trash2 size={13} strokeWidth={2.4} />
-                Remove
-              </button>
-            </div>
+            <GroupHeader
+              n={index + 1}
+              label="Product"
+              action={
+                <button
+                  type="button"
+                  onClick={() => remove(index)}
+                  disabled={fields.length === 1}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-chip border border-hairline px-3 py-1.5 text-[12.5px] font-semibold text-ink-muted transition-colors hover:border-hairline-strong hover:text-ink-strong disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Trash2 size={13} strokeWidth={2.4} />
+                  Remove
+                </button>
+              }
+            />
 
             {/* Product identity */}
             <div className="grid grid-cols-[1fr_auto] gap-4 max-md:grid-cols-1">
@@ -324,7 +329,7 @@ export function QuotationForm({ inquiries }: Props) {
               </Field>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+            <div className="grid grid-cols-5 gap-3 max-lg:grid-cols-3 max-md:grid-cols-1">
               <Field
                 id={`lines.${index}.custDrawingNo`}
                 label="Customer Drawing No"
@@ -347,9 +352,6 @@ export function QuotationForm({ inquiries }: Props) {
                   {...register(`lines.${index}.drawingRevisionNo`)}
                 />
               </Field>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
               <Field id={`lines.${index}.partNo`} label="Part No">
                 <input
                   id={`lines.${index}.partNo`}
@@ -369,9 +371,6 @@ export function QuotationForm({ inquiries }: Props) {
                   {...register(`lines.${index}.gradeNameForCust`)}
                 />
               </Field>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
               <Field
                 id={`lines.${index}.gradeCustomer`}
                 label="Grade (Customer)"
@@ -492,7 +491,7 @@ export function QuotationForm({ inquiries }: Props) {
 
       {/* 3. Status */}
       <SectionCard title="Status">
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1 items-start">
+        <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1 items-start">
           <Field label="Costing Done Status" labelOnly>
             <Controller
               control={control}
@@ -523,16 +522,16 @@ export function QuotationForm({ inquiries }: Props) {
               )}
             />
           </Field>
+          <Field id="qt-link" label="Quotation Link">
+            <input
+              id="qt-link"
+              type="url"
+              className="nt-input"
+              placeholder="https://..."
+              {...register("quotationLink")}
+            />
+          </Field>
         </div>
-        <Field id="qt-link" label="Quotation Link">
-          <input
-            id="qt-link"
-            type="url"
-            className="nt-input"
-            placeholder="https://..."
-            {...register("quotationLink")}
-          />
-        </Field>
       </SectionCard>
 
       {(serverError || firstFieldError) && (
@@ -624,9 +623,10 @@ function buildDimString(s: QuoteAutofill): string | null {
   return parts.length > 0 ? parts.join(" × ") : null;
 }
 
-/** Read-only "SM Details" row -- shape, dimensions, contact.
- *  Renders nothing when all three sections are empty. */
-function SmDetailsRow({ snapshot: s }: { snapshot: QuoteAutofill }) {
+/** Read-only SM detail cells -- shape, dimensions, contact. Returned as a
+ *  fragment so they sit as siblings of Company / Enquiry Date / Sales Person in
+ *  the single snapshot grid. Each present section is one grid cell. */
+function SmDetailFields({ snapshot: s }: { snapshot: QuoteAutofill }) {
   const dimStr = buildDimString(s);
   const contactName =
     [s.contactFirstName, s.contactLastName].filter(Boolean).join(" ") || null;
@@ -635,13 +635,8 @@ function SmDetailsRow({ snapshot: s }: { snapshot: QuoteAutofill }) {
   const hasContact =
     contactName != null || s.contactNo != null || s.contactEmail != null;
 
-  if (!hasShape && !hasDims && !hasContact) return null;
-
   return (
-    <div
-      className="flex flex-wrap items-start gap-x-8 gap-y-2 pt-2"
-      style={{ borderTop: "1px solid var(--color-hairline)" }}
-    >
+    <>
       {hasShape && <Caption label="Shape">{s.shape}</Caption>}
       {hasDims && (
         <Caption label="Dimensions">
@@ -655,6 +650,6 @@ function SmDetailsRow({ snapshot: s }: { snapshot: QuoteAutofill }) {
             .join(" · ") || "—"}
         </Caption>
       )}
-    </div>
+    </>
   );
 }

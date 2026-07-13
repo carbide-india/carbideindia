@@ -89,7 +89,7 @@ export function CommentInput({ taskId, me }: Props) {
                   if (canSubmit) post();
                 }
               }}
-              placeholder="Add a comment, ask a question, or leave a note for the team…  (⌘↵ to post)"
+              placeholder="Add a comment, ask a question, or leave a note for the team  (⌘↵ to post)"
               className="w-full resize-y bg-transparent px-4 pt-3 pb-2 text-[16px] text-ink outline-none placeholder:text-ink-subtle"
               style={{ lineHeight: 1.55, minHeight: 72 }}
             />
@@ -113,7 +113,7 @@ export function CommentInput({ taskId, me }: Props) {
                 }}
               >
                 <Send size={14} strokeWidth={2.4} />
-                {pending ? "Posting…" : "Post"}
+                {pending ? "Posting" : "Post"}
               </button>
             </div>
           </div>

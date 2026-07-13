@@ -1,10 +1,13 @@
-import { DashboardHeader } from "@/components/layout/header";
-import { DashboardFooter } from "@/components/layout/footer";
 import { QuotationForm } from "@/components/quotations/quotation-form";
 import { requireUser, getCurrentEmployee } from "@/lib/auth/current";
 import { listInquiryOptions } from "@/lib/queries/inquiries";
 import { listEmployeeOptions } from "@/lib/queries/employees";
-import { BulkUploadButton } from "@/components/import/bulk-upload-button";
+import { loadLookups, specRefKinds } from "@/lib/import/lookups";
+import { quotationImportSpec } from "@/lib/import/specs/quotation";
+import { commitQuotationImport } from "@/app/(app)/quotations/import/actions";
+import { BulkImportModal } from "@/components/import/bulk-import-modal";
+import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
+import { UserMenuServer } from "@/components/header/user-menu-server";
 
 export const dynamic = "force-dynamic";
 
@@ -16,28 +19,30 @@ export default async function NewQuotationPage() {
     listEmployeeOptions(),
   ]);
 
+  // Admins get a Bulk Upload entry in the sidebar (opens the quotation import modal).
+  const importLookups = me?.isAdmin
+    ? await loadLookups(specRefKinds(quotationImportSpec.fields))
+    : null;
+
   return (
-    <>
-      <DashboardHeader generatedAt={new Date()} />
-      <main className="mx-auto max-w-[980px] px-12 max-md:px-4 pt-8 pb-16">
-        <header className="mb-6">
-          <div className="text-[10px] uppercase tracking-[0.18em] text-ink-subtle font-bold">
-            Sales · Quote Master
-          </div>
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-display-lg text-ink-strong mt-1">New Quotation</h1>
-              <p className="text-body-lg text-ink-subtle mt-1">
-                Build a quote from an enquiry — pick the SM, then price it, set the
-                timeline and validity.
-              </p>
-            </div>
-            {me?.isAdmin && <BulkUploadButton href="/quotations/import" />}
-          </div>
-        </header>
+    <EnquiryModuleShell
+      title="Quotation"
+      userMenu={<UserMenuServer />}
+      bulkUpload={
+        me?.isAdmin && importLookups ? (
+          <BulkImportModal
+            spec={quotationImportSpec}
+            lookups={importLookups}
+            commit={commitQuotationImport}
+            isAdmin
+            triggerClassName="flex h-[44px] w-full items-center gap-3 rounded-lg px-3.5 text-[14px] font-semibold text-[#3a4152] transition hover:bg-[#efeffb] hover:text-[#3f3f94]"
+          />
+        ) : null
+      }
+    >
+      <div className="w-full">
         <QuotationForm inquiries={inquiries} employees={employees} />
-      </main>
-      <DashboardFooter />
-    </>
+      </div>
+    </EnquiryModuleShell>
   );
 }

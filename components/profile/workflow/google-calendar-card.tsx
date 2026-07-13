@@ -14,7 +14,7 @@ import {
  * assigned to this person automatically appear on their calendar.
  *
  * Connect is a full-page OAuth redirect (`/api/google/connect`); disconnect is
- * a server action. The `?google=…` query param (set by the OAuth callback)
+ * a server action. The `?google=` query param (set by the OAuth callback)
  * surfaces a one-time status toast.
  */
 export function GoogleCalendarCard({
@@ -114,7 +114,7 @@ export function GoogleCalendarCard({
                 ) : (
                   <RefreshCw size={14} strokeWidth={2.4} />
                 )}
-                {syncing ? "Syncing…" : "Sync now"}
+                {syncing ? "Syncing" : "Sync now"}
               </button>
               <button
                 type="button"

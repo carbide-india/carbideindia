@@ -282,8 +282,8 @@ export function NewTaskForm({ employees, clients, subjects, projectNodes = [], o
                 id="nt-initiator"
                 value={field.value ?? ""}
                 onValueChange={field.onChange}
-                placeholder="Select an employee…"
-                searchPlaceholder="Search employees…"
+                placeholder="Select an employee"
+                searchPlaceholder="Search employees"
                 searchable
                 options={employees.map((emp) => ({ value: emp.id, label: emp.name }))}
               />
@@ -345,7 +345,7 @@ export function NewTaskForm({ employees, clients, subjects, projectNodes = [], o
               onChange={field.onChange}
               subjects={subjects}
               className="nt-input"
-              placeholder="Select a subject…"
+              placeholder="Select a subject"
             />
           )}
         />
@@ -357,7 +357,7 @@ export function NewTaskForm({ employees, clients, subjects, projectNodes = [], o
           rows={4}
           className="nt-input resize-y"
           style={{ fontWeight: 400 }}
-          placeholder="What needs to happen, in detail…"
+          placeholder="What needs to happen, in detail"
           {...register("description")}
         />
       </Field>
@@ -368,7 +368,7 @@ export function NewTaskForm({ employees, clients, subjects, projectNodes = [], o
           rows={3}
           className="nt-input resize-y"
           style={{ fontWeight: 400 }}
-          placeholder="Notes only the team sees…"
+          placeholder="Notes only the team sees"
           {...register("notes")}
         />
       </Field>
@@ -464,7 +464,7 @@ export function NewTaskForm({ employees, clients, subjects, projectNodes = [], o
               "0 6px 16px rgba(63, 63, 148, 0.34)";
           }}
         >
-          {pending ? "Creating…" : "Create Task"}
+          {pending ? "Creating" : "Create Task"}
         </button>
       </div>
     </form>
@@ -619,7 +619,7 @@ function DoerMultiSelect({
             setHi(0);
           }}
           onKeyDown={onKeyDown}
-          placeholder={selected.length === 0 ? "Type a name…" : ""}
+          placeholder={selected.length === 0 ? "Type a name" : ""}
           className="flex-1 min-w-[90px] bg-transparent outline-none"
           style={{ fontSize: 15, fontWeight: 600, color: "var(--color-ink-strong)", padding: "2px 0" }}
         />
@@ -782,8 +782,8 @@ function TagsInput({
         }}
         placeholder={
           tags.length === 0
-            ? "Type a tag and press Enter or comma to add…"
-            : "Add another tag…"
+            ? "Type a tag and press Enter or comma to add"
+            : "Add another tag"
         }
         className="flex-1 min-w-[180px] bg-transparent outline-none"
         style={{

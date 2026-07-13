@@ -10,7 +10,7 @@
  *
  * Legacy shape TEXT is resolved to a shape master via
  * `normalizeShapeName` → active shape master name, so historical free-text
- * ("cyl", "flat spl", …) maps to the canonical six before syncing. A line whose
+ * ("cyl", "flat spl", ) maps to the canonical six before syncing. A line whose
  * shape can't be resolved (or is null) still produces a DRAFT (never skipped).
  *
  * READ-ONLY until the controller runs it. Idempotent (only touches item_id IS

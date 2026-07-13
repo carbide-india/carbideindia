@@ -151,7 +151,7 @@ export function ScheduleSection({ value, onChange }: Props) {
         )}
       </div>
 
-      {/* Recurrence — Google-Calendar-faithful presets + Custom… dialog. */}
+      {/* Recurrence — Google-Calendar-faithful presets + Custom dialog. */}
       <RecurrenceControl
         anchor={anchor}
         recurrence={value.recurrence}

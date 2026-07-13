@@ -336,7 +336,7 @@ export function NegotiationDetail({ negotiation, employees, inquiryLink, lines }
                   id="nd-link"
                   type="url"
                   className="nt-input"
-                  placeholder="https://…"
+                  placeholder="https://"
                   {...register("quotationLink")}
                 />
               </Field>
@@ -345,7 +345,7 @@ export function NegotiationDetail({ negotiation, employees, inquiryLink, lines }
                   id="nd-notes"
                   rows={4}
                   className="nt-input resize-y"
-                  placeholder="Counter-offers, customer feedback, next steps…"
+                  placeholder="Counter-offers, customer feedback, next steps"
                   {...register("negotiationNotes")}
                 />
               </Field>

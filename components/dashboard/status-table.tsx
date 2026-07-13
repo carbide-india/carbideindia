@@ -352,7 +352,7 @@ function FilterBar({
           type="text"
           value={query}
           onChange={(e) => onQuery(e.target.value)}
-          placeholder="Search employees…"
+          placeholder="Search employees"
           className="flex-1 bg-transparent border-0 outline-none px-2.5 text-body-lg text-ink placeholder:text-ink-subtle"
           aria-label="Search employees"
         />

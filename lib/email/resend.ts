@@ -65,7 +65,7 @@ const SUBJECT_MAX = 80;
 function clampSubject(s: string): string {
   const trimmed = s.trim();
   if (trimmed.length <= SUBJECT_MAX) return trimmed;
-  return `${trimmed.slice(0, SUBJECT_MAX - 1)}…`;
+  return `${trimmed.slice(0, SUBJECT_MAX - 1)}`;
 }
 
 export function digestSubject(pendingCount: number): string {

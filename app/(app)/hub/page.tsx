@@ -3,7 +3,6 @@ import Link from "next/link";
 import { Bell, Bot, FileText, Database, Cog, Plus, Activity, ChevronRight } from "lucide-react";
 import { getCurrentEmployee } from "@/lib/auth/current";
 import { getUnreadCount } from "@/lib/queries/notifications";
-import { getHubCounts, type HubCounts } from "@/lib/queries/hub-counts";
 import { UserMenuServer } from "@/components/header/user-menu-server";
 import { HubSearch } from "@/components/hub/hub-search";
 
@@ -16,12 +15,11 @@ export const metadata: Metadata = {
 const MONO = "var(--font-mono-display)";
 
 const MODULES: {
-  key: keyof HubCounts;
+  key: string;
   title: string;
   desc: string;
   href: Route;
   Icon: typeof Bot;
-  metricLabel: string;
 }[] = [
   {
     key: "wms",
@@ -29,15 +27,13 @@ const MODULES: {
     desc: "Work Management System. Track active jobs, schedules, and floor routing.",
     href: "/" as Route,
     Icon: Bot,
-    metricLabel: "ACTIVE JOBS",
   },
   {
     key: "enquiries",
     title: "ENQUIRIES",
     desc: "Manage incoming requests, client quotations, and sales pipeline tracking.",
-    href: "/inquiries" as Route,
+    href: "/enquiries" as Route,
     Icon: FileText,
-    metricLabel: "ENQUIRIES",
   },
   {
     key: "masters",
@@ -45,7 +41,6 @@ const MODULES: {
     desc: "Core system data. Manage materials, parts libraries, and vendor directories.",
     href: "/masters" as Route,
     Icon: Database,
-    metricLabel: "ITEMS",
   },
   {
     key: "admin",
@@ -53,7 +48,6 @@ const MODULES: {
     desc: "System configuration, user roles, access control, and audit logs.",
     href: "/admin" as Route,
     Icon: Cog,
-    metricLabel: "USERS",
   },
 ];
 
@@ -61,10 +55,7 @@ export default async function HubPage() {
   const me = await getCurrentEmployee();
   const firstName = me?.name?.trim().split(/\s+/)[0] ?? "there";
 
-  const [counts, unread] = await Promise.all([
-    getHubCounts().catch((): HubCounts => ({ wms: null, enquiries: null, masters: null, admin: null })),
-    me ? getUnreadCount(me.id).catch(() => 0) : Promise.resolve(0),
-  ]);
+  const unread = me ? await getUnreadCount(me.id).catch(() => 0) : 0;
 
   return (
     <div className="min-h-screen bg-[#f3f4f6]">
@@ -126,52 +117,34 @@ export default async function HubPage() {
 
         {/* Module cards */}
         <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {MODULES.map((m, i) => {
-            const n = counts[m.key];
-            return (
-              <Link
-                key={m.key}
-                href={m.href}
-                className="hub-in group relative flex flex-col overflow-hidden rounded-2xl border border-[#e8eaed] bg-white p-7 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:border-[#c7ccf5] hover:shadow-[0_18px_44px_rgba(30,47,102,0.16)]"
-                style={{ animationDelay: `${0.1 + i * 0.06}s` }}
+          {MODULES.map((m, i) => (
+            <Link
+              key={m.key}
+              href={m.href}
+              className="hub-in group relative flex flex-col overflow-hidden rounded-2xl border border-[#e8eaed] bg-white p-7 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:border-[#c7ccf5] hover:shadow-[0_18px_44px_rgba(30,47,102,0.16)]"
+              style={{ animationDelay: `${0.1 + i * 0.06}s` }}
+            >
+              {/* top hover accent */}
+              <span className="pointer-events-none absolute inset-x-0 top-0 h-[4px] origin-left scale-x-0 bg-[linear-gradient(90deg,#2b46b5,#6d5cf0)] transition-transform duration-300 group-hover:scale-x-100" />
+
+              <div className="grid h-16 w-16 place-items-center rounded-2xl bg-[#e8eefc] transition-all duration-300 group-hover:bg-[#dbe3fb] group-hover:shadow-[0_8px_20px_rgba(43,70,181,0.22)]">
+                <m.Icon
+                  className="h-[32px] w-[32px] text-[#2b46b5] transition-transform duration-300 group-hover:scale-110"
+                  strokeWidth={1.9}
+                />
+              </div>
+
+              <h3 className="mt-6 text-[23px] font-extrabold tracking-tight text-[#111827]">{m.title}</h3>
+              <p className="mt-2.5 min-h-[76px] text-[15.5px] font-medium leading-[1.6] text-[#4b5563]">{m.desc}</p>
+              <div
+                className="mt-4 flex items-center gap-1.5 text-[13.5px] font-bold tracking-[0.1em] text-[#2b46b5]"
+                style={{ fontFamily: MONO }}
               >
-                {/* top hover accent */}
-                <span className="pointer-events-none absolute inset-x-0 top-0 h-[4px] origin-left scale-x-0 bg-[linear-gradient(90deg,#2b46b5,#6d5cf0)] transition-transform duration-300 group-hover:scale-x-100" />
-
-                <div className="flex items-start justify-between">
-                  <div className="grid h-16 w-16 place-items-center rounded-2xl bg-[#e8eefc] transition-all duration-300 group-hover:bg-[#dbe3fb] group-hover:shadow-[0_8px_20px_rgba(43,70,181,0.22)]">
-                    <m.Icon
-                      className="h-[32px] w-[32px] text-[#2b46b5] transition-transform duration-300 group-hover:scale-110"
-                      strokeWidth={1.9}
-                    />
-                  </div>
-                  {n !== null && (
-                    <div className="text-right">
-                      <div className="text-[30px] font-extrabold leading-none tracking-tight text-[#1a2a5e] tabular-nums">
-                        {n.toLocaleString("en-IN")}
-                      </div>
-                      <div
-                        className="mt-1.5 text-[10.5px] font-semibold tracking-[0.12em] text-[#9aa0ab]"
-                        style={{ fontFamily: MONO }}
-                      >
-                        {m.metricLabel}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <h3 className="mt-6 text-[23px] font-extrabold tracking-tight text-[#111827]">{m.title}</h3>
-                <p className="mt-2.5 min-h-[76px] text-[15.5px] font-medium leading-[1.6] text-[#4b5563]">{m.desc}</p>
-                <div
-                  className="mt-4 flex items-center gap-1.5 text-[13.5px] font-bold tracking-[0.1em] text-[#2b46b5]"
-                  style={{ fontFamily: MONO }}
-                >
-                  OPEN MODULE
-                  <ChevronRight className="h-[18px] w-[18px] transition-transform duration-200 group-hover:translate-x-1" />
-                </div>
-              </Link>
-            );
-          })}
+                OPEN MODULE
+                <ChevronRight className="h-[18px] w-[18px] transition-transform duration-200 group-hover:translate-x-1" />
+              </div>
+            </Link>
+          ))}
         </div>
 
         {/* Quick Actions bar */}

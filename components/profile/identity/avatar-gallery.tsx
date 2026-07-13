@@ -173,7 +173,7 @@ export function AvatarGallery({ initialName, currentUrl, onPicked }: Props) {
                     placeItems: "center",
                   }}
                 >
-                  …
+                  
                 </span>
               )}
             </button>

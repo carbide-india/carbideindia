@@ -356,7 +356,7 @@ export function SampleDetail({ sample, employees, inquiryLink }: Props) {
                               onChange={field.onChange}
                               options={STAGE_LOCATIONS}
                               otherOption="Others"
-                              specifyPlaceholder="Specify lab / vendor…"
+                              specifyPlaceholder="Specify lab / vendor"
                               ariaLabel={`${row.label} location`}
                             />
                           )}

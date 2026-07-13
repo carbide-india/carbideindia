@@ -130,9 +130,9 @@ export function ReassignDialog({
                 id="rd-doer"
                 value={newDoerId}
                 onValueChange={setNewDoerId}
-                placeholder="Select an employee…"
+                placeholder="Select an employee"
                 searchable
-                searchPlaceholder="Search employees…"
+                searchPlaceholder="Search employees"
                 options={options.map((e) => ({ value: e.id, label: e.name }))}
               />
             </div>
@@ -170,7 +170,7 @@ export function ReassignDialog({
                     "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
                 }}
               >
-                {pending ? "Saving…" : "Reassign"}
+                {pending ? "Saving" : "Reassign"}
               </button>
             </div>
           </form>

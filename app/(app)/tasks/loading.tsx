@@ -47,7 +47,7 @@ export default function TasksLoading() {
         </div>
       </main>
 
-      <PageBuffering label="Loading tasks…" />
+      <PageBuffering label="Loading tasks" />
     </>
   );
 }

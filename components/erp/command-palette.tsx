@@ -136,7 +136,7 @@ export function CommandPalette() {
                 autoFocus
                 value={query}
                 onValueChange={setQuery}
-                placeholder="Type to search records or jump to a page…"
+                placeholder="Type to search records or jump to a page"
                 className="h-14 !border-b-0 !px-0 text-[16px]"
               />
               {isFetching && (

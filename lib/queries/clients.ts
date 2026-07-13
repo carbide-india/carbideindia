@@ -26,7 +26,7 @@ import type {
  *
  * Cached under the `clients` tag — the roster is identical for every
  * user and changes only when an admin creates/renames a client or any
- * authed user uses "+ Add new client…" (both write paths call
+ * authed user uses "+ Add new client" (both write paths call
  * `updateTag(CACHE_TAGS.clients)`). 10-min TTL is just a safety net
  * for an invalidation we missed.
  */

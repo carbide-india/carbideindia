@@ -19,13 +19,13 @@ import {
 import { format, differenceInCalendarDays } from "date-fns";
 
 // Classic numbered pagination: a rows-per-page selector (default 25) with
-// First « · Prev · 1 2 3 … N · Next · Last » controls.
+// First « · Prev · 1 2 3  N · Next · Last » controls.
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 const DEFAULT_PAGE_SIZE = 25;
 
 // Build the windowed list of page numbers to render: always first + last, the
 // current page with one neighbour on each side, and "ellipsis" gaps between.
-// e.g. total 34 on page 17 → [1, …, 16, 17, 18, …, 34]. Short lists (≤7) show
+// e.g. total 34 on page 17 → [1, , 16, 17, 18, , 34]. Short lists (≤7) show
 // every page with no ellipsis.
 function pageWindow(current: number, total: number): (number | "ellipsis")[] {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
@@ -130,7 +130,7 @@ import { CriticalBadge } from "@/components/ui/critical-badge";
 import { PRIORITY_LABELS, TASK_STATUSES, TASK_PRIORITIES } from "@/db/enums";
 import type { TaskStatus, StatusColorToken, TaskPriority } from "@/db/enums";
 
-// Canonical status order (Not Read → … → Done → Approved → …) so grouping /
+// Canonical status order (Not Read →  → Done → Approved → ) so grouping /
 // sorting by status follows the workflow rather than alphabetical by label.
 const STATUS_ORDER: Record<string, number> = Object.fromEntries(
   TASK_STATUSES.map((s, i) => [s, i]),
@@ -857,7 +857,7 @@ export function TaskTable({
   );
 }
 
-// Compact numbered pager for the top toolbar: 1 2 3 … N · Next · Last. The
+// Compact numbered pager for the top toolbar: 1 2 3  N · Next · Last. The
 // current page reads red; the always-present "1" doubles as a jump-to-first
 // (so a dedicated First/Prev is unnecessary — the previous page number is
 // always one tap away in the window). Hidden entirely on a single-page list.
@@ -887,7 +887,7 @@ function CompactPager({
             className="px-1 text-ink-subtle font-bold select-none"
             aria-hidden
           >
-            …
+            
           </span>
         ) : (
           <button
@@ -953,7 +953,7 @@ function SearchBox({
           type="search"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="Search by task no. (#1042), title, subject, client, doer…"
+          placeholder="Search by task no. (#1042), title, subject, client, doer"
           aria-label="Search tasks"
           className="w-full h-11 pl-10 pr-9 rounded-pill border border-hairline bg-surface-card text-[15px] text-ink-strong placeholder:text-ink-subtle outline-none transition-all focus:border-brand focus:ring-2 focus:ring-brand/25"
         />

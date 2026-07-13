@@ -107,7 +107,7 @@ export function WorkingHours({ initial }: Props) {
             save({ timezone: v });
           }}
           searchable
-          searchPlaceholder="Search timezone…"
+          searchPlaceholder="Search timezone"
           options={[
             ...TZ_OPTIONS.map((t) => ({ value: t, label: t })),
             ...(!TZ_OPTIONS.includes(tz) ? [{ value: tz, label: tz }] : []),

@@ -222,10 +222,10 @@ export function BioAndTags({ initialBio, initialTags }: Props) {
             }}
             placeholder={
               tags.length === 0
-                ? "Type a tag and press Enter…"
+                ? "Type a tag and press Enter"
                 : tags.length >= TAGS_MAX
                   ? "Maximum reached"
-                  : "Add another…"
+                  : "Add another"
             }
             disabled={tags.length >= TAGS_MAX}
             style={{

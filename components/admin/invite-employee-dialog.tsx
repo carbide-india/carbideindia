@@ -161,7 +161,7 @@ export function InviteEmployeeDialog({
                   boxShadow: "0 4px 14px rgba(63, 63, 148, 0.32)",
                 }}
               >
-                {pending ? "Sending…" : "Send invite"}
+                {pending ? "Sending" : "Send invite"}
               </button>
             </div>
           </form>

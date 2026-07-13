@@ -41,7 +41,7 @@ const STAGE_DOTS = [
  * Sample register table — a thin config wrapper over the shared
  * RegisterDataTable. The non-sortable "Stages" column is Manan's at-a-glance
  * incompleteness view: four colour dots, one per stage. Export collapses the
- * four stages into a single "Dim:… · Chem:… · Drw:… · Cost:…" string.
+ * four stages into a single "Dim: · Chem: · Drw: · Cost:" string.
  */
 export function SampleTable({ rows, employees }: Props) {
   const columns = React.useMemo<RegisterColumn<SampleListItem>[]>(

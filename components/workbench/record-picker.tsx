@@ -129,7 +129,7 @@ interface PickerFieldProps {
 export function PickerField({
   label,
   value,
-  placeholder = "Select…",
+  placeholder = "Select",
   onOpen,
   disabled,
   id,

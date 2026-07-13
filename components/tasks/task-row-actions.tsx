@@ -250,9 +250,9 @@ export function TaskRowActions({ row, employees, me }: Props) {
           };
           const items: Array<{ label: string; href: string }> = [];
           if (canApprove({ ...permInput, isDoersManager: false }))
-            items.push({ label: "Approve / Decline…", href: `/tasks/${row.id}#approve` });
+            items.push({ label: "Approve / Decline", href: `/tasks/${row.id}#approve` });
           if (canReassign(permInput))
-            items.push({ label: "Reassign…", href: `/tasks/${row.id}#reassign` });
+            items.push({ label: "Reassign", href: `/tasks/${row.id}#reassign` });
           if (items.length === 0) return null;
           return (
             <>
@@ -273,7 +273,7 @@ export function TaskRowActions({ row, employees, me }: Props) {
             <DropdownMenuSeparator />
             <DropdownMenuItem danger onClick={handleDelete}>
               <Trash2 size={14} />
-              Delete task…
+              Delete task
             </DropdownMenuItem>
           </>
         )}

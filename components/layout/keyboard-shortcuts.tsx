@@ -53,7 +53,7 @@ export function KeyboardShortcuts() {
       }
       if (isTypingTarget(e.target)) return;
 
-      // Second key of a `g …` sequence.
+      // Second key of a `g ` sequence.
       if (gAt.current && Date.now() - gAt.current < SEQUENCE_WINDOW_MS) {
         gAt.current = 0;
         if (!e.metaKey && !e.ctrlKey && !e.altKey) {

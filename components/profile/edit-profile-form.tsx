@@ -132,7 +132,7 @@ export function EditProfileForm({ initial }: Props) {
             onChange={(e) => setAvatarUrl(e.target.value)}
             maxLength={2000}
             className="w-full rounded-md border border-[#E2E8F0] px-3.5 py-2.5 text-[15px] bg-white outline-none focus:border-[#94A3B8]"
-            placeholder="https://…"
+            placeholder="https://"
           />
         </label>
       </div>
@@ -159,7 +159,7 @@ export function EditProfileForm({ initial }: Props) {
               "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
           }}
         >
-          {pending ? "Saving…" : "Save changes"}
+          {pending ? "Saving" : "Save changes"}
         </button>
       </div>
     </form>

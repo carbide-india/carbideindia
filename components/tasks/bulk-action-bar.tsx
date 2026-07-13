@@ -107,7 +107,7 @@ export function BulkActionBar({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="max-h-72 overflow-y-auto">
-          <DropdownMenuLabel>Set status to…</DropdownMenuLabel>
+          <DropdownMenuLabel>Set status to</DropdownMenuLabel>
           {statuses.map((s) => (
             <DropdownMenuItem
               key={s}
@@ -129,7 +129,7 @@ export function BulkActionBar({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">
-          <DropdownMenuLabel>Set priority to…</DropdownMenuLabel>
+          <DropdownMenuLabel>Set priority to</DropdownMenuLabel>
           {TASK_PRIORITIES.map((p) => (
             <DropdownMenuItem
               key={p}
@@ -153,7 +153,7 @@ export function BulkActionBar({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="max-h-72 overflow-y-auto">
-          <DropdownMenuLabel>Reassign doer to…</DropdownMenuLabel>
+          <DropdownMenuLabel>Reassign doer to</DropdownMenuLabel>
           {employees.map((e) => (
             <DropdownMenuItem
               key={e.id}

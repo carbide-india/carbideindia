@@ -275,7 +275,7 @@ export default async function ProfilePage() {
                     rows={achievements.map((a) => ({
                       // Pass ONLY the serializable fields — `a.def` also carries
                       // an `evaluate` function, which can't cross the RSC→client
-                      // boundary (throws "Functions cannot be passed…").
+                      // boundary (throws "Functions cannot be passed").
                       def: {
                         key: a.def.key,
                         name: a.def.name,

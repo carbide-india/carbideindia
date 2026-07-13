@@ -55,7 +55,7 @@ export function Spinner({
  * a `loading.tsx` so the wait reads as an intentional "buffering" moment.
  */
 export function BufferingState({
-  label = "Loading…",
+  label = "Loading",
   className = "",
 }: {
   label?: string;
@@ -79,7 +79,7 @@ export function BufferingState({
  * page, so the loading experience is uniform app-wide (not tasks-only).
  * Pointer-events-none so it never blocks the skeleton beneath it.
  */
-export function PageBuffering({ label = "Loading…" }: { label?: string }) {
+export function PageBuffering({ label = "Loading" }: { label?: string }) {
   return (
     <div
       role="status"

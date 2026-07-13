@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
-import { DashboardHeader } from "@/components/layout/header";
-import { DashboardFooter } from "@/components/layout/footer";
 import { CostingForm } from "@/components/costings/costing-form";
 import { requireUser } from "@/lib/auth/current";
 import { getInquiryItemCaption } from "@/lib/queries/costings";
+import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
+import { UserMenuServer } from "@/components/header/user-menu-server";
 
 export const dynamic = "force-dynamic";
 
@@ -29,26 +29,14 @@ export default async function NewCostingPage({ searchParams }: PageProps) {
   const productCaption = await getInquiryItemCaption(inquiryItemId);
 
   return (
-    <>
-      <DashboardHeader generatedAt={new Date()} />
-      <main className="mx-auto max-w-[980px] px-12 max-md:px-4 pt-8 pb-16">
-        <header className="mb-6">
-          <div className="text-[10px] uppercase tracking-[0.18em] text-ink-subtle font-bold">
-            Sales &middot; Costing
-          </div>
-          <h1 className="text-display-lg text-ink-strong mt-1">New Costing</h1>
-          <p className="text-body-lg text-ink-subtle mt-1">
-            In-house or bought-out cost sheet &mdash; live estimate updates as
-            you type.
-          </p>
-        </header>
+    <EnquiryModuleShell title="Costing Sheet" userMenu={<UserMenuServer />}>
+      <div className="w-full">
         <CostingForm
           inquiryItemId={inquiryItemId}
           inquiryId={inquiryId}
           productCaption={productCaption}
         />
-      </main>
-      <DashboardFooter />
-    </>
+      </div>
+    </EnquiryModuleShell>
   );
 }

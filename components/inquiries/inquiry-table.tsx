@@ -7,8 +7,10 @@ import {
   ENQUIRY_STATUSES,
   ENQUIRY_STATUS_LABELS,
   ENQUIRY_STATUS_COLORS,
+  FEASIBILITY_STATUSES,
   FEASIBILITY_STATUS_LABELS,
   FEASIBILITY_STATUS_COLORS,
+  INQUIRY_PRIORITIES,
   INQUIRY_PRIORITY_LABELS,
 } from "@/db/enums";
 import { formatDate } from "@/lib/format";
@@ -18,7 +20,12 @@ import {
   type RegisterColumn,
   type FilterConfig,
 } from "@/components/registers/register-data-table";
-import { setEnquiryStatusBulk } from "@/app/(app)/inquiries/actions";
+import {
+  setEnquiryStatusBulk,
+  setEnquiryPriorityBulk,
+  setFeasibilityStatusBulk,
+  assignEnquirySalesPersonBulk,
+} from "@/app/(app)/inquiries/actions";
 import type { InquiryListItem } from "@/lib/queries/inquiries";
 import type { EmployeeOption } from "@/lib/queries/employees";
 
@@ -41,12 +48,13 @@ export function InquiryTable({ rows, employees }: Props) {
     () => [
       {
         id: "smNumber",
-        header: "SM Number",
+        header: "SM No.",
+        width: "96px",
         searchable: true,
         sortValue: (r) => r.smNumber,
         cell: (r) => (
           <Link
-            href={`/inquiries/${r.id}` as Route}
+            href={`/enquiries/register/${r.id}` as Route}
             className="font-semibold text-ink-strong hover:underline"
             style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}
           >
@@ -56,7 +64,8 @@ export function InquiryTable({ rows, employees }: Props) {
       },
       {
         id: "enquiryDate",
-        header: "Enquiry Date",
+        header: "Date",
+        width: "108px",
         sortValue: (r) => r.enquiryDate,
         cell: (r) => (
           <span className="tabular-nums text-ink-soft">
@@ -67,6 +76,7 @@ export function InquiryTable({ rows, employees }: Props) {
       {
         id: "companyName",
         header: "Company",
+        truncate: true,
         searchable: true,
         sortValue: (r) => r.companyName,
         cell: (r) => (
@@ -76,20 +86,15 @@ export function InquiryTable({ rows, employees }: Props) {
       {
         id: "productDescription",
         header: "Product",
+        truncate: true,
         searchable: true,
         sortValue: (r) => r.productDescription,
-        cell: (r) => (
-          <span
-            className="block max-w-[60ch] truncate text-ink-soft"
-            title={r.productDescription}
-          >
-            {r.productDescription}
-          </span>
-        ),
+        cell: (r) => <span className="text-ink-soft">{r.productDescription}</span>,
       },
       {
         id: "priority",
         header: "Priority",
+        width: "104px",
         sortValue: (r) => r.priority,
         exportValue: (r) => INQUIRY_PRIORITY_LABELS[r.priority],
         cell: (r) => (
@@ -102,6 +107,7 @@ export function InquiryTable({ rows, employees }: Props) {
       {
         id: "salesPersonName",
         header: "Sales Person",
+        truncate: true,
         searchable: true,
         sortValue: (r) => r.salesPersonName ?? "",
         exportValue: (r) => r.salesPersonName ?? "",
@@ -111,7 +117,8 @@ export function InquiryTable({ rows, employees }: Props) {
       },
       {
         id: "enquiryStatus",
-        header: "Enquiry Status",
+        header: "Enquiry",
+        width: "128px",
         sortValue: (r) => ENQUIRY_STATUS_LABELS[r.enquiryStatus],
         cell: (r) => (
           <Chip
@@ -122,7 +129,8 @@ export function InquiryTable({ rows, employees }: Props) {
       },
       {
         id: "feasibilityStatus",
-        header: "Feasibility Status",
+        header: "Feasibility",
+        width: "148px",
         sortValue: (r) => FEASIBILITY_STATUS_LABELS[r.feasibilityStatus],
         cell: (r) => (
           <Chip
@@ -169,17 +177,40 @@ export function InquiryTable({ rows, employees }: Props) {
       rows={rows}
       getRowId={(r) => r.id}
       columns={columns}
-      getOpenHref={(r) => `/inquiries/${r.id}` as Route}
+      getOpenHref={(r) => `/enquiries/register/${r.id}` as Route}
       filters={filters}
       exportFilename="enquiries"
-      bulkAction={{
-        label: "Set status",
-        options: ENQUIRY_STATUSES.map((s) => ({
-          value: s,
-          label: ENQUIRY_STATUS_LABELS[s],
-        })),
-        onApply: (ids, value) => setEnquiryStatusBulk(ids, value),
-      }}
+      bulkActions={[
+        {
+          label: "Set status",
+          options: ENQUIRY_STATUSES.map((s) => ({
+            value: s,
+            label: ENQUIRY_STATUS_LABELS[s],
+          })),
+          onApply: (ids, value) => setEnquiryStatusBulk(ids, value),
+        },
+        {
+          label: "Set priority",
+          options: INQUIRY_PRIORITIES.map((p) => ({
+            value: p,
+            label: INQUIRY_PRIORITY_LABELS[p],
+          })),
+          onApply: (ids, value) => setEnquiryPriorityBulk(ids, value),
+        },
+        {
+          label: "Set feasibility",
+          options: FEASIBILITY_STATUSES.map((s) => ({
+            value: s,
+            label: FEASIBILITY_STATUS_LABELS[s],
+          })),
+          onApply: (ids, value) => setFeasibilityStatusBulk(ids, value),
+        },
+        {
+          label: "Assign sales person",
+          options: employees.map((e) => ({ value: e.id, label: e.name })),
+          onApply: (ids, value) => assignEnquirySalesPersonBulk(ids, value),
+        },
+      ]}
       emptyTitle="No enquiries yet — create the first one."
       emptyHint="New enquiries appear here, one SM number each."
     />

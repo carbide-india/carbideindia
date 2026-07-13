@@ -80,8 +80,9 @@ export function ClientAutofillSection({
 
   return (
     <div className="flex flex-col gap-4">
-      <Field label="Client Type">
+      <Field label="Client Type" labelOnly>
         <Segmented
+          size="lg"
           options={MODE_OPTIONS}
           value={mode}
           onChange={(m) => {
@@ -100,8 +101,8 @@ export function ClientAutofillSection({
                 id="inq-client"
                 value={clientId ?? ""}
                 onValueChange={(v) => void pick(v)}
-                placeholder="Search and pick the client…"
-                searchPlaceholder="Search clients…"
+                placeholder="Search and pick the client"
+                searchPlaceholder="Search clients"
                 searchable
                 options={clients.map((c) => ({ value: c.id, label: c.name }))}
               />
@@ -110,7 +111,7 @@ export function ClientAutofillSection({
           </div>
           {loading ? (
             <p className="text-[13px] text-ink-subtle">
-              Fetching client details…
+              Fetching client details
             </p>
           ) : (
             <p className="text-[13px] text-ink-subtle">

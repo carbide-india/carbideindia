@@ -216,7 +216,7 @@ export function TaskImport({
         )}
         {previewing && (
           <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink-subtle mt-1">
-            <Loader2 size={14} className="animate-spin" /> Reading &amp; validating…
+            <Loader2 size={14} className="animate-spin" /> Reading &amp; validating
           </span>
         )}
       </label>
@@ -365,7 +365,7 @@ export function TaskImport({
                 style={{ background: "linear-gradient(135deg, rgb(225,6,0), rgb(168,4,0))", boxShadow: "0 6px 16px rgba(225,6,0,0.32)" }}
               >
                 {committing ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} strokeWidth={2.4} />}
-                {committing ? "Importing…" : `Import ${preview.validCount} task${preview.validCount === 1 ? "" : "s"}`}
+                {committing ? "Importing" : `Import ${preview.validCount} task${preview.validCount === 1 ? "" : "s"}`}
               </button>
             </div>
           </div>

@@ -144,7 +144,7 @@ export function ClientDocuments({
           }`}
         >
           <Upload className="h-4 w-4" />
-          {busy ? "Uploading…" : "Upload"}
+          {busy ? "Uploading" : "Upload"}
           <input
             ref={fileRef}
             type="file"
@@ -205,7 +205,7 @@ export function ClientDocuments({
               >
                 <Trash2 className="h-4 w-4" />
                 <span className="hidden sm:inline">
-                  {deletingId === doc.id ? "Deleting…" : "Delete"}
+                  {deletingId === doc.id ? "Deleting" : "Delete"}
                 </span>
               </button>
             </li>

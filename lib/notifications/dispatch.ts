@@ -145,7 +145,7 @@ async function notifyImpl(opts: NotifyOpts): Promise<void> {
   }
 
   // M4 Commit 3a — the web_push arm wants the task's human subject +
-  // short-id so its payload can render `Subject … View task →` with a
+  // short-id so its payload can render `Subject  View task →` with a
   // deep link.  We look the task up once here so both arms (email reuses
   // title/body already) share the same projection.  When `taskId` is
   // null (overdue digest etc.) we leave the fields empty and fall back

@@ -132,7 +132,7 @@ export function ApproveDeclineButtons({
                     "linear-gradient(135deg, var(--color-red), var(--color-red-deep))",
                 }}
               >
-                {pending ? "Saving…" : "Decline"}
+                {pending ? "Saving" : "Decline"}
               </button>
             </div>
           </Dialog.Content>

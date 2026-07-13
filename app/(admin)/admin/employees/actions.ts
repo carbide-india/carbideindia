@@ -177,7 +177,7 @@ export async function inviteEmployee(input: InviteEmployeeInput): Promise<{
   // point. The DB-side UNIQUE constraint on `employees.email` is the real
   // arbiter; we catch the violation here and translate Postgres error
   // 23505 into a friendly message instead of leaking "DB: duplicate key
-  // value violates …" to the admin.
+  // value violates " to the admin.
   let inserted;
   try {
     [inserted] = await db.insert(employees).values({

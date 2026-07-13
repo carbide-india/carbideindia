@@ -38,6 +38,8 @@ const DIM_RULE_LABELS: Record<DimRule, string> = {
 
 interface Props {
   items: MasterOption[];
+  /** Limit the visible kind tabs (default: all master kinds). */
+  kinds?: readonly MasterKind[];
 }
 
 /** Kinds whose data hasn't arrived yet — the empty-state names the source. */
@@ -48,18 +50,19 @@ const PENDING_DATA_KINDS: ReadonlySet<MasterKind> = new Set([
 
 const BLANK_DIMS = defaultShapeConfig().dims;
 
-export function MasterList({ items }: Props) {
+export function MasterList({ items, kinds }: Props) {
+  const tabKinds = kinds && kinds.length ? kinds : MASTER_KINDS;
   const router = useRouter();
   const formRef = useRef<HTMLDivElement>(null);
   const [rowBusyId, setRowBusyId] = useState<string | null>(null);
   const [rowPending, startRowAction] = useTransition();
 
   const [kindRaw, setKind] = useQueryState("kind", {
-    defaultValue: "customer_type",
+    defaultValue: tabKinds[0]!,
     parse: (v): MasterKind =>
-      (MASTER_KINDS as readonly string[]).includes(v)
+      (tabKinds as readonly string[]).includes(v)
         ? (v as MasterKind)
-        : "customer_type",
+        : tabKinds[0]!,
   });
   const kind = kindRaw as MasterKind;
 
@@ -252,7 +255,7 @@ export function MasterList({ items }: Props) {
     <div className="space-y-6">
       {/* Kind tabs */}
       <div className="flex flex-wrap gap-2" role="tablist" aria-label="Master kinds">
-        {MASTER_KINDS.map((k) => {
+        {tabKinds.map((k) => {
           const isActiveTab = kind === k;
           const count = items.filter((o) => o.kind === k).length;
           return (
@@ -695,7 +698,7 @@ function BulkCreateMasterDialog({ kind }: { kind: MasterKind }) {
                 }}
               >
                 {pending
-                  ? "Adding…"
+                  ? "Adding"
                   : parsedCount > 0
                     ? `Add ${parsedCount}`
                     : "Add"}

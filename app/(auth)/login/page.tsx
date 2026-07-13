@@ -64,7 +64,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
 
   const sp = await searchParams;
   const reason = firstString(sp["reason"]);
-  // Clerk appends ?__clerk_ticket=… when an invitation email link is clicked.
+  // Clerk appends ?__clerk_ticket= when an invitation email link is clicked.
   // Its presence flips this sheet into "activate your account" mode.
   const inviteTicket = firstString(sp["__clerk_ticket"]);
   const year = new Date().getFullYear();

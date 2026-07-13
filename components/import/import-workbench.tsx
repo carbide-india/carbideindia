@@ -16,9 +16,12 @@ interface Props {
   lookups: Lookups;
   isAdmin: boolean;
   commit: (rows: ImportRowPayload[]) => Promise<{ created: number; skipped: number; newMasters: number; errors: { row: number; reason: string }[] }>;
+  /** When provided (e.g. inside a modal), called after a successful import
+   *  instead of navigating to the register — lets the caller close/refresh. */
+  onDone?: () => void;
 }
 
-export function ImportWorkbench({ spec, lookups, isAdmin, commit }: Props) {
+export function ImportWorkbench({ spec, lookups, isAdmin, commit, onDone }: Props) {
   const router = useRouter();
   const [rows, setRows] = React.useState<StagedRow[]>([]);
   const [pending, setPending] = React.useState(false);
@@ -84,8 +87,13 @@ export function ImportWorkbench({ spec, lookups, isAdmin, commit }: Props) {
     try {
       const res = await commit(payload);
       fireToast({ message: `Imported ${res.created} ${spec.title}${res.created === 1 ? "" : "s"}${res.skipped ? `, ${res.skipped} skipped` : ""}.`, type: "success" });
-      router.push(spec.basePath as Route);
-      router.refresh();
+      if (onDone) {
+        onDone();
+        router.refresh();
+      } else {
+        router.push(spec.basePath as Route);
+        router.refresh();
+      }
     } catch (e) {
       fireToast({ message: e instanceof Error ? e.message : "Import failed.", type: "error" });
     } finally {
@@ -148,7 +156,7 @@ export function ImportWorkbench({ spec, lookups, isAdmin, commit }: Props) {
         <div className="flex justify-end">
           <button type="button" disabled={pending || validCount === 0} onClick={onCommit} className="inline-flex items-center gap-2 rounded-chip px-7 py-3.5 text-white font-extrabold disabled:opacity-50" style={{ background: "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))" }}>
             {pending ? <Loader2 size={16} className="animate-spin" /> : null}
-            {pending ? "Importing…" : `Import ${validCount} ${spec.title}${validCount === 1 ? "" : "s"}`}
+            {pending ? "Importing" : `Import ${validCount} ${spec.title}${validCount === 1 ? "" : "s"}`}
           </button>
         </div>
       )}

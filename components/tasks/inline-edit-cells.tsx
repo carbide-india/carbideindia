@@ -143,7 +143,7 @@ export function InlineDoerCell({
               autoFocus
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search…"
+              placeholder="Search"
               className="w-full h-9 pl-8 pr-2 rounded-chip border border-hairline bg-surface-soft text-[14px] outline-none focus:border-brand"
             />
           </div>

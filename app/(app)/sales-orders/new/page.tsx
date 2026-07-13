@@ -1,12 +1,15 @@
-import { DashboardHeader } from "@/components/layout/header";
-import { DashboardFooter } from "@/components/layout/footer";
 import { SoForm } from "@/components/sales-orders/so-form";
 import { requireUser, getCurrentEmployee } from "@/lib/auth/current";
 import { listInquiryOptions } from "@/lib/queries/inquiries";
 import { listQuotationOptions } from "@/lib/queries/quotes";
 import { listEmployeeOptions } from "@/lib/queries/employees";
-import { BulkUploadButton } from "@/components/import/bulk-upload-button";
 import { enforcedNewGuard } from "@/components/workflow/enforced-new-guard";
+import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
+import { UserMenuServer } from "@/components/header/user-menu-server";
+import { loadLookups, specRefKinds } from "@/lib/import/lookups";
+import { salesOrderImportSpec } from "@/lib/import/specs/sales-order";
+import { commitSalesOrderImport } from "@/app/(app)/sales-orders/import/actions";
+import { BulkImportModal } from "@/components/import/bulk-import-modal";
 
 export const dynamic = "force-dynamic";
 
@@ -23,32 +26,35 @@ export default async function NewSalesOrderPage() {
     listEmployeeOptions(),
   ]);
 
+  const importLookups = me?.isAdmin
+    ? await loadLookups(specRefKinds(salesOrderImportSpec.fields))
+    : null;
+
+  // Admins get a Bulk Upload entry in the sidebar (opens the sales-order import modal).
+  const bulkUpload =
+    me?.isAdmin && importLookups ? (
+      <BulkImportModal
+        spec={salesOrderImportSpec}
+        lookups={importLookups}
+        commit={commitSalesOrderImport}
+        isAdmin
+        triggerClassName="flex h-[44px] w-full items-center gap-3 rounded-lg px-3.5 text-[14px] font-semibold text-[#3a4152] transition hover:bg-[#efeffb] hover:text-[#3f3f94]"
+      />
+    ) : null;
+
   return (
-    <>
-      <DashboardHeader generatedAt={new Date()} />
-      <main className="mx-auto max-w-[980px] px-12 max-md:px-4 pt-8 pb-16">
-        <header className="mb-6">
-          <div className="text-[10px] uppercase tracking-[0.18em] text-ink-subtle font-bold">
-            Sales · Sales Order
-          </div>
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-display-lg text-ink-strong mt-1">New Sales Order</h1>
-              <p className="text-body-lg text-ink-subtle mt-1">
-                Record the customer PO and SO documents against an enquiry — pick the
-                SM, link the quotation to pull its pricing, then log the PO details.
-              </p>
-            </div>
-            {me?.isAdmin && <BulkUploadButton href="/sales-orders/import" />}
-          </div>
-        </header>
+    <EnquiryModuleShell
+      title="Sales Order"
+      userMenu={<UserMenuServer />}
+      bulkUpload={bulkUpload}
+    >
+      <div className="w-full">
         <SoForm
           inquiries={inquiries}
           quotations={quotations}
           employees={employees}
         />
-      </main>
-      <DashboardFooter />
-    </>
+      </div>
+    </EnquiryModuleShell>
   );
 }

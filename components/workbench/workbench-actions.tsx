@@ -52,7 +52,7 @@ export function WorkbenchActions({
           "disabled:opacity-50 disabled:cursor-not-allowed",
         )}
       >
-        {saving ? "Saving…" : "Save"}
+        {saving ? "Saving" : "Save"}
       </button>
 
       {onDelete ? (

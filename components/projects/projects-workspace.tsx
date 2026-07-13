@@ -1021,7 +1021,7 @@ function NodeRow({
       <EditableName node={node} typeStyle={typeStyle} depth={depth} />
 
       {/* Assign-owner pill — interactive and always shown on every row, so any
-          node (milestone, action, sub-action, …) can be assigned to a person
+          node (milestone, action, sub-action, ) can be assigned to a person
           directly without opening the details panel. */}
       <span className="shrink-0">
         <OwnerPicker node={node} compact />
@@ -1465,7 +1465,7 @@ function DeleteNodeDialog({
                       "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
                   }}
                 >
-                  {pending ? "Deleting…" : `Permanently delete`}
+                  {pending ? "Deleting" : `Permanently delete`}
                 </button>
               </div>
             </>
@@ -1653,7 +1653,7 @@ function OwnerPicker({
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search people…"
+              placeholder="Search people"
               className="w-full rounded-md border border-hairline px-2.5 py-1.5 text-[14.5px] outline-none focus:border-brand mb-1"
             />
             <div className="max-h-[240px] overflow-y-auto">
@@ -1760,7 +1760,7 @@ function MembersPicker({ node }: { node: ProjectTreeNode }) {
                 autoFocus
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search people…"
+                placeholder="Search people"
                 className="w-full rounded-md border border-hairline px-2.5 py-1.5 text-[14.5px] outline-none focus:border-brand mb-1"
               />
               <div className="max-h-[240px] overflow-y-auto">
@@ -1918,7 +1918,7 @@ function NotesEditor({ node, big }: { node: ProjectTreeNode; big: boolean }) {
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onBlur={save}
-        placeholder="Context, intent, acceptance criteria… written here so whoever picks this up knows what's expected."
+        placeholder="Context, intent, acceptance criteria written here so whoever picks this up knows what's expected."
         rows={big ? 4 : 3}
         maxLength={8000}
         className="w-full resize-y rounded-md border bg-surface-card px-3 py-2.5 outline-none focus:border-brand"

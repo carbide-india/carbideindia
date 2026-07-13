@@ -121,6 +121,14 @@ const MASTER_SEEDS: Record<MasterKind, string[]> = {
     "Tumble",
   ],
   internal_grade: [], // data pending from Alokbhai — admin adds via UI
+  department: [
+    "New Product Development",
+    "Sales",
+    "Quotation",
+    "Purchase",
+    "Director",
+    "Others",
+  ],
   size: [
     "Small", "Medium", "Large",
     "Small Assembly", "Medium Assembly", "Large Assembly",

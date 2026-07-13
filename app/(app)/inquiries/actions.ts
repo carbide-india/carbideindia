@@ -214,6 +214,7 @@ export async function createInquiry(
           smFolderLink: v.smFolderLink,
           enquiryNotes: v.enquiryNotes,
           assignedSalesPersonId: v.assignedSalesPersonId,
+          departmentId: v.departmentId,
           createdById: me.id,
         })
         .returning({ id: inquiries.id, smNumber: inquiries.smNumber });

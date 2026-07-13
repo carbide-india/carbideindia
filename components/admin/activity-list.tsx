@@ -251,7 +251,7 @@ function TaskRowBody({
       <div className="mt-1">
         {/* Body-only audit-event renderer.  We omit the actor strong-name
            from its prefix by rendering through AuditEvent, which already
-           starts with "<strong>Who</strong> …" — the duplicate is
+           starts with "<strong>Who</strong> " — the duplicate is
            intentional and matches the per-task feed pattern. */}
         <div className="audit-inline">
           <AuditEvent row={auditRow} statusLabels={statusLabels} />

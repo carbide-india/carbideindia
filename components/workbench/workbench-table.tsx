@@ -182,7 +182,7 @@ export function WorkbenchTable<T>({
                             type="text"
                             value={val}
                             onChange={(e) => setColumnFilter(col.key, e.target.value)}
-                            placeholder="Filter…"
+                            placeholder="Filter"
                             aria-label={`Filter by ${col.header}`}
                             className={cn(
                               "w-full h-7 rounded-chip border border-hairline-strong bg-surface-card",

@@ -160,7 +160,7 @@ function LiasoningCard({
     // Open synchronously inside the user gesture so popup blockers
     // don't de-trust the call. The pulse animates after, independently.
     window.open(link.url, "_blank", "noopener,noreferrer");
-    fireToast({ message: `Opening ${link.label}…` });
+    fireToast({ message: `Opening ${link.label}` });
 
     const el = ref.current;
     if (reduced || !el) {

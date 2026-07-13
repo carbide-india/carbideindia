@@ -286,7 +286,7 @@ export function ItemForm({
                   id="item-shape"
                   value={field.value ?? ""}
                   onValueChange={(v) => field.onChange(v || undefined)}
-                  placeholder="Select shape…"
+                  placeholder="Select shape"
                   searchable
                   options={shapes.map((s) => ({
                     value: s.id,
@@ -328,7 +328,7 @@ export function ItemForm({
             rows={2}
             className="nt-input resize-y"
             style={{ fontWeight: 400 }}
-            placeholder="Special notes about dimensions…"
+            placeholder="Special notes about dimensions"
             {...register("dimensionNotes")}
           />
         </Field>
@@ -343,7 +343,7 @@ export function ItemForm({
                   id="item-grade"
                   value={field.value ?? ""}
                   onValueChange={(v) => field.onChange(v || undefined)}
-                  placeholder="Select grade…"
+                  placeholder="Select grade"
                   searchable
                   options={grades.map((g) => ({
                     value: g.id,
@@ -363,7 +363,7 @@ export function ItemForm({
                   id="item-condition"
                   value={field.value ?? ""}
                   onValueChange={(v) => field.onChange(v || undefined)}
-                  placeholder="Select condition…"
+                  placeholder="Select condition"
                   searchable
                   options={conditions.map((c) => ({
                     value: c.id,
@@ -383,7 +383,7 @@ export function ItemForm({
                   id="item-tolerance"
                   value={field.value ?? ""}
                   onValueChange={(v) => field.onChange(v || undefined)}
-                  placeholder="Select tolerance (or leave XXX)…"
+                  placeholder="Select tolerance (or leave XXX)"
                   searchable
                   options={tolerances.map((t) => ({
                     value: t.id,
@@ -405,7 +405,7 @@ export function ItemForm({
                   id="item-size"
                   value={field.value ?? ""}
                   onValueChange={(v) => field.onChange(v || undefined)}
-                  placeholder="Auto from dimensions…"
+                  placeholder="Auto from dimensions"
                   options={[{ value: "", label: "— Auto —" }, ...SIZE_CODE_OPTIONS]}
                 />
               )}
@@ -423,7 +423,7 @@ export function ItemForm({
                   onValueChange={(v) =>
                     field.onChange(v ? (v as typeof COSTING_TYPES[number]) : undefined)
                   }
-                  placeholder="Select costing type…"
+                  placeholder="Select costing type"
                   options={COSTING_TYPES.map((ct) => ({
                     value: ct,
                     label: COSTING_TYPE_LABELS[ct],
@@ -595,7 +595,7 @@ export function ItemForm({
             letterSpacing: "0.005em",
           }}
         >
-          {pending ? "Saving…" : isEdit ? "Update Item" : "Create Item"}
+          {pending ? "Saving" : isEdit ? "Update Item" : "Create Item"}
         </button>
       </div>
     </form>

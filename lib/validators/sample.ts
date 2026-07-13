@@ -37,12 +37,18 @@ const SampleFieldsSchema = z.object({
   dimensionStatus: z.enum(STAGE_STATUSES).default("not_started"),
   dimensionLocation: LocationText.default("Undecided"),
   dimensionCompletedOn: z.string().optional(),        // ISO date
+  dimensionNotes: OptionalText(2000),
+  dimensionAudioUrl: OptionalText(2000),              // Blob URL of the voice note
   chemicalStatus: z.enum(STAGE_STATUSES).default("not_started"),
   chemicalLocation: LocationText.default("Undecided"),
   chemicalCompletedOn: z.string().optional(),
+  chemicalNotes: OptionalText(2000),
+  chemicalAudioUrl: OptionalText(2000),
   drawingStatus: z.enum(STAGE_STATUSES).default("not_started"),
   drawingLocation: LocationText.default("Undecided"),
   drawingCompletedOn: z.string().optional(),
+  drawingNotes: OptionalText(2000),
+  drawingAudioUrl: OptionalText(2000),
   costingStatus: z.enum(STAGE_STATUSES).default("not_started"),
   costingCompletedOn: z.string().optional(),
   reportsUploaded: z.array(z.enum(SAMPLE_REPORT_TYPES)).optional(),

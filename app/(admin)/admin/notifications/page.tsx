@@ -60,25 +60,18 @@ export default async function AdminNotificationsPage({ searchParams }: PageProps
   };
 
   return (
-    <div>
-      <header className="mb-8">
-        <div className="text-[10px] uppercase tracking-[0.18em] text-ink-subtle font-bold">
-          Admin · Notifications
-        </div>
-        <h1
-          className="mt-1 text-ink-strong"
-          style={{
-            fontFamily: "var(--font-serif)",
-            fontStyle: "italic",
-            fontWeight: 500,
-            fontSize: 44,
-            lineHeight: 1.05,
-            letterSpacing: "-0.02em",
-          }}
+    <div className="mx-auto max-w-[1180px]">
+      <header className="mb-7">
+        <span
+          className="block text-[10.5px] font-bold uppercase tracking-[0.18em] text-[#a2a8b4]"
+          style={{ fontFamily: "var(--font-mono-display)" }}
         >
-          Every message we sent.
+          Admin · Communication
+        </span>
+        <h1 className="mt-1.5 text-[30px] font-extrabold leading-tight tracking-tight text-[#1e2f66]">
+          Message History
         </h1>
-        <p className="text-body-lg text-ink-subtle mt-2 max-w-2xl">
+        <p className="mt-2 max-w-2xl text-[14px] text-[#6b7280]">
           Per-notification delivery log across email and Web Push.
         </p>
       </header>
@@ -112,10 +105,17 @@ export default async function AdminNotificationsPage({ searchParams }: PageProps
 
 function StatCard({ label, value, tone = "default" }: { label: string; value: number; tone?: "default" | "red" }) {
   return (
-    <div className="rounded-section border border-hairline bg-surface-card p-4">
-      <div className="text-[10px] uppercase tracking-[0.10em] font-bold text-ink-subtle">{label}</div>
+    <div className="rounded-2xl border border-[#e6e8ec] bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
       <div
-        className={`mt-1 text-display-md font-serif italic ${tone === "red" ? "text-brand" : "text-ink-strong"}`}
+        className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#a2a8b4]"
+        style={{ fontFamily: "var(--font-mono-display)" }}
+      >
+        {label}
+      </div>
+      <div
+        className={`mt-1.5 text-[34px] font-extrabold leading-none tabular-nums ${
+          tone === "red" ? "text-[#d32f2f]" : "text-[#1e2f66]"
+        }`}
       >
         {value}
       </div>

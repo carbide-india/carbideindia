@@ -343,7 +343,7 @@ export function SoDetail({ salesOrder, employees, inquiryLink, lines }: Props) {
                     id="sod-link"
                     type="url"
                     className="nt-input"
-                    placeholder="https://…"
+                    placeholder="https://"
                     {...register("quotationLink")}
                   />
                 </Field>
@@ -366,7 +366,7 @@ export function SoDetail({ salesOrder, employees, inquiryLink, lines }: Props) {
                     id="sod-polink"
                     type="url"
                     className="nt-input"
-                    placeholder="https://…"
+                    placeholder="https://"
                     {...register("customerPoLink")}
                   />
                 </Field>
@@ -380,7 +380,7 @@ export function SoDetail({ salesOrder, employees, inquiryLink, lines }: Props) {
                     id="sod-custlink"
                     type="url"
                     className="nt-input"
-                    placeholder="https://…"
+                    placeholder="https://"
                     {...register("customerSoLink")}
                   />
                 </Field>
@@ -389,7 +389,7 @@ export function SoDetail({ salesOrder, employees, inquiryLink, lines }: Props) {
                     id="sod-prodlink"
                     type="url"
                     className="nt-input"
-                    placeholder="https://…"
+                    placeholder="https://"
                     {...register("productionSoLink")}
                   />
                 </Field>

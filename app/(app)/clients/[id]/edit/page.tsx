@@ -19,12 +19,13 @@ export default async function EditClientPage({ params }: PageProps) {
   await requireAdmin();
   const { id } = await params;
 
-  const [client, customerTypes, industryTypes, productTypes, employees, documents] =
+  const [client, customerTypes, industryTypes, productTypes, departments, employees, documents] =
     await Promise.all([
       getClientForEdit(id),
       listMasterOptions("customer_type"),
       listMasterOptions("industry_type"),
       listMasterOptions("product_type"),
+      listMasterOptions("department"),
       listEmployeeOptions(),
       getClientDocuments(id),
     ]);
@@ -55,6 +56,7 @@ export default async function EditClientPage({ params }: PageProps) {
           customerTypes={customerTypes}
           industryTypes={industryTypes}
           productTypes={productTypes}
+          departments={departments}
           employees={employees}
           editClientId={id}
           initialValues={client}

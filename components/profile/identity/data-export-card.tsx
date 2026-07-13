@@ -142,7 +142,7 @@ export function DataExportCard({ recent }: Props) {
           cursor: busy ? "not-allowed" : "pointer",
         }}
       >
-        {busy ? "Requesting…" : "Request my data"}
+        {busy ? "Requesting" : "Request my data"}
       </button>
 
       {merged.length > 0 && (

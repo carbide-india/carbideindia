@@ -200,7 +200,7 @@ export function EmployeeRowActions({
           {canDelete && (
             <DropdownMenuItem danger onClick={() => setDeleteOpen(true)}>
               <Trash2 size={14} />
-              Delete permanently…
+              Delete permanently
             </DropdownMenuItem>
           )}
         </DropdownMenuContent>
@@ -255,7 +255,7 @@ export function EmployeeRowActions({
 
             {deleteImpact === null ? (
               <div className="rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] p-3 text-[13px] text-[#64748B] mb-4">
-                Counting impact…
+                Counting impact
               </div>
             ) : !deleteImpact.ok ? (
               <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-[13px] text-[#B71C1C] mb-4">
@@ -309,7 +309,7 @@ export function EmployeeRowActions({
                 className="rounded-md py-2.5 px-5 text-[14px] font-semibold text-white disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{ background: "linear-gradient(135deg, #D32F2F, #B71C1C)" }}
               >
-                {deletePending ? "Deleting…" : "Delete permanently"}
+                {deletePending ? "Deleting" : "Delete permanently"}
               </button>
             </div>
           </Dialog.Content>
@@ -367,7 +367,7 @@ export function EmployeeRowActions({
                 }
               >
                 {pending
-                  ? "Working…"
+                  ? "Working"
                   : confirm === "deactivate"
                   ? "Deactivate"
                   : "Reactivate"}

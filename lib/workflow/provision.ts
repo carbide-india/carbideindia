@@ -24,7 +24,7 @@ import { db } from "@/lib/db";
  * provision + audit are one atomic unit.
  */
 
-// A handle compatible with both `db` and a `db.transaction(tx => …)` tx — the
+// A handle compatible with both `db` and a `db.transaction(tx => )` tx — the
 // provision helpers only ever `select`/`insert`, so this narrow surface lets a
 // caller pass either without a structural mismatch.
 type DbLike = Pick<typeof db, "select" | "insert">;

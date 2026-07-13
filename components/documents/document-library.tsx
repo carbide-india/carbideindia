@@ -136,8 +136,8 @@ export function DocumentLibrary({ documents }: { documents: DocumentRow[] }) {
           >
             {busy
               ? progress != null
-                ? `Uploading… ${Math.round(progress)}%`
-                : "Uploading…"
+                ? `Uploading ${Math.round(progress)}%`
+                : "Uploading"
               : "Upload"}
           </button>
         </div>

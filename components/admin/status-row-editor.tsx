@@ -77,7 +77,7 @@ export function StatusRowEditor({ status, initial, isLast }: Props) {
         ) : saved ? (
           <Check className="h-3.5 w-3.5 text-emerald-600" />
         ) : null}
-        {pending ? "Saving…" : saved ? "Saved" : "Save"}
+        {pending ? "Saving" : saved ? "Saved" : "Save"}
       </button>
 
       {error && (

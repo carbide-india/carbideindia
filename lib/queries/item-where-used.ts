@@ -69,7 +69,7 @@ export interface RelatedRecord {
   id: string;
   /** The link target (a workspace/detail route), or null if no route exists yet. */
   href: string | null;
-  /** The primary label (SM number / quote no / …). */
+  /** The primary label (SM number / quote no / ). */
   label: string;
   /** A secondary muted line (customer). */
   sub: string | null;

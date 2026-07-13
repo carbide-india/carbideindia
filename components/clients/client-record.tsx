@@ -433,7 +433,7 @@ function composeAddress(parts: {
 }
 
 /**
- * Returns address as separate display lines (Line 1, Line 2…, City/State/Country,
+ * Returns address as separate display lines (Line 1, Line 2, City/State/Country,
  * PIN) so it stacks cleanly and never reads as one scrambled comma string.
  */
 function addressLines(parts: {

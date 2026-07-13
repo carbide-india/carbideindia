@@ -4,6 +4,7 @@ import {
   INQUIRY_COUNTRIES,
   GST_REGISTRATION_TYPES,
   ADDRESS_TYPES,
+  CLIENT_GRADES,
 } from "@/db/enums";
 
 const Trimmed = (max: number) => z.string().trim().max(max);
@@ -66,6 +67,9 @@ const ClientKycFieldsSchema = z.object({
   customerTypeIds: z.array(z.string().uuid()).optional(),
   industryTypeIds: z.array(z.string().uuid()).optional(),
   productTypeIds: z.array(z.string().uuid()).optional(),
+  // Client rating A/B/C + owning department (master option id).
+  grade: z.enum(CLIENT_GRADES).optional(),
+  departmentId: z.string().uuid().optional(),
   export: z.boolean().optional(),
   currency: z.enum(INQUIRY_CURRENCIES).default("INR"),
   country: z.enum(INQUIRY_COUNTRIES).default("India"),
@@ -85,7 +89,7 @@ const ClientKycFieldsSchema = z.object({
   billToAddress: OptionalText(1000),
   paymentTerms: OptionalText(240), freightCharges: OptionalText(240),
   qtyDeviation: OptionalText(80),
-  // Open, multi-value, optional categorization tags (Mining / Defense / …).
+  // Open, multi-value, optional categorization tags (Mining / Defense / ).
   tags: z.array(z.string().trim().min(1).max(40)).optional(),
   contactFirstName: OptionalText(80), contactLastName: OptionalText(80),
   contactDesignation: OptionalText(120),

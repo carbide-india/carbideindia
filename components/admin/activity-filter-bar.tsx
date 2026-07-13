@@ -244,7 +244,7 @@ export function ActivityFilterBar({ employees, initial }: Props) {
               boxShadow: "0 6px 16px rgba(63, 63, 148, 0.28)",
             }}
           >
-            {isPending ? "Applying…" : "Apply"}
+            {isPending ? "Applying" : "Apply"}
             <ArrowRight size={16} strokeWidth={2.4} />
           </button>
         </div>

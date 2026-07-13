@@ -20,7 +20,7 @@ const DEFAULT_SLOW_MS = 300;
 
 function clipSql(s: string, max = 200): string {
   const flat = s.replace(/\s+/g, " ").trim();
-  return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
+  return flat.length > max ? `${flat.slice(0, max - 1)}` : flat;
 }
 
 function describeArgs(args: unknown[]): string {

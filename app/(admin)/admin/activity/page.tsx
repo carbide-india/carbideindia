@@ -63,25 +63,18 @@ export default async function AdminActivityPage({ searchParams }: PageProps) {
   })();
 
   return (
-    <div>
+    <div className="mx-auto max-w-[1180px]">
       <header className="mb-8">
-        <div className="text-[10px] uppercase tracking-[0.18em] text-ink-subtle font-bold">
-          Admin · Activity
-        </div>
-        <h1
-          className="mt-1 text-ink-strong"
-          style={{
-            fontFamily: "var(--font-serif)",
-            fontStyle: "italic",
-            fontWeight: 500,
-            fontSize: 44,
-            lineHeight: 1.05,
-            letterSpacing: "-0.02em",
-          }}
+        <span
+          className="block text-[10.5px] font-bold uppercase tracking-[0.18em] text-[#a2a8b4]"
+          style={{ fontFamily: "var(--font-mono-display)" }}
         >
-          Everything happening across the team.
+          Admin · System
+        </span>
+        <h1 className="mt-1.5 text-[30px] font-extrabold leading-tight tracking-tight text-[#1e2f66]">
+          Activity Log
         </h1>
-        <p className="text-body-lg text-ink-subtle mt-2 max-w-2xl">
+        <p className="mt-2 max-w-2xl text-[14px] text-[#6b7280]">
           A live, filterable audit timeline of every action — comments,
           status changes, transfers, and approvals.
         </p>

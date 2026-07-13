@@ -7,12 +7,12 @@
  * rolled-back invoice permanently burns its number. Indian statute requires a
  * *gapless* invoice/DN register per financial year — you may not skip 42. So we
  * use a per-(series, FY) counter ROW in `doc_number_series` and increment it
- * inside the caller's transaction with a `SELECT … FOR UPDATE`.
+ * inside the caller's transaction with a `SELECT  FOR UPDATE`.
  *
  * CONCURRENCY GUARANTEE
  * ---------------------
  * `nextDocNumber` runs inside a transaction and takes a ROW LOCK
- * (`SELECT … FOR UPDATE`) on the counter row for (seriesKey, fyLabel). Two
+ * (`SELECT  FOR UPDATE`) on the counter row for (seriesKey, fyLabel). Two
  * concurrent allocations for the same series+FY therefore serialize: the second
  * blocks until the first COMMITs, then reads the just-incremented value. Because
  * the increment and the document INSERT share ONE transaction, a rollback
@@ -22,7 +22,7 @@
  * it with `ON CONFLICT DO NOTHING` then re-select FOR UPDATE, so first-use of a
  * new FY is also race-safe.)
  *
- * The caller MUST pass the same `db.transaction(async (tx) => …)` handle used to
+ * The caller MUST pass the same `db.transaction(async (tx) => )` handle used to
  * insert the document, so the two are atomic.
  */
 import { sql } from "drizzle-orm";
@@ -45,7 +45,7 @@ export const SERIES_DEFAULTS: Record<SeriesKey, { prefix: string; padTo: number 
  */
 export function financialYearLabel(date: Date = new Date()): string {
   const y = date.getUTCFullYear();
-  const m = date.getUTCMonth(); // 0 = Jan … 3 = Apr
+  const m = date.getUTCMonth(); // 0 = Jan  3 = Apr
   const startYear = m >= 3 ? y : y - 1; // Jan–Mar belong to the FY that began last April
   const endYY = String((startYear + 1) % 100).padStart(2, "0");
   return `${startYear}-${endYY}`;

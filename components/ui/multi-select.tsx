@@ -100,7 +100,7 @@ export function MultiSelect({
       </PopoverTrigger>
       <PopoverContent className="w-72 p-0">
         <Command onKeyDown={onCommandKeyDown}>
-          <CommandInput placeholder="Search…" />
+          <CommandInput placeholder="Search" />
           <CommandList className="max-h-64 overflow-auto">
             <CommandEmpty className="px-2 py-3 text-[15px] text-ink-subtle">
               No results.

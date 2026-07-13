@@ -4,9 +4,7 @@ import {
   LayoutDashboard,
   ListTodo,
   CalendarDays,
-  FolderKanban,
   SquareKanban,
-  CalendarCheck,
   Boxes,
   Layers,
   Building2,
@@ -54,15 +52,13 @@ export const MODULES: ModuleDef[] = [
     key: "wms",
     label: "WMS",
     home: "/",
-    // WMS is the default module; "/" + task/project/attendance surfaces.
-    match: ["/tasks", "/projects", "/attendance"],
+    // WMS is the default module; "/" + task surfaces.
+    match: ["/tasks"],
     items: [
       { href: "/" as Route, label: "Dashboard", Icon: LayoutDashboard, exact: true },
       { href: "/tasks/agenda" as Route, label: "My Day", Icon: CalendarDays },
       { href: "/tasks" as Route, label: "Tasks", Icon: ListTodo, taskCount: true },
       { href: "/tasks/kanban" as Route, label: "Kanban", Icon: SquareKanban, adminOnly: true },
-      { href: "/projects" as Route, label: "Projects", Icon: FolderKanban },
-      { href: "/attendance" as Route, label: "Attendance", Icon: CalendarCheck },
     ],
   },
   {

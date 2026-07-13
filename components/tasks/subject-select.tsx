@@ -24,7 +24,7 @@ interface Props {
  * "Subject" picker — a fully-styled searchable combobox. The dropdown is a
  * portalled Radix Popover so it floats above the form rather than overlapping
  * the fields below. Type to filter, ↑/↓ + Enter to pick, Tab to confirm + move
- * on, and a "+ Add new subject…" row that flips into an inline add input.
+ * on, and a "+ Add new subject" row that flips into an inline add input.
  * Mirrors ClientSelect.
  */
 export function SubjectSelect({
@@ -34,7 +34,7 @@ export function SubjectSelect({
   id,
   required,
   className,
-  placeholder = "Select a subject…",
+  placeholder = "Select a subject",
   onFocus,
   onBlur,
 }: Props) {
@@ -263,7 +263,7 @@ export function SubjectSelect({
                 setHi(0);
               }}
               onKeyDown={searchKeyDown}
-              placeholder="Search subjects…"
+              placeholder="Search subjects"
               className="w-full bg-transparent outline-none py-2.5"
               style={{ fontSize: 15, fontWeight: 600, color: "var(--color-ink-strong)" }}
             />
@@ -309,7 +309,7 @@ export function SubjectSelect({
             }}
           >
             <Plus size={16} strokeWidth={2.6} />
-            Add new subject…
+            Add new subject
           </li>
         </ul>
       </PopoverContent>

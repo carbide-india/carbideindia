@@ -143,7 +143,7 @@ export async function materializeRecurringTasks(
       const id = crypto.randomUUID();
       const shortId = deriveShortId(id);
       try {
-        // Single INSERT … ON CONFLICT DO NOTHING (the unique partial
+        // Single INSERT  ON CONFLICT DO NOTHING (the unique partial
         // index handles dedup). We do NOT clone:
         //   - `recurrence_rule`        — children aren't rule-holders.
         //   - `legacy_import_key`      — keep null on synthesised rows.

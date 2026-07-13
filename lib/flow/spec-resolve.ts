@@ -29,7 +29,7 @@ import { items, inquiryItems, masterOptions } from "@/db/schema";
 export interface ResolvedSpec {
   /** The Item row id the line points at (null only for legacy unsynced lines). */
   itemId: string | null;
-  /** Internal item code (S-10001-…), or DRAFT-<seq> for a draft item. */
+  /** Internal item code (S-10001-), or DRAFT-<seq> for a draft item. */
   itemCode: string | null;
   /** Item lifecycle status (draft | active | archived). */
   itemStatus: string | null;

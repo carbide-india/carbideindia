@@ -92,6 +92,7 @@ const InquiryFieldsSchema = z.object({
   smFolderLink: OptionalText(500),
   enquiryNotes: OptionalText(2000),
   assignedSalesPersonId: z.string().uuid().optional(),
+  departmentId: z.string().uuid().optional(),
   products: z.array(ProductItemSchema).optional(),
 });
 

@@ -52,7 +52,7 @@ export function ItemStatusControl({
       }`}
     >
       <Power size={15} strokeWidth={2.2} />
-      {pending ? "Saving…" : isActive ? "Deactivate" : "Reactivate"}
+      {pending ? "Saving" : isActive ? "Deactivate" : "Reactivate"}
     </button>
   );
 }

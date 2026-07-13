@@ -45,6 +45,7 @@ import {
   AUDIT_ACTIONS,
   GST_REGISTRATION_TYPES,
   ADDRESS_TYPES,
+  CLIENT_GRADES,
   PRODUCTION_ORDER_STATUSES,
   PRODUCTION_OP_STATUSES,
   PRODUCTION_QC_RESULTS,
@@ -316,6 +317,7 @@ export const clientsClientCodeSeq = pgSequence("clients_client_code_seq", { star
  */
 export const gstRegistrationTypeEnum = pgEnum("gst_registration_type", GST_REGISTRATION_TYPES);
 export const addressTypeEnum = pgEnum("address_type", ADDRESS_TYPES);
+export const clientGradeEnum = pgEnum("client_grade", CLIENT_GRADES);
 
 export const clients = pgTable(
   "clients",
@@ -335,6 +337,9 @@ export const clients = pgTable(
     customerTypeIds: uuid("customer_type_ids").array(),  // multi-select checkboxes
     industryTypeIds: uuid("industry_type_ids").array(),  // multi-select checkboxes
     productTypeIds: uuid("product_type_ids").array(),  // multi-select checkboxes
+    // Client rating A/B/C (2026-07-13) + owning department (master_options).
+    grade: clientGradeEnum("grade"),
+    departmentId: uuid("department_id").references(() => masterOptions.id, { onDelete: "set null" }),
     export: boolean("export"),
     currency: text("currency"),
     country: text("country"),
@@ -607,6 +612,7 @@ export const inquiries = pgTable(
     smFolderLink: text("sm_folder_link"),
     enquiryNotes: text("enquiry_notes"),
     assignedSalesPersonId: uuid("assigned_sales_person_id").references(() => employees.id, { onDelete: "set null" }),
+    departmentId: uuid("department_id").references(() => masterOptions.id, { onDelete: "set null" }),
     enquiryStatus: enquiryStatusEnum("enquiry_status").notNull().default("not_started"),
 
     // ── Primary Feasibility stage ──
@@ -858,12 +864,18 @@ export const samples = pgTable(
     dimensionStatus: stageStatusEnum("dimension_status").notNull().default("not_started"),
     dimensionLocation: text("dimension_location").notNull().default("Undecided"),
     dimensionCompletedOn: timestamp("dimension_completed_on", { withTimezone: true }),
+    dimensionNotes: text("dimension_notes"),
+    dimensionAudioUrl: text("dimension_audio_url"),
     chemicalStatus: stageStatusEnum("chemical_status").notNull().default("not_started"),
     chemicalLocation: text("chemical_location").notNull().default("Undecided"),
     chemicalCompletedOn: timestamp("chemical_completed_on", { withTimezone: true }),
+    chemicalNotes: text("chemical_notes"),
+    chemicalAudioUrl: text("chemical_audio_url"),
     drawingStatus: stageStatusEnum("drawing_status").notNull().default("not_started"),
     drawingLocation: text("drawing_location").notNull().default("Undecided"),
     drawingCompletedOn: timestamp("drawing_completed_on", { withTimezone: true }),
+    drawingNotes: text("drawing_notes"),
+    drawingAudioUrl: text("drawing_audio_url"),
     costingStatus: stageStatusEnum("costing_status").notNull().default("not_started"),
     costingCompletedOn: timestamp("costing_completed_on", { withTimezone: true }),
     reportsUploaded: text("reports_uploaded").array(),          // SAMPLE_REPORT_TYPES values

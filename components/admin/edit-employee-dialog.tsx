@@ -244,7 +244,7 @@ export function EditEmployeeDialog({
                 className="rounded-md py-2.5 px-5 text-[14px] font-medium text-white disabled:opacity-50"
                 style={{ background: "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))" }}
               >
-                {pending ? "Saving…" : "Save changes"}
+                {pending ? "Saving" : "Save changes"}
               </button>
             </div>
           </form>

@@ -192,7 +192,7 @@ async function runCheck(c: Check): Promise<Drift[]> {
 }
 
 async function main(): Promise<void> {
-  console.log("precheck:drift — comparing spec-mirror columns vs read-through resolution…\n");
+  console.log("precheck:drift — comparing spec-mirror columns vs read-through resolution\n");
   const drifts: Drift[] = [];
   for (const c of CHECKS) {
     const d = await runCheck(c);

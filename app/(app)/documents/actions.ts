@@ -88,7 +88,7 @@ interface DocumentFileMeta {
  * constrained the real upload, but this action can be called with arbitrary
  * arguments — CRITICALLY the pathname must live under `documents/`, otherwise
  * a malicious client could register (and later delete, via deleteDocument's
- * blob cleanup) an `avatars/…` blob it doesn't own.
+ * blob cleanup) an `avatars/` blob it doesn't own.
  */
 function validateFileMeta(meta: DocumentFileMeta): { ok: true } | { ok: false; error: string } {
   if (

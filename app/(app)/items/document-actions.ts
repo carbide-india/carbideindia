@@ -19,8 +19,8 @@ type Result<T = unknown> = ({ ok: true } & T) | { ok: false; error: string };
  * Item drawings/documents live under this prefix. It nests inside the shared
  * `documents/` prefix that /api/documents/upload (the reused private-token
  * route) enforces, so item uploads need no route change — and pinning the
- * prefix here means a caller can't register an `avatars/…` or
- * `client-documents/…` blob it doesn't own (which deleteItemDocument's blob
+ * prefix here means a caller can't register an `avatars/` or
+ * `client-documents/` blob it doesn't own (which deleteItemDocument's blob
  * cleanup would later reap).
  */
 const ITEM_DOCS_PATHNAME_PREFIX = "documents/item-documents/";

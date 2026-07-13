@@ -7,7 +7,7 @@ import { useForm, Controller, useFieldArray, type Control } from "react-hook-for
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
 import { upload } from "@vercel/blob/client";
-import { Check, ImagePlus, Loader2, Plus, Trash2, X } from "lucide-react";
+import { Check, ImagePlus, Loader2, Plus, X } from "lucide-react";
 import { CreateClientKycSchema } from "@/lib/validators/client-kyc";
 import { createClientKyc } from "@/app/(app)/clients/actions";
 import {
@@ -16,16 +16,17 @@ import {
   type DuplicateClientMatch,
 } from "@/app/(admin)/admin/clients/actions";
 import {
-  ADDRESS_TYPES,
-  ADDRESS_TYPE_LABELS,
   GST_REGISTRATION_TYPES,
   GST_REGISTRATION_TYPE_LABELS,
+  CLIENT_GRADES,
+  INQUIRY_CURRENCIES,
+  INQUIRY_COUNTRIES,
 } from "@/db/enums";
 import { fireToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { Select } from "@/components/ui/select";
 import { TagsInput } from "@/components/ui/tags-input";
-import { Field, SectionCard } from "@/components/inquiries/form-field";
+import { Field, SectionCard, GroupHeader, Segmented } from "@/components/inquiries/form-field";
 import { toOptionalNumber } from "@/lib/form-utils";
 import type { MasterOptionItem } from "@/lib/queries/masters";
 import type { EmployeeOption } from "@/lib/queries/employees";
@@ -43,6 +44,8 @@ interface Props {
   industryTypes: MasterOptionItem[];
   productTypes: MasterOptionItem[];
   employees: EmployeeOption[];
+  /** Admin-managed departments — surfaced as the "Department" dropdown. */
+  departments?: MasterOptionItem[];
   /** When set, the form edits this client in place (admin "Edit client")
    *  instead of onboarding a new one. */
   editClientId?: string;
@@ -64,6 +67,22 @@ const ALLOWED_CARD_TYPES = new Set([
 ]);
 const MAX_CARD_BYTES = 25 * 1024 * 1024;
 
+/** Common courier partners for the Transporter dropdown (free-text label). */
+const TRANSPORTER_OPTIONS = [
+  "Blue Dart",
+  "DTDC",
+  "VRL",
+  "Gati",
+  "Delhivery",
+  "Professional Couriers",
+  "Other",
+];
+
+const YES_NO_SEGMENTED = [
+  { value: "yes", label: "Yes" },
+  { value: "no", label: "No" },
+] as const;
+
 function safeCardName(name: string): string {
   return name.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 120) || "card";
 }
@@ -81,22 +100,18 @@ function uploadCardToBlob(file: File) {
   });
 }
 
-/** <input type="time"> yields "" when cleared — the HH:MM regex must never see it. */
-function emptyToUndefined(v: unknown): string | undefined {
-  return v === "" || v == null ? undefined : String(v);
-}
-
 /**
- * Client KYC form — reorganised into 9 sections matching the Client Master
- * spec: Identity / Registration & Tax / Addresses / Contacts /
- * Commercial & Credit / Bank Details / Documents / Business Cards /
- * Meeting & Notes.
+ * Client KYC form — restyled to the New Enquiry visual language (prominent
+ * chips, one-line dense grids, numbered group headers). Sections: Identity /
+ * Registration & Tax / Addresses / Contact Person / Commercial & Credit /
+ * Bank Details / Documents.
  */
 export function KycForm({
   customerTypes,
   industryTypes,
   productTypes,
   employees,
+  departments = [],
   editClientId,
   initialValues,
   clientCode,
@@ -112,12 +127,18 @@ export function KycForm({
     control,
     handleSubmit,
     setValue,
+    getValues,
     watch,
     formState: { errors },
   } = useForm<KycFormValues, unknown, KycFormOutput>({
     resolver: zodResolver(CreateClientKycSchema),
     defaultValues: {
       name: "",
+      grade: undefined,
+      departmentId: undefined,
+      export: undefined,
+      currency: "INR",
+      country: "India",
       customerTypeIds: [],
       industryTypeIds: [],
       productTypeIds: [],
@@ -150,10 +171,22 @@ export function KycForm({
       placeOfSupply: "",
       isTransporter: false,
       // ── Normalized multi-address / multi-bank children ──
-      // New client: seed one empty registered address; editing prefills below.
+      // New client: seed a billing + shipping address; editing prefills below.
       addresses: [
         {
-          addressType: "registered",
+          addressType: "bill_to",
+          isPrimary: true,
+          line1: "",
+          line2: "",
+          line3: "",
+          line4: "",
+          city: "",
+          state: "",
+          country: "",
+          pinCode: "",
+        },
+        {
+          addressType: "ship_to",
           isPrimary: false,
           line1: "",
           line2: "",
@@ -163,8 +196,6 @@ export function KycForm({
           state: "",
           country: "",
           pinCode: "",
-          gstin: "",
-          notes: "",
         },
       ],
       bankAccounts: [],
@@ -177,8 +208,6 @@ export function KycForm({
       contactNotes: "",
       additionalContacts: [],
       notes: "",
-      meetingDate: "",
-      meetingNotes: "",
       // Edit mode prefill — overrides the empty defaults field-by-field.
       ...initialValues,
     },
@@ -192,6 +221,14 @@ export function KycForm({
 
   const { fields: bankFields, append: appendBank, remove: removeBank } =
     useFieldArray({ control, name: "bankAccounts" });
+
+  /** Copy the billing address (index 0) into another address block. */
+  function copyFromBilling(idx: number) {
+    const billing = getValues("addresses")?.[0];
+    (["line1", "line2", "line3", "line4", "city", "state", "country", "pinCode"] as const).forEach(
+      (key) => setValue(`addresses.${idx}.${key}`, billing?.[key] ?? ""),
+    );
+  }
 
   // Non-blocking GSTIN/PAN dedup warning. On blur of either field we ask the
   // server for clients sharing the same GSTIN/PAN (excluding the one we edit);
@@ -320,22 +357,41 @@ export function KycForm({
           </Field>
         )}
 
-        <Field id="kyc-name" label="Company Name" required>
-          <input
-            id="kyc-name"
-            type="text"
-            className="nt-input"
-            placeholder="e.g. Precision Tools Pvt Ltd"
-            {...register("name")}
-          />
-          {errors.name?.message && (
-            <p className="text-[13px] font-semibold" style={{ color: "#D32F2F" }}>
-              {errors.name.message}
-            </p>
-          )}
-        </Field>
+        {/* Company Name (fills the row) + Grade rating on one line */}
+        <div className="grid grid-cols-[1fr_auto] gap-4 max-md:grid-cols-1">
+          <Field id="kyc-name" label="Company Name" required>
+            <input
+              id="kyc-name"
+              type="text"
+              className="nt-input"
+              placeholder="e.g. Precision Tools Pvt Ltd"
+              {...register("name")}
+            />
+            {errors.name?.message && (
+              <p className="text-[13px] font-semibold" style={{ color: "#D32F2F" }}>
+                {errors.name.message}
+              </p>
+            )}
+          </Field>
+          <Field label="Grade" labelOnly>
+            <Controller
+              control={control}
+              name="grade"
+              render={({ field }) => (
+                <Segmented
+                  ariaLabel="Grade"
+                  options={CLIENT_GRADES.map((g) => ({ value: g, label: g }))}
+                  value={field.value}
+                  onChange={(v) =>
+                    field.onChange(v as (typeof CLIENT_GRADES)[number] | undefined)
+                  }
+                />
+              )}
+            />
+          </Field>
+        </div>
 
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+        <div className="grid grid-cols-2 gap-6 max-md:grid-cols-1">
           <MasterChips
             control={control}
             name="customerTypeIds"
@@ -350,7 +406,7 @@ export function KycForm({
           />
         </div>
 
-        {/* Product Types — checkbox chip grid over the admin-managed master. */}
+        {/* Product Types — uniform-width checkbox chip grid over the master. */}
         <Field label="Product Types">
           <Controller
             control={control}
@@ -364,7 +420,7 @@ export function KycForm({
                       No product types yet — add them in Admin &#8594; Masters.
                     </p>
                   ) : (
-                    <div className="flex flex-wrap gap-2">
+                    <div className="grid grid-cols-4 gap-2 max-md:grid-cols-2">
                       {productTypes.map((opt) => {
                         const checked = selected.includes(opt.id);
                         return (
@@ -381,18 +437,18 @@ export function KycForm({
                               )
                             }
                             className={cn(
-                              "inline-flex items-center gap-2 rounded-chip border px-3 py-2 text-[13px] font-semibold transition-colors",
+                              "flex w-full items-center gap-2 rounded-chip border-[1.75px] px-3 py-2 text-[13px] font-semibold transition-colors",
                               checked
                                 ? "border-brand bg-brand/8 text-ink-strong"
-                                : "border-hairline bg-surface-card text-ink-muted hover:border-hairline-strong hover:text-ink-strong",
+                                : "border-[#9199b6] bg-surface-card text-ink-strong hover:border-[#6f78a0] hover:bg-[#f3f4f8]",
                             )}
                           >
                             <span
                               className={cn(
-                                "inline-flex size-[16px] items-center justify-center rounded-[4px] border transition-colors",
+                                "inline-flex size-[16px] shrink-0 items-center justify-center rounded-[4px] border-[1.75px] transition-colors",
                                 checked
                                   ? "bg-brand border-brand text-white"
-                                  : "border-hairline-strong bg-white text-transparent",
+                                  : "border-[#9199b6] bg-white text-transparent",
                               )}
                             >
                               <Check size={11} strokeWidth={3} />
@@ -412,52 +468,54 @@ export function KycForm({
           />
         </Field>
 
-        {/* Tags — open, multi, optional categorization (Mining / Defense / …). */}
-        <Field label="Tags">
-          <Controller
-            control={control}
-            name="tags"
-            render={({ field }) => (
-              <TagsInput
-                id="kyc-tags"
-                value={field.value ?? []}
-                onChange={field.onChange}
-                placeholder="e.g. Mining, Defense, Cutting..."
-              />
-            )}
-          />
-        </Field>
-
-        <Field label="Sales Person" labelOnly>
-          <Controller
-            control={control}
-            name="kycSalesPersonId"
-            render={({ field }) => (
-              <Select
-                ariaLabel="Sales Person"
-                value={field.value ?? ""}
-                onValueChange={(v) => field.onChange(v || undefined)}
-                placeholder={
-                  employees.length === 0
-                    ? "No employees yet"
-                    : "Select an employee..."
-                }
-                disabled={employees.length === 0}
-                searchable
-                searchPlaceholder="Search employees..."
-                options={employees.map((e) => ({ value: e.id, label: e.name }))}
-              />
-            )}
-          />
-        </Field>
+        {/* Assign Sales Person (left) + Tags (right) on one row */}
+        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+          <Field label="Assign Sales Person" labelOnly>
+            <Controller
+              control={control}
+              name="kycSalesPersonId"
+              render={({ field }) => (
+                <Select
+                  ariaLabel="Assign Sales Person"
+                  value={field.value ?? ""}
+                  onValueChange={(v) => field.onChange(v || undefined)}
+                  placeholder={
+                    employees.length === 0
+                      ? "No employees yet"
+                      : "Select an employee"
+                  }
+                  disabled={employees.length === 0}
+                  searchable
+                  searchPlaceholder="Search employees"
+                  options={employees.map((e) => ({ value: e.id, label: e.name }))}
+                />
+              )}
+            />
+          </Field>
+          <Field label="Tags">
+            <Controller
+              control={control}
+              name="tags"
+              render={({ field }) => (
+                <TagsInput
+                  id="kyc-tags"
+                  value={field.value ?? []}
+                  onChange={field.onChange}
+                  placeholder="e.g. Mining, Defense, Cutting"
+                />
+              )}
+            />
+          </Field>
+        </div>
       </SectionCard>
 
       {/* ── 2 · Registration & Tax ───────────────────────────────────── */}
       <SectionCard
-        title="Registration &amp; Tax"
-        hint="GST, PAN and MSME / Udyam registration details."
+        title="Registration & Tax"
+        inlineHint
+        hint="GST, PAN, MSME / Udyam registration and export / currency details."
       >
-        <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
+        <div className="grid grid-cols-5 gap-4 max-lg:grid-cols-3 max-md:grid-cols-1">
           <Field id="kyc-gstin" label="GSTIN">
             <input
               id="kyc-gstin"
@@ -483,24 +541,6 @@ export function KycForm({
               {...register("msmeUdyamNo")}
             />
           </Field>
-        </div>
-
-        {/* Non-blocking dedup warning — existing clients sharing this GSTIN/PAN. */}
-        {(dupPending || dupMatches.length > 0) && (
-          <p
-            className="text-[12.5px] font-semibold"
-            style={{ color: dupMatches.length > 0 ? "#B45309" : "var(--color-ink-subtle)" }}
-            role="status"
-          >
-            {dupPending
-              ? "Checking for duplicates..."
-              : `Possible duplicate: ${dupMatches
-                  .map((m) => `${m.name}${m.clientCode ? ` (${m.clientCode})` : ""}`)
-                  .join(", ")}`}
-          </p>
-        )}
-
-        <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
           <Field label="GST Registration Type" labelOnly>
             <Controller
               control={control}
@@ -510,7 +550,7 @@ export function KycForm({
                   ariaLabel="GST Registration Type"
                   value={field.value ?? ""}
                   onValueChange={(v) => field.onChange(v || undefined)}
-                  placeholder="Select type..."
+                  placeholder="Select type"
                   options={GST_REGISTRATION_TYPES.map((t) => ({
                     value: t,
                     label: GST_REGISTRATION_TYPE_LABELS[t],
@@ -529,121 +569,197 @@ export function KycForm({
             />
           </Field>
         </div>
+
+        {/* Non-blocking dedup warning — existing clients sharing this GSTIN/PAN. */}
+        {(dupPending || dupMatches.length > 0) && (
+          <p
+            className="text-[12.5px] font-semibold"
+            style={{ color: dupMatches.length > 0 ? "#B45309" : "var(--color-ink-subtle)" }}
+            role="status"
+          >
+            {dupPending
+              ? "Checking for duplicates"
+              : `Possible duplicate: ${dupMatches
+                  .map((m) => `${m.name}${m.clientCode ? ` (${m.clientCode})` : ""}`)
+                  .join(", ")}`}
+          </p>
+        )}
+
+        <div className="grid grid-cols-4 gap-4 max-lg:grid-cols-2 max-md:grid-cols-1">
+          <Field label="Department" labelOnly>
+            <Controller
+              control={control}
+              name="departmentId"
+              render={({ field }) => (
+                <Select
+                  ariaLabel="Department"
+                  value={field.value ?? ""}
+                  onValueChange={(v) => field.onChange(v || undefined)}
+                  placeholder={
+                    departments.length === 0
+                      ? "No departments yet"
+                      : "Select a department"
+                  }
+                  disabled={departments.length === 0}
+                  options={departments.map((d) => ({ value: d.id, label: d.name }))}
+                />
+              )}
+            />
+          </Field>
+          <Field label="Export" labelOnly>
+            <Controller
+              control={control}
+              name="export"
+              render={({ field }) => (
+                <Segmented
+                  ariaLabel="Export"
+                  options={YES_NO_SEGMENTED}
+                  value={
+                    field.value === undefined ? undefined : field.value ? "yes" : "no"
+                  }
+                  onChange={(v) =>
+                    field.onChange(v === undefined ? undefined : v === "yes")
+                  }
+                />
+              )}
+            />
+          </Field>
+          <Field label="Currency" labelOnly>
+            <Controller
+              control={control}
+              name="currency"
+              render={({ field }) => (
+                <Select
+                  ariaLabel="Currency"
+                  value={field.value ?? "INR"}
+                  onValueChange={field.onChange}
+                  options={INQUIRY_CURRENCIES.map((c) => ({ value: c, label: c }))}
+                />
+              )}
+            />
+          </Field>
+          <Field label="Country" labelOnly>
+            <Controller
+              control={control}
+              name="country"
+              render={({ field }) => (
+                <Select
+                  ariaLabel="Country"
+                  value={field.value ?? "India"}
+                  onValueChange={field.onChange}
+                  options={INQUIRY_COUNTRIES.map((c) => ({ value: c, label: c }))}
+                />
+              )}
+            />
+          </Field>
+        </div>
       </SectionCard>
 
       {/* ── 3 · Addresses ────────────────────────────────────────────── */}
       <SectionCard
         title="Addresses"
-        hint="Registered, bill-to, ship-to and consignee addresses — flag one as primary."
+        inlineHint
+        hint="Billing and shipping addresses — copy billing into shipping when they match."
       >
-        {addressFields.map((field, idx) => (
-          <div
-            key={field.id}
-            className="rounded-xl border border-hairline bg-surface-soft p-4 flex flex-col gap-4"
-          >
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[13px] font-semibold text-ink-strong">
-                Address {idx + 1}
-              </p>
-              <button
-                type="button"
-                aria-label={`Remove address ${idx + 1}`}
-                onClick={() => removeAddress(idx)}
-                className="inline-flex items-center gap-1 text-[12px] font-semibold text-ink-muted hover:text-red-600 transition-colors"
-              >
-                <Trash2 size={13} strokeWidth={2.4} />
-                Remove
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-              <Field label="Address Type" labelOnly>
-                <Controller
-                  control={control}
-                  name={`addresses.${idx}.addressType`}
-                  render={({ field: f }) => (
-                    <Select
-                      ariaLabel="Address Type"
-                      value={f.value ?? "registered"}
-                      onValueChange={(v) => f.onChange(v)}
-                      options={ADDRESS_TYPES.map((t) => ({
-                        value: t,
-                        label: ADDRESS_TYPE_LABELS[t],
-                      }))}
-                    />
-                  )}
-                />
-              </Field>
-              <Field label="Primary" labelOnly>
-                <Controller
-                  control={control}
-                  name={`addresses.${idx}.isPrimary`}
-                  render={({ field: f }) => (
-                    <label className="inline-flex items-center gap-2 py-2 text-[13px] font-semibold text-ink-muted">
-                      <input
-                        type="checkbox"
-                        className="size-[16px] accent-brand"
-                        checked={Boolean(f.value)}
-                        onChange={(e) => f.onChange(e.target.checked)}
-                      />
-                      Primary address
-                    </label>
-                  )}
-                />
-              </Field>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-              <Field id={`kyc-addr${idx}-l1`} label="Address Line 1">
-                <input id={`kyc-addr${idx}-l1`} type="text" className="nt-input" {...register(`addresses.${idx}.line1`)} />
-              </Field>
-              <Field id={`kyc-addr${idx}-l2`} label="Address Line 2">
-                <input id={`kyc-addr${idx}-l2`} type="text" className="nt-input" {...register(`addresses.${idx}.line2`)} />
-              </Field>
-              <Field id={`kyc-addr${idx}-l3`} label="Address Line 3">
-                <input id={`kyc-addr${idx}-l3`} type="text" className="nt-input" {...register(`addresses.${idx}.line3`)} />
-              </Field>
-              <Field id={`kyc-addr${idx}-l4`} label="Address Line 4">
-                <input id={`kyc-addr${idx}-l4`} type="text" className="nt-input" {...register(`addresses.${idx}.line4`)} />
-              </Field>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-              <Field id={`kyc-addr${idx}-city`} label="City">
-                <input id={`kyc-addr${idx}-city`} type="text" className="nt-input" {...register(`addresses.${idx}.city`)} />
-              </Field>
-              <Field id={`kyc-addr${idx}-state`} label="State">
-                <input id={`kyc-addr${idx}-state`} type="text" className="nt-input" {...register(`addresses.${idx}.state`)} />
-              </Field>
-              <Field id={`kyc-addr${idx}-country`} label="Country">
-                <input id={`kyc-addr${idx}-country`} type="text" className="nt-input" placeholder="e.g. India" {...register(`addresses.${idx}.country`)} />
-              </Field>
-              <Field id={`kyc-addr${idx}-pin`} label="Pin Code">
-                <input id={`kyc-addr${idx}-pin`} type="text" className="nt-input" {...register(`addresses.${idx}.pinCode`)} />
-              </Field>
-              <Field id={`kyc-addr${idx}-gstin`} label="GSTIN">
-                <input id={`kyc-addr${idx}-gstin`} type="text" className="nt-input" {...register(`addresses.${idx}.gstin`)} />
-              </Field>
-            </div>
-
-            <Field id={`kyc-addr${idx}-notes`} label="Notes">
-              <textarea
-                id={`kyc-addr${idx}-notes`}
-                rows={2}
-                className="nt-input resize-y"
-                style={{ fontWeight: 400 }}
-                placeholder="Notes about this address..."
-                {...register(`addresses.${idx}.notes`)}
+        {addressFields.map((field, idx) => {
+          const addrLabel =
+            idx === 0 ? "Billing Address" : idx === 1 ? "Shipping Address" : `Address ${idx + 1}`;
+          return (
+            <div key={field.id} className="flex flex-col gap-3">
+              <GroupHeader
+                n={idx + 1}
+                label={addrLabel}
+                action={
+                  <div className="flex shrink-0 items-center gap-2">
+                    {idx >= 1 && (
+                      <button
+                        type="button"
+                        onClick={() => copyFromBilling(idx)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-[#c9c9ea] bg-[#f4f4fd] px-2.5 py-1.5 text-[12px] font-bold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#eeeefb]"
+                      >
+                        Copy from billing address
+                      </button>
+                    )}
+                    {idx >= 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeAddress(idx)}
+                        aria-label={`Remove ${addrLabel.toLowerCase()}`}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-hairline px-2.5 py-1.5 text-[12px] font-semibold text-ink-subtle transition hover:border-[#f0b4b4] hover:bg-[#fdf3f3] hover:text-[#d32f2f]"
+                      >
+                        <X className="h-[15px] w-[15px]" />
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                }
               />
-            </Field>
-          </div>
-        ))}
+
+              <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+                <Field id={`kyc-addr${idx}-l1`} label="Address Line 1">
+                  <input
+                    id={`kyc-addr${idx}-l1`}
+                    type="text"
+                    className="nt-input"
+                    placeholder="Unit No./Block No., Floor, Building Name"
+                    {...register(`addresses.${idx}.line1`)}
+                  />
+                </Field>
+                <Field id={`kyc-addr${idx}-l2`} label="Address Line 2">
+                  <input
+                    id={`kyc-addr${idx}-l2`}
+                    type="text"
+                    className="nt-input"
+                    placeholder="Street Name, Sector Name"
+                    {...register(`addresses.${idx}.line2`)}
+                  />
+                </Field>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+                <Field id={`kyc-addr${idx}-l3`} label="Address Line 3">
+                  <input
+                    id={`kyc-addr${idx}-l3`}
+                    type="text"
+                    className="nt-input"
+                    placeholder="Area"
+                    {...register(`addresses.${idx}.line3`)}
+                  />
+                </Field>
+                <Field id={`kyc-addr${idx}-l4`} label="Address Line 4">
+                  <input
+                    id={`kyc-addr${idx}-l4`}
+                    type="text"
+                    className="nt-input"
+                    placeholder="Nearby Landmark"
+                    {...register(`addresses.${idx}.line4`)}
+                  />
+                </Field>
+              </div>
+
+              <div className="grid grid-cols-4 gap-3 max-md:grid-cols-2">
+                <Field id={`kyc-addr${idx}-city`} label="City">
+                  <input id={`kyc-addr${idx}-city`} type="text" className="nt-input" {...register(`addresses.${idx}.city`)} />
+                </Field>
+                <Field id={`kyc-addr${idx}-state`} label="State">
+                  <input id={`kyc-addr${idx}-state`} type="text" className="nt-input" {...register(`addresses.${idx}.state`)} />
+                </Field>
+                <Field id={`kyc-addr${idx}-country`} label="Country">
+                  <input id={`kyc-addr${idx}-country`} type="text" className="nt-input" placeholder="e.g. India" {...register(`addresses.${idx}.country`)} />
+                </Field>
+                <Field id={`kyc-addr${idx}-pin`} label="Pin Code">
+                  <input id={`kyc-addr${idx}-pin`} type="text" className="nt-input" {...register(`addresses.${idx}.pinCode`)} />
+                </Field>
+              </div>
+            </div>
+          );
+        })}
 
         <button
           type="button"
           onClick={() =>
             appendAddress({
-              addressType: "registered",
+              addressType: "ship_to",
               isPrimary: false,
               line1: "",
               line2: "",
@@ -653,13 +769,11 @@ export function KycForm({
               state: "",
               country: "",
               pinCode: "",
-              gstin: "",
-              notes: "",
             })
           }
-          className="inline-flex items-center gap-1.5 self-start rounded-chip border border-hairline-strong bg-surface-card px-4 py-2 text-[13px] font-semibold text-ink-muted hover:text-ink-strong hover:border-ink-subtle transition-colors"
+          className="inline-flex w-max items-center gap-1.5 rounded-lg border border-dashed border-[#c9c9ea] bg-[#f4f4fd] px-4 py-2.5 text-[13px] font-bold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#eeeefb]"
         >
-          <Plus size={14} strokeWidth={2.6} />
+          <Plus className="h-4 w-4" />
           Add address
         </button>
       </SectionCard>
@@ -667,99 +781,81 @@ export function KycForm({
       {/* ── 4 · Contact Person ───────────────────────────────────────── */}
       <SectionCard
         title="Contact Person"
-        hint="Saved as the client's primary contact — auto-fetched on enquiries."
+        inlineHint
+        hint="The first contact is saved as the client's primary — auto-fetched on enquiries."
       >
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-          <Field id="kyc-cfirst" label="First Name">
-            <input
-              id="kyc-cfirst"
-              type="text"
-              className="nt-input"
-              {...register("contactFirstName")}
-            />
-          </Field>
-          <Field id="kyc-clast" label="Last Name">
-            <input
-              id="kyc-clast"
-              type="text"
-              className="nt-input"
-              {...register("contactLastName")}
-            />
-          </Field>
-          <Field id="kyc-cdesig" label="Designation">
-            <input
-              id="kyc-cdesig"
-              type="text"
-              className="nt-input"
-              placeholder="e.g. Purchase Manager"
-              {...register("contactDesignation")}
-            />
-          </Field>
-          <Field id="kyc-cno" label="Contact No">
-            <input
-              id="kyc-cno"
-              type="tel"
-              className="nt-input"
-              {...register("contactNo")}
-            />
-          </Field>
-          <Field id="kyc-cemail" label="Email">
-            <input
-              id="kyc-cemail"
-              type="email"
-              className="nt-input"
-              {...register("contactEmail")}
-            />
-          </Field>
+        {/* Primary contact */}
+        <div className="flex flex-col gap-3">
+          <GroupHeader n={1} label="Contact" />
+          <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
+            <Field id="kyc-cfirst" label="First Name">
+              <input id="kyc-cfirst" type="text" className="nt-input" {...register("contactFirstName")} />
+            </Field>
+            <Field id="kyc-clast" label="Last Name">
+              <input id="kyc-clast" type="text" className="nt-input" {...register("contactLastName")} />
+            </Field>
+            <Field id="kyc-cno" label="Contact No">
+              <input id="kyc-cno" type="tel" className="nt-input" {...register("contactNo")} />
+            </Field>
+            <Field id="kyc-cemail" label="Email">
+              <input id="kyc-cemail" type="email" className="nt-input" {...register("contactEmail")} />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+            <Field id="kyc-cdesig" label="Designation">
+              <input
+                id="kyc-cdesig"
+                type="text"
+                className="nt-input"
+                placeholder="e.g. Purchase Manager"
+                {...register("contactDesignation")}
+              />
+            </Field>
+            <Field id="kyc-cnotes" label="Contact Notes">
+              <input
+                id="kyc-cnotes"
+                type="text"
+                className="nt-input"
+                placeholder="Notes about this contact"
+                {...register("contactNotes")}
+              />
+            </Field>
+          </div>
         </div>
-        <Field id="kyc-cnotes" label="Contact Notes">
-          <textarea
-            id="kyc-cnotes"
-            rows={2}
-            className="nt-input resize-y"
-            style={{ fontWeight: 400 }}
-            placeholder="Notes about this contact person..."
-            {...register("contactNotes")}
-          />
-        </Field>
 
         {/* Additional contacts */}
         {additionalContactFields.map((field, idx) => (
-          <div
-            key={field.id}
-            className="rounded-xl border border-hairline bg-surface-soft p-4 flex flex-col gap-4"
-          >
-            <div className="flex items-center justify-between">
-              <p className="text-[13px] font-semibold text-ink-strong">
-                Contact {idx + 2}
-              </p>
-              <button
-                type="button"
-                aria-label={`Remove contact ${idx + 2}`}
-                onClick={() => removeContact(idx)}
-                className="inline-flex items-center gap-1 text-[12px] font-semibold text-ink-muted hover:text-red-600 transition-colors"
-              >
-                <Trash2 size={13} strokeWidth={2.4} />
-                Remove
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+          <div key={field.id} className="flex flex-col gap-3">
+            <GroupHeader
+              n={idx + 2}
+              label="Contact"
+              action={
+                <button
+                  type="button"
+                  onClick={() => removeContact(idx)}
+                  aria-label={`Remove contact ${idx + 2}`}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-hairline px-2.5 py-1.5 text-[12px] font-semibold text-ink-subtle transition hover:border-[#f0b4b4] hover:bg-[#fdf3f3] hover:text-[#d32f2f]"
+                >
+                  <X className="h-[15px] w-[15px]" />
+                  Remove
+                </button>
+              }
+            />
+            <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
               <Field id={`kyc-ac${idx}-first`} label="First Name" required>
-                <input
-                  id={`kyc-ac${idx}-first`}
-                  type="text"
-                  className="nt-input"
-                  {...register(`additionalContacts.${idx}.firstName`)}
-                />
+                <input id={`kyc-ac${idx}-first`} type="text" className="nt-input" {...register(`additionalContacts.${idx}.firstName`)} />
               </Field>
               <Field id={`kyc-ac${idx}-last`} label="Last Name">
-                <input
-                  id={`kyc-ac${idx}-last`}
-                  type="text"
-                  className="nt-input"
-                  {...register(`additionalContacts.${idx}.lastName`)}
-                />
+                <input id={`kyc-ac${idx}-last`} type="text" className="nt-input" {...register(`additionalContacts.${idx}.lastName`)} />
               </Field>
+              <Field id={`kyc-ac${idx}-no`} label="Contact No">
+                <input id={`kyc-ac${idx}-no`} type="tel" className="nt-input" {...register(`additionalContacts.${idx}.contactNo`)} />
+              </Field>
+              <Field id={`kyc-ac${idx}-email`} label="Email">
+                <input id={`kyc-ac${idx}-email`} type="email" className="nt-input" {...register(`additionalContacts.${idx}.email`)} />
+              </Field>
+            </div>
+            <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
               <Field id={`kyc-ac${idx}-desig`} label="Designation">
                 <input
                   id={`kyc-ac${idx}-desig`}
@@ -769,33 +865,16 @@ export function KycForm({
                   {...register(`additionalContacts.${idx}.designation`)}
                 />
               </Field>
-              <Field id={`kyc-ac${idx}-no`} label="Contact No">
+              <Field id={`kyc-ac${idx}-notes`} label="Notes">
                 <input
-                  id={`kyc-ac${idx}-no`}
-                  type="tel"
+                  id={`kyc-ac${idx}-notes`}
+                  type="text"
                   className="nt-input"
-                  {...register(`additionalContacts.${idx}.contactNo`)}
-                />
-              </Field>
-              <Field id={`kyc-ac${idx}-email`} label="Email">
-                <input
-                  id={`kyc-ac${idx}-email`}
-                  type="email"
-                  className="nt-input"
-                  {...register(`additionalContacts.${idx}.email`)}
+                  placeholder="Notes about this contact"
+                  {...register(`additionalContacts.${idx}.notes`)}
                 />
               </Field>
             </div>
-            <Field id={`kyc-ac${idx}-notes`} label="Notes">
-              <textarea
-                id={`kyc-ac${idx}-notes`}
-                rows={2}
-                className="nt-input resize-y"
-                style={{ fontWeight: 400 }}
-                placeholder="Notes about this contact..."
-                {...register(`additionalContacts.${idx}.notes`)}
-              />
-            </Field>
           </div>
         ))}
 
@@ -811,24 +890,28 @@ export function KycForm({
               notes: "",
             })
           }
-          className="inline-flex items-center gap-1.5 self-start rounded-chip border border-hairline-strong bg-surface-card px-4 py-2 text-[13px] font-semibold text-ink-muted hover:text-ink-strong hover:border-ink-subtle transition-colors"
+          className="inline-flex w-max items-center gap-1.5 rounded-lg border border-dashed border-[#c9c9ea] bg-[#f4f4fd] px-4 py-2.5 text-[13px] font-bold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#eeeefb]"
         >
-          <Plus size={14} strokeWidth={2.6} />
-          Add another contact
+          <Plus className="h-4 w-4" />
+          Add Contact
         </button>
       </SectionCard>
 
       {/* ── 5 · Commercial & Credit ──────────────────────────────────── */}
       <SectionCard
-        title="Commercial &amp; Credit"
+        title="Commercial & Credit"
+        inlineHint
         hint="Payment terms, credit limits, freight and logistics details."
       >
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+        <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
           <Field id="kyc-payterms" label="Payment Terms">
-            <input id="kyc-payterms" type="text" className="nt-input" {...register("paymentTerms")} />
-            <p className="mt-1 text-[12px] text-ink-subtle">
-              Payment structure — e.g. 50% advance, 50% on delivery
-            </p>
+            <input
+              id="kyc-payterms"
+              type="text"
+              className="nt-input"
+              placeholder="e.g. 50% advance, 50% on delivery"
+              {...register("paymentTerms")}
+            />
           </Field>
           <Field id="kyc-freight" label="Freight Charges">
             <input id="kyc-freight" type="text" className="nt-input" {...register("freightCharges")} />
@@ -843,9 +926,6 @@ export function KycForm({
               placeholder="e.g. 30"
               {...register("creditDays", { setValueAs: toOptionalNumber })}
             />
-            <p className="mt-1 text-[12px] text-ink-subtle">
-              Net days to pay after invoice / dispatch
-            </p>
           </Field>
           <Field id="kyc-creditlimit" label="Credit Limit">
             <input
@@ -857,28 +937,55 @@ export function KycForm({
               placeholder="e.g. 500000"
               {...register("creditLimit", { setValueAs: toOptionalNumber })}
             />
-            <p className="mt-1 text-[12px] text-ink-subtle">
-              Maximum outstanding allowed for this client
-            </p>
           </Field>
-          <Field id="kyc-transporter" label="Transporter">
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+          <Field label="Transporter" labelOnly>
+            <Controller
+              control={control}
+              name="transporter"
+              render={({ field }) => (
+                <Select
+                  ariaLabel="Transporter"
+                  value={field.value ?? ""}
+                  onValueChange={(v) => field.onChange(v || undefined)}
+                  placeholder="Select transporter"
+                  options={TRANSPORTER_OPTIONS.map((t) => ({ value: t, label: t }))}
+                />
+              )}
+            />
+          </Field>
+          <Field id="kyc-qtydev" label="Quantity Deviation">
             <input
-              id="kyc-transporter"
+              id="kyc-qtydev"
               type="text"
               className="nt-input"
-              placeholder="e.g. Blue Dart"
-              {...register("transporter")}
+              placeholder="e.g. +/- 10%"
+              {...register("qtyDeviation")}
             />
           </Field>
         </div>
+
         <Field id="kyc-otherrefs" label="Other References">
           <textarea
             id="kyc-otherrefs"
             rows={2}
             className="nt-input resize-y"
             style={{ fontWeight: 400 }}
-            placeholder="Any other references or notes relevant to this client..."
+            placeholder="Any other references or notes relevant to this client"
             {...register("otherReferences")}
+          />
+        </Field>
+
+        <Field id="kyc-notes" label="Client Notes">
+          <textarea
+            id="kyc-notes"
+            rows={3}
+            className="nt-input resize-y"
+            style={{ fontWeight: 400 }}
+            placeholder="Any general notes about this client"
+            {...register("notes")}
           />
         </Field>
       </SectionCard>
@@ -886,43 +993,36 @@ export function KycForm({
       {/* ── 6 · Bank Details ─────────────────────────────────────────── */}
       <SectionCard
         title="Bank Details"
+        inlineHint
         hint="One or more bank accounts for payments — flag one as primary."
       >
         {bankFields.map((field, idx) => (
-          <div
-            key={field.id}
-            className="rounded-xl border border-hairline bg-surface-soft p-4 flex flex-col gap-4"
-          >
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[13px] font-semibold text-ink-strong">
-                Account {idx + 1}
-              </p>
-              <button
-                type="button"
-                aria-label={`Remove bank account ${idx + 1}`}
-                onClick={() => removeBank(idx)}
-                className="inline-flex items-center gap-1 text-[12px] font-semibold text-ink-muted hover:text-red-600 transition-colors"
-              >
-                <Trash2 size={13} strokeWidth={2.4} />
-                Remove
-              </button>
-            </div>
+          <div key={field.id} className="flex flex-col gap-3">
+            <GroupHeader
+              n={idx + 1}
+              label="Account"
+              action={
+                <button
+                  type="button"
+                  onClick={() => removeBank(idx)}
+                  aria-label={`Remove bank account ${idx + 1}`}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-hairline px-2.5 py-1.5 text-[12px] font-semibold text-ink-subtle transition hover:border-[#f0b4b4] hover:bg-[#fdf3f3] hover:text-[#d32f2f]"
+                >
+                  <X className="h-[15px] w-[15px]" />
+                  Remove
+                </button>
+              }
+            />
 
-            <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-              <Field id={`kyc-bank${idx}-name`} label="Bank Name">
-                <input id={`kyc-bank${idx}-name`} type="text" className="nt-input" placeholder="e.g. State Bank of India" {...register(`bankAccounts.${idx}.bankName`)} />
-              </Field>
-              <Field id={`kyc-bank${idx}-accno`} label="Account No">
-                <input id={`kyc-bank${idx}-accno`} type="text" className="nt-input" {...register(`bankAccounts.${idx}.accountNo`)} />
-              </Field>
-              <Field id={`kyc-bank${idx}-ifsc`} label="IFSC Code">
-                <input id={`kyc-bank${idx}-ifsc`} type="text" className="nt-input" placeholder="e.g. SBIN0001234" {...register(`bankAccounts.${idx}.ifsc`)} />
-              </Field>
-              <Field id={`kyc-bank${idx}-branch`} label="Branch">
-                <input id={`kyc-bank${idx}-branch`} type="text" className="nt-input" placeholder="e.g. Ambad, Nashik" {...register(`bankAccounts.${idx}.branch`)} />
-              </Field>
-              <Field id={`kyc-bank${idx}-holder`} label="Account Holder">
-                <input id={`kyc-bank${idx}-holder`} type="text" className="nt-input" placeholder={watch("name") || "Name on the account"} {...register(`bankAccounts.${idx}.accountHolder`)} />
+            <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
+              <Field id={`kyc-bank${idx}-holder`} label="Account Name">
+                <input
+                  id={`kyc-bank${idx}-holder`}
+                  type="text"
+                  className="nt-input"
+                  placeholder={watch("name") || "Name on the account"}
+                  {...register(`bankAccounts.${idx}.accountHolder`)}
+                />
                 <button
                   type="button"
                   onClick={() =>
@@ -932,6 +1032,21 @@ export function KycForm({
                 >
                   &#8627; Same as company
                 </button>
+              </Field>
+              <Field id={`kyc-bank${idx}-name`} label="Bank Name">
+                <input id={`kyc-bank${idx}-name`} type="text" className="nt-input" placeholder="e.g. State Bank of India" {...register(`bankAccounts.${idx}.bankName`)} />
+              </Field>
+              <Field id={`kyc-bank${idx}-accno`} label="Account No">
+                <input id={`kyc-bank${idx}-accno`} type="text" className="nt-input" {...register(`bankAccounts.${idx}.accountNo`)} />
+              </Field>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
+              <Field id={`kyc-bank${idx}-ifsc`} label="IFSC / SWIFT Code">
+                <input id={`kyc-bank${idx}-ifsc`} type="text" className="nt-input" placeholder="IFSC (domestic) or SWIFT (international)" {...register(`bankAccounts.${idx}.ifsc`)} />
+              </Field>
+              <Field id={`kyc-bank${idx}-branch`} label="Branch">
+                <input id={`kyc-bank${idx}-branch`} type="text" className="nt-input" placeholder="e.g. Ambad, Nashik" {...register(`bankAccounts.${idx}.branch`)} />
               </Field>
               <Field id={`kyc-bank${idx}-type`} label="Account Type">
                 <input id={`kyc-bank${idx}-type`} type="text" className="nt-input" placeholder="e.g. Current / Savings" {...register(`bankAccounts.${idx}.accountType`)} />
@@ -970,17 +1085,18 @@ export function KycForm({
               notes: "",
             })
           }
-          className="inline-flex items-center gap-1.5 self-start rounded-chip border border-hairline-strong bg-surface-card px-4 py-2 text-[13px] font-semibold text-ink-muted hover:text-ink-strong hover:border-ink-subtle transition-colors"
+          className="inline-flex w-max items-center gap-1.5 rounded-lg border border-dashed border-[#c9c9ea] bg-[#f4f4fd] px-4 py-2.5 text-[13px] font-bold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#eeeefb]"
         >
-          <Plus size={14} strokeWidth={2.6} />
+          <Plus className="h-4 w-4" />
           Add account
         </button>
       </SectionCard>
 
-      {/* ── 7 · Documents ────────────────────────────────────────────── */}
+      {/* ── 7 · Documents & Business Card ────────────────────────────── */}
       <SectionCard
         title="Documents"
-        hint="Attach PDFs, images and other files to this client record."
+        inlineHint
+        hint="Attach any document, image, audio, or video to this client record — plus scans of the contact's business card."
       >
         {editClientId ? (
           <ClientDocuments
@@ -992,79 +1108,26 @@ export function KycForm({
             Save the client first, then you can attach documents.
           </p>
         )}
-      </SectionCard>
 
-      {/* ── 8 · Business Card ────────────────────────────────────────── */}
-      <SectionCard
-        title="Business Card"
-        hint="Optional scans of the contact's card — uploads run immediately; the client saves fine without them."
-      >
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-          <CardUpload
-            label="Front"
-            url={cardFront}
-            uploading={uploading.front}
-            onPick={(f) => void onPickCard(f, "front")}
-            onClear={() => setValue("businessCardFrontUrl", undefined)}
-          />
-          <CardUpload
-            label="Back"
-            url={cardBack}
-            uploading={uploading.back}
-            onPick={(f) => void onPickCard(f, "back")}
-            onClear={() => setValue("businessCardBackUrl", undefined)}
-          />
+        <div className="flex flex-col gap-3">
+          <GroupHeader n={1} label="Business Card" />
+          <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+            <CardUpload
+              label="Front"
+              url={cardFront}
+              uploading={uploading.front}
+              onPick={(f) => void onPickCard(f, "front")}
+              onClear={() => setValue("businessCardFrontUrl", undefined)}
+            />
+            <CardUpload
+              label="Back"
+              url={cardBack}
+              uploading={uploading.back}
+              onPick={(f) => void onPickCard(f, "back")}
+              onClear={() => setValue("businessCardBackUrl", undefined)}
+            />
+          </div>
         </div>
-      </SectionCard>
-
-      {/* ── 9 · Meeting & Notes ──────────────────────────────────────── */}
-      <SectionCard title="Meeting &amp; Notes">
-        <Field id="kyc-notes" label="Client Notes">
-          <textarea
-            id="kyc-notes"
-            rows={3}
-            className="nt-input resize-y"
-            style={{ fontWeight: 400 }}
-            placeholder="Any general notes about this client..."
-            {...register("notes")}
-          />
-        </Field>
-        <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-          <Field id="kyc-mdate" label="Meeting Date">
-            <input
-              id="kyc-mdate"
-              type="date"
-              className="nt-input"
-              {...register("meetingDate")}
-            />
-          </Field>
-          <Field id="kyc-mstart" label="Meeting Start Time">
-            <input
-              id="kyc-mstart"
-              type="time"
-              className="nt-input"
-              {...register("meetingStart", { setValueAs: emptyToUndefined })}
-            />
-          </Field>
-          <Field id="kyc-mend" label="Meeting End Time">
-            <input
-              id="kyc-mend"
-              type="time"
-              className="nt-input"
-              {...register("meetingEnd", { setValueAs: emptyToUndefined })}
-            />
-          </Field>
-        </div>
-        <Field id="kyc-mnotes" label="Meeting Notes">
-          <textarea
-            id="kyc-mnotes"
-            rows={3}
-            className="nt-input resize-y"
-            style={{ fontWeight: 400 }}
-            placeholder="Key points from the meeting..."
-            {...register("meetingNotes")}
-          />
-        </Field>
       </SectionCard>
 
       {(serverError || firstFieldError) && (
@@ -1093,7 +1156,7 @@ export function KycForm({
             letterSpacing: "0.005em",
           }}
         >
-          {pending ? "Saving..." : isEdit ? "Save changes" : "Onboard Client"}
+          {pending ? "Saving" : isEdit ? "Save changes" : "Onboard Client"}
         </button>
       </div>
     </form>
@@ -1101,10 +1164,11 @@ export function KycForm({
 }
 
 /**
- * Multi-select master picker rendered as a checkbox chip grid — visually and
- * behaviourally identical to Product Types. Stores an array of selected uuids;
- * the legacy singular column is mirrored to the first selection server-side.
- * Empty master shows the "add in Admin -> Masters" fallback.
+ * Multi-select master picker rendered as a prominent checkbox chip row — the
+ * same chip treatment as the enquiry checklist's "Docs Given". Stores an array
+ * of selected uuids; the legacy singular column is mirrored to the first
+ * selection server-side. Empty master shows the "add in Admin -> Masters"
+ * fallback.
  */
 function MasterChips({
   control,
@@ -1152,18 +1216,18 @@ function MasterChips({
                           )
                         }
                         className={cn(
-                          "inline-flex items-center gap-2 rounded-chip border px-3 py-2 text-[13px] font-semibold transition-colors",
+                          "inline-flex items-center gap-2 rounded-chip border-[1.75px] px-3 py-2 text-[13px] font-semibold transition-colors",
                           checked
                             ? "border-brand bg-brand/8 text-ink-strong"
-                            : "border-hairline bg-surface-card text-ink-muted hover:border-hairline-strong hover:text-ink-strong",
+                            : "border-[#9199b6] bg-surface-card text-ink-strong hover:border-[#6f78a0] hover:bg-[#f3f4f8]",
                         )}
                       >
                         <span
                           className={cn(
-                            "inline-flex size-[16px] items-center justify-center rounded-[4px] border transition-colors",
+                            "inline-flex size-[16px] items-center justify-center rounded-[4px] border-[1.75px] transition-colors",
                             checked
                               ? "bg-brand border-brand text-white"
-                              : "border-hairline-strong bg-white text-transparent",
+                              : "border-[#9199b6] bg-white text-transparent",
                           )}
                         >
                           <Check size={11} strokeWidth={3} />
@@ -1205,7 +1269,7 @@ function CardUpload({
 }) {
   const inputRef = React.useRef<HTMLInputElement>(null);
   return (
-    <Field label={`Business Card -- ${label}`} labelOnly>
+    <Field label={`Business Card — ${label}`} labelOnly>
       <input
         ref={inputRef}
         type="file"
@@ -1252,7 +1316,7 @@ function CardUpload({
             <ImagePlus size={18} />
           )}
           <span className="text-[11.5px] font-semibold">
-            {uploading ? "Uploading..." : `Add ${label.toLowerCase()}`}
+            {uploading ? "Uploading" : `Add ${label.toLowerCase()}`}
           </span>
         </button>
       )}

@@ -21,8 +21,11 @@ import postgres from "postgres";
 
 const APPLY = process.argv.includes("--apply");
 
-const url = process.env.DATABASE_URL;
-if (!url) throw new Error("DATABASE_URL not set");
+// Prefer a dedicated migration URL when set. DDL should run over a SESSION
+// connection (Supabase session pooler :5432 / direct), not the transaction
+// pooler (:6543) the app runtime uses — so MIGRATE_DATABASE_URL overrides.
+const url = process.env.MIGRATE_DATABASE_URL ?? process.env.DATABASE_URL;
+if (!url) throw new Error("MIGRATE_DATABASE_URL / DATABASE_URL not set");
 const sql = postgres(url, { max: 1, prepare: false });
 
 interface Migration {

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
 import {
@@ -16,11 +16,14 @@ import {
 } from "@/db/enums";
 import { CreateInquirySchema } from "@/lib/validators/inquiry";
 import { createInquiry, updateInquiry } from "@/app/(app)/inquiries/actions";
+import { saveEnquiryDraft, deleteEnquiryDraft } from "@/app/(app)/enquiries/drafts/actions";
+import { draftHasContent } from "@/lib/drafts/enquiry-draft";
+import { Plus, X } from "lucide-react";
 import { fireToast } from "@/lib/toast";
 import { Select } from "@/components/ui/select";
 import { INDIA_STATES, citiesForState } from "@/lib/data/india-states-cities";
 import { SearchableSelect } from "./searchable-select";
-import { Field, SectionCard } from "./form-field";
+import { Field, SectionCard, GroupHeader } from "./form-field";
 import { ClientAutofillSection } from "./client-autofill";
 import { ProductsSection } from "./products-section";
 import { ChecklistSection } from "./checklist-section";
@@ -43,6 +46,8 @@ interface Props {
   grades: MasterOptionItem[];
   tolerances: MasterOptionItem[];
   conditions: MasterOptionItem[];
+  /** Owning department options (master_options 'department'). */
+  departments?: MasterOptionItem[];
   /** Per-shape dimension config keyed by shape name. */
   shapeProfiles: Record<string, ShapeConfig>;
   /**
@@ -59,6 +64,10 @@ interface Props {
    */
   editInquiryId?: string;
   initialValues?: Partial<InquiryFormValues>;
+  /** Create-mode only: enable auto-saving this form as a draft. */
+  enableDrafts?: boolean;
+  /** When resuming a draft, its id (auto-save continues into the same draft). */
+  resumeDraftId?: string;
 }
 
 /** Local YYYY-MM-DD for the date input's default (today, user's timezone). */
@@ -86,13 +95,17 @@ export function InquiryForm({
   grades,
   tolerances,
   conditions,
+  departments = [],
   shapeProfiles,
   pickerMasters,
   defaultSalesPersonId,
   editInquiryId,
   initialValues,
+  enableDrafts,
+  resumeDraftId,
 }: Props) {
   const isEdit = editInquiryId !== undefined;
+  const draftsOn = Boolean(enableDrafts) && !isEdit;
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
   const [serverError, setServerError] = React.useState<string | null>(null);
@@ -105,6 +118,7 @@ export function InquiryForm({
     handleSubmit,
     setValue,
     watch,
+    getValues,
     formState: { errors },
   } = useForm<InquiryFormValues, unknown, InquiryFormOutput>({
     resolver: zodResolver(CreateInquirySchema),
@@ -128,8 +142,10 @@ export function InquiryForm({
       contactNo: "",
       contactEmail: "",
       ccEmails: "",
+      extraContacts: [],
       productDescription: "",
       docsGiven: [],
+      assumedValues: {},
       dimensionNotes: "",
       smFolderLink: "",
       enquiryNotes: "",
@@ -161,6 +177,47 @@ export function InquiryForm({
 
   const clientMode = watch("clientMode");
   const clientId = watch("clientId");
+
+  const {
+    fields: extraContactFields,
+    append: appendContact,
+    remove: removeContact,
+  } = useFieldArray({ control, name: "extraContacts" });
+
+  // ── Draft auto-save (create mode only — silent, runs in background) ──
+  const [draftId] = React.useState(() =>
+    resumeDraftId ?? (draftsOn ? crypto.randomUUID() : ""),
+  );
+  const draftDeletedRef = React.useRef(false);
+  const saveTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedRef = React.useRef("");
+
+  const persistDraft = React.useCallback(async () => {
+    if (!draftsOn || !draftId || draftDeletedRef.current) return;
+    const values = getValues() as Record<string, unknown>;
+    if (!draftHasContent(values)) return;
+    const json = JSON.stringify(values);
+    if (json === lastSavedRef.current) return;
+    try {
+      await saveEnquiryDraft({ id: draftId, payload: values });
+      lastSavedRef.current = json;
+    } catch {
+      /* silent — retried on the next change */
+    }
+  }, [draftsOn, draftId, getValues]);
+
+  React.useEffect(() => {
+    if (!draftsOn) return;
+    const sub = watch(() => {
+      if (draftDeletedRef.current) return;
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => void persistDraft(), 1200);
+    });
+    return () => {
+      sub.unsubscribe();
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
+  }, [watch, draftsOn, persistDraft]);
 
   /** Copy the fetched KYC snapshot into the client block. Values stay fully
    *  editable — the inquiry stores a snapshot, not a live reference. */
@@ -227,6 +284,15 @@ export function InquiryForm({
         message: res.smNumber ? `Enquiry ${res.smNumber} created` : "Enquiry created",
         type: "success",
       });
+      // Enquiry saved — retire the draft so it leaves the Drafts inbox.
+      if (draftsOn && draftId) {
+        draftDeletedRef.current = true;
+        try {
+          await deleteEnquiryDraft(draftId);
+        } catch {
+          /* non-fatal — the draft just lingers */
+        }
+      }
       // The detail route exists now (typedRoutes verifies the template literal).
       if (res.id) router.push(`/inquiries/${res.id}`);
       else router.push("/inquiries" as Route);
@@ -239,41 +305,94 @@ export function InquiryForm({
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-6" noValidate>
-      {!isEdit && (
-        <p className="text-[13px] text-ink-subtle -mb-1">
-          SM number is assigned automatically on save.
-        </p>
-      )}
-
       {/* ── 1 · Client ───────────────────────────────────────────────── */}
-      <SectionCard
-        title="Client"
-        hint="New client creates a client record; Old client fetches its KYC details as an editable snapshot."
-      >
-        <ClientAutofillSection
-          mode={clientMode}
-          onModeChange={(m) => {
-            setValue("clientMode", m);
-            if (m === "new") setValue("clientId", undefined);
-          }}
-          clientId={clientId}
-          onClientChange={(id) => setValue("clientId", id)}
-          clients={clients}
-          onAutofill={applyAutofill}
-          error={errors.clientId?.message}
-        />
+      <SectionCard>
+        {/* Client Type (left) + Company Name (fills the right space) — two aligned boxes */}
+        <div className="flex flex-wrap items-start gap-4">
+          <div className="w-[268px] max-md:w-full">
+            <ClientAutofillSection
+              mode={clientMode}
+              onModeChange={(m) => {
+                setValue("clientMode", m);
+                if (m === "new") setValue("clientId", undefined);
+              }}
+              clientId={clientId}
+              onClientChange={(id) => setValue("clientId", id)}
+              clients={clients}
+              onAutofill={applyAutofill}
+              error={errors.clientId?.message}
+            />
+          </div>
+          <div className="min-w-[280px] flex-1">
+            <Field id="inq-company" label="Company Name" required>
+              <input
+                id="inq-company"
+                type="text"
+                className="nt-input"
+                placeholder="e.g. Precision Tools Pvt Ltd"
+                {...register("companyName")}
+              />
+            </Field>
+          </div>
+        </div>
 
-        <Field id="inq-company" label="Company Name" required>
-          <input
-            id="inq-company"
-            type="text"
-            className="nt-input"
-            placeholder="e.g. Precision Tools Pvt Ltd"
-            {...register("companyName")}
-          />
-        </Field>
+        <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
+          <Field id="inq-sm" label="SM Number">
+            <input
+              id="inq-sm"
+              type="text"
+              className="nt-input"
+              placeholder="Auto-generated on save"
+              disabled
+              readOnly
+            />
+          </Field>
+          <Field id="inq-date" label="Enquiry Date">
+            <input
+              id="inq-date"
+              type="date"
+              className="nt-input"
+              {...register("enquiryDate")}
+            />
+          </Field>
+          <Field id="inq-priority" label="Priority">
+            <Controller
+              control={control}
+              name="priority"
+              render={({ field }) => (
+                <Select
+                  id="inq-priority"
+                  value={field.value ?? "normal"}
+                  onValueChange={field.onChange}
+                  options={INQUIRY_PRIORITIES.map((p) => ({
+                    value: p,
+                    label: INQUIRY_PRIORITY_LABELS[p],
+                  }))}
+                />
+              )}
+            />
+          </Field>
+          <Field id="inq-source" label="Source">
+            <Controller
+              control={control}
+              name="source"
+              render={({ field }) => (
+                <Select
+                  id="inq-source"
+                  value={field.value ?? ""}
+                  onValueChange={(v) => field.onChange(v === "" ? undefined : v)}
+                  placeholder="How did it come in?"
+                  options={INQUIRY_SOURCES.map((s) => ({
+                    value: s,
+                    label: INQUIRY_SOURCE_LABELS[s],
+                  }))}
+                />
+              )}
+            />
+          </Field>
+        </div>
 
-        <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
+        <div className="grid grid-cols-6 gap-3 max-lg:grid-cols-3 max-md:grid-cols-2">
           <Field id="inq-export" label="Export">
             <Controller
               control={control}
@@ -287,7 +406,7 @@ export function InquiryForm({
                   onValueChange={(v) =>
                     field.onChange(v === "" ? undefined : v === "yes")
                   }
-                  placeholder="Select…"
+                  placeholder="Select"
                   options={YES_NO_OPTIONS}
                 />
               )}
@@ -327,9 +446,6 @@ export function InquiryForm({
               )}
             />
           </Field>
-        </div>
-
-        <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
           {watch("country") === "India" ? (
             <>
               <Field id="inq-state" label="State">
@@ -347,8 +463,8 @@ export function InquiryForm({
                         if (v) setCityGateError(false);
                       }}
                       options={INDIA_STATES}
-                      placeholder="Select state…"
-                      searchPlaceholder="Search states…"
+                      placeholder="Select state"
+                      searchPlaceholder="Search states"
                     />
                   )}
                 />
@@ -366,8 +482,8 @@ export function InquiryForm({
                           value={field.value || undefined}
                           onChange={(v) => field.onChange(v ?? "")}
                           options={citiesForState(selectedState)}
-                          placeholder="Select city…"
-                          searchPlaceholder="Search cities…"
+                          placeholder="Select city"
+                          searchPlaceholder="Search cities"
                           emptyText="No cities match."
                           allowCustom
                           disabled={!selectedState}
@@ -415,8 +531,12 @@ export function InquiryForm({
             <input
               id="inq-pin"
               type="text"
+              inputMode="numeric"
               className="nt-input"
               {...register("pinCode")}
+              onInput={(e) => {
+                e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, "");
+              }}
             />
           </Field>
         </div>
@@ -427,6 +547,7 @@ export function InquiryForm({
               id="inq-addr1"
               type="text"
               className="nt-input"
+              placeholder="Unit No./Block No., Floor, Building Name"
               {...register("addressLine1")}
             />
           </Field>
@@ -435,6 +556,7 @@ export function InquiryForm({
               id="inq-addr2"
               type="text"
               className="nt-input"
+              placeholder="Street Name, Sector Name"
               {...register("addressLine2")}
             />
           </Field>
@@ -443,6 +565,7 @@ export function InquiryForm({
               id="inq-addr3"
               type="text"
               className="nt-input"
+              placeholder="Area"
               {...register("addressLine3")}
             />
           </Field>
@@ -451,44 +574,48 @@ export function InquiryForm({
               id="inq-addr4"
               type="text"
               className="nt-input"
+              placeholder="Nearby Landmark"
               {...register("addressLine4")}
             />
           </Field>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-          <Field id="inq-cfirst" label="Contact First Name">
-            <input
-              id="inq-cfirst"
-              type="text"
-              className="nt-input"
-              {...register("contactFirstName")}
-            />
-          </Field>
-          <Field id="inq-clast" label="Contact Last Name">
-            <input
-              id="inq-clast"
-              type="text"
-              className="nt-input"
-              {...register("contactLastName")}
-            />
-          </Field>
-          <Field id="inq-cno" label="Contact No">
-            <input
-              id="inq-cno"
-              type="tel"
-              className="nt-input"
-              {...register("contactNo")}
-            />
-          </Field>
-          <Field id="inq-cemail" label="Email">
-            <input
-              id="inq-cemail"
-              type="email"
-              className="nt-input"
-              {...register("contactEmail")}
-            />
-          </Field>
+        <div className="flex flex-col gap-3">
+          <GroupHeader n={1} label="Contact" />
+          <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
+            <Field id="inq-cfirst" label="First Name">
+              <input
+                id="inq-cfirst"
+                type="text"
+                className="nt-input"
+                {...register("contactFirstName")}
+              />
+            </Field>
+            <Field id="inq-clast" label="Last Name">
+              <input
+                id="inq-clast"
+                type="text"
+                className="nt-input"
+                {...register("contactLastName")}
+              />
+            </Field>
+            <Field id="inq-cno" label="Contact No">
+              <input
+                id="inq-cno"
+                type="tel"
+                className="nt-input"
+                {...register("contactNo")}
+              />
+            </Field>
+            <Field id="inq-cemail" label="Email">
+              <input
+                id="inq-cemail"
+                type="email"
+                className="nt-input"
+                {...register("contactEmail")}
+              />
+            </Field>
+          </div>
         </div>
 
         <Field id="inq-cc" label="CC Emails">
@@ -496,62 +623,65 @@ export function InquiryForm({
             id="inq-cc"
             type="text"
             className="nt-input"
-            placeholder="Comma-separated…"
+            placeholder="Comma-separated"
             {...register("ccEmails")}
           />
         </Field>
+
+        {extraContactFields.length > 0 && (
+          <div className="flex flex-col gap-5">
+            {extraContactFields.map((f, i) => (
+              <div key={f.id} className="flex flex-col gap-3">
+                <GroupHeader
+                  n={i + 2}
+                  label="Contact"
+                  action={
+                    <button
+                      type="button"
+                      onClick={() => removeContact(i)}
+                      aria-label={`Remove contact ${i + 2}`}
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-hairline px-2.5 py-1.5 text-[12px] font-semibold text-ink-subtle transition hover:border-[#f0b4b4] hover:bg-[#fdf3f3] hover:text-[#d32f2f]"
+                    >
+                      <X className="h-[15px] w-[15px]" />
+                      Remove
+                    </button>
+                  }
+                />
+                <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
+                  <Field label="First Name">
+                    <input type="text" className="nt-input" {...register(`extraContacts.${i}.firstName` as const)} />
+                  </Field>
+                  <Field label="Last Name">
+                    <input type="text" className="nt-input" {...register(`extraContacts.${i}.lastName` as const)} />
+                  </Field>
+                  <Field label="Contact No">
+                    <input type="tel" className="nt-input" {...register(`extraContacts.${i}.contactNo` as const)} />
+                  </Field>
+                  <Field label="Email">
+                    <input type="email" className="nt-input" {...register(`extraContacts.${i}.email` as const)} />
+                  </Field>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={() => appendContact({ firstName: "", lastName: "", contactNo: "", email: "" })}
+          className="inline-flex w-max items-center gap-1.5 rounded-lg border border-dashed border-[#c9c9ea] bg-[#f4f4fd] px-4 py-2.5 text-[13px] font-bold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#eeeefb]"
+        >
+          <Plus className="h-4 w-4" />
+          Add Contact
+        </button>
       </SectionCard>
 
-      {/* ── 2 · Enquiry ──────────────────────────────────────────────── */}
-      <SectionCard title="Enquiry">
-        <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-          <Field id="inq-date" label="Enquiry Date">
-            <input
-              id="inq-date"
-              type="date"
-              className="nt-input"
-              {...register("enquiryDate")}
-            />
-          </Field>
-          <Field id="inq-priority" label="Priority">
-            <Controller
-              control={control}
-              name="priority"
-              render={({ field }) => (
-                <Select
-                  id="inq-priority"
-                  value={field.value ?? "normal"}
-                  onValueChange={field.onChange}
-                  options={INQUIRY_PRIORITIES.map((p) => ({
-                    value: p,
-                    label: INQUIRY_PRIORITY_LABELS[p],
-                  }))}
-                />
-              )}
-            />
-          </Field>
-          <Field id="inq-source" label="Source">
-            <Controller
-              control={control}
-              name="source"
-              render={({ field }) => (
-                <Select
-                  id="inq-source"
-                  value={field.value ?? ""}
-                  onValueChange={(v) =>
-                    field.onChange(v === "" ? undefined : v)
-                  }
-                  placeholder="How did it come in?"
-                  options={INQUIRY_SOURCES.map((s) => ({
-                    value: s,
-                    label: INQUIRY_SOURCE_LABELS[s],
-                  }))}
-                />
-              )}
-            />
-          </Field>
-        </div>
-      </SectionCard>
+      {/* ── 2 · Checklist ────────────────────────────────────────────── */}
+      <ChecklistSection
+        control={control}
+        register={register}
+        productDescriptionError={errors.productDescription?.message}
+      />
 
       {/* ── 3 · Products ─────────────────────────────────────────────── */}
       {/* Products are hidden in edit mode — they link to costings/quotes and
@@ -570,49 +700,60 @@ export function InquiryForm({
         />
       )}
 
-      {/* ── 4 · Checklist ────────────────────────────────────────────── */}
-      <ChecklistSection
-        control={control}
-        register={register}
-        productDescriptionError={errors.productDescription?.message}
-      />
-
-      {/* ── 5 · Assignment ───────────────────────────────────────────── */}
+      {/* ── 4 · Assignment ───────────────────────────────────────────── */}
       <SectionCard title="Assignment">
-        <Field id="inq-sm-link" label="SM Folder Link">
-          <input
-            id="inq-sm-link"
-            type="url"
-            className="nt-input"
-            placeholder="https://drive.google.com/…"
-            {...register("smFolderLink")}
-          />
-        </Field>
+        <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
+          <Field id="inq-sm-link" label="SM Folder Link">
+            <input
+              id="inq-sm-link"
+              type="url"
+              className="nt-input"
+              placeholder="https://drive.google.com/"
+              {...register("smFolderLink")}
+            />
+          </Field>
+          <Field id="inq-sales" label="Assign Sales Person">
+            <Controller
+              control={control}
+              name="assignedSalesPersonId"
+              render={({ field }) => (
+                <Select
+                  id="inq-sales"
+                  value={field.value ?? ""}
+                  onValueChange={(v) => field.onChange(v || undefined)}
+                  placeholder="Select an employee"
+                  searchPlaceholder="Search employees"
+                  searchable
+                  options={employees.map((e) => ({ value: e.id, label: e.name }))}
+                />
+              )}
+            />
+          </Field>
+          <Field id="inq-dept" label="Department">
+            <Controller
+              control={control}
+              name="departmentId"
+              render={({ field }) => (
+                <Select
+                  id="inq-dept"
+                  value={field.value ?? ""}
+                  onValueChange={(v) => field.onChange(v || undefined)}
+                  placeholder={departments.length ? "Select department" : "No departments yet"}
+                  disabled={departments.length === 0}
+                  options={departments.map((d) => ({ value: d.id, label: d.name }))}
+                />
+              )}
+            />
+          </Field>
+        </div>
         <Field id="inq-notes" label="Enquiry Notes">
           <textarea
             id="inq-notes"
             rows={3}
             className="nt-input resize-y"
             style={{ fontWeight: 400 }}
-            placeholder="Anything the team should know about this enquiry…"
+            placeholder="Anything the team should know about this enquiry"
             {...register("enquiryNotes")}
-          />
-        </Field>
-        <Field id="inq-sales" label="Assign Sales Person">
-          <Controller
-            control={control}
-            name="assignedSalesPersonId"
-            render={({ field }) => (
-              <Select
-                id="inq-sales"
-                value={field.value ?? ""}
-                onValueChange={(v) => field.onChange(v || undefined)}
-                placeholder="Select an employee…"
-                searchPlaceholder="Search employees…"
-                searchable
-                options={employees.map((e) => ({ value: e.id, label: e.name }))}
-              />
-            )}
           />
         </Field>
       </SectionCard>
@@ -627,7 +768,7 @@ export function InquiryForm({
       )}
 
       <div
-        className="flex items-center justify-end gap-3 pt-2"
+        className="flex items-center justify-center gap-3 pt-5"
         style={{ borderTop: "1px solid var(--color-hairline)" }}
       >
         <button
@@ -645,8 +786,8 @@ export function InquiryForm({
         >
           {pending
             ? isEdit
-              ? "Updating…"
-              : "Creating…"
+              ? "Updating"
+              : "Creating"
             : isEdit
               ? "Update Enquiry"
               : "Create Enquiry"}

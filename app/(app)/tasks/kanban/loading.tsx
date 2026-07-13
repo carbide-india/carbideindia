@@ -10,7 +10,7 @@ import { PageBuffering } from "@/components/ui/spinner";
 export default function KanbanLoading() {
   return (
     <>
-      <PageBuffering label="Loading board…" />
+      <PageBuffering label="Loading board" />
       {/* Header placeholder (matches the 96px / 72px chrome) */}
       <div className="sticky top-0 z-40 h-[96px] max-md:h-[72px] border-b border-[color:var(--color-hairline,#e5e7eb)] bg-white/70 backdrop-blur" />
 

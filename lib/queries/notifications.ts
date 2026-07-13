@@ -32,7 +32,7 @@ export const DEFAULT_NOTIFICATIONS_PAGE_SIZE = 50;
 /**
  * One flat row for the /inbox feed.  Joins the task subject + status
  * (so the row can deep-link with context) and the actor's name (the
- * "Alice approved …" caption).
+ * "Alice approved " caption).
  */
 export type InboxNotificationRow = {
   id: string;

@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
  * DetailGrid (ERP redesign — Phase 3).
  *
  * The single replacement for the repeated `ReadCard` + `InfoGrid` pattern
- * (`components/items/item-detail.tsx`, the quick-views, client detail, …). A
+ * (`components/items/item-detail.tsx`, the quick-views, client detail, ). A
  * label/value grid that:
  *   - skips empty rows (null / undefined / ""),
  *   - lays out multi-column responsively,

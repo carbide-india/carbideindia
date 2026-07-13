@@ -1039,7 +1039,7 @@ function QuickActions({
         <textarea
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          placeholder="Note for the team…"
+          placeholder="Note for the team"
           rows={3}
           className="w-full resize-none outline-none px-3 py-2.5 rounded-md"
           style={{

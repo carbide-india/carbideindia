@@ -218,85 +218,84 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
       <SectionCard
         title="Linked Enquiry"
         hint="Pick the SM this negotiation belongs to -- its company, sales person and products are auto-fetched. Optionally link a quotation to pull its pricing."
+        inlineHint
       >
-        <Field label="Enquiry (SM)" labelOnly required>
-          <Controller
-            control={control}
-            name="inquiryId"
-            render={({ field }) => (
-              <Select
-                value={field.value ?? ""}
-                onValueChange={(v) => void onPickInquiry(v || undefined)}
-                placeholder="Select an enquiry..."
-                searchPlaceholder="Search SM number or company..."
-                searchable
-                ariaLabel="Linked enquiry"
-                options={inquiries.map((o) => ({
-                  value: o.id,
-                  label: `${o.smNumber} — ${o.companyName}`,
-                }))}
-              />
-            )}
-          />
-        </Field>
+        <div className="grid grid-cols-3 gap-3 max-lg:grid-cols-3 max-md:grid-cols-1">
+          <Field label="Enquiry (SM)" labelOnly required>
+            <Controller
+              control={control}
+              name="inquiryId"
+              render={({ field }) => (
+                <Select
+                  value={field.value ?? ""}
+                  onValueChange={(v) => void onPickInquiry(v || undefined)}
+                  placeholder="Select an enquiry..."
+                  searchPlaceholder="Search SM number or company..."
+                  searchable
+                  ariaLabel="Linked enquiry"
+                  options={inquiries.map((o) => ({
+                    value: o.id,
+                    label: `${o.smNumber} — ${o.companyName}`,
+                  }))}
+                />
+              )}
+            />
+          </Field>
+
+          <Field label="Linked Quotation" labelOnly>
+            <Select
+              value={quoteId}
+              onValueChange={(v) => void onPickQuotation(v || undefined)}
+              placeholder="Optional -- pull a quotation's pricing..."
+              searchPlaceholder="Search quote number or company..."
+              searchable
+              ariaLabel="Linked quotation"
+              options={quotations.map((o) => ({
+                value: o.id,
+                label: `${o.quoteNo} — ${o.companyName ?? "—"}`,
+              }))}
+            />
+          </Field>
+
+          <Field id="ng-no" label="Negotiation No">
+            <input
+              id="ng-no"
+              type="text"
+              className="nt-input"
+              placeholder="Blank auto-numbers <SM>-N01"
+              style={{ fontFamily: "var(--font-mono)", fontSize: 13.5 }}
+              {...register("negotiationNo")}
+            />
+          </Field>
+        </div>
 
         {(snapshot || autofetching) && (
           <div className="flex flex-col gap-3 rounded-xl border border-hairline bg-surface-soft px-4 py-3">
             <div className="flex flex-wrap items-start gap-x-8 gap-y-2">
               <Caption label="Company">
-                {autofetching ? "…" : snapshot?.companyName ?? "—"}
+                {autofetching ? "" : snapshot?.companyName ?? "—"}
               </Caption>
               <Caption label="Enquiry Date">
                 {autofetching
-                  ? "…"
+                  ? ""
                   : snapshot?.enquiryDate
                     ? formatDate(new Date(snapshot.enquiryDate))
                     : "—"}
               </Caption>
               <Caption label="Sales Person">
-                {autofetching ? "…" : snapshot?.salesPersonName ?? "—"}
+                {autofetching ? "" : snapshot?.salesPersonName ?? "—"}
               </Caption>
             </div>
             {!autofetching && snapshot && <SmDetailsRow snapshot={snapshot} />}
           </div>
         )}
-
-        <Field label="Linked Quotation" labelOnly>
-          <Select
-            value={quoteId}
-            onValueChange={(v) => void onPickQuotation(v || undefined)}
-            placeholder="Optional -- link a quotation to pull its pricing..."
-            searchPlaceholder="Search quote number or company..."
-            searchable
-            ariaLabel="Linked quotation"
-            options={quotations.map((o) => ({
-              value: o.id,
-              label: `${o.quoteNo} — ${o.companyName ?? "—"}`,
-            }))}
-          />
-        </Field>
-
-        <Field id="ng-no" label="Negotiation No">
-          <input
-            id="ng-no"
-            type="text"
-            className="nt-input"
-            placeholder="Leave blank to auto-number"
-            style={{ fontFamily: "var(--font-mono)", fontSize: 13.5 }}
-            {...register("negotiationNo")}
-          />
-          <p className="text-[12.5px] text-ink-subtle">
-            Negotiation No auto-numbers as{" "}
-            <span style={{ fontFamily: "var(--font-mono)" }}>&lt;SM&gt;-N01</span>{" "}
-            -- leave blank.
-          </p>
-        </Field>
       </SectionCard>
 
       {/* -- 2 . Products & Pricing (per-line editor) --------------------- */}
       <SectionCard
         title="Products &amp; Pricing"
         hint="One line per product -- prefilled from the enquiry; add negotiated pricing per line."
+        inlineHint
       >
         {fields.map((field, index) => (
           <div
@@ -319,8 +318,8 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
               </button>
             </div>
 
-            {/* Product */}
-            <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+            {/* Product & Timeline */}
+            <div className="grid grid-cols-6 gap-3 max-lg:grid-cols-3 max-md:grid-cols-1">
               <Field
                 id={`lines.${index}.custProductName`}
                 label="Cust Product Name"
@@ -345,16 +344,48 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
                   {...register(`lines.${index}.qty`, qtyRegister)}
                 />
               </Field>
+              <Field id={`lines.${index}.partNo`} label="Part No">
+                <input
+                  id={`lines.${index}.partNo`}
+                  type="text"
+                  className="nt-input"
+                  {...register(`lines.${index}.partNo`)}
+                />
+              </Field>
+              <Field
+                id={`lines.${index}.developmentTime`}
+                label="Development Time"
+              >
+                <input
+                  id={`lines.${index}.developmentTime`}
+                  type="text"
+                  className="nt-input"
+                  placeholder="e.g. 6-8 weeks"
+                  {...register(`lines.${index}.developmentTime`)}
+                />
+              </Field>
+              <Field
+                id={`lines.${index}.deliveryTime`}
+                label="Delivery Time"
+              >
+                <input
+                  id={`lines.${index}.deliveryTime`}
+                  type="text"
+                  className="nt-input"
+                  placeholder="e.g. 30 days from PO"
+                  {...register(`lines.${index}.deliveryTime`)}
+                />
+              </Field>
+              <Field id={`lines.${index}.validity`} label="Validity">
+                <input
+                  id={`lines.${index}.validity`}
+                  type="text"
+                  className="nt-input"
+                  placeholder="e.g. 30 days"
+                  {...register(`lines.${index}.validity`)}
+                />
+              </Field>
             </div>
-
-            <Field id={`lines.${index}.partNo`} label="Part No">
-              <input
-                id={`lines.${index}.partNo`}
-                type="text"
-                className="nt-input"
-                {...register(`lines.${index}.partNo`)}
-              />
-            </Field>
 
             {/* Pricing */}
             <div
@@ -385,51 +416,6 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
                 </MiniField>
               </div>
             </div>
-
-            {/* Timeline & Validity */}
-            <div
-              className="pt-4"
-              style={{ borderTop: "1px solid var(--color-hairline)" }}
-            >
-              <p className="mb-3 text-[11px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
-                Timeline &amp; Validity
-              </p>
-              <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-                <Field
-                  id={`lines.${index}.developmentTime`}
-                  label="Development Time"
-                >
-                  <input
-                    id={`lines.${index}.developmentTime`}
-                    type="text"
-                    className="nt-input"
-                    placeholder="e.g. 6-8 weeks"
-                    {...register(`lines.${index}.developmentTime`)}
-                  />
-                </Field>
-                <Field
-                  id={`lines.${index}.deliveryTime`}
-                  label="Delivery Time"
-                >
-                  <input
-                    id={`lines.${index}.deliveryTime`}
-                    type="text"
-                    className="nt-input"
-                    placeholder="e.g. 30 days from PO"
-                    {...register(`lines.${index}.deliveryTime`)}
-                  />
-                </Field>
-                <Field id={`lines.${index}.validity`} label="Validity">
-                  <input
-                    id={`lines.${index}.validity`}
-                    type="text"
-                    className="nt-input"
-                    placeholder="e.g. 30 days"
-                    {...register(`lines.${index}.validity`)}
-                  />
-                </Field>
-              </div>
-            </div>
           </div>
         ))}
 
@@ -449,6 +435,7 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
       <SectionCard
         title="Status &amp; Notes"
         hint="The live pipeline state plus the quote document and any negotiation notes."
+        inlineHint
       >
         <Field label="Negotiation Status" labelOnly>
           <div className="[&>[role=group]]:flex-wrap [&>[role=group]]:max-w-full">

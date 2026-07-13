@@ -12,7 +12,7 @@ import {
 import { Trash2 } from "lucide-react";
 import { INQUIRY_SHAPES, QUANTITY_UOMS } from "@/db/enums";
 import { Select } from "@/components/ui/select";
-import { Field, SectionCard } from "./form-field";
+import { Field, SectionCard, GroupHeader } from "./form-field";
 import { toOptionalNumber } from "./checklist-section";
 import type { InquiryFormValues } from "./inquiry-form";
 import type { MasterOptionItem } from "@/lib/queries/masters";
@@ -107,6 +107,7 @@ export function ProductsSection({
   return (
     <SectionCard
       title="Products"
+      inlineHint
       hint="Search existing materials first — pick to reuse the canonical spec, or create a new one. You can still edit the fields below."
     >
       {fields.map((field, index) => {
@@ -122,20 +123,21 @@ export function ProductsSection({
           className="flex flex-col gap-5 rounded-section border border-hairline p-5"
           style={{ background: "var(--color-surface-soft)" }}
         >
-          <div className="flex items-center justify-between">
-            <h3 className="text-[13px] font-bold text-ink-strong">
-              Product {index + 1}
-            </h3>
-            <button
-              type="button"
-              onClick={() => remove(index)}
-              disabled={fields.length === 1}
-              className="inline-flex items-center gap-1.5 rounded-chip border border-hairline px-3 py-1.5 text-[12.5px] font-semibold text-ink-muted transition-colors hover:border-hairline-strong hover:text-ink-strong disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <Trash2 size={13} strokeWidth={2.4} />
-              Remove
-            </button>
-          </div>
+          <GroupHeader
+            n={index + 1}
+            label="Product"
+            action={
+              <button
+                type="button"
+                onClick={() => remove(index)}
+                disabled={fields.length === 1}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-chip border border-hairline px-3 py-1.5 text-[12.5px] font-semibold text-ink-muted transition-colors hover:border-hairline-strong hover:text-ink-strong disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Trash2 size={13} strokeWidth={2.4} />
+                Remove
+              </button>
+            }
+          />
 
           {/* SAP-style Material Search — the primary way to add a product. */}
           <div>
@@ -165,7 +167,7 @@ export function ProductsSection({
                 id={`products.${index}.custProductName`}
                 type="text"
                 className="nt-input"
-                placeholder="What the client calls it…"
+                placeholder="What the client calls it"
                 {...register(`products.${index}.custProductName`)}
               />
             </Field>
@@ -190,36 +192,35 @@ export function ProductsSection({
             </Field>
           </div>
 
-          <Field id={`products.${index}.shape`} label="Shape">
-            <Controller
-              control={control}
-              name={`products.${index}.shape`}
-              render={({ field: f }) => (
-                <Select
-                  id={`products.${index}.shape`}
-                  value={f.value ?? ""}
-                  onValueChange={(v) => {
-                    f.onChange(v || undefined);
-                    // Clear any dimension the newly-chosen shape hides.
-                    const next = (v && shapeProfiles[v]) || defaultShapeConfig();
-                    for (const d of DIM_FIELDS) {
-                      if (next.dims[d] === "hidden") {
-                        setValue(`products.${index}.${d}`, undefined, {
-                          shouldValidate: false,
-                          shouldDirty: false,
-                        });
+          {/* Shape + dimensions — one row (only the dims the shape uses, mm). */}
+          <div className="grid grid-cols-6 gap-3 max-lg:grid-cols-3 max-md:grid-cols-2">
+            <Field id={`products.${index}.shape`} label="Shape">
+              <Controller
+                control={control}
+                name={`products.${index}.shape`}
+                render={({ field: f }) => (
+                  <Select
+                    id={`products.${index}.shape`}
+                    value={f.value ?? ""}
+                    onValueChange={(v) => {
+                      f.onChange(v || undefined);
+                      // Clear any dimension the newly-chosen shape hides.
+                      const next = (v && shapeProfiles[v]) || defaultShapeConfig();
+                      for (const d of DIM_FIELDS) {
+                        if (next.dims[d] === "hidden") {
+                          setValue(`products.${index}.${d}`, undefined, {
+                            shouldValidate: false,
+                            shouldDirty: false,
+                          });
+                        }
                       }
-                    }
-                  }}
-                  placeholder="Select a shape…"
-                  options={INQUIRY_SHAPES.map((s) => ({ value: s, label: s }))}
-                />
-              )}
-            />
-          </Field>
-
-          {/* Dimensions — only those the selected shape uses (mm). */}
-          <div className="grid grid-cols-5 gap-3 max-md:grid-cols-2">
+                    }}
+                    placeholder="Select a shape"
+                    options={INQUIRY_SHAPES.map((s) => ({ value: s, label: s }))}
+                  />
+                )}
+              />
+            </Field>
             {DIM_FIELDS.map((dim) => {
               const rule = cfg.dims[dim];
               if (rule === "hidden") return null;
@@ -229,16 +230,22 @@ export function ProductsSection({
                   id={`products.${index}.${dim}`}
                   label={`${DIM_LABELS[dim]}${rule === "required" ? " *" : ""}`}
                 >
-                  <input
-                    id={`products.${index}.${dim}`}
-                    type="number"
-                    min={0}
-                    step="any"
-                    className="nt-input"
-                    {...register(`products.${index}.${dim}`, {
-                      setValueAs: toOptionalNumber,
-                    })}
-                  />
+                  <div className="relative">
+                    <input
+                      id={`products.${index}.${dim}`}
+                      type="number"
+                      min={0}
+                      step="any"
+                      placeholder="e.g. 12"
+                      className="nt-input pr-12"
+                      {...register(`products.${index}.${dim}`, {
+                        setValueAs: toOptionalNumber,
+                      })}
+                    />
+                    <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[13px] font-bold text-ink-subtle">
+                      mm
+                    </span>
+                  </div>
                 </Field>
               );
             })}
@@ -252,13 +259,13 @@ export function ProductsSection({
               id={`products.${index}.dimensionNotes`}
               type="text"
               className="nt-input"
-              placeholder="e.g. as per drawing rev. B, chamfer both ends…"
+              placeholder="e.g. as per drawing rev. B, chamfer both ends"
               {...register(`products.${index}.dimensionNotes`)}
             />
           </Field>
 
-          {/* Admin-managed masters */}
-          <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
+          {/* Masters + quantity — one row: grade, tolerance, condition, qty, uom */}
+          <div className="grid grid-cols-5 gap-4 max-lg:grid-cols-3 max-md:grid-cols-1">
             <ProductMasterSelect
               control={control}
               name={`products.${index}.gradeId`}
@@ -277,10 +284,6 @@ export function ProductsSection({
               label="Condition"
               options={conditions}
             />
-          </div>
-
-          {/* Quantity row */}
-          <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
             <Field id={`products.${index}.quantityNos`} label="Quantity (Nos)">
               <input
                 id={`products.${index}.quantityNos`}
@@ -358,7 +361,7 @@ function ProductMasterSelect({
             value={field.value ?? ""}
             onValueChange={(v) => field.onChange(v || undefined)}
             placeholder={
-              empty ? "No options yet" : `Select ${label.toLowerCase()}…`
+              empty ? "No options yet" : `Select ${label.toLowerCase()}`
             }
             disabled={empty}
             options={options.map((o) => ({ value: o.id, label: o.name }))}

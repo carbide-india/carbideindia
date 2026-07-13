@@ -351,7 +351,7 @@ export function QuotationDetail({ quotation, employees, inquiryLink, lines }: Pr
                   id="qd-link"
                   type="url"
                   className="nt-input"
-                  placeholder="https://…"
+                  placeholder="https://"
                   {...register("quotationLink")}
                 />
               </Field>

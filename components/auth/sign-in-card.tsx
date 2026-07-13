@@ -326,7 +326,7 @@ export function SignInCard() {
               style={{ ...mono, background: NAVY }}
             >
               {/* Label dead-centre; arrow pinned to the right edge. */}
-              <span>{pending ? "Signing in…" : "Sign in"}</span>
+              <span>{pending ? "Signing in" : "Sign in"}</span>
               <span className="absolute right-5 top-1/2 -translate-y-1/2 inline-flex">
                 {pending ? (
                   <Loader2 size={16} className="animate-spin" />
@@ -378,7 +378,7 @@ export function SignInCard() {
               className="flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-lg px-5 text-[12px] text-white transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60"
               style={{ ...mono, background: NAVY }}
             >
-              <span>{pending ? "Sending…" : "Send reset code"}</span>
+              <span>{pending ? "Sending" : "Send reset code"}</span>
               {pending ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
             </button>
             <button
@@ -439,7 +439,7 @@ export function SignInCard() {
               className="flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-lg px-5 text-[12px] text-white transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60"
               style={{ ...mono, background: NAVY }}
             >
-              <span>{pending ? "Resetting…" : "Reset & sign in"}</span>
+              <span>{pending ? "Resetting" : "Reset & sign in"}</span>
               {pending ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
             </button>
             <button
@@ -482,7 +482,7 @@ export function SignInCard() {
               className="flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-lg px-5 text-[12px] text-white transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60"
               style={{ ...mono, background: NAVY }}
             >
-              <span>{pending ? "Verifying…" : "Verify device"}</span>
+              <span>{pending ? "Verifying" : "Verify device"}</span>
               {pending ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
             </button>
             <button

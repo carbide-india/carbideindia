@@ -77,7 +77,7 @@ export function IntegrationCard({ status }: { status: IntegrationStatus }) {
           className="inline-flex items-center gap-1.5 rounded-md border border-[rgba(15,23,42,0.10)] bg-white px-3 py-1.5 text-sm font-semibold disabled:opacity-50"
         >
           {pending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-          {pending ? "Sending…" : "Send test to me"}
+          {pending ? "Sending" : "Send test to me"}
         </button>
         {result === "ok" && (
           <span className="inline-flex items-center gap-1 text-sm text-emerald-700">

@@ -453,7 +453,7 @@ export function FilterBar({
                   "0 6px 16px rgba(63, 63, 148, 0.32)";
               }}
             >
-              {isPending ? "Applying…" : "Apply Filter"}
+              {isPending ? "Applying" : "Apply Filter"}
               <ArrowRight size={16} strokeWidth={2.4} />
             </button>
           </div>

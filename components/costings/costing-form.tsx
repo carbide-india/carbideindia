@@ -65,7 +65,7 @@ const MoneyInput = React.forwardRef<
   React.InputHTMLAttributes<HTMLInputElement>
 >(function MoneyInput(props, ref) {
   return (
-    <div className="relative w-[180px]">
+    <div className="relative w-full">
       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[14px] font-semibold text-ink-subtle">
         &#8377;
       </span>
@@ -245,7 +245,8 @@ export function CostingForm({ inquiryItemId, inquiryId, productCaption }: Props)
       {/* 1. Route toggle */}
       <SectionCard
         title="Costing Route"
-        hint={`Product: ${productCaption}. Choose In-house (we manufacture) or Bought-Out (outsourced vendor).`}
+        inlineHint
+        hint={`Product: ${productCaption}. In-house (we manufacture) or Bought-Out (vendor).`}
       >
         <Field label="Route" labelOnly>
           <Controller
@@ -318,8 +319,8 @@ export function CostingForm({ inquiryItemId, inquiryId, productCaption }: Props)
       {isInhouse && (
         <>
           {/* Identity */}
-          <SectionCard title="Identity" hint="Costing logic + quantity for this run.">
-            <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+          <SectionCard title="Identity" inlineHint hint="Costing logic + quantity for this run.">
+            <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
               <Field id="c-qty" label="Quantity">
                 <input
                   id="c-qty"
@@ -353,7 +354,8 @@ export function CostingForm({ inquiryItemId, inquiryId, productCaption }: Props)
           {/* Weights */}
           <SectionCard
             title="Weights"
-            hint="Block, theoretical and pressing weights in grams. Choose which weight the sintered cost is based on."
+            inlineHint
+            hint="Block, theoretical and pressing weights in grams. Choose which the sintered cost is based on."
           >
             <Field label="Weight Used For Costing" labelOnly>
               <Controller
@@ -370,7 +372,7 @@ export function CostingForm({ inquiryItemId, inquiryId, productCaption }: Props)
                 )}
               />
             </Field>
-            <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
+            <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
               <MiniField label="Block Wt (gms)">
                 <input
                   type="number"
@@ -407,11 +409,8 @@ export function CostingForm({ inquiryItemId, inquiryId, productCaption }: Props)
                   {...register("pressingWt", numRegister)}
                 />
               </MiniField>
-            </div>
-            <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-              <Field id="c-losspct" label="Loss % (e.g. 0.15 = 15%)">
+              <MiniField label="Loss % (0.15 = 15%)">
                 <input
-                  id="c-losspct"
                   type="number"
                   inputMode="decimal"
                   step="any"
@@ -419,18 +418,20 @@ export function CostingForm({ inquiryItemId, inquiryId, productCaption }: Props)
                   max={1}
                   className="nt-input tabular-nums"
                   placeholder="0.15"
+                  aria-label="Loss percentage"
                   {...register("lossPct", numRegister)}
                 />
-              </Field>
+              </MiniField>
             </div>
           </SectionCard>
 
           {/* RM + VA */}
           <SectionCard
             title="Raw Material + Value Addition"
-            hint="RM price per kg and the VA percentage (VA/kg = max(RM x VA%, VA floor))."
+            inlineHint
+            hint="RM price per kg and VA percentage (VA/kg = max(RM x VA%, VA floor))."
           >
-            <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
+            <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
               <MiniField label="RM Price / kg">
                 <MoneyInput
                   aria-label="RM price per kg"
@@ -444,7 +445,7 @@ export function CostingForm({ inquiryItemId, inquiryId, productCaption }: Props)
                   step="any"
                   min={0}
                   max={2}
-                  className="nt-input tabular-nums w-[140px]"
+                  className="nt-input tabular-nums"
                   placeholder="0.3"
                   aria-label="VA percentage"
                   {...register("vaPct", numRegister)}
@@ -462,9 +463,10 @@ export function CostingForm({ inquiryItemId, inquiryId, productCaption }: Props)
           {/* Tooling */}
           <SectionCard
             title="Tooling"
-            hint="Flat tool cost folded per piece (tool cost / qty). Leave blank if no tooling."
+            inlineHint
+            hint="Flat tool cost folded per piece (tool cost / qty). Leave blank if none."
           >
-            <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+            <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
               <Field id="c-tooltype" label="Tool Type">
                 <input
                   id="c-tooltype"
@@ -483,27 +485,26 @@ export function CostingForm({ inquiryItemId, inquiryId, productCaption }: Props)
                   {...register("toolCostMethod")}
                 />
               </Field>
-            </div>
-            <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
-              <MiniField label="Flat Tool Cost">
+              <Field id="c-toolcost" label="Flat Tool Cost">
                 <MoneyInput
+                  id="c-toolcost"
                   aria-label="Flat tool cost"
                   {...register("toolFlatCost", numRegister)}
                 />
-              </MiniField>
+              </Field>
             </div>
           </SectionCard>
 
           {/* Shaping */}
-          <SectionCard title="Shaping" hint="Shaping time and rate per minute.">
-            <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
+          <SectionCard title="Shaping" inlineHint hint="Shaping time and rate per minute.">
+            <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
               <MiniField label="Shaping (mins)">
                 <input
                   type="number"
                   inputMode="decimal"
                   step="any"
                   min={0}
-                  className="nt-input tabular-nums w-[140px]"
+                  className="nt-input tabular-nums"
                   placeholder="2"
                   aria-label="Shaping minutes"
                   {...register("shapingMins", numRegister)}
@@ -519,8 +520,8 @@ export function CostingForm({ inquiryItemId, inquiryId, productCaption }: Props)
           </SectionCard>
 
           {/* Machining */}
-          <SectionCard title="Machining" hint="Machining rate and overhead percentage.">
-            <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+          <SectionCard title="Machining" inlineHint hint="Machining rate and overhead percentage.">
+            <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
               <Field id="c-machtype" label="Machining Type">
                 <input
                   id="c-machtype"
@@ -530,7 +531,14 @@ export function CostingForm({ inquiryItemId, inquiryId, productCaption }: Props)
                   {...register("machiningType")}
                 />
               </Field>
-              <Field id="c-ovhpct" label="Overhead % (e.g. 0.25 = 25%)">
+              <Field id="c-machrate" label="Machining Rate">
+                <MoneyInput
+                  id="c-machrate"
+                  aria-label="Machining rate"
+                  {...register("machiningRate", numRegister)}
+                />
+              </Field>
+              <Field id="c-ovhpct" label="Overhead % (0.25 = 25%)">
                 <input
                   id="c-ovhpct"
                   type="number"
@@ -544,20 +552,13 @@ export function CostingForm({ inquiryItemId, inquiryId, productCaption }: Props)
                 />
               </Field>
             </div>
-            <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
-              <MiniField label="Machining Rate">
-                <MoneyInput
-                  aria-label="Machining rate"
-                  {...register("machiningRate", numRegister)}
-                />
-              </MiniField>
-            </div>
           </SectionCard>
 
           {/* Negotiation */}
           <SectionCard
             title="Negotiation"
-            hint="Negotiation buffer as a fraction (e.g. 0.03 = 3%)."
+            inlineHint
+            hint="Negotiation buffer as a fraction (0.03 = 3%)."
           >
             <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
               <MiniField label="Negotiation % (e.g. 0.03)">
@@ -582,7 +583,7 @@ export function CostingForm({ inquiryItemId, inquiryId, productCaption }: Props)
       {!isInhouse && (
         <>
           {/* Identity */}
-          <SectionCard title="Identity" hint="Quantity for this bought-out run.">
+          <SectionCard title="Identity" inlineHint hint="Quantity for this bought-out run.">
             <Field id="bo-qty" label="Quantity">
               <input
                 id="bo-qty"
@@ -600,54 +601,56 @@ export function CostingForm({ inquiryItemId, inquiryId, productCaption }: Props)
           {/* Vendor */}
           <SectionCard
             title="Vendor"
+            inlineHint
             hint="Outsourced vendor cost and overhead percentage."
           >
-            <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
-              <MiniField label="Vendor Cost / pc">
+            <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
+              <Field id="bo-vcost" label="Vendor Cost / pc">
                 <MoneyInput
+                  id="bo-vcost"
                   aria-label="Outsourced vendor cost per piece"
                   {...register("outsourcedVendorCost", numRegister)}
                 />
-              </MiniField>
-              <MiniField label="Vendor OH % (e.g. 0.1)">
+              </Field>
+              <Field id="bo-voh" label="Vendor OH % (0.1 = 10%)">
                 <input
+                  id="bo-voh"
                   type="number"
                   inputMode="decimal"
                   step="any"
                   min={0}
                   max={2}
-                  className="nt-input tabular-nums w-[140px]"
+                  className="nt-input tabular-nums"
                   placeholder="0.1"
-                  aria-label="Vendor overhead percentage"
                   {...register("vendorOhPct", numRegister)}
                 />
-              </MiniField>
+              </Field>
+              <Field id="bo-vnotes" label="Vendor Notes">
+                <input
+                  id="bo-vnotes"
+                  type="text"
+                  className="nt-input"
+                  placeholder="e.g. Vendor name, sourcing note"
+                  {...register("vendorNotes")}
+                />
+              </Field>
             </div>
-            <Field id="bo-vnotes" label="Vendor Notes">
-              <input
-                id="bo-vnotes"
-                type="text"
-                className="nt-input"
-                placeholder="e.g. Vendor name, sourcing note"
-                {...register("vendorNotes")}
-              />
-            </Field>
           </SectionCard>
 
           {/* Development */}
           <SectionCard
             title="Development"
+            inlineHint
             hint="Development cost and any technical or sourcing notes."
           >
-            <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
-              <MiniField label="Development Cost">
+            <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
+              <Field id="bo-dcost" label="Development Cost">
                 <MoneyInput
+                  id="bo-dcost"
                   aria-label="Development cost"
                   {...register("developmentCost", numRegister)}
                 />
-              </MiniField>
-            </div>
-            <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+              </Field>
               <Field id="bo-dnotes" label="Development Notes">
                 <input
                   id="bo-dnotes"

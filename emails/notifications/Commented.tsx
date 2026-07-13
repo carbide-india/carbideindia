@@ -24,7 +24,7 @@ export const previewText = (p: Pick<CommentedProps, "actorName" | "taskSubject">
 export function CommentedEmail(props: CommentedProps) {
   const raw = (props.comment ?? "").trim();
   const clipped =
-    raw.length > COMMENT_CLIP ? `${raw.slice(0, COMMENT_CLIP)}…` : raw;
+    raw.length > COMMENT_CLIP ? `${raw.slice(0, COMMENT_CLIP)}` : raw;
 
   return (
     <NotificationEmailLayout

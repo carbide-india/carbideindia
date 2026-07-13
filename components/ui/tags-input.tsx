@@ -65,7 +65,7 @@ export function TagsInput({ id = "tags-input", value, onChange, placeholder, max
           if (e.key === "Enter" || e.key === ",") { e.preventDefault(); commit(); }
           else if (e.key === "Backspace" && draft === "" && value.length > 0) removeAt(value.length - 1);
         }}
-        placeholder={placeholder ?? (value.length === 0 ? "Type a tag and press Enter or comma to add…" : "Add another tag…")}
+        placeholder={placeholder ?? (value.length === 0 ? "Type a tag and press Enter or comma to add" : "Add another tag")}
         className="min-w-[180px] flex-1 bg-transparent outline-none"
         style={{ fontSize: 15, fontWeight: 600, color: "var(--color-ink-strong)" }}
       />

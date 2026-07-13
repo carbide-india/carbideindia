@@ -23,7 +23,6 @@ import { fireToast } from "@/lib/toast";
 import { Select } from "@/components/ui/select";
 import {
   Field,
-  MiniField,
   SectionCard,
   Segmented,
 } from "@/components/inquiries/form-field";
@@ -205,7 +204,8 @@ export function SoForm({ inquiries, quotations }: Props) {
       {/* -- 1 . Linked Enquiry ------------------------------------------- */}
       <SectionCard
         title="Linked Enquiry"
-        hint="Pick the SM this sales order belongs to -- its company, sales person and products are auto-fetched. Link the quotation to pull its pricing."
+        inlineHint
+        hint="Pick the SM -- company, sales person and products auto-fetch. Link the quotation to pull its pricing."
       >
         <Field label="Enquiry (SM)" labelOnly required>
           <Controller
@@ -249,51 +249,47 @@ export function SoForm({ inquiries, quotations }: Props) {
           </div>
         )}
 
-        <Field label="Linked Quotation" labelOnly>
-          <Select
-            value={quoteId}
-            onValueChange={(v) => void onPickQuotation(v || undefined)}
-            placeholder="Optional -- link a quotation to pull its pricing..."
-            searchPlaceholder="Search quote number or company..."
-            searchable
-            ariaLabel="Linked quotation"
-            options={quotations.map((o) => ({
-              value: o.id,
-              label: `${o.quoteNo} — ${o.companyName ?? "—"}`,
-            }))}
-          />
-        </Field>
-
-        <Field id="so-no" label="SO No">
-          <input
-            id="so-no"
-            type="text"
-            className="nt-input"
-            placeholder="Leave blank to auto-number"
-            style={{ fontFamily: "var(--font-mono)", fontSize: 13.5 }}
-            {...register("soNo")}
-          />
-          <p className="text-[12.5px] text-ink-subtle">
-            SO No auto-numbers as{" "}
-            <span style={{ fontFamily: "var(--font-mono)" }}>&lt;SM&gt;-SO01</span>{" "}
-            -- leave blank.
-          </p>
-        </Field>
-
-        <Field id="so-link" label="Quotation Link">
-          <input
-            id="so-link"
-            type="url"
-            className="nt-input"
-            placeholder="https://..."
-            {...register("quotationLink")}
-          />
-        </Field>
+        <div className="grid grid-cols-3 gap-4 max-lg:grid-cols-3 max-md:grid-cols-1">
+          <Field label="Linked Quotation" labelOnly>
+            <Select
+              value={quoteId}
+              onValueChange={(v) => void onPickQuotation(v || undefined)}
+              placeholder="Optional -- link a quotation to pull its pricing..."
+              searchPlaceholder="Search quote number or company..."
+              searchable
+              ariaLabel="Linked quotation"
+              options={quotations.map((o) => ({
+                value: o.id,
+                label: `${o.quoteNo} — ${o.companyName ?? "—"}`,
+              }))}
+            />
+          </Field>
+          <Field id="so-no" label="SO No">
+            <input
+              id="so-no"
+              type="text"
+              className="nt-input"
+              placeholder="Blank auto-numbers <SM>-SO01"
+              style={{ fontFamily: "var(--font-mono)", fontSize: 13.5 }}
+              {...register("soNo")}
+            />
+          </Field>
+          <Field id="so-link" label="Quotation Link">
+            <input
+              id="so-link"
+              type="url"
+              className="nt-input"
+              placeholder="https://"
+              {...register("quotationLink")}
+            />
+          </Field>
+        </div>
       </SectionCard>
 
       {/* -- 2 . Products & Pricing (per-line editor) --------------------- */}
       <SectionCard
         title="Products &amp; Pricing"
+        inlineHint
         hint="One line per product -- prefilled from the enquiry. Add quote price and timeline per line."
       >
         {fields.map((field, index) => (
@@ -317,17 +313,18 @@ export function SoForm({ inquiries, quotations }: Props) {
               </button>
             </div>
 
-            {/* Product */}
-            <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+            {/* Product -- name (wide) + qty + part no on one row */}
+            <div className="grid grid-cols-4 gap-4 max-md:grid-cols-1">
               <Field
                 id={`lines.${index}.custProductName`}
                 label="Cust Product Name"
+                className="col-span-2 max-md:col-span-1"
               >
                 <input
                   id={`lines.${index}.custProductName`}
                   type="text"
                   className="nt-input"
-                  placeholder="e.g. Tungsten carbide insert, CNMG..."
+                  placeholder="e.g. Tungsten carbide insert, CNMG"
                   {...register(`lines.${index}.custProductName`)}
                 />
               </Field>
@@ -343,78 +340,60 @@ export function SoForm({ inquiries, quotations }: Props) {
                   {...register(`lines.${index}.qty`, qtyRegister)}
                 />
               </Field>
+              <Field id={`lines.${index}.partNo`} label="Part No">
+                <input
+                  id={`lines.${index}.partNo`}
+                  type="text"
+                  className="nt-input"
+                  {...register(`lines.${index}.partNo`)}
+                />
+              </Field>
             </div>
 
-            <Field id={`lines.${index}.partNo`} label="Part No">
-              <input
-                id={`lines.${index}.partNo`}
-                type="text"
-                className="nt-input"
-                {...register(`lines.${index}.partNo`)}
-              />
-            </Field>
-
-            {/* Pricing */}
+            {/* Pricing, timeline & validity -- one row */}
             <div
-              className="pt-4"
+              className="grid grid-cols-4 gap-4 pt-4 max-md:grid-cols-1"
               style={{ borderTop: "1px solid var(--color-hairline)" }}
             >
-              <p className="mb-3 text-[11px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
-                Pricing
-              </p>
-              <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
-                <MiniField label="Quote Price">
-                  <MoneyInput
-                    aria-label={`Quote price line ${index + 1}`}
-                    {...register(`lines.${index}.quotePrice`, moneyRegister)}
-                  />
-                </MiniField>
-              </div>
-            </div>
-
-            {/* Timeline & Validity */}
-            <div
-              className="pt-4"
-              style={{ borderTop: "1px solid var(--color-hairline)" }}
-            >
-              <p className="mb-3 text-[11px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
-                Timeline &amp; Validity
-              </p>
-              <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-                <Field
+              <Field label="Quote Price" labelOnly>
+                <MoneyInput
+                  aria-label={`Quote price line ${index + 1}`}
+                  {...register(`lines.${index}.quotePrice`, moneyRegister)}
+                />
+              </Field>
+              <Field
+                id={`lines.${index}.developmentTime`}
+                label="Development Time"
+              >
+                <input
                   id={`lines.${index}.developmentTime`}
-                  label="Development Time"
-                >
-                  <input
-                    id={`lines.${index}.developmentTime`}
-                    type="text"
-                    className="nt-input"
-                    placeholder="e.g. 6-8 weeks"
-                    {...register(`lines.${index}.developmentTime`)}
-                  />
-                </Field>
-                <Field
+                  type="text"
+                  className="nt-input"
+                  placeholder="e.g. 6-8 weeks"
+                  {...register(`lines.${index}.developmentTime`)}
+                />
+              </Field>
+              <Field
+                id={`lines.${index}.deliveryTime`}
+                label="Delivery Time"
+              >
+                <input
                   id={`lines.${index}.deliveryTime`}
-                  label="Delivery Time"
-                >
-                  <input
-                    id={`lines.${index}.deliveryTime`}
-                    type="text"
-                    className="nt-input"
-                    placeholder="e.g. 30 days from PO"
-                    {...register(`lines.${index}.deliveryTime`)}
-                  />
-                </Field>
-                <Field id={`lines.${index}.validity`} label="Validity">
-                  <input
-                    id={`lines.${index}.validity`}
-                    type="text"
-                    className="nt-input"
-                    placeholder="e.g. 30 days"
-                    {...register(`lines.${index}.validity`)}
-                  />
-                </Field>
-              </div>
+                  type="text"
+                  className="nt-input"
+                  placeholder="e.g. 30 days from PO"
+                  {...register(`lines.${index}.deliveryTime`)}
+                />
+              </Field>
+              <Field id={`lines.${index}.validity`} label="Validity">
+                <input
+                  id={`lines.${index}.validity`}
+                  type="text"
+                  className="nt-input"
+                  placeholder="e.g. 30 days"
+                  {...register(`lines.${index}.validity`)}
+                />
+              </Field>
             </div>
           </div>
         ))}
@@ -434,6 +413,7 @@ export function SoForm({ inquiries, quotations }: Props) {
       {/* -- 3 . Customer PO -------------------------------------------- */}
       <SectionCard
         title="Customer PO"
+        inlineHint
         hint="The purchase order the customer raised against the quote."
       >
         <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
@@ -458,9 +438,10 @@ export function SoForm({ inquiries, quotations }: Props) {
       {/* -- 4 . Sales Order Docs --------------------------------------- */}
       <SectionCard
         title="Sales Order Docs"
+        inlineHint
         hint="The customer-facing SO sent back and the internal production SO."
       >
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+        <div className="grid grid-cols-3 gap-4 max-lg:grid-cols-3 max-md:grid-cols-1">
           <Field id="so-custlink" label="Customer SO Link">
             <input
               id="so-custlink"
@@ -479,22 +460,22 @@ export function SoForm({ inquiries, quotations }: Props) {
               {...register("productionSoLink")}
             />
           </Field>
+          <Field label="Customer SO Sent" labelOnly>
+            <Controller
+              control={control}
+              name="customerSoSent"
+              render={({ field }) => (
+                <Segmented
+                  options={SO_SENT_OPTIONS}
+                  value={field.value ? "yes" : "no"}
+                  onChange={(v) => field.onChange(v === "yes")}
+                  allowClear={false}
+                  ariaLabel="Customer SO sent"
+                />
+              )}
+            />
+          </Field>
         </div>
-        <Field label="Customer SO Sent" labelOnly>
-          <Controller
-            control={control}
-            name="customerSoSent"
-            render={({ field }) => (
-              <Segmented
-                options={SO_SENT_OPTIONS}
-                value={field.value ? "yes" : "no"}
-                onChange={(v) => field.onChange(v === "yes")}
-                allowClear={false}
-                ariaLabel="Customer SO sent"
-              />
-            )}
-          />
-        </Field>
       </SectionCard>
 
       {(serverError || firstFieldError) && (
@@ -537,7 +518,7 @@ const MoneyInput = React.forwardRef<
   React.InputHTMLAttributes<HTMLInputElement>
 >(function MoneyInput(props, ref) {
   return (
-    <div className="relative w-[180px]">
+    <div className="relative w-full">
       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[14px] font-semibold text-ink-subtle">
         &#8377;
       </span>

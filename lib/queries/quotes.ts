@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import {
   inquiries,
   inquiryItems,
+  items,
   employees,
   masterOptions,
   quotations,
@@ -159,8 +160,11 @@ export async function listQuotationOptions(): Promise<QuotationOption[]> {
  * Quotation form's per-line editor when the SM is picked. Resolves the
  * tolerance/condition master ids → their display names via two aliased LEFT
  * JOINs (same row type as the grade alias, so aliasing is required), ordered by
- * the product's sort order. `gradeCustomer` is the raw free-text from the line;
- * `inquiryItemId`/`itemId` carry the source product + its linked Item (if any).
+ * the product's sort order. The customer-facing fields (`gradeCustomer`,
+ * `gradeNameForCust`, `partNo`, tolerance/condition names) resolve from the
+ * line's own columns first, then fall back to the linked Item's spec so every
+ * field the enquiry captured flows through to the quote line. `inquiryItemId`/
+ * `itemId` carry the source product + its linked Item (if any).
  */
 export interface QuoteLineSeed {
   inquiryItemId: string;
@@ -170,6 +174,8 @@ export interface QuoteLineSeed {
   drawingRevisionNo: string | null;
   qty: string | null;
   gradeCustomer: string | null;
+  gradeNameForCust: string | null;
+  partNo: string | null;
   tolerance: string | null;
   condition: string | null;
   /** Final cost per piece from the chosen costing (if one exists). */
@@ -179,11 +185,16 @@ export interface QuoteLineSeed {
 export async function getInquiryItemSeeds(
   inquiryId: string,
 ): Promise<QuoteLineSeed[]> {
+  // Line-side tolerance/condition (from inquiry_items' own FKs) …
   const tolerance = alias(masterOptions, "tolerance");
   const condition = alias(masterOptions, "condition");
+  // … and the linked Item's spec (+ its tolerance/condition) as fallback.
+  const seedItem = alias(items, "seed_item");
+  const itemTolerance = alias(masterOptions, "item_tolerance");
+  const itemCondition = alias(masterOptions, "item_condition");
   const chosen = alias(costings, "chosen_costing");
 
-  return db
+  const rows = await db
     .select({
       inquiryItemId: inquiryItems.id,
       itemId: inquiryItems.itemId,
@@ -191,14 +202,22 @@ export async function getInquiryItemSeeds(
       custDrawingNo: inquiryItems.custDrawingNo,
       drawingRevisionNo: inquiryItems.drawingRevisionNo,
       qty: inquiryItems.quantityNos,
-      gradeCustomer: inquiryItems.gradeCustomer,
-      tolerance: tolerance.name,
-      condition: condition.name,
+      gradeCustomerLine: inquiryItems.gradeCustomer,
+      gradeCustomerItem: seedItem.gradeCustomer,
+      gradeNameForCust: seedItem.gradeNameForCust,
+      partNo: seedItem.partNo,
+      toleranceLine: tolerance.name,
+      toleranceItem: itemTolerance.name,
+      conditionLine: condition.name,
+      conditionItem: itemCondition.name,
       finalCost: chosen.finalCostPerPiece,
     })
     .from(inquiryItems)
     .leftJoin(tolerance, eq(inquiryItems.toleranceId, tolerance.id))
     .leftJoin(condition, eq(inquiryItems.conditionId, condition.id))
+    .leftJoin(seedItem, eq(inquiryItems.itemId, seedItem.id))
+    .leftJoin(itemTolerance, eq(seedItem.toleranceId, itemTolerance.id))
+    .leftJoin(itemCondition, eq(seedItem.conditionId, itemCondition.id))
     .leftJoin(
       chosen,
       and(
@@ -208,6 +227,21 @@ export async function getInquiryItemSeeds(
     )
     .where(eq(inquiryItems.inquiryId, inquiryId))
     .orderBy(asc(inquiryItems.sortOrder));
+
+  return rows.map((r) => ({
+    inquiryItemId: r.inquiryItemId,
+    itemId: r.itemId,
+    custProductName: r.custProductName,
+    custDrawingNo: r.custDrawingNo,
+    drawingRevisionNo: r.drawingRevisionNo,
+    qty: r.qty,
+    gradeCustomer: r.gradeCustomerLine ?? r.gradeCustomerItem,
+    gradeNameForCust: r.gradeNameForCust,
+    partNo: r.partNo,
+    tolerance: r.toleranceLine ?? r.toleranceItem,
+    condition: r.conditionLine ?? r.conditionItem,
+    finalCost: r.finalCost,
+  }));
 }
 
 /**

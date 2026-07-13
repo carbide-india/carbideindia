@@ -489,14 +489,14 @@ export function JobCardWorkbench({ rows, picker, isAdmin }: Props) {
             <Field label="Customer">
               <PickerField
                 value={form.customerName}
-                placeholder="Pick customer…"
+                placeholder="Pick customer"
                 onOpen={() => setCustomerOpen(true)}
               />
             </Field>
             <Field label="Product">
               <PickerField
                 value={form.productCode}
-                placeholder="Pick product…"
+                placeholder="Pick product"
                 onOpen={() => setProductOpen(true)}
               />
             </Field>
@@ -585,7 +585,7 @@ export function JobCardWorkbench({ rows, picker, isAdmin }: Props) {
                 options={dispatchOptions}
                 value={form.dispatchConditionId}
                 onValueChange={(v) => set("dispatchConditionId", v)}
-                placeholder="Select…"
+                placeholder="Select"
                 ariaLabel="Dispatch Condition"
               />
             </Field>
@@ -602,7 +602,7 @@ export function JobCardWorkbench({ rows, picker, isAdmin }: Props) {
                 options={toleranceOptions}
                 value={form.toleranceId}
                 onValueChange={(v) => set("toleranceId", v)}
-                placeholder="Select…"
+                placeholder="Select"
                 ariaLabel="Tolerance"
               />
             </Field>
@@ -627,7 +627,7 @@ export function JobCardWorkbench({ rows, picker, isAdmin }: Props) {
                 options={pressingOptions}
                 value={form.pressingTypeId}
                 onValueChange={(v) => set("pressingTypeId", v)}
-                placeholder="Select…"
+                placeholder="Select"
                 ariaLabel="Pressing Type"
               />
             </Field>

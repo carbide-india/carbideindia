@@ -201,8 +201,9 @@ export function MeetingForm({
       <SectionCard
         title="Sales Person"
         hint="Who met the client — prefilled from your profile."
+        inlineHint
       >
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+        <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
           <Field id="mtg-sales-name" label="Name" required>
             <input
               id="mtg-sales-name"
@@ -222,8 +223,6 @@ export function MeetingForm({
               {...register("salesNumber")}
             />
           </Field>
-        </div>
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
           <Field id="mtg-sales-desig" label="Designation">
             <input
               id="mtg-sales-desig"
@@ -246,8 +245,12 @@ export function MeetingForm({
       </SectionCard>
 
       {/* ── 2 · Meeting ──────────────────────────────────────────────── */}
-      <SectionCard title="Meeting" hint="When the visit happened, and how it came about.">
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+      <SectionCard
+        title="Meeting"
+        hint="When the visit happened, and how it came about."
+        inlineHint
+      >
+        <div className="grid grid-cols-5 gap-3 max-lg:grid-cols-3 max-md:grid-cols-1">
           <Field id="mtg-date" label="Date" required>
             <input
               id="mtg-date"
@@ -257,49 +260,6 @@ export function MeetingForm({
               {...register("meetingDate")}
             />
           </Field>
-          <Field label="Meeting Source" labelOnly>
-            <div className="flex flex-col gap-2">
-              <Controller
-                control={control}
-                name="meetingSource"
-                render={({ field }) => (
-                  <Select
-                    value={sourceChoice}
-                    onValueChange={(next) => {
-                      setSourceChoice(next);
-                      // Store the preset directly; "Other" defers to the typed
-                      // specify input below (cleared until the user types).
-                      field.onChange(next === OTHER_SOURCE ? undefined : next || undefined);
-                    }}
-                    placeholder="Select a source…"
-                    ariaLabel="Meeting source"
-                    options={SOURCE_OPTIONS}
-                  />
-                )}
-              />
-              {sourceSpecifying && (
-                <Controller
-                  control={control}
-                  name="meetingSource"
-                  render={({ field }) => (
-                    <input
-                      type="text"
-                      required
-                      maxLength={80}
-                      className="nt-input"
-                      placeholder="Specify source…"
-                      aria-label="Meeting source — specify"
-                      value={field.value ?? ""}
-                      onChange={(e) => field.onChange(e.target.value || undefined)}
-                    />
-                  )}
-                />
-              )}
-            </div>
-          </Field>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
           <Field id="mtg-start" label="Meeting Start Time">
             <input
               id="mtg-start"
@@ -316,44 +276,84 @@ export function MeetingForm({
               {...register("meetingEndTime")}
             />
           </Field>
-        </div>
-
-        <Field label="Client Type" labelOnly>
-          <Controller
-            control={control}
-            name="clientType"
-            render={({ field }) =>
-              customerTypeNames.length ? (
-                <Select
-                  value={field.value ?? ""}
-                  onValueChange={(v) => field.onChange(v || undefined)}
-                  placeholder="Select a client type…"
-                  searchPlaceholder="Search types…"
-                  ariaLabel="Client type"
-                  options={customerTypeNames.map((n) => ({
-                    value: n,
-                    label: n,
-                  }))}
+          <Field label="Meeting Source" labelOnly>
+            <div className="flex flex-col gap-2">
+              <Controller
+                control={control}
+                name="meetingSource"
+                render={({ field }) => (
+                  <Select
+                    value={sourceChoice}
+                    onValueChange={(next) => {
+                      setSourceChoice(next);
+                      // Store the preset directly; "Other" defers to the typed
+                      // specify input below (cleared until the user types).
+                      field.onChange(next === OTHER_SOURCE ? undefined : next || undefined);
+                    }}
+                    placeholder="Select a source"
+                    ariaLabel="Meeting source"
+                    options={SOURCE_OPTIONS}
+                  />
+                )}
+              />
+              {sourceSpecifying && (
+                <Controller
+                  control={control}
+                  name="meetingSource"
+                  render={({ field }) => (
+                    <input
+                      type="text"
+                      required
+                      maxLength={80}
+                      className="nt-input"
+                      placeholder="Specify source"
+                      aria-label="Meeting source — specify"
+                      value={field.value ?? ""}
+                      onChange={(e) => field.onChange(e.target.value || undefined)}
+                    />
+                  )}
                 />
-              ) : (
-                <button
-                  type="button"
-                  disabled
-                  aria-label="Client type — no options"
-                  className="nt-input flex w-full items-center text-left text-ink-subtle cursor-not-allowed opacity-60"
-                >
-                  No options — add in Admin → Masters
-                </button>
-              )
-            }
-          />
-        </Field>
+              )}
+            </div>
+          </Field>
+          <Field label="Client Type" labelOnly>
+            <Controller
+              control={control}
+              name="clientType"
+              render={({ field }) =>
+                customerTypeNames.length ? (
+                  <Select
+                    value={field.value ?? ""}
+                    onValueChange={(v) => field.onChange(v || undefined)}
+                    placeholder="Select a client type"
+                    searchPlaceholder="Search types"
+                    ariaLabel="Client type"
+                    options={customerTypeNames.map((n) => ({
+                      value: n,
+                      label: n,
+                    }))}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    aria-label="Client type — no options"
+                    className="nt-input flex w-full items-center text-left text-ink-subtle cursor-not-allowed opacity-60"
+                  >
+                    No options — add in Admin → Masters
+                  </button>
+                )
+              }
+            />
+          </Field>
+        </div>
       </SectionCard>
 
       {/* ── 3 · Client ───────────────────────────────────────────────── */}
       <SectionCard
         title="Client"
         hint="Pick a known client to link it, or type a new company name."
+        inlineHint
       >
         <Field label="Company Name" labelOnly required>
           <Controller
@@ -380,8 +380,8 @@ export function MeetingForm({
                 }}
                 options={clientNames}
                 allowCustom
-                placeholder="Select or type a company…"
-                searchPlaceholder="Search companies…"
+                placeholder="Select or type a company"
+                searchPlaceholder="Search companies"
                 emptyText="No matching client — type to add a new company."
                 ariaLabel="Company name"
                 invalid={Boolean(errors.companyName)}
@@ -390,7 +390,7 @@ export function MeetingForm({
           />
         </Field>
 
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+        <div className="grid grid-cols-5 gap-3 max-lg:grid-cols-3 max-md:grid-cols-1">
           <Field id="mtg-cfirst" label="Contact First Name" required>
             <input
               id="mtg-cfirst"
@@ -410,9 +410,6 @@ export function MeetingForm({
               {...register("contactLastName")}
             />
           </Field>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
           <Field id="mtg-cdesig" label="Designation">
             <input
               id="mtg-cdesig"
@@ -431,23 +428,23 @@ export function MeetingForm({
               {...register("contactNumber")}
             />
           </Field>
+          <Field id="mtg-cemail" label="Email">
+            <input
+              id="mtg-cemail"
+              type="email"
+              className="nt-input"
+              placeholder="e.g. rahul@acmetools.com"
+              {...register("contactEmail")}
+            />
+          </Field>
         </div>
-
-        <Field id="mtg-cemail" label="Email">
-          <input
-            id="mtg-cemail"
-            type="email"
-            className="nt-input"
-            placeholder="e.g. rahul@acmetools.com"
-            {...register("contactEmail")}
-          />
-        </Field>
       </SectionCard>
 
       {/* ── 4 · Outcome ──────────────────────────────────────────────── */}
       <SectionCard
         title="Outcome"
         hint="Why you met, what came of it, and when to follow up."
+        inlineHint
       >
         <Field label="Purpose of Meeting" labelOnly>
           <Controller
@@ -472,7 +469,7 @@ export function MeetingForm({
               type="text"
               required
               className="nt-input"
-              placeholder="Specify purpose…"
+              placeholder="Specify purpose"
               {...register("purposeOther")}
             />
           </Field>
@@ -484,7 +481,7 @@ export function MeetingForm({
             rows={4}
             className="nt-input resize-y"
             style={{ fontWeight: 400 }}
-            placeholder="What was discussed, decisions, action items…"
+            placeholder="What was discussed, decisions, action items"
             {...register("meetingNotes")}
           />
         </Field>
@@ -525,7 +522,7 @@ export function MeetingForm({
             letterSpacing: "0.005em",
           }}
         >
-          {pending ? "Logging…" : "Log Meeting"}
+          {pending ? "Logging" : "Log Meeting"}
         </button>
       </div>
     </form>

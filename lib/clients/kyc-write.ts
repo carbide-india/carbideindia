@@ -37,6 +37,8 @@ export function buildKycClientPatch(v: Kyc): Partial<ClientInsert> {
     customerTypeId: v.customerTypeIds?.[0] ?? null,
     industryTypeId: v.industryTypeIds?.[0] ?? null,
     productTypeIds: v.productTypeIds ?? null,
+    grade: v.grade ?? null,
+    departmentId: v.departmentId ?? null,
     state: v.state ?? null,
     city: v.city ?? null,
     addressLine1: v.addressLine1 ?? null,

@@ -31,8 +31,6 @@ import {
   ArrowUpRight,
   Pencil,
   Check,
-  Rows3,
-  Rows4,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -74,7 +72,7 @@ import { cn } from "@/lib/utils";
 export interface RegisterColumn<TRow> {
   id: string;
   header: string;
-  /** Rendered node for the cell (chips, mono links, plain text, …). */
+  /** Rendered node for the cell (chips, mono links, plain text, ). */
   cell: (row: TRow) => React.ReactNode;
   /** Comparable value used for sorting + as the default search/export value. */
   sortValue?: (row: TRow) => string | number | Date;
@@ -87,6 +85,21 @@ export interface RegisterColumn<TRow> {
   /** Default true. Set false to disable click-to-sort on the header. */
   enableSorting?: boolean;
   align?: "left" | "right";
+  /**
+   * Fixed column width (any CSS width — "120px", "22%"). When ANY column
+   * supplies a width the table switches to `table-fixed` + a `<colgroup>` so it
+   * fills its container without horizontal scroll. Use "1fr" (or leave unset)
+   * for the one flexible column that should absorb the leftover space — it
+   * renders with no explicit width so the fixed layout distributes the rest to
+   * it. Registers that supply no widths keep the previous auto-layout behavior.
+   */
+  width?: string;
+  /**
+   * When true, this cell's content is clipped to the (fixed) column width with a
+   * CSS ellipsis and a hover `title` of the column's text value. Only meaningful
+   * alongside `width` on a `table-fixed` table. Used for long free-text columns.
+   */
+  truncate?: boolean;
 }
 
 export interface FilterConfig<TRow> {
@@ -134,7 +147,16 @@ export interface RegisterDataTableProps<TRow> {
    * (e.g. Item Master's "Export to Excel" xlsx route), to avoid a duplicate.
    */
   showExport?: boolean;
+  /**
+   * A single bulk action (legacy). Kept for the registers that ship exactly one.
+   * When `bulkActions` (plural) is supplied it takes precedence.
+   */
   bulkAction?: BulkActionConfig;
+  /**
+   * Multiple bulk actions, each rendered as its own compact select + Apply
+   * control group in the bulk bar. Supersedes `bulkAction` when provided.
+   */
+  bulkActions?: BulkActionConfig[];
   emptyTitle: string;
   emptyHint?: string;
 }
@@ -181,10 +203,38 @@ export function RegisterDataTable<TRow>({
   exportFilename,
   showExport = true,
   bulkAction,
+  bulkActions,
   emptyTitle,
   emptyHint,
 }: RegisterDataTableProps<TRow>) {
   const router = useRouter();
+
+  // Normalize the single/plural bulk-action props into one array. Plural wins;
+  // otherwise fall back to the legacy singular prop (so the other five
+  // registers keep working unchanged).
+  const allBulkActions = React.useMemo<BulkActionConfig[]>(
+    () => bulkActions ?? (bulkAction ? [bulkAction] : []),
+    [bulkActions, bulkAction],
+  );
+
+  // Fixed-layout kicks in only when at least one column declares a width; when
+  // none do, the table keeps its original auto layout (unchanged for the other
+  // registers).
+  const hasWidths = React.useMemo(
+    () => columns.some((c) => c.width),
+    [columns],
+  );
+
+  /** Column width for the `<colgroup>`. "1fr"/unset → no width (auto = flexes). */
+  const leafWidth = React.useCallback(
+    (id: string): string | undefined => {
+      if (id === "__select") return "40px";
+      if (id === "__actions") return "56px";
+      const w = columns.find((c) => c.id === id)?.width;
+      return !w || w === "1fr" ? undefined : w;
+    },
+    [columns],
+  );
 
   // -- Persistence (column visibility + density). Start with config defaults
   //    on both server + first client render to avoid hydration mismatch, then
@@ -197,7 +247,6 @@ export function RegisterDataTable<TRow>({
 
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>(defaultVisibility);
-  const [density, setDensity] = React.useState<Density>("comfortable");
 
   React.useEffect(() => {
     try {
@@ -205,7 +254,6 @@ export function RegisterDataTable<TRow>({
       if (!raw) return;
       const saved = JSON.parse(raw) as Persisted;
       if (saved.columnVisibility) setColumnVisibility(saved.columnVisibility);
-      if (saved.density) setDensity(saved.density);
     } catch {
       /* ignore malformed / unavailable storage */
     }
@@ -213,12 +261,12 @@ export function RegisterDataTable<TRow>({
 
   React.useEffect(() => {
     try {
-      const payload: Persisted = { columnVisibility, density };
+      const payload: Persisted = { columnVisibility };
       localStorage.setItem(storageKey(tableKey), JSON.stringify(payload));
     } catch {
       /* storage may be unavailable (private mode) */
     }
-  }, [tableKey, columnVisibility, density]);
+  }, [tableKey, columnVisibility]);
 
   // -- Global search + faceted filters (client-side state) --------------------
   const [query, setQuery] = React.useState("");
@@ -333,7 +381,12 @@ export function RegisterDataTable<TRow>({
         return asText(va).localeCompare(asText(vb), undefined, { sensitivity: "base" });
       },
       cell: ({ row }) => c.cell(row.original),
-      meta: { align: c.align ?? "left" },
+      meta: {
+        align: c.align ?? "left",
+        truncate: c.truncate ?? false,
+        // Hover title for truncated cells: the column's text value.
+        title: c.truncate && c.sortValue ? (row: TRow) => asText(c.sortValue!(row)) : undefined,
+      },
     }));
 
     const actions: ColumnDef<TRow> = {
@@ -447,7 +500,8 @@ export function RegisterDataTable<TRow>({
     fireToast({ message: `Exported ${body.length} ${body.length === 1 ? "row" : "rows"}.` });
   }
 
-  const cellPadY = density === "compact" ? "py-2" : "py-3.5";
+  // The register renders in a single compact density (the toggle was removed).
+  const cellPadY = "py-2";
 
   return (
     <div>
@@ -463,7 +517,7 @@ export function RegisterDataTable<TRow>({
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search…"
+            placeholder="Search"
             aria-label="Search rows"
             className="w-full rounded-chip border border-hairline bg-surface-card pl-9 pr-8 py-2 text-[14px] text-ink-strong placeholder:text-ink-subtle outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
             style={{ boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)" }}
@@ -547,8 +601,7 @@ export function RegisterDataTable<TRow>({
           </button>
         )}
 
-        <div className="ml-auto flex items-center gap-2">
-          <DensityToggle value={density} onChange={setDensity} />
+        <div className="flex items-center gap-2">
           <ColumnsMenu table={table} columns={columns} />
           {showExport && (
             <button
@@ -569,7 +622,7 @@ export function RegisterDataTable<TRow>({
         <BulkBar
           count={selectedIds.length}
           ids={selectedIds}
-          bulkAction={bulkAction}
+          bulkActions={allBulkActions}
           onExportSelected={exportSelected}
           onClear={() => table.resetRowSelection()}
           onApplied={() => {
@@ -592,7 +645,14 @@ export function RegisterDataTable<TRow>({
           className="overflow-auto rounded-section border border-hairline bg-surface-card max-h-[calc(100vh-260px)]"
           style={{ boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)" }}
         >
-          <table className="w-full text-[14px]">
+          <table className={cn("w-full text-[14px]", hasWidths && "table-fixed")}>
+            {hasWidths && (
+              <colgroup>
+                {table.getVisibleLeafColumns().map((col) => (
+                  <col key={col.id} style={{ width: leafWidth(col.id) }} />
+                ))}
+              </colgroup>
+            )}
             <thead>
               {table.getHeaderGroups().map((hg) => (
                 <tr
@@ -616,7 +676,7 @@ export function RegisterDataTable<TRow>({
                               : undefined
                         }
                         className={cn(
-                          "sticky top-0 z-10 px-5 py-4 whitespace-nowrap",
+                          "sticky top-0 z-10 px-4 py-4 whitespace-nowrap",
                           align === "right" ? "text-right" : "text-left",
                         )}
                         style={{ background: "var(--color-surface-soft)" }}
@@ -677,23 +737,43 @@ export function RegisterDataTable<TRow>({
                   >
                     {row.getVisibleCells().map((cell) => {
                       const colId = cell.column.id;
-                      const align =
-                        (cell.column.columnDef.meta as { align?: string } | undefined)
-                          ?.align;
+                      const meta = cell.column.columnDef.meta as
+                        | {
+                            align?: string;
+                            truncate?: boolean;
+                            title?: (row: TRow) => string;
+                          }
+                        | undefined;
+                      const align = meta?.align;
                       const isSelect = colId === "__select";
                       const isActions = colId === "__actions";
+                      const truncate = Boolean(meta?.truncate);
+                      const rendered = flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      );
                       return (
                         <td
                           key={cell.id}
                           className={cn(
-                            "px-5 whitespace-nowrap",
+                            "px-4 whitespace-nowrap",
                             cellPadY,
                             align === "right" ? "text-right" : "text-left",
                             isSelect ? "w-10" : "",
                             isActions ? "w-0" : "",
+                            truncate ? "overflow-hidden" : "",
                           )}
                         >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          {truncate ? (
+                            <span
+                              className="block truncate"
+                              title={meta?.title?.(cell.row.original)}
+                            >
+                              {rendered}
+                            </span>
+                          ) : (
+                            rendered
+                          )}
                         </td>
                       );
                     })}
@@ -813,53 +893,6 @@ function RowActions({
   );
 }
 
-function DensityToggle({
-  value,
-  onChange,
-}: {
-  value: Density;
-  onChange: (v: Density) => void;
-}) {
-  return (
-    <div
-      role="group"
-      aria-label="Row density"
-      className="inline-flex items-center gap-1 rounded-pill border border-hairline bg-surface-soft p-0.5"
-    >
-      <button
-        type="button"
-        aria-pressed={value === "comfortable"}
-        aria-label="Comfortable rows"
-        title="Comfortable"
-        onClick={() => onChange("comfortable")}
-        className={cn(
-          "inline-flex items-center justify-center size-8 rounded-pill transition-colors",
-          value === "comfortable"
-            ? "bg-white text-ink-strong border border-hairline-strong shadow-sm"
-            : "text-ink-muted hover:text-ink-strong",
-        )}
-      >
-        <Rows3 size={15} strokeWidth={2.2} />
-      </button>
-      <button
-        type="button"
-        aria-pressed={value === "compact"}
-        aria-label="Compact rows"
-        title="Compact"
-        onClick={() => onChange("compact")}
-        className={cn(
-          "inline-flex items-center justify-center size-8 rounded-pill transition-colors",
-          value === "compact"
-            ? "bg-white text-ink-strong border border-hairline-strong shadow-sm"
-            : "text-ink-muted hover:text-ink-strong",
-        )}
-      >
-        <Rows4 size={15} strokeWidth={2.2} />
-      </button>
-    </div>
-  );
-}
-
 function ColumnsMenu<TRow>({
   table,
   columns,
@@ -909,26 +942,79 @@ function ColumnsMenu<TRow>({
 function BulkBar({
   count,
   ids,
-  bulkAction,
+  bulkActions,
   onExportSelected,
   onClear,
   onApplied,
 }: {
   count: number;
   ids: string[];
-  bulkAction?: BulkActionConfig;
+  bulkActions: BulkActionConfig[];
   onExportSelected: () => void;
   onClear: () => void;
+  onApplied: () => void;
+}) {
+  return (
+    <div
+      className="sticky top-2 z-20 mb-3 flex items-center gap-x-3 gap-y-2.5 flex-wrap rounded-section border border-brand/30 bg-brand/[0.06] px-4 py-2.5"
+      style={{ boxShadow: "0 4px 14px rgba(15, 23, 42, 0.08)" }}
+    >
+      <span className="text-[13px] font-bold text-ink-strong tabular-nums">
+        {count} selected
+      </span>
+      <button
+        type="button"
+        onClick={onExportSelected}
+        className="inline-flex items-center gap-1.5 h-8 px-3 rounded-pill text-[13px] font-bold border border-hairline bg-surface-card text-ink-soft hover:border-brand hover:text-brand transition-all"
+      >
+        <Download size={13} strokeWidth={2.2} />
+        Export selected
+      </button>
+
+      {bulkActions.map((action, i) => (
+        <BulkActionGroup
+          key={`${action.label}-${i}`}
+          action={action}
+          count={count}
+          ids={ids}
+          onApplied={onApplied}
+        />
+      ))}
+
+      <button
+        type="button"
+        onClick={onClear}
+        className="ml-auto text-[13px] font-semibold text-ink-subtle hover:text-ink-strong transition-colors"
+      >
+        Clear selection
+      </button>
+    </div>
+  );
+}
+
+/**
+ * One bulk-action control group (its own select + Apply). Each group owns its
+ * selected value + pending state so applying one action never disturbs another.
+ */
+function BulkActionGroup({
+  action,
+  count,
+  ids,
+  onApplied,
+}: {
+  action: BulkActionConfig;
+  count: number;
+  ids: string[];
   onApplied: () => void;
 }) {
   const [value, setValue] = React.useState("");
   const [pending, setPending] = React.useState(false);
 
   async function apply() {
-    if (!bulkAction || !value) return;
+    if (!value) return;
     setPending(true);
     try {
-      const res = await bulkAction.onApply(ids, value);
+      const res = await action.onApply(ids, value);
       if (res.ok) {
         fireToast({ message: `Updated ${count} ${count === 1 ? "row" : "rows"}.` });
         setValue("");
@@ -944,56 +1030,34 @@ function BulkBar({
   }
 
   return (
-    <div
-      className="sticky top-2 z-20 mb-3 flex items-center gap-3 flex-wrap rounded-section border border-brand/30 bg-brand/[0.06] px-4 py-2.5"
-      style={{ boxShadow: "0 4px 14px rgba(15, 23, 42, 0.08)" }}
-    >
-      <span className="text-[13px] font-bold text-ink-strong tabular-nums">
-        {count} selected
+    <div className="inline-flex flex-col gap-1">
+      <span className="px-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-brand/70">
+        {action.label}
       </span>
-      <button
-        type="button"
-        onClick={onExportSelected}
-        className="inline-flex items-center gap-1.5 h-8 px-3 rounded-pill text-[13px] font-bold border border-hairline bg-surface-card text-ink-soft hover:border-brand hover:text-brand transition-all"
-      >
-        <Download size={13} strokeWidth={2.2} />
-        Export selected
-      </button>
-
-      {bulkAction && (
-        <div className="inline-flex items-center gap-2">
-          <select
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            disabled={pending}
-            aria-label={bulkAction.label}
-            className="rounded-pill border border-hairline bg-surface-card px-3 py-1.5 text-[13px] font-semibold text-ink-strong outline-none focus:border-brand disabled:opacity-50"
-          >
-            <option value="">{bulkAction.label}…</option>
-            {bulkAction.options.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            onClick={apply}
-            disabled={pending || !value}
-            className="inline-flex items-center h-8 px-3.5 rounded-pill text-[13px] font-bold bg-brand text-white transition-all enabled:hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {pending ? "Applying…" : "Apply"}
-          </button>
-        </div>
-      )}
-
-      <button
-        type="button"
-        onClick={onClear}
-        className="ml-auto text-[13px] font-semibold text-ink-subtle hover:text-ink-strong transition-colors"
-      >
-        Clear selection
-      </button>
+      <div className="inline-flex items-center gap-1.5">
+        <select
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          disabled={pending}
+          aria-label={action.label}
+          className="rounded-pill border border-hairline bg-surface-card px-3 py-1.5 text-[13px] font-semibold text-ink-strong outline-none focus:border-brand disabled:opacity-50"
+        >
+          <option value="">{action.label}</option>
+          {action.options.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={apply}
+          disabled={pending || !value}
+          className="inline-flex items-center h-8 px-3.5 rounded-pill text-[13px] font-bold bg-brand text-white transition-all enabled:hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {pending ? "Applying" : "Apply"}
+        </button>
+      </div>
     </div>
   );
 }

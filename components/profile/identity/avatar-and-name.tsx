@@ -168,7 +168,7 @@ export function AvatarAndName({ initialName, initialAvatarUrl }: Props) {
                 fontWeight: 600,
               }}
             >
-              Saving…
+              Saving
             </div>
           )}
         </div>
@@ -231,7 +231,7 @@ export function AvatarAndName({ initialName, initialAvatarUrl }: Props) {
               disabled={uploading}
               style={btnStyle("primary")}
             >
-              {uploading ? "Uploading…" : "Upload photo"}
+              {uploading ? "Uploading" : "Upload photo"}
             </button>
             {avatarUrl && (
               <button

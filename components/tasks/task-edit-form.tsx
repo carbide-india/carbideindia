@@ -354,7 +354,7 @@ export function TaskEditForm({
             onChange={setSubject}
             subjects={subjects}
             className={inputClass}
-            placeholder="Select a subject…"
+            placeholder="Select a subject"
             {...p}
           />
         )}
@@ -462,8 +462,8 @@ export function TaskEditForm({
               }}
               placeholder={
                 tags.length === 0
-                  ? "Type and press Enter or comma…"
-                  : "Add another…"
+                  ? "Type and press Enter or comma"
+                  : "Add another"
               }
               className="flex-1 min-w-[140px] bg-transparent outline-none text-[14px]"
             />
@@ -587,7 +587,7 @@ export function TaskEditForm({
             boxShadow: "0 8px 20px -10px rgba(63, 63, 148, 0.55)",
           }}
         >
-          {pending ? "Saving…" : "Save changes"}
+          {pending ? "Saving" : "Save changes"}
         </button>
       </div>
     </motion.form>

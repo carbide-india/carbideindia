@@ -233,6 +233,8 @@ export const MASTER_KINDS = [
   "internal_grade",
   "tolerance",
   "condition",
+  // Department (2026-07-13): owning team on a client / enquiry.
+  "department",
   // Item Master (2026-06-17): size + shape carry a short `code` used to
   // assemble the internal item code.
   "size",
@@ -242,6 +244,10 @@ export const MASTER_KINDS = [
   "pressing_type",
 ] as const;
 export type MasterKind = (typeof MASTER_KINDS)[number];
+
+/** Client rating grade (A best → C). Free-standing enum stored on clients. */
+export const CLIENT_GRADES = ["A", "B", "C"] as const;
+export type ClientGrade = (typeof CLIENT_GRADES)[number];
 
 /** Item Master costing route. */
 export const COSTING_TYPES = ["inhouse", "bought_out", "both"] as const;
@@ -270,6 +276,7 @@ export const MASTER_KIND_LABELS: Record<MasterKind, string> = {
   internal_grade: "Internal Grade",
   tolerance: "Tolerance",
   condition: "Condition",
+  department: "Department",
   size: "Size",
   shape: "Shape",
   dispatch_condition: "Dispatch Condition",

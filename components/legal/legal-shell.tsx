@@ -6,7 +6,7 @@ import { ArrowLeft } from "lucide-react";
 interface Props {
   eyebrow: string;
   title: string;
-  /** ISO date like "2026-05-14" — shown as "Last updated …" */
+  /** ISO date like "2026-05-14" — shown as "Last updated " */
   lastUpdated: string;
   /** One-paragraph editorial subtitle below the title. */
   intro: string;

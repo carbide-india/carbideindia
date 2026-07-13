@@ -36,7 +36,7 @@ function check(label: string, value: string | undefined, validate?: (v: string) 
 function redact(label: string, value: string): string {
   // Keep prefix + length, hide the rest, for secrets.
   if (/KEY|SECRET|TOKEN|PRIVATE/i.test(label)) {
-    return `${value.slice(0, 6)}…(${value.length} chars)`;
+    return `${value.slice(0, 6)}(${value.length} chars)`;
   }
   return value;
 }

@@ -23,6 +23,7 @@ import { fireToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { Select } from "@/components/ui/select";
 import { LocationSelect } from "@/components/samples/location-select";
+import { AudioNoteRecorder } from "@/components/samples/audio-note-recorder";
 import {
   Field,
   MiniField,
@@ -114,18 +115,24 @@ const TRACKED_STAGES = [
     status: "dimensionStatus",
     location: "dimensionLocation",
     completed: "dimensionCompletedOn",
+    notes: "dimensionNotes",
+    audio: "dimensionAudioUrl",
   },
   {
     label: "Chemical Analysis",
     status: "chemicalStatus",
     location: "chemicalLocation",
     completed: "chemicalCompletedOn",
+    notes: "chemicalNotes",
+    audio: "chemicalAudioUrl",
   },
   {
     label: "Drawing",
     status: "drawingStatus",
     location: "drawingLocation",
     completed: "drawingCompletedOn",
+    notes: "drawingNotes",
+    audio: "drawingAudioUrl",
   },
 ] as const;
 
@@ -165,12 +172,18 @@ export function SampleForm({ employees }: Props) {
       dimensionStatus: "not_started",
       dimensionLocation: "Undecided",
       dimensionCompletedOn: "",
+      dimensionNotes: "",
+      dimensionAudioUrl: "",
       chemicalStatus: "not_started",
       chemicalLocation: "Undecided",
       chemicalCompletedOn: "",
+      chemicalNotes: "",
+      chemicalAudioUrl: "",
       drawingStatus: "not_started",
       drawingLocation: "Undecided",
       drawingCompletedOn: "",
+      drawingNotes: "",
+      drawingAudioUrl: "",
       costingStatus: "not_started",
       costingCompletedOn: "",
       reportsUploaded: [],
@@ -251,8 +264,9 @@ export function SampleForm({ employees }: Props) {
       <SectionCard
         title="Sample"
         hint="Sample number as written on the physical sample / register."
+        inlineHint
       >
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+        <div className="grid grid-cols-5 gap-3 max-lg:grid-cols-3 max-md:grid-cols-1 items-start">
           <Field id="smp-date" label="Date">
             <input
               id="smp-date"
@@ -272,9 +286,6 @@ export function SampleForm({ employees }: Props) {
               {...register("sampleNo")}
             />
           </Field>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1 items-start">
           <Field label="Sample Location" labelOnly>
             <Controller
               control={control}
@@ -285,7 +296,7 @@ export function SampleForm({ employees }: Props) {
                   onChange={field.onChange}
                   options={SAMPLE_LOCATIONS}
                   otherOption="Other"
-                  specifyPlaceholder="Specify location…"
+                  specifyPlaceholder="Specify location"
                   ariaLabel="Sample location"
                 />
               )}
@@ -305,25 +316,27 @@ export function SampleForm({ employees }: Props) {
               )}
             />
           </Field>
+          <Field label="Responsible Person" labelOnly>
+            <Controller
+              control={control}
+              name="responsiblePersonId"
+              render={({ field }) => (
+                <Select
+                  value={field.value ?? ""}
+                  onValueChange={(v) => field.onChange(v || undefined)}
+                  placeholder="Select an employee"
+                  searchPlaceholder="Search employees"
+                  searchable
+                  ariaLabel="Responsible person"
+                  options={employees.map((e) => ({
+                    value: e.id,
+                    label: e.name,
+                  }))}
+                />
+              )}
+            />
+          </Field>
         </div>
-
-        <Field label="Responsible Person" labelOnly>
-          <Controller
-            control={control}
-            name="responsiblePersonId"
-            render={({ field }) => (
-              <Select
-                value={field.value ?? ""}
-                onValueChange={(v) => field.onChange(v || undefined)}
-                placeholder="Select an employee…"
-                searchPlaceholder="Search employees…"
-                searchable
-                ariaLabel="Responsible person"
-                options={employees.map((e) => ({ value: e.id, label: e.name }))}
-              />
-            )}
-          />
-        </Field>
 
         <Field id="smp-notes" label="Sample Notes">
           <textarea
@@ -331,7 +344,7 @@ export function SampleForm({ employees }: Props) {
             rows={3}
             className="nt-input resize-y"
             style={{ fontWeight: 400 }}
-            placeholder="Anything the team should know about this sample…"
+            placeholder="Anything the team should know about this sample"
             {...register("sampleNotes")}
           />
         </Field>
@@ -340,7 +353,8 @@ export function SampleForm({ employees }: Props) {
       {/* ── 2 · Photos ───────────────────────────────────────────────── */}
       <SectionCard
         title="Photos"
-        hint="JPEG, PNG or WebP up to 10 MB each — uploads run immediately; the sample saves fine without photos."
+        hint="JPEG, PNG or WebP up to 10 MB each — the sample saves fine without photos."
+        inlineHint
       >
         <input
           ref={fileRef}
@@ -389,7 +403,7 @@ export function SampleForm({ employees }: Props) {
               <ImagePlus size={18} />
             )}
             <span className="text-[11.5px] font-semibold">
-              {uploadingCount > 0 ? "Uploading…" : "Add photos"}
+              {uploadingCount > 0 ? "Uploading" : "Add photos"}
             </span>
           </button>
         </div>
@@ -398,28 +412,30 @@ export function SampleForm({ employees }: Props) {
       {/* ── 3 · Stage Tracking ───────────────────────────────────────── */}
       <SectionCard
         title="Stage Tracking"
-        hint="Dimension, chemical analysis and drawing — first options mean 'not started yet', so dashboards can flag incomplete stages."
+        hint="First option means 'not started yet', so dashboards can flag incomplete stages."
+        inlineHint
       >
         <div className="flex flex-col gap-3">
           {TRACKED_STAGES.map((row) => (
             <div
               key={row.status}
-              className="flex flex-col gap-3.5 rounded-xl border border-hairline p-4"
+              className="flex items-start gap-4 rounded-xl border border-hairline p-4 max-md:flex-col max-md:gap-3"
             >
-              <span className="text-[14px] font-bold text-ink-strong">
+              <span className="w-[132px] shrink-0 pt-1 text-[14px] font-bold text-ink-strong">
                 {row.label}
               </span>
-              <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
-                <MiniField label="Status">
+              <div className="flex flex-1 flex-wrap items-start gap-x-5 gap-y-3">
+                <MiniField label="Status" className="min-w-[190px]">
                   <Controller
                     control={control}
                     name={row.status}
                     render={({ field }) => (
-                      <Segmented
+                      <Select
                         options={STAGE_STATUS_OPTIONS}
-                        value={field.value}
-                        onChange={field.onChange}
-                        allowClear={false}
+                        value={field.value ?? ""}
+                        onValueChange={(v) =>
+                          field.onChange(v as (typeof STAGE_STATUSES)[number])
+                        }
                         ariaLabel={`${row.label} status`}
                       />
                     )}
@@ -435,7 +451,7 @@ export function SampleForm({ employees }: Props) {
                         onChange={field.onChange}
                         options={STAGE_LOCATIONS}
                         otherOption="Others"
-                        specifyPlaceholder="Specify lab / vendor…"
+                        specifyPlaceholder="Specify lab / vendor"
                         ariaLabel={`${row.label} location`}
                       />
                     )}
@@ -449,6 +465,29 @@ export function SampleForm({ employees }: Props) {
                     {...register(row.completed)}
                   />
                 </MiniField>
+                <MiniField label="Notes" className="w-full">
+                  <textarea
+                    rows={2}
+                    className="nt-input resize-y"
+                    style={{ fontWeight: 400 }}
+                    aria-label={`${row.label} notes`}
+                    placeholder={`Notes about the ${row.label.toLowerCase()} stage`}
+                    {...register(row.notes)}
+                  />
+                </MiniField>
+                <MiniField label="Voice Note" className="w-full">
+                  <Controller
+                    control={control}
+                    name={row.audio}
+                    render={({ field }) => (
+                      <AudioNoteRecorder
+                        value={field.value || undefined}
+                        onChange={(url) => field.onChange(url ?? "")}
+                        label={`${row.label} voice note`}
+                      />
+                    )}
+                  />
+                </MiniField>
               </div>
             </div>
           ))}
@@ -458,7 +497,8 @@ export function SampleForm({ employees }: Props) {
       {/* ── 4 · Costing ──────────────────────────────────────────────── */}
       <SectionCard
         title="Costing"
-        hint="Costing runs in-house, so it tracks status and completion only — no location."
+        hint="In-house — status and completion only, no location."
+        inlineHint
       >
         <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
           <MiniField label="Status">
@@ -489,6 +529,7 @@ export function SampleForm({ employees }: Props) {
 
       {/* ── 5 · Reports & Processing ─────────────────────────────────── */}
       <SectionCard title="Reports & Processing">
+        <div className="grid grid-cols-3 gap-4 max-lg:grid-cols-2 max-md:grid-cols-1 items-start">
         <Field label="Sample Reports Uploaded">
           <Controller
             control={control}
@@ -512,18 +553,18 @@ export function SampleForm({ employees }: Props) {
                         )
                       }
                       className={cn(
-                        "inline-flex items-center gap-2 rounded-chip border px-3 py-2 text-[13px] font-semibold transition-colors",
+                        "inline-flex items-center gap-2 rounded-chip border-[1.75px] px-3 py-2 text-[13px] font-semibold transition-colors",
                         checked
                           ? "border-brand bg-brand/8 text-ink-strong"
-                          : "border-hairline bg-surface-card text-ink-muted hover:border-hairline-strong hover:text-ink-strong",
+                          : "border-[#9199b6] bg-surface-card text-ink-strong hover:border-[#6f78a0] hover:bg-[#f3f4f8]",
                       )}
                     >
                       <span
                         className={cn(
-                          "inline-flex size-[16px] items-center justify-center rounded-[4px] border transition-colors",
+                          "inline-flex size-[16px] items-center justify-center rounded-[4px] border-[1.75px] transition-colors",
                           checked
                             ? "bg-brand border-brand text-white"
-                            : "border-hairline-strong bg-white text-transparent",
+                            : "border-[#9199b6] bg-white text-transparent",
                         )}
                       >
                         <Check size={11} strokeWidth={3} />
@@ -537,7 +578,6 @@ export function SampleForm({ employees }: Props) {
           />
         </Field>
 
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
           <Field label="Reports in SM Folder">
             <Controller
               control={control}
@@ -569,7 +609,7 @@ export function SampleForm({ employees }: Props) {
             rows={3}
             className="nt-input resize-y"
             style={{ fontWeight: 400 }}
-            placeholder="How the sample was (or should be) processed…"
+            placeholder="How the sample was (or should be) processed"
             {...register("processNotes")}
           />
         </Field>
@@ -601,7 +641,7 @@ export function SampleForm({ employees }: Props) {
             letterSpacing: "0.005em",
           }}
         >
-          {pending ? "Registering…" : "Register Sample"}
+          {pending ? "Registering" : "Register Sample"}
         </button>
       </div>
     </form>

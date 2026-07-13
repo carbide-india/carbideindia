@@ -138,7 +138,7 @@ export function ProductPicker({
             setQuery(e.target.value);
             setOpen(true);
           }}
-          placeholder="Search materials by code, size, grade, customer…"
+          placeholder="Search materials by code, size, grade, customer"
           className="h-11 flex-1 bg-transparent text-[14px] text-ink-strong outline-none placeholder:text-ink-subtle"
         />
         {isFetching && (
@@ -413,7 +413,7 @@ function CreateMaterialSheet({
                     return cp;
                   });
                 }}
-                placeholder="Select a shape…"
+                placeholder="Select a shape"
                 options={masters.shapes.map((s) => ({ value: s.id, label: s.name }))}
               />
             </Labeled>
@@ -424,16 +424,22 @@ function CreateMaterialSheet({
                   const req = cfg.dims[d] === "required";
                   return (
                     <Labeled key={d} label={`${DIM_LABELS[d]}${req ? " *" : ""}`}>
-                      <input
-                        type="number"
-                        min={0}
-                        step="any"
-                        value={dims[d] ?? ""}
-                        onChange={(e) =>
-                          setDims((prev) => ({ ...prev, [d]: e.target.value }))
-                        }
-                        className="nt-input"
-                      />
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min={0}
+                          step="any"
+                          value={dims[d] ?? ""}
+                          onChange={(e) =>
+                            setDims((prev) => ({ ...prev, [d]: e.target.value }))
+                          }
+                          placeholder="e.g. 12"
+                          className="nt-input pr-12"
+                        />
+                        <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[13px] font-bold text-ink-subtle">
+                          mm
+                        </span>
+                      </div>
                     </Labeled>
                   );
                 })}
@@ -445,7 +451,7 @@ function CreateMaterialSheet({
                 <Select
                   value={gradeId}
                   onValueChange={setGradeId}
-                  placeholder="Select…"
+                  placeholder="Select"
                   options={masters.grades.map((o) => ({ value: o.id, label: o.name }))}
                 />
               </Labeled>
@@ -453,7 +459,7 @@ function CreateMaterialSheet({
                 <Select
                   value={toleranceId}
                   onValueChange={setToleranceId}
-                  placeholder="Select…"
+                  placeholder="Select"
                   options={masters.tolerances.map((o) => ({ value: o.id, label: o.name }))}
                 />
               </Labeled>
@@ -461,7 +467,7 @@ function CreateMaterialSheet({
                 <Select
                   value={conditionId}
                   onValueChange={setConditionId}
-                  placeholder="Select…"
+                  placeholder="Select"
                   options={masters.conditions.map((o) => ({ value: o.id, label: o.name }))}
                 />
               </Labeled>
@@ -472,7 +478,7 @@ function CreateMaterialSheet({
                 type="text"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Optional…"
+                placeholder="Optional"
                 className="nt-input"
               />
             </Labeled>

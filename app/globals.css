@@ -1568,10 +1568,12 @@ html[data-density="compact"] body {
   line-height: 1.4;
   color: var(--color-ink-strong);
   background: linear-gradient(180deg, #ffffff 0%, #f5f7fa 100%);
-  border: 1.5px solid var(--color-hairline-strong);
-  border-radius: 13px;
+  border: 1.5px solid #c3c9db;
+  border-radius: 12px;
   outline: none;
+  /* Distinctive indigo left-accent marks every field — clearly visible + unique. */
   box-shadow:
+    inset 2px 0 0 rgba(63, 63, 148, 0.32),
     inset 0 1px 0 rgba(255, 255, 255, 0.95),
     0 1px 2px rgba(15, 23, 42, 0.05),
     0 3px 8px -3px rgba(15, 23, 42, 0.10);
@@ -1582,8 +1584,9 @@ html[data-density="compact"] body {
   font-weight: 500;
 }
 .nt-input:hover {
-  border-color: var(--color-ink-subtle);
+  border-color: #9aa2bd;
   box-shadow:
+    inset 2px 0 0 rgba(63, 63, 148, 0.55),
     inset 0 1px 0 rgba(255, 255, 255, 0.95),
     0 2px 4px rgba(15, 23, 42, 0.06),
     0 5px 12px -4px rgba(15, 23, 42, 0.14);
@@ -1592,10 +1595,10 @@ html[data-density="compact"] body {
 .nt-input:focus-visible,
 .nt-input:focus-within {
   background: #ffffff;
-  border-color: rgb(var(--vp-cyan));
+  border-color: #3f3f94;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.95),
-    0 0 0 3px rgb(var(--vp-cyan) / 0.18),
+    inset 3px 0 0 #3f3f94,
+    0 0 0 3px rgba(63, 63, 148, 0.16),
     0 4px 10px -4px rgba(15, 23, 42, 0.12);
 }
 /* Native <select> as a skeuomorphic field with a custom chevron — the OS
@@ -1612,6 +1615,20 @@ select.nt-input {
   background-repeat: no-repeat, no-repeat;
   background-position: right 16px center, center;
   background-size: 14px, auto;
+}
+
+/* Sidebar collapse toggle — a springy pop each time the icon flips, so the
+   collapse action reads clearly. Applied to a re-keyed span in the shell. */
+@keyframes togglePop {
+  0% { transform: scale(0.5) rotate(-16deg); opacity: 0.35; }
+  55% { transform: scale(1.18) rotate(7deg); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.animate-toggle-pop {
+  animation: togglePop 0.34s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-toggle-pop { animation: none; }
 }
 
 /* Task title link — cyan hover instead of the brand accent */

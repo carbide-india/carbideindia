@@ -41,7 +41,7 @@ export function fiscalYearRange(ref: Date = new Date()): {
   end: Date;
 } {
   const y = ref.getUTCFullYear();
-  const m = ref.getUTCMonth(); // 0 = Jan … 3 = Apr
+  const m = ref.getUTCMonth(); // 0 = Jan  3 = Apr
   const startYear = m >= 3 ? y : y - 1;
   const start = new Date(Date.UTC(startYear, 3, 1, 0, 0, 0, 0));
   const end = new Date(Date.UTC(startYear + 1, 3, 1, 0, 0, 0, 0));

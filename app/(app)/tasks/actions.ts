@@ -912,7 +912,7 @@ export async function createTask(input: CreateTaskInput): Promise<
 
 /**
  * Appends a new client to the shared roster, used by the "+ Add new
- * client…" affordance on the task forms. Any authenticated user may add
+ * client" affordance on the task forms. Any authenticated user may add
  * one (see migration 0022 RLS). Case-insensitive dedupe: if the name
  * already exists we return the canonical stored spelling instead of
  * erroring, so the picker can just select it.
@@ -965,7 +965,7 @@ export async function quickAddClient(
 
 /**
  * Appends a new subject to the shared roster, used by the "+ Add new
- * subject…" affordance on the task forms. Mirrors quickAddClient.
+ * subject" affordance on the task forms. Mirrors quickAddClient.
  */
 export async function quickAddSubject(
   rawName: string,
@@ -1460,7 +1460,7 @@ export async function addComment(
 
   // Fan-out: every participant except me; body is the first 140 chars.
   const label = taskLabel({ subject: current.subject, title: current.title });
-  const preview = parsed.body.length > 140 ? `${parsed.body.slice(0, 140)}…` : parsed.body;
+  const preview = parsed.body.length > 140 ? `${parsed.body.slice(0, 140)}` : parsed.body;
   await notifyManyForTask(taskId, {
     actorId: me.id,
     kind: "commented",
@@ -1478,7 +1478,7 @@ export async function addComment(
 // approval_status + revised_target_date are admin-only columns added in
 // migration 0019. They sit alongside the existing status column rather
 // than reusing it, so the doer's "status" lifecycle stays independent
-// from the initiator/admin's verdict (approved | not_approved | …).
+// from the initiator/admin's verdict (approved | not_approved | ).
 
 /**
  * Set or clear `approval_status` on a task. Admin-only.

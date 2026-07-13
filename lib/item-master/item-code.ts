@@ -20,9 +20,9 @@
 export interface ItemCodeParts {
   sizeCode: string;        // S / M / L / SA / MA / LA / Sp / A / P
   seq: number;             // running serial, padded to 5 digits
-  shapeCode: string;       // C / HC / F / CSp …
-  gradeCode: string;       // CIF06 …
-  conditionCode: string;   // B / Fi / SF …
+  shapeCode: string;       // C / HC / F / CSp 
+  gradeCode: string;       // CIF06 
+  conditionCode: string;   // B / Fi / SF 
   toleranceCode?: string;  // → "XXX" when unknown
   dims: number[];          // present dimension values, in order (OD,ID,L,W,T)
 }

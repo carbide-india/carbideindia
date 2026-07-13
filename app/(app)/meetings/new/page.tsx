@@ -1,11 +1,14 @@
-import { DashboardHeader } from "@/components/layout/header";
-import { DashboardFooter } from "@/components/layout/footer";
 import { MeetingForm } from "@/components/meetings/meeting-form";
 import { requireUser, getCurrentEmployee } from "@/lib/auth/current";
 import { listEmployeeOptions } from "@/lib/queries/employees";
 import { listClientOptions } from "@/lib/queries/clients";
 import { listMasterOptions } from "@/lib/queries/masters";
-import { BulkUploadButton } from "@/components/import/bulk-upload-button";
+import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
+import { UserMenuServer } from "@/components/header/user-menu-server";
+import { loadLookups, specRefKinds } from "@/lib/import/lookups";
+import { meetingImportSpec } from "@/lib/import/specs/meeting";
+import { commitMeetingImport } from "@/app/(app)/meetings/import/actions";
+import { BulkImportModal } from "@/components/import/bulk-import-modal";
 
 export const dynamic = "force-dynamic";
 
@@ -18,25 +21,29 @@ export default async function NewMeetingPage() {
     listMasterOptions("customer_type"),
   ]);
 
+  const importLookups = currentEmployee?.isAdmin
+    ? await loadLookups(specRefKinds(meetingImportSpec.fields))
+    : null;
+
+  // Admins get a Bulk Upload entry in the sidebar (opens the meeting import modal).
+  const bulkUpload =
+    currentEmployee?.isAdmin && importLookups ? (
+      <BulkImportModal
+        spec={meetingImportSpec}
+        lookups={importLookups}
+        commit={commitMeetingImport}
+        isAdmin
+        triggerClassName="flex h-[44px] w-full items-center gap-3 rounded-lg px-3.5 text-[14px] font-semibold text-[#3a4152] transition hover:bg-[#efeffb] hover:text-[#3f3f94]"
+      />
+    ) : null;
+
   return (
-    <>
-      <DashboardHeader generatedAt={new Date()} />
-      <main className="mx-auto max-w-[980px] px-12 max-md:px-4 pt-8 pb-16">
-        <header className="mb-6">
-          <div className="text-[10px] uppercase tracking-[0.18em] text-ink-subtle font-bold">
-            Sales · Daily Meetings
-          </div>
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-display-lg text-ink-strong mt-1">New Meeting</h1>
-              <p className="text-body-lg text-ink-subtle mt-1">
-                Log a client visit — sales and contact details, timing, and the
-                meeting outcome.
-              </p>
-            </div>
-            {currentEmployee?.isAdmin && <BulkUploadButton href="/meetings/import" />}
-          </div>
-        </header>
+    <EnquiryModuleShell
+      title="Client Meeting"
+      userMenu={<UserMenuServer />}
+      bulkUpload={bulkUpload}
+    >
+      <div className="w-full">
         <MeetingForm
           defaultSalesPersonId={me.id}
           defaultSalesName={me.name}
@@ -45,8 +52,7 @@ export default async function NewMeetingPage() {
           clients={clients}
           customerTypes={customerTypes}
         />
-      </main>
-      <DashboardFooter />
-    </>
+      </div>
+    </EnquiryModuleShell>
   );
 }

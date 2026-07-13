@@ -18,7 +18,7 @@ type Result<T = unknown> = ({ ok: true } & T) | { ok: false; error: string };
  * Client document blobs live under this prefix. It nests inside the shared
  * `documents/` prefix that /api/documents/upload (the reused private-token
  * route) enforces, so client uploads need no route change — and pinning the
- * prefix here means a malicious caller can't register an `avatars/…` blob it
+ * prefix here means a malicious caller can't register an `avatars/` blob it
  * doesn't own (which deleteClientDocument's blob cleanup would later reap).
  */
 const CLIENT_DOCS_PATHNAME_PREFIX = "documents/client-documents/";

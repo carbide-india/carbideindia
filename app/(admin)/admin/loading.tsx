@@ -39,7 +39,7 @@ export default function AdminLoading() {
         </div>
       </main>
 
-      <PageBuffering label="Loading…" />
+      <PageBuffering label="Loading" />
     </>
   );
 }

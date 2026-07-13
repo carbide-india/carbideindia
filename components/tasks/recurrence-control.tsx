@@ -9,8 +9,8 @@ import { Select } from "@/components/ui/select";
 /**
  * Google-Calendar-faithful recurrence picker.
  *
- * A preset dropdown (Does not repeat / Daily / Weekly on … / Monthly on the
- * Nth … / Annually on … / Every weekday / Custom…) plus a "Custom…" dialog
+ * A preset dropdown (Does not repeat / Daily / Weekly on  / Monthly on the
+ * Nth  / Annually on  / Every weekday / Custom) plus a "Custom" dialog
  * that mirrors Google's: "Repeat every N [day|week|month|year]", weekday
  * chips, "on day N" vs "on the Nth weekday", and Ends (Never / On date /
  * After N occurrences). Emits a `recurrence` enum + an RRULE string the
@@ -166,7 +166,7 @@ export function RecurrenceControl({ anchor, recurrence, recurrenceRule, onChange
     { key: "monthly", label: `Monthly on the ${nthLabel(anchor)} ${wdFull(anchor)}` },
     { key: "yearly", label: `Annually on ${MONTHS[anchor.getMonth()]} ${anchor.getDate()}` },
     { key: "weekday", label: "Every weekday (Monday to Friday)" },
-    { key: "custom", label: "Custom…" },
+    { key: "custom", label: "Custom" },
   ];
 
   function selectPreset(key: PresetKey) {
