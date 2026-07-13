@@ -1,5 +1,6 @@
-import { KycForm } from "@/components/clients/kyc-form";
+import { KycForm, type KycFormValues } from "@/components/clients/kyc-form";
 import { requireUser, getCurrentEmployee } from "@/lib/auth/current";
+import { getFormDraft } from "@/lib/queries/form-drafts";
 import { listMasterOptions } from "@/lib/queries/masters";
 import { listEmployeeOptions } from "@/lib/queries/employees";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
@@ -17,9 +18,16 @@ export const dynamic = "force-dynamic";
  * rather than the old standalone Client-Master chrome. It is one of the forms
  * on the Enquiries launchpad.
  */
-export default async function NewClientKycPage() {
+export default async function NewClientKycPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ draft?: string }>;
+}) {
   await requireUser();
   const me = await getCurrentEmployee();
+  const sp = await searchParams;
+  const draftParam = typeof sp.draft === "string" ? sp.draft : undefined;
+  const draftPayload = draftParam ? await getFormDraft("kyc", draftParam) : null;
   const [customerTypes, industryTypes, productTypes, departments, employees] =
     await Promise.all([
       listMasterOptions("customer_type"),
@@ -57,6 +65,9 @@ export default async function NewClientKycPage() {
           productTypes={productTypes}
           departments={departments}
           employees={employees}
+          enableDrafts
+          resumeDraftId={draftPayload ? draftParam : undefined}
+          initialValues={draftPayload ? (draftPayload as Partial<KycFormValues>) : undefined}
         />
       </div>
     </EnquiryModuleShell>

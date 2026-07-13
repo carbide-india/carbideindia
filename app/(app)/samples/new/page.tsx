@@ -1,5 +1,7 @@
 import { SampleForm } from "@/components/samples/sample-form";
+import type { SampleFormValues } from "@/components/samples/sample-form";
 import { requireUser, getCurrentEmployee } from "@/lib/auth/current";
+import { getFormDraft } from "@/lib/queries/form-drafts";
 import { listEmployeeOptions } from "@/lib/queries/employees";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
 import { UserMenuServer } from "@/components/header/user-menu-server";
@@ -10,10 +12,18 @@ import { BulkImportModal } from "@/components/import/bulk-import-modal";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewSamplePage() {
+interface PageProps {
+  searchParams: Promise<{ draft?: string }>;
+}
+
+export default async function NewSamplePage({ searchParams }: PageProps) {
   await requireUser();
   const me = await getCurrentEmployee();
   const employees = await listEmployeeOptions();
+
+  const sp = await searchParams;
+  const draftParam = typeof sp.draft === "string" ? sp.draft : undefined;
+  const draftPayload = draftParam ? await getFormDraft("sample", draftParam) : null;
 
   // Admins get a Bulk Upload entry in the sidebar (opens the sample import modal).
   const importLookups = me?.isAdmin ? await loadLookups(specRefKinds(sampleImportSpec.fields)) : null;
@@ -36,7 +46,12 @@ export default async function NewSamplePage() {
       bulkUpload={bulkUpload}
     >
       <div className="w-full">
-        <SampleForm employees={employees} />
+        <SampleForm
+          employees={employees}
+          enableDrafts
+          resumeDraftId={draftPayload ? draftParam : undefined}
+          initialValues={draftPayload ? (draftPayload as Partial<SampleFormValues>) : undefined}
+        />
       </div>
     </EnquiryModuleShell>
   );

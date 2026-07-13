@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { HubSearch } from "@/components/hub/hub-search";
+import { draftKindForSegment, FORM_DRAFT_META } from "@/lib/drafts/form-drafts";
 import { cn } from "@/lib/utils";
 
 interface NavDef {
@@ -67,9 +68,11 @@ function registerFor(pathname: string): { label: string; href: string } {
 // Client Master family, otherwise the Enquiry family.
 function navFor(pathname: string): NavDef[] {
   const newForm = newFormRoute(pathname);
-  // Only the enquiry form has a drafts store today; on other forms the Drafts
-  // item is a greyed "coming soon" so it never wrongly lands on enquiry drafts.
-  const isEnquiry = pathname.startsWith("/enquiries") || pathname.startsWith("/inquiries");
+  // Each form family has its OWN drafts page (kyc/sample/…); enquiry keeps its
+  // dedicated /enquiries/drafts.
+  const seg = pathname.split("/")[1] ?? "";
+  const draftKind = draftKindForSegment(seg);
+  const draftsRoute = draftKind ? FORM_DRAFT_META[draftKind].draftsRoute : "/enquiries/drafts";
   return [
     { label: "Dashboard", href: "/hub" as Route, Icon: LayoutDashboard, ready: false },
     {
@@ -81,10 +84,10 @@ function navFor(pathname: string): NavDef[] {
     },
     {
       label: "Drafts",
-      href: "/enquiries/drafts" as Route,
+      href: draftsRoute as Route,
       Icon: Files,
-      ready: isEnquiry,
-      active: (p) => p.startsWith("/enquiries/drafts"),
+      ready: true,
+      active: (p) => p.startsWith(draftsRoute),
     },
     (() => {
       const reg = registerFor(pathname);
@@ -94,7 +97,10 @@ function navFor(pathname: string): NavDef[] {
         Icon: FileText,
         ready: true,
         active: (p: string) =>
-          p === reg.href || (p.startsWith(reg.href) && !p.startsWith(`${reg.href}/new`)),
+          p === reg.href ||
+          (p.startsWith(reg.href) &&
+            !p.startsWith(`${reg.href}/new`) &&
+            !p.startsWith(`${reg.href}/drafts`)),
       };
     })(),
     {

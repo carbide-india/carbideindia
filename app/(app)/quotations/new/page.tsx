@@ -8,11 +8,20 @@ import { commitQuotationImport } from "@/app/(app)/quotations/import/actions";
 import { BulkImportModal } from "@/components/import/bulk-import-modal";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
 import { UserMenuServer } from "@/components/header/user-menu-server";
+import { getFormDraft } from "@/lib/queries/form-drafts";
+import type { QuotationFormValues } from "@/components/quotations/quotation-form";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewQuotationPage() {
+export default async function NewQuotationPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ draft?: string }>;
+}) {
   await requireUser();
+  const sp = await searchParams;
+  const draftParam = typeof sp.draft === "string" ? sp.draft : undefined;
+  const draftPayload = draftParam ? await getFormDraft("quotation", draftParam) : null;
   const me = await getCurrentEmployee();
   const [inquiries, employees] = await Promise.all([
     listInquiryOptions(),
@@ -41,7 +50,15 @@ export default async function NewQuotationPage() {
       }
     >
       <div className="w-full">
-        <QuotationForm inquiries={inquiries} employees={employees} />
+        <QuotationForm
+          inquiries={inquiries}
+          employees={employees}
+          enableDrafts
+          resumeDraftId={draftPayload ? draftParam : undefined}
+          initialValues={
+            draftPayload ? (draftPayload as Partial<QuotationFormValues>) : undefined
+          }
+        />
       </div>
     </EnquiryModuleShell>
   );

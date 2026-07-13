@@ -26,6 +26,7 @@ import {
   SectionCard,
   Segmented,
 } from "@/components/inquiries/form-field";
+import { useFormDraft } from "@/components/drafts/use-form-draft";
 
 /** RHF holds the schema's *input* shape (pre-transform); zodResolver hands the
  *  parsed *output* (defaults applied, `""` folded to `undefined`) to the submit
@@ -39,6 +40,12 @@ interface Props {
   /** Unused for now (the SM owns the sales person) -- kept for parity with the
    *  house-style page wiring; reserved for a future "Created by" override. */
   employees: EmployeeOption[];
+  /** Prefill values (e.g. a resumed draft) spread over the base defaults. */
+  initialValues?: Partial<SoFormValues>;
+  /** Enable auto-saving this form as a draft. */
+  enableDrafts?: boolean;
+  /** When resuming a draft, its id (auto-save continues into the same draft). */
+  resumeDraftId?: string;
 }
 
 const SO_SENT_OPTIONS = [
@@ -77,7 +84,14 @@ const EMPTY_LINE = {
  * getQuotationAutofill to prefill price/timeline/validity/link on line 1.
  * SO No auto-numbers `<SM>-SO01` server-side.
  */
-export function SoForm({ inquiries, quotations }: Props) {
+export function SoForm({
+  inquiries,
+  quotations,
+  initialValues,
+  enableDrafts,
+  resumeDraftId,
+}: Props) {
+  const draftsOn = Boolean(enableDrafts);
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
   const [serverError, setServerError] = React.useState<string | null>(null);
@@ -90,6 +104,8 @@ export function SoForm({ inquiries, quotations }: Props) {
     control,
     handleSubmit,
     setValue,
+    watch,
+    getValues,
     formState: { errors },
   } = useForm<SoFormValues, unknown, SoFormOutput>({
     resolver: zodResolver(CreateSalesOrderSchema),
@@ -105,7 +121,17 @@ export function SoForm({ inquiries, quotations }: Props) {
       customerSoSent: false,
       productionSoLink: "",
       lines: [{ ...EMPTY_LINE }],
+      // A resumed draft prefills over the base defaults above.
+      ...initialValues,
     },
+  });
+
+  const { discard } = useFormDraft({
+    kind: "sales-order",
+    enabled: draftsOn,
+    resumeDraftId,
+    watch,
+    getValues,
   });
 
   const { fields, append, remove, replace } = useFieldArray({
@@ -187,6 +213,8 @@ export function SoForm({ inquiries, quotations }: Props) {
         fireToast({ message: res.error, type: "error" });
         return;
       }
+      // Sales order saved -- retire the draft so it leaves the Drafts inbox.
+      await discard();
       fireToast({
         message: `Sales Order ${res.soNo ?? ""} created`.trim(),
         type: "success",

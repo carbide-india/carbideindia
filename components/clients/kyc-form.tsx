@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { Select } from "@/components/ui/select";
 import { TagsInput } from "@/components/ui/tags-input";
 import { Field, SectionCard, GroupHeader, Segmented } from "@/components/inquiries/form-field";
+import { useFormDraft } from "@/components/drafts/use-form-draft";
 import { toOptionalNumber } from "@/lib/form-utils";
 import type { MasterOptionItem } from "@/lib/queries/masters";
 import type { EmployeeOption } from "@/lib/queries/employees";
@@ -36,7 +37,7 @@ import type { ClientDocument } from "@/lib/queries/client-documents";
 /** RHF holds the schema's *input* shape (pre-transform); zodResolver hands
  *  the parsed *output* (`""` folded to `undefined`, currency/country
  *  defaulted) to the submit handler — exactly what createClientKyc takes. */
-type KycFormValues = z.input<typeof CreateClientKycSchema>;
+export type KycFormValues = z.input<typeof CreateClientKycSchema>;
 type KycFormOutput = z.output<typeof CreateClientKycSchema>;
 
 interface Props {
@@ -55,6 +56,10 @@ interface Props {
   clientCode?: string;
   /** Pre-presigned documents list for the Documents section (edit mode only). */
   documents?: ClientDocument[];
+  /** Create-mode only: enable auto-saving this form as a draft. */
+  enableDrafts?: boolean;
+  /** When resuming a draft, its id (auto-save continues into the same draft). */
+  resumeDraftId?: string;
 }
 
 /* ── Business-card upload (browser → Vercel Blob, client-direct) ──────── */
@@ -116,8 +121,11 @@ export function KycForm({
   initialValues,
   clientCode,
   documents,
+  enableDrafts,
+  resumeDraftId,
 }: Props) {
   const isEdit = Boolean(editClientId);
+  const draftsOn = Boolean(enableDrafts) && !isEdit;
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
   const [serverError, setServerError] = React.useState<string | null>(null);
@@ -222,6 +230,15 @@ export function KycForm({
   const { fields: bankFields, append: appendBank, remove: removeBank } =
     useFieldArray({ control, name: "bankAccounts" });
 
+  // ── Draft auto-save (create mode only — silent, runs in background) ──
+  const { discard } = useFormDraft({
+    kind: "kyc",
+    enabled: draftsOn,
+    resumeDraftId,
+    watch,
+    getValues,
+  });
+
   /** Copy the billing address (index 0) into another address block. */
   function copyFromBilling(idx: number) {
     const billing = getValues("addresses")?.[0];
@@ -319,6 +336,8 @@ export function KycForm({
         fireToast({ message: res.error, type: "error" });
         return;
       }
+      // Client saved — retire the draft so it leaves the Drafts inbox.
+      if (draftsOn) await discard();
       fireToast({
         message: isEdit
           ? `${values.name} updated.`

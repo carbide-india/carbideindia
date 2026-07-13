@@ -27,6 +27,7 @@ import {
   SectionCard,
   Segmented,
 } from "@/components/inquiries/form-field";
+import { useFormDraft } from "@/components/drafts/use-form-draft";
 
 /** RHF holds the schema's *input* shape (pre-transform); zodResolver hands the
  *  parsed *output* (defaults applied, `""` folded to `undefined`) to the submit
@@ -40,6 +41,12 @@ interface Props {
   /** Unused for now (the SM owns the sales person) -- kept for parity with the
    *  house-style page wiring; reserved for a future "Created by" override. */
   employees: EmployeeOption[];
+  /** Prefill the form (used to resume a saved draft). */
+  initialValues?: Partial<NegotiationFormValues>;
+  /** Enable auto-saving this form as a draft while the user types. */
+  enableDrafts?: boolean;
+  /** When resuming a draft, its id (auto-save continues into the same draft). */
+  resumeDraftId?: string;
 }
 
 const NEGOTIATION_STATUS_OPTIONS = NEGOTIATION_STATUSES.map((s) => ({
@@ -80,7 +87,14 @@ const EMPTY_LINE = {
  * picker fetches getQuotationAutofill to prefill price/timeline/validity/link
  * on line 1. Negotiation No auto-numbers `&lt;SM&gt;-N01` when left blank.
  */
-export function NegotiationForm({ inquiries, quotations }: Props) {
+export function NegotiationForm({
+  inquiries,
+  quotations,
+  initialValues,
+  enableDrafts,
+  resumeDraftId,
+}: Props) {
+  const draftsOn = Boolean(enableDrafts);
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
   const [serverError, setServerError] = React.useState<string | null>(null);
@@ -93,6 +107,8 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
     control,
     handleSubmit,
     setValue,
+    watch,
+    getValues,
     formState: { errors },
   } = useForm<NegotiationFormValues, unknown, NegotiationFormOutput>({
     resolver: zodResolver(CreateNegotiationSchema),
@@ -114,7 +130,17 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
       negotiationStatus: "to_start",
       negotiationNotes: "",
       lines: [{ ...EMPTY_LINE }],
+      // Resumed-draft prefill overrides the blank defaults above.
+      ...initialValues,
     },
+  });
+
+  const { discard } = useFormDraft({
+    kind: "negotiation",
+    enabled: draftsOn,
+    resumeDraftId,
+    watch,
+    getValues,
   });
 
   const { fields, append, remove, replace } = useFieldArray({
@@ -200,6 +226,8 @@ export function NegotiationForm({ inquiries, quotations }: Props) {
         fireToast({ message: res.error, type: "error" });
         return;
       }
+      // Negotiation saved -- retire the draft so it leaves the Drafts inbox.
+      await discard();
       fireToast({
         message: `Negotiation ${res.negotiationNo ?? ""} created`.trim(),
         type: "success",

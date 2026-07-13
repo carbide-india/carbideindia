@@ -1,4 +1,6 @@
 import { SoForm } from "@/components/sales-orders/so-form";
+import type { SoFormValues } from "@/components/sales-orders/so-form";
+import { getFormDraft } from "@/lib/queries/form-drafts";
 import { requireUser, getCurrentEmployee } from "@/lib/auth/current";
 import { listInquiryOptions } from "@/lib/queries/inquiries";
 import { listQuotationOptions } from "@/lib/queries/quotes";
@@ -13,8 +15,14 @@ import { BulkImportModal } from "@/components/import/bulk-import-modal";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewSalesOrderPage() {
+interface PageProps {
+  searchParams: Promise<{ draft?: string }>;
+}
+
+export default async function NewSalesOrderPage({ searchParams }: PageProps) {
   await requireUser();
+  const sp = await searchParams;
+  const draftParam = typeof sp.draft === "string" ? sp.draft : undefined;
   // Phase 8 — when the Negotiation flag is ON, order_won auto-provisions the SO
   // via advanceStage; disable this standalone form to avoid a double-provision.
   // Flag OFF (default) ⇒ no-op, form renders as today.
@@ -29,6 +37,8 @@ export default async function NewSalesOrderPage() {
   const importLookups = me?.isAdmin
     ? await loadLookups(specRefKinds(salesOrderImportSpec.fields))
     : null;
+
+  const draftPayload = draftParam ? await getFormDraft("sales-order", draftParam) : null;
 
   // Admins get a Bulk Upload entry in the sidebar (opens the sales-order import modal).
   const bulkUpload =
@@ -53,6 +63,9 @@ export default async function NewSalesOrderPage() {
           inquiries={inquiries}
           quotations={quotations}
           employees={employees}
+          enableDrafts
+          resumeDraftId={draftPayload ? draftParam : undefined}
+          initialValues={draftPayload ? (draftPayload as Partial<SoFormValues>) : undefined}
         />
       </div>
     </EnquiryModuleShell>

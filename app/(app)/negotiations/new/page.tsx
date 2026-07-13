@@ -1,5 +1,7 @@
 import { NegotiationForm } from "@/components/negotiations/negotiation-form";
+import type { NegotiationFormValues } from "@/components/negotiations/negotiation-form";
 import { requireUser, getCurrentEmployee } from "@/lib/auth/current";
+import { getFormDraft } from "@/lib/queries/form-drafts";
 import { listInquiryOptions } from "@/lib/queries/inquiries";
 import { listQuotationOptions } from "@/lib/queries/quotes";
 import { listEmployeeOptions } from "@/lib/queries/employees";
@@ -13,8 +15,15 @@ import { BulkImportModal } from "@/components/import/bulk-import-modal";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewNegotiationPage() {
+interface PageProps {
+  searchParams: Promise<{ draft?: string }>;
+}
+
+export default async function NewNegotiationPage({ searchParams }: PageProps) {
   await requireUser();
+  const sp = await searchParams;
+  const draftParam = typeof sp.draft === "string" ? sp.draft : undefined;
+  const draftPayload = draftParam ? await getFormDraft("negotiation", draftParam) : null;
   // Phase 8 — when the Quotation flag is ON, sending a quote auto-provisions the
   // negotiation via advanceStage; disable this standalone form to avoid a
   // double-provision. Flag OFF (default) ⇒ no-op, form renders as today.
@@ -53,6 +62,9 @@ export default async function NewNegotiationPage() {
           inquiries={inquiries}
           quotations={quotations}
           employees={employees}
+          enableDrafts
+          resumeDraftId={draftPayload ? draftParam : undefined}
+          initialValues={draftPayload ? (draftPayload as Partial<NegotiationFormValues>) : undefined}
         />
       </div>
     </EnquiryModuleShell>

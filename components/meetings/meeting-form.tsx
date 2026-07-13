@@ -12,6 +12,7 @@ import {
 } from "@/db/enums";
 import { CreateClientMeetingSchema } from "@/lib/validators/client-meeting";
 import { createClientMeeting } from "@/app/(app)/meetings/actions";
+import { useFormDraft } from "@/components/drafts/use-form-draft";
 import { fireToast } from "@/lib/toast";
 import { Select } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/inquiries/searchable-select";
@@ -27,7 +28,7 @@ import type { MasterOptionItem } from "@/lib/queries/masters";
 /** RHF holds the schema's *input* shape (pre-transform); zodResolver hands the
  *  parsed *output* (defaults applied, `""` folded to `undefined`) to the submit
  *  handler — which is exactly what createClientMeeting takes. */
-type MeetingFormValues = z.input<typeof CreateClientMeetingSchema>;
+export type MeetingFormValues = z.input<typeof CreateClientMeetingSchema>;
 type MeetingFormOutput = z.output<typeof CreateClientMeetingSchema>;
 
 interface Props {
@@ -37,6 +38,12 @@ interface Props {
   employees: EmployeeOption[];
   clients: ClientOption[];
   customerTypes: MasterOptionItem[];
+  /** Resumed/edit prefill: spread over the base defaults. */
+  initialValues?: Partial<MeetingFormValues>;
+  /** Enable auto-saving this form as a draft while typing. */
+  enableDrafts?: boolean;
+  /** When resuming a draft, its id (auto-save continues into the same draft). */
+  resumeDraftId?: string;
 }
 
 /** Local YYYY-MM-DD for the date input's default (today, user's timezone). */
@@ -74,7 +81,11 @@ export function MeetingForm({
   employees,
   clients,
   customerTypes,
+  initialValues,
+  enableDrafts,
+  resumeDraftId,
 }: Props) {
+  const draftsOn = Boolean(enableDrafts);
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
   const [serverError, setServerError] = React.useState<string | null>(null);
@@ -98,6 +109,8 @@ export function MeetingForm({
     control,
     handleSubmit,
     setValue,
+    watch,
+    getValues,
     formState: { errors },
   } = useForm<MeetingFormValues, unknown, MeetingFormOutput>({
     resolver: zodResolver(CreateClientMeetingSchema),
@@ -110,7 +123,18 @@ export function MeetingForm({
       companyName: "",
       contactFirstName: "",
       meetingSource: undefined,
+      // Resumed draft prefills header/client/outcome fields.
+      ...initialValues,
     },
+  });
+
+  // ── Draft auto-save (silent, runs in background) ──
+  const { discard } = useFormDraft({
+    kind: "meeting",
+    enabled: draftsOn,
+    resumeDraftId,
+    watch,
+    getValues,
   });
 
   // Subscribe to the purpose field so the "Other" specify input reveals/hides.
@@ -184,6 +208,8 @@ export function MeetingForm({
           : "Meeting logged",
         type: "success",
       });
+      // Meeting saved — retire the draft so it leaves the Drafts inbox.
+      if (draftsOn) await discard();
       if (res.id) router.push(`/meetings/${res.id}`);
       else router.push("/meetings");
     });

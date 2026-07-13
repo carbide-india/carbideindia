@@ -19,6 +19,7 @@ import {
 } from "@/db/enums";
 import { CreateSampleSchema } from "@/lib/validators/sample";
 import { createSample } from "@/app/(app)/samples/actions";
+import { useFormDraft } from "@/components/drafts/use-form-draft";
 import { fireToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { Select } from "@/components/ui/select";
@@ -53,6 +54,12 @@ type SampleFormOutput = z.output<typeof SampleFormSchema>;
 
 interface Props {
   employees: EmployeeOption[];
+  /** Prefill values (used to resume a saved draft). */
+  initialValues?: Partial<SampleFormValues>;
+  /** Enable auto-saving this form as a draft. */
+  enableDrafts?: boolean;
+  /** When resuming a draft, its id (auto-save continues into the same draft). */
+  resumeDraftId?: string;
 }
 
 /** Local YYYY-MM-DD for the date input's default (today, user's timezone). */
@@ -143,7 +150,13 @@ const TRACKED_STAGES = [
  * its first option per Manan's dashboard rule, so untouched stages read as
  * incomplete.
  */
-export function SampleForm({ employees }: Props) {
+export function SampleForm({
+  employees,
+  initialValues,
+  enableDrafts,
+  resumeDraftId,
+}: Props) {
+  const draftsOn = Boolean(enableDrafts);
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
   const [serverError, setServerError] = React.useState<string | null>(null);
@@ -159,6 +172,8 @@ export function SampleForm({ employees }: Props) {
     register,
     control,
     handleSubmit,
+    watch,
+    getValues,
     formState: { errors },
   } = useForm<SampleFormValues, unknown, SampleFormOutput>({
     resolver: zodResolver(SampleFormSchema),
@@ -190,7 +205,17 @@ export function SampleForm({ employees }: Props) {
       reportsInSmFolder: false,
       processedDate: "",
       processNotes: "",
+      // Resumed-draft values override the base defaults so the form prefills.
+      ...initialValues,
     },
+  });
+
+  const { discard } = useFormDraft({
+    kind: "sample",
+    enabled: draftsOn,
+    resumeDraftId,
+    watch,
+    getValues,
   });
 
   async function onPickFiles(e: React.ChangeEvent<HTMLInputElement>) {
@@ -243,6 +268,8 @@ export function SampleForm({ employees }: Props) {
         fireToast({ message: res.error, type: "error" });
         return;
       }
+      // Sample saved — retire the draft so it leaves the Drafts inbox.
+      await discard();
       fireToast({
         message: res.sampleNo
           ? `Sample ${res.sampleNo} registered`

@@ -28,6 +28,7 @@ import {
   Segmented,
   GroupHeader,
 } from "@/components/inquiries/form-field";
+import { useFormDraft } from "@/components/drafts/use-form-draft";
 
 /** RHF holds the schema's *input* shape (pre-transform); zodResolver hands the
  *  parsed *output* (defaults applied, `""` folded to `undefined`) to the submit
@@ -40,6 +41,12 @@ interface Props {
   /** Unused for now (the SM owns the sales person) -- kept for parity with the
    *  house-style page wiring; reserved for a future "Created by" override. */
   employees: EmployeeOption[];
+  /** Enable auto-saving this form as a draft while the user types. */
+  enableDrafts?: boolean;
+  /** When resuming a draft, its id (auto-save continues into the same draft). */
+  resumeDraftId?: string;
+  /** Prefill values (resumed draft payload). Spread over the base defaults. */
+  initialValues?: Partial<QuotationFormValues>;
 }
 
 const COSTING_DONE_OPTIONS = COSTING_DONE_STATUSES.map((s) => ({
@@ -88,7 +95,13 @@ const EMPTY_LINE = {
  * on select and pre-seeds the per-line editor from the SM's inquiry_items;
  * Quote No auto-numbers `<SM>-Q01` when left blank.
  */
-export function QuotationForm({ inquiries }: Props) {
+export function QuotationForm({
+  inquiries,
+  enableDrafts,
+  resumeDraftId,
+  initialValues,
+}: Props) {
+  const draftsOn = Boolean(enableDrafts);
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
   const [serverError, setServerError] = React.useState<string | null>(null);
@@ -100,6 +113,8 @@ export function QuotationForm({ inquiries }: Props) {
     control,
     handleSubmit,
     setValue,
+    watch,
+    getValues,
     formState: { errors },
   } = useForm<QuotationFormValues, unknown, QuotationFormOutput>({
     resolver: zodResolver(CreateQuotationSchema),
@@ -126,7 +141,17 @@ export function QuotationForm({ inquiries }: Props) {
       quotationLink: "",
       quoteSent: false,
       lines: [{ ...EMPTY_LINE }],
+      // Resumed-draft prefill overrides the base defaults above.
+      ...initialValues,
     },
+  });
+
+  const { discard } = useFormDraft({
+    kind: "quotation",
+    enabled: draftsOn,
+    resumeDraftId,
+    watch,
+    getValues,
   });
 
   const { fields, append, remove, replace } = useFieldArray({
@@ -190,6 +215,8 @@ export function QuotationForm({ inquiries }: Props) {
         fireToast({ message: res.error, type: "error" });
         return;
       }
+      // Quotation saved — retire the draft so it leaves the Drafts inbox.
+      await discard();
       fireToast({
         message: `Quotation ${res.quoteNo ?? ""} created`.trim(),
         type: "success",

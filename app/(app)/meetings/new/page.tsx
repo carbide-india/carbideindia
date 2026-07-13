@@ -1,4 +1,5 @@
 import { MeetingForm } from "@/components/meetings/meeting-form";
+import type { MeetingFormValues } from "@/components/meetings/meeting-form";
 import { requireUser, getCurrentEmployee } from "@/lib/auth/current";
 import { listEmployeeOptions } from "@/lib/queries/employees";
 import { listClientOptions } from "@/lib/queries/clients";
@@ -9,12 +10,20 @@ import { loadLookups, specRefKinds } from "@/lib/import/lookups";
 import { meetingImportSpec } from "@/lib/import/specs/meeting";
 import { commitMeetingImport } from "@/app/(app)/meetings/import/actions";
 import { BulkImportModal } from "@/components/import/bulk-import-modal";
+import { getFormDraft } from "@/lib/queries/form-drafts";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewMeetingPage() {
+interface PageProps {
+  searchParams: Promise<{ draft?: string }>;
+}
+
+export default async function NewMeetingPage({ searchParams }: PageProps) {
   const me = await requireUser();
   const currentEmployee = await getCurrentEmployee();
+  const sp = await searchParams;
+  const draftParam = typeof sp.draft === "string" ? sp.draft : undefined;
+  const draftPayload = draftParam ? await getFormDraft("meeting", draftParam) : null;
   const [employees, clients, customerTypes] = await Promise.all([
     listEmployeeOptions(),
     listClientOptions(),
@@ -51,6 +60,9 @@ export default async function NewMeetingPage() {
           employees={employees}
           clients={clients}
           customerTypes={customerTypes}
+          enableDrafts
+          resumeDraftId={draftPayload ? draftParam : undefined}
+          initialValues={draftPayload ? (draftPayload as Partial<MeetingFormValues>) : undefined}
         />
       </div>
     </EnquiryModuleShell>

@@ -20,6 +20,7 @@ import {
 } from "@/lib/costing/compute";
 import { formatInr } from "@/lib/format";
 import { fireToast } from "@/lib/toast";
+import { useFormDraft } from "@/components/drafts/use-form-draft";
 import {
   Field,
   MiniField,
@@ -31,6 +32,12 @@ interface Props {
   inquiryItemId: string;
   inquiryId: string;
   productCaption: string;
+  /** Create-mode only: enable auto-saving this form as a draft. */
+  enableDrafts?: boolean;
+  /** When resuming a draft, its id (auto-save continues into the same draft). */
+  resumeDraftId?: string;
+  /** Prefill values (used when resuming a saved draft). */
+  initialValues?: Partial<CreateCostingInput>;
 }
 
 const ROUTE_OPTIONS = COSTING_ROUTES.map((r) => ({
@@ -115,8 +122,16 @@ function perGm(n: number): string {
  * Results panel always visible (sticky in feel via mt-auto placement on mobile).
  * On submit: saveCosting server action, fireToast, redirect to SM detail.
  */
-export function CostingForm({ inquiryItemId, inquiryId, productCaption }: Props) {
+export function CostingForm({
+  inquiryItemId,
+  inquiryId,
+  productCaption,
+  enableDrafts,
+  resumeDraftId,
+  initialValues,
+}: Props) {
   const router = useRouter();
+  const draftsOn = Boolean(enableDrafts);
   const [pending, startTransition] = React.useTransition();
   const [serverError, setServerError] = React.useState<string | null>(null);
 
@@ -125,12 +140,11 @@ export function CostingForm({ inquiryItemId, inquiryId, productCaption }: Props)
     control,
     handleSubmit,
     watch,
+    getValues,
     formState: { errors },
   } = useForm<CreateCostingInput>({
     resolver: zodResolver(CreateCostingSchema),
     defaultValues: {
-      inquiryItemId,
-      inquiryId,
       costingType: "inhouse",
       costingLogic: undefined,
       qty: undefined,
@@ -146,7 +160,20 @@ export function CostingForm({ inquiryItemId, inquiryId, productCaption }: Props)
       vendorOhPct: undefined,
       outsourcedVendorCost: undefined,
       developmentCost: undefined,
+      // A resumed draft prefills over the base defaults.
+      ...initialValues,
+      // Route identity stays authoritative even when resuming a draft.
+      inquiryItemId,
+      inquiryId,
     },
+  });
+
+  const { discard } = useFormDraft<CreateCostingInput>({
+    kind: "costing",
+    enabled: draftsOn,
+    resumeDraftId,
+    watch,
+    getValues,
   });
 
   // Watch all values for live recompute
@@ -228,6 +255,8 @@ export function CostingForm({ inquiryItemId, inquiryId, productCaption }: Props)
         fireToast({ message: res.error, type: "error" });
         return;
       }
+      // Costing saved — retire the draft so it leaves the Drafts inbox.
+      await discard();
       fireToast({ message: "Costing saved successfully.", type: "success" });
       router.push(("/inquiries/" + inquiryId) as Route);
     });
