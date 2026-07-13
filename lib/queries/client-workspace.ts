@@ -197,7 +197,7 @@ export async function getClientKpis(clientId: string): Promise<ClientKpis> {
       SELECT so.id
       FROM sales_orders so
       JOIN inquiries i ON i.id = so.inquiry_id AND i.client_id = ${clientId}
-      WHERE so.created_at >= ${start} AND so.created_at < ${end}
+      WHERE so.created_at >= ${start.toISOString()}::timestamptz AND so.created_at < ${end.toISOString()}::timestamptz
     ),
     revenue AS (
       SELECT coalesce(sum(

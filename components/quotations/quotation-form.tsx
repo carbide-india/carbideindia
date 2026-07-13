@@ -324,11 +324,12 @@ export function QuotationForm({
               }
             />
 
-            {/* Product identity */}
-            <div className="grid grid-cols-[1fr_auto] gap-4 max-md:grid-cols-1">
+            {/* Product identity — one dense line. */}
+            <div className="grid grid-cols-10 gap-2.5 max-xl:grid-cols-5 max-md:grid-cols-2">
               <Field
                 id={`lines.${index}.custProductName`}
                 label="Customer Product Name"
+                className="col-span-2"
               >
                 <input
                   id={`lines.${index}.custProductName`}
@@ -341,7 +342,6 @@ export function QuotationForm({
               <Field
                 id={`lines.${index}.qty`}
                 label="Qty"
-                className="md:w-[180px]"
               >
                 <input
                   id={`lines.${index}.qty`}
@@ -354,9 +354,6 @@ export function QuotationForm({
                   {...register(`lines.${index}.qty`, qtyRegister)}
                 />
               </Field>
-            </div>
-
-            <div className="grid grid-cols-5 gap-3 max-lg:grid-cols-3 max-md:grid-cols-1">
               <Field
                 id={`lines.${index}.custDrawingNo`}
                 label="Customer Drawing No"

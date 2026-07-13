@@ -16,6 +16,7 @@ import {
   LayoutGrid,
   Contact,
   SlidersHorizontal,
+  ClipboardCheck,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
@@ -118,6 +119,17 @@ function navFor(pathname: string): NavDef[] {
       active: (p) => p.startsWith("/contacts"),
     },
   ];
+  // Primary Feasibility launcher — enquiry family only (pick an SM to verify).
+  const fam = familySeg(pathname);
+  if (fam === "enquiries" || fam === "inquiries") {
+    items.push({
+      label: "Primary Feasibility",
+      href: "/enquiries/register" as Route,
+      Icon: ClipboardCheck,
+      ready: true,
+      active: (p) => p.startsWith("/enquiries/feasibility"),
+    });
+  }
   // Forms with their own "Custom" dropdown lists get a Custom editor entry.
   if (custom) {
     items.push({

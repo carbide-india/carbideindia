@@ -50,7 +50,6 @@ import {
   generateItemForInquiryItem,
 } from "@/app/(app)/inquiries/actions";
 import { AppShell, type RailGroup } from "@/components/erp/app-shell";
-import { Stepper } from "@/components/erp/stepper";
 import { StatusPill, type PillTone } from "@/components/erp/status-pill";
 import { DetailGrid, type DetailField } from "@/components/erp/detail-grid";
 import { ContextDrawer } from "@/components/erp/context-drawer";
@@ -311,11 +310,6 @@ export function SmWorkspace({
               {header.salesPersonName ?? "Not allocated"}
             </HeaderMeta>
             <HeaderMeta label="Created">{formatDate(header.createdAt)}</HeaderMeta>
-          </div>
-
-          {/* Pipeline stepper — server-derived position (Enq → Invoice). */}
-          <div className="mt-5 rounded-xl border border-hairline bg-surface-soft px-4 py-3">
-            <Stepper current={header.stageIndex} className="max-w-full" />
           </div>
 
           {/* Next-action strip. */}
@@ -722,7 +716,7 @@ function HeaderMeta({ label, children }: { label: string; children: React.ReactN
       <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink-subtle">
         {label}
       </div>
-      <div className="mt-1 truncate text-[13.5px] font-semibold text-ink-strong">{children}</div>
+      <div className="mt-1 truncate text-[19px] font-extrabold text-ink-strong">{children}</div>
     </div>
   );
 }

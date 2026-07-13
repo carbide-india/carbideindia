@@ -90,9 +90,10 @@ const VERDICT_KEYS = [
 ] as const;
 
 /**
- * One verdict cell: a segmented Feasible / Not feasible / Need info control,
- * with a note input that reveals only when the verdict is a non-feasible one
- * (Not feasible or Need info). Bound to `products.<inquiryItemId>.<key>*`.
+ * One verdict cell: a Feasible / Not feasible / Need info dropdown (shared
+ * `Select`), with a note input that reveals only when the verdict is a
+ * non-feasible one (Not feasible or Need info). Bound to
+ * `products.<inquiryItemId>.<key>*`.
  */
 function VerdictCell({
   control,
@@ -116,11 +117,11 @@ function VerdictCell({
           const value = field.value as FeasCheckVerdict | undefined;
           return (
             <div className="flex flex-col gap-2">
-              <Segmented
+              <Select
+                value={value ?? ""}
+                onValueChange={(v) => field.onChange(v || undefined)}
+                placeholder="Select"
                 options={CHECK_OPTS}
-                value={value}
-                onChange={(v) => field.onChange(v)}
-                allowClear={false}
                 ariaLabel={`${label} verdict`}
               />
               {(value === "not_feasible" || value === "need_info") && (

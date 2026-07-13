@@ -490,8 +490,8 @@ export function KycForm({
           </Field>
         )}
 
-        {/* Company Name (narrower) + Grade (wider A/B/C segments) on one line */}
-        <div className="grid grid-cols-[3fr_2fr] gap-4 max-md:grid-cols-1">
+        {/* Company Name fills the row; Grade is a compact dropdown. */}
+        <div className="grid grid-cols-[1fr_200px] gap-4 max-md:grid-cols-1">
           <Field id="kyc-name" label="Company Name" required>
             <input
               id="kyc-name"
@@ -511,14 +511,14 @@ export function KycForm({
               control={control}
               name="grade"
               render={({ field }) => (
-                <Segmented
+                <Select
                   ariaLabel="Grade"
-                  size="lg"
-                  options={CLIENT_GRADES.map((g) => ({ value: g, label: g }))}
-                  value={field.value}
-                  onChange={(v) =>
-                    field.onChange(v as (typeof CLIENT_GRADES)[number] | undefined)
+                  value={field.value ?? ""}
+                  onValueChange={(v) =>
+                    field.onChange((v || undefined) as (typeof CLIENT_GRADES)[number] | undefined)
                   }
+                  placeholder="Grade"
+                  options={CLIENT_GRADES.map((g) => ({ value: g, label: g }))}
                 />
               )}
             />
