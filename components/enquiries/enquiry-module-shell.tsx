@@ -15,12 +15,14 @@ import {
   LayoutDashboard,
   LayoutGrid,
   Contact,
+  SlidersHorizontal,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { HubSearch } from "@/components/hub/hub-search";
 import { draftKindForSegment, FORM_DRAFT_META } from "@/lib/drafts/form-drafts";
+import { customEditorForSegment } from "@/lib/custom-lists/registry";
 import { cn } from "@/lib/utils";
 
 interface NavDef {
@@ -44,9 +46,14 @@ const NEW_FORM_ROUTES: Record<string, string> = {
   "sales-orders": "/sales-orders/new",
   meetings: "/meetings/new",
 };
-function newFormRoute(pathname: string): string {
+// The Contact Person Address Book lives under /contacts but belongs to the
+// Client (KYC) family — so its sidebar reads Client Master, not New Enquiry.
+function familySeg(pathname: string): string {
   const seg = pathname.split("/")[1] ?? "";
-  return NEW_FORM_ROUTES[seg] ?? "/enquiries/new";
+  return seg === "contacts" ? "clients" : seg;
+}
+function newFormRoute(pathname: string): string {
+  return NEW_FORM_ROUTES[familySeg(pathname)] ?? "/enquiries/new";
 }
 
 // The register/list page for the current form family — each form has its own.
@@ -60,8 +67,7 @@ const REGISTERS: Record<string, { label: string; href: string }> = {
   meetings: { label: "Meeting Register", href: "/meetings" },
 };
 function registerFor(pathname: string): { label: string; href: string } {
-  const seg = pathname.split("/")[1] ?? "";
-  return REGISTERS[seg] ?? { label: "Enquiry Register", href: "/enquiries/register" };
+  return REGISTERS[familySeg(pathname)] ?? { label: "Enquiry Register", href: "/enquiries/register" };
 }
 
 // Sidebar nav for the module — context-aware: on client routes it reads as the
@@ -69,11 +75,11 @@ function registerFor(pathname: string): { label: string; href: string } {
 function navFor(pathname: string): NavDef[] {
   const newForm = newFormRoute(pathname);
   // Each form family has its OWN drafts page (kyc/sample/…); enquiry keeps its
-  // dedicated /enquiries/drafts.
-  const seg = pathname.split("/")[1] ?? "";
-  const draftKind = draftKindForSegment(seg);
+  // dedicated /enquiries/drafts. /contacts maps to the clients family.
+  const draftKind = draftKindForSegment(familySeg(pathname));
   const draftsRoute = draftKind ? FORM_DRAFT_META[draftKind].draftsRoute : "/enquiries/drafts";
-  return [
+  const custom = customEditorForSegment(familySeg(pathname));
+  const items: NavDef[] = [
     { label: "Dashboard", href: "/hub" as Route, Icon: LayoutDashboard, ready: false },
     {
       label: "Create New Form",
@@ -100,17 +106,29 @@ function navFor(pathname: string): NavDef[] {
           p === reg.href ||
           (p.startsWith(reg.href) &&
             !p.startsWith(`${reg.href}/new`) &&
-            !p.startsWith(`${reg.href}/drafts`)),
+            !p.startsWith(`${reg.href}/drafts`) &&
+            !p.startsWith(`${reg.href}/custom`)),
       };
     })(),
     {
-      label: "Contact Person",
+      label: "Contact Person Address Book",
       href: "/contacts" as Route,
       Icon: Contact,
       ready: true,
       active: (p) => p.startsWith("/contacts"),
     },
   ];
+  // Forms with their own "Custom" dropdown lists get a Custom editor entry.
+  if (custom) {
+    items.push({
+      label: "Custom",
+      href: custom.route as Route,
+      Icon: SlidersHorizontal,
+      ready: true,
+      active: (p) => p.startsWith(custom.route),
+    });
+  }
+  return items;
 }
 
 export function EnquiryModuleShell({
@@ -130,7 +148,7 @@ export function EnquiryModuleShell({
   const [collapsed, setCollapsed] = useState(false);
   // The page title now lives in the header (beside the search).
   const pageTitle =
-    title ?? (pathname.startsWith("/enquiries/new") ? "New Enquiry" : "Enquiries");
+    title ?? (pathname.startsWith("/enquiries/new") ? "New Enquiry" : "Forms");
   // Sidebar is hidden entirely on the launchpad (form selection).
   const showSidebar = pathname !== "/enquiries";
   const nav = navFor(pathname);
@@ -170,6 +188,15 @@ export function EnquiryModuleShell({
               Back to Forms
             </Link>
           )}
+          {/* Hub sits immediately before the module title. */}
+          <Link
+            href={"/hub" as Route}
+            className="flex h-10 shrink-0 items-center gap-2 rounded-lg border border-[#dcdce8] px-4 text-[15px] font-extrabold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#efeffb] active:scale-95"
+            aria-label="Back to hub"
+          >
+            <LayoutGrid className="h-[19px] w-[19px]" strokeWidth={2.4} />
+            Hub
+          </Link>
           <span className="ml-1 shrink-0 text-[26px] font-black leading-none tracking-tight text-[#3f3f94]">
             {pageTitle}
           </span>
@@ -180,14 +207,6 @@ export function EnquiryModuleShell({
 
         {/* Right zone — actions. */}
         <div className="flex flex-1 items-center justify-end gap-2.5">
-          <Link
-            href={"/hub" as Route}
-            className="flex h-10 items-center gap-2 rounded-lg border border-[#dcdce8] px-4 text-[15px] font-extrabold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#efeffb] active:scale-95"
-            aria-label="Back to hub"
-          >
-            <LayoutGrid className="h-[19px] w-[19px]" strokeWidth={2.4} />
-            Hub
-          </Link>
           <Link
             href={"/inbox" as Route}
             className="grid h-9 w-9 place-items-center rounded-full text-[#4b5563] transition hover:bg-[#efeffb] hover:text-[#3f3f94]"

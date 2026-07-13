@@ -23,6 +23,7 @@ export interface BuiltProductRow {
   custProductName: string | null; custDrawingNo: string | null; drawingRevisionNo: string | null;
   shape: string | null;
   outerDia: string | null; innerDia: string | null; length: string | null; width: string | null; thickness: string | null;
+  dimensionUnit: string;
   dimensionNotes: string | null;
   gradeId: string | null; gradeCustomer: string | null; toleranceId: string | null; conditionId: string | null;
   quantityNos: string | null; quantityUom: string;
@@ -45,6 +46,7 @@ export function productRowsForInquiry(v: Src): BuiltProductRow[] {
     custProductName: txt(p.custProductName), custDrawingNo: txt(p.custDrawingNo), drawingRevisionNo: txt(p.drawingRevisionNo),
     shape: txt(p.shape),
     outerDia: numStr(p.outerDia), innerDia: numStr(p.innerDia), length: numStr(p.length), width: numStr(p.width), thickness: numStr(p.thickness),
+    dimensionUnit: txt(p.dimensionUnit) ?? "mm",
     dimensionNotes: txt(p.dimensionNotes),
     gradeId: txt(p.gradeId), gradeCustomer: txt(p.gradeCustomer), toleranceId: txt(p.toleranceId), conditionId: txt(p.conditionId),
     quantityNos: numStr(p.quantityNos), quantityUom: txt(p.quantityUom) ?? "Nos",

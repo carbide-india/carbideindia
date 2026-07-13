@@ -39,6 +39,9 @@ interface Props {
   pickerMasters: PickerMasters;
 }
 
+/** Units a product's dimensions can be expressed in. */
+const DIMENSION_UNITS = ["mm", "cm", "m", "inch"] as const;
+
 /** Shape of one fresh, empty product card. */
 const EMPTY_PRODUCT = {
   custProductName: "",
@@ -50,6 +53,7 @@ const EMPTY_PRODUCT = {
   length: undefined,
   width: undefined,
   thickness: undefined,
+  dimensionUnit: "mm",
   dimensionNotes: "",
   gradeId: undefined,
   toleranceId: undefined,
@@ -117,6 +121,8 @@ export function ProductsSection({
         const cfg: ShapeConfig =
           (typeof shapeName === "string" && shapeProfiles[shapeName]) ||
           defaultShapeConfig();
+        // The unit every dimension in this card is expressed in.
+        const dimUnit = watch(`products.${index}.dimensionUnit`) || "mm";
         return (
         <div
           key={field.id}
@@ -221,6 +227,20 @@ export function ProductsSection({
                 )}
               />
             </Field>
+            <Field id={`products.${index}.dimensionUnit`} label="Unit">
+              <Controller
+                control={control}
+                name={`products.${index}.dimensionUnit`}
+                render={({ field: f }) => (
+                  <Select
+                    id={`products.${index}.dimensionUnit`}
+                    value={f.value ?? "mm"}
+                    onValueChange={(v) => f.onChange(v || "mm")}
+                    options={DIMENSION_UNITS.map((u) => ({ value: u, label: u }))}
+                  />
+                )}
+              />
+            </Field>
             {DIM_FIELDS.map((dim) => {
               const rule = cfg.dims[dim];
               if (rule === "hidden") return null;
@@ -243,7 +263,7 @@ export function ProductsSection({
                       })}
                     />
                     <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[13px] font-bold text-ink-subtle">
-                      mm
+                      {dimUnit}
                     </span>
                   </div>
                 </Field>

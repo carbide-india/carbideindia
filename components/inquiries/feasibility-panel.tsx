@@ -26,6 +26,7 @@ import type { EmployeeOption } from "@/lib/queries/employees";
 import { saveFeasibilityFull } from "@/app/(app)/inquiries/actions";
 import { fireToast } from "@/lib/toast";
 import { Select } from "@/components/ui/select";
+import { NotesField } from "@/components/ui/notes-field";
 import { Field, GroupHeader, SectionCard, Segmented } from "./form-field";
 import { Chip } from "./chip";
 import { ProductFeasibilityContext } from "./feasibility-context";
@@ -292,12 +293,18 @@ export function FeasibilityPanel({
         </div>
 
         <Field id="feas-actions" label="Actions List">
-          <textarea
-            id="feas-actions"
-            rows={3}
-            placeholder="Actions to take"
-            className="nt-input"
-            {...register("sm.feasActionsList")}
+          <Controller
+            control={control}
+            name="sm.feasActionsList"
+            render={({ field }) => (
+              <NotesField
+                id="feas-actions"
+                rows={3}
+                placeholder="Actions to take"
+                value={field.value ?? ""}
+                onChange={field.onChange}
+              />
+            )}
           />
         </Field>
       </SectionCard>

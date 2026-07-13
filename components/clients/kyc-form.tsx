@@ -7,7 +7,7 @@ import { useForm, Controller, useFieldArray, type Control } from "react-hook-for
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
 import { upload } from "@vercel/blob/client";
-import { Check, ImagePlus, Loader2, Plus, X } from "lucide-react";
+import { Check, FileText, ImagePlus, Loader2, Plus, X } from "lucide-react";
 import { CreateClientKycSchema } from "@/lib/validators/client-kyc";
 import { createClientKyc } from "@/app/(app)/clients/actions";
 import {
@@ -27,8 +27,8 @@ import { cn } from "@/lib/utils";
 import { Select } from "@/components/ui/select";
 import { TagsInput } from "@/components/ui/tags-input";
 import { Field, SectionCard, GroupHeader, Segmented } from "@/components/inquiries/form-field";
+import { NotesField } from "@/components/ui/notes-field";
 import { useFormDraft } from "@/components/drafts/use-form-draft";
-import { toOptionalNumber } from "@/lib/form-utils";
 import type { MasterOptionItem } from "@/lib/queries/masters";
 import type { EmployeeOption } from "@/lib/queries/employees";
 import { ClientDocuments } from "@/components/clients/client-documents";
@@ -47,6 +47,13 @@ interface Props {
   employees: EmployeeOption[];
   /** Admin-managed departments — surfaced as the "Department" dropdown. */
   departments?: MasterOptionItem[];
+  /** Per-form "Custom" dropdown lists (§2.5). Each falls back to a preset. */
+  paymentTermsOptions?: string[];
+  freightOptions?: string[];
+  creditDaysOptions?: string[];
+  creditLimitOptions?: string[];
+  qtyDeviationOptions?: string[];
+  transporterOptions?: string[];
   /** When set, the form edits this client in place (admin "Edit client")
    *  instead of onboarding a new one. */
   editClientId?: string;
@@ -70,6 +77,8 @@ const ALLOWED_CARD_TYPES = new Set([
   "image/webp",
   "image/heic",
 ]);
+/** The "Other" documents tile additionally accepts PDFs. */
+const ALLOWED_OTHER_TYPES = new Set([...ALLOWED_CARD_TYPES, "application/pdf"]);
 const MAX_CARD_BYTES = 25 * 1024 * 1024;
 
 /** Common courier partners for the Transporter dropdown (free-text label). */
@@ -82,6 +91,43 @@ const TRANSPORTER_OPTIONS = [
   "Professional Couriers",
   "Other",
 ];
+
+/* ── Commercial dropdown presets ──────────────────────────────────────────
+ * Fallback option lists for the §2.5 commercial dropdowns. When the per-form
+ * "Custom" lists are populated the page passes those in as props; until then
+ * (or when a list is empty) these presets keep the dropdowns usable. */
+const PAYMENT_TERMS_PRESET = [
+  "Advance",
+  "50% Advance, 50% on Delivery",
+  "Against Delivery",
+  "30 Days Credit",
+  "45 Days Credit",
+  "60 Days Credit",
+  "As per PO",
+];
+const FREIGHT_PRESET = ["Paid", "To Pay", "Extra at Actuals", "Included", "Ex-Works"];
+const CREDIT_DAYS_PRESET = ["0", "15", "30", "45", "60", "90"];
+const CREDIT_LIMIT_PRESET = ["50000", "100000", "250000", "500000", "1000000"];
+const QTY_DEVIATION_PRESET = ["±5%", "±10%", "±15%", "±20%", "As per PO"];
+
+/**
+ * Map a KYC country to its default currency — drives the auto-populate of the
+ * Currency field when a Country is picked (Registration & Tax section).
+ */
+const COUNTRY_TO_CURRENCY: Partial<
+  Record<(typeof INQUIRY_COUNTRIES)[number], (typeof INQUIRY_CURRENCIES)[number]>
+> = {
+  India: "INR",
+  USA: "USD",
+  Russia: "Ruble",
+  Italy: "EURO",
+  Poland: "EURO",
+  Australia: "AUD",
+  UAE: "AHD",
+  Spain: "EURO",
+  Belgium: "EURO",
+  Others: "Others",
+};
 
 const YES_NO_SEGMENTED = [
   { value: "yes", label: "Yes" },
@@ -117,6 +163,12 @@ export function KycForm({
   productTypes,
   employees,
   departments = [],
+  paymentTermsOptions,
+  freightOptions,
+  creditDaysOptions,
+  creditLimitOptions,
+  qtyDeviationOptions,
+  transporterOptions,
   editClientId,
   initialValues,
   clientCode,
@@ -124,6 +176,13 @@ export function KycForm({
   enableDrafts,
   resumeDraftId,
 }: Props) {
+  // Custom lists fall back to presets when the "Custom" editor hasn't been used.
+  const paymentTermsList = paymentTermsOptions?.length ? paymentTermsOptions : PAYMENT_TERMS_PRESET;
+  const freightList = freightOptions?.length ? freightOptions : FREIGHT_PRESET;
+  const creditDaysList = creditDaysOptions?.length ? creditDaysOptions : CREDIT_DAYS_PRESET;
+  const creditLimitList = creditLimitOptions?.length ? creditLimitOptions : CREDIT_LIMIT_PRESET;
+  const qtyDeviationList = qtyDeviationOptions?.length ? qtyDeviationOptions : QTY_DEVIATION_PRESET;
+  const transporterList = transporterOptions?.length ? transporterOptions : TRANSPORTER_OPTIONS;
   const isEdit = Boolean(editClientId);
   const draftsOn = Boolean(enableDrafts) && !isEdit;
   const router = useRouter();
@@ -215,6 +274,7 @@ export function KycForm({
       contactEmail: "",
       contactNotes: "",
       additionalContacts: [],
+      businessCardOtherUrls: [],
       notes: "",
       // Edit mode prefill — overrides the empty defaults field-by-field.
       ...initialValues,
@@ -238,6 +298,16 @@ export function KycForm({
     watch,
     getValues,
   });
+
+  /** Pick a Country → default its Currency and propagate the country down to
+   *  every address block (Registration is the source of truth). */
+  function applyCountry(next: (typeof INQUIRY_COUNTRIES)[number]) {
+    setValue("country", next);
+    const mapped = COUNTRY_TO_CURRENCY[next];
+    if (mapped) setValue("currency", mapped);
+    const addrs = getValues("addresses") ?? [];
+    addrs.forEach((_, i) => setValue(`addresses.${i}.country`, next));
+  }
 
   /** Copy the billing address (index 0) into another address block. */
   function copyFromBilling(idx: number) {
@@ -278,10 +348,12 @@ export function KycForm({
   // file-pick and never block the save. `front`/`back` track in-flight uploads.
   const cardFront = watch("businessCardFrontUrl");
   const cardBack = watch("businessCardBackUrl");
+  const cardOther = watch("businessCardOtherUrls") ?? [];
   const [uploading, setUploading] = React.useState<{
     front: boolean;
     back: boolean;
-  }>({ front: false, back: false });
+    other: boolean;
+  }>({ front: false, back: false, other: false });
 
   async function onPickCard(file: File | undefined, side: "front" | "back") {
     if (!file) return;
@@ -314,6 +386,48 @@ export function KycForm({
     } finally {
       setUploading((u) => ({ ...u, [side]: false }));
     }
+  }
+
+  /** "Other" documents — multi-file, appends every uploaded blob URL. */
+  async function onPickOther(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setUploading((u) => ({ ...u, other: true }));
+    try {
+      for (const file of Array.from(files)) {
+        if (!ALLOWED_OTHER_TYPES.has(file.type)) {
+          fireToast({
+            message: `${file.name}: only images or PDF files are allowed.`,
+            type: "error",
+          });
+          continue;
+        }
+        if (file.size > MAX_CARD_BYTES) {
+          fireToast({ message: `${file.name} exceeds 25 MB.`, type: "error" });
+          continue;
+        }
+        try {
+          const blob = await uploadCardToBlob(file);
+          setValue("businessCardOtherUrls", [
+            ...(getValues("businessCardOtherUrls") ?? []),
+            blob.url,
+          ]);
+        } catch {
+          fireToast({
+            message: `${file.name}: upload unavailable — check storage configuration.`,
+            type: "error",
+          });
+        }
+      }
+    } finally {
+      setUploading((u) => ({ ...u, other: false }));
+    }
+  }
+
+  function removeOther(url: string) {
+    setValue(
+      "businessCardOtherUrls",
+      (getValues("businessCardOtherUrls") ?? []).filter((u) => u !== url),
+    );
   }
 
   const submit = handleSubmit((values) => {
@@ -376,8 +490,8 @@ export function KycForm({
           </Field>
         )}
 
-        {/* Company Name (fills the row) + Grade rating on one line */}
-        <div className="grid grid-cols-[1fr_auto] gap-4 max-md:grid-cols-1">
+        {/* Company Name (narrower) + Grade (wider A/B/C segments) on one line */}
+        <div className="grid grid-cols-[3fr_2fr] gap-4 max-md:grid-cols-1">
           <Field id="kyc-name" label="Company Name" required>
             <input
               id="kyc-name"
@@ -399,6 +513,7 @@ export function KycForm({
               render={({ field }) => (
                 <Segmented
                   ariaLabel="Grade"
+                  size="lg"
                   options={CLIENT_GRADES.map((g) => ({ value: g, label: g }))}
                   value={field.value}
                   onChange={(v) =>
@@ -410,19 +525,25 @@ export function KycForm({
           </Field>
         </div>
 
-        <div className="grid grid-cols-2 gap-6 max-md:grid-cols-1">
-          <MasterChips
-            control={control}
-            name="customerTypeIds"
-            label="Customer Type"
-            options={customerTypes}
-          />
-          <MasterChips
-            control={control}
-            name="industryTypeIds"
-            label="Industry Type"
-            options={industryTypes}
-          />
+        {/* Customer Type sizes to its chips; Industry Type fills the rest — a
+            small gap between them instead of a wasteful 50/50 split. */}
+        <div className="flex flex-wrap items-start gap-x-8 gap-y-4">
+          <div className="shrink-0">
+            <MasterChips
+              control={control}
+              name="customerTypeIds"
+              label="Customer Type"
+              options={customerTypes}
+            />
+          </div>
+          <div className="min-w-0 flex-1">
+            <MasterChips
+              control={control}
+              name="industryTypeIds"
+              label="Industry Type"
+              options={industryTypes}
+            />
+          </div>
         </div>
 
         {/* Product Types — uniform-width checkbox chip grid over the master. */}
@@ -439,7 +560,7 @@ export function KycForm({
                       No product types yet — add them in Admin &#8594; Masters.
                     </p>
                   ) : (
-                    <div className="grid grid-cols-4 gap-2 max-md:grid-cols-2">
+                    <div className="flex flex-wrap gap-2">
                       {productTypes.map((opt) => {
                         const checked = selected.includes(opt.id);
                         return (
@@ -456,7 +577,7 @@ export function KycForm({
                               )
                             }
                             className={cn(
-                              "flex w-full items-center gap-2 rounded-chip border-[1.75px] px-3 py-2 text-[13px] font-semibold transition-colors",
+                              "inline-flex items-center gap-2 rounded-chip border-[1.75px] px-3 py-2 text-[13px] font-semibold transition-colors",
                               checked
                                 ? "border-brand bg-brand/8 text-ink-strong"
                                 : "border-[#9199b6] bg-surface-card text-ink-strong hover:border-[#6f78a0] hover:bg-[#f3f4f8]",
@@ -604,45 +725,8 @@ export function KycForm({
           </p>
         )}
 
-        <div className="grid grid-cols-4 gap-4 max-lg:grid-cols-2 max-md:grid-cols-1">
-          <Field label="Department" labelOnly>
-            <Controller
-              control={control}
-              name="departmentId"
-              render={({ field }) => (
-                <Select
-                  ariaLabel="Department"
-                  value={field.value ?? ""}
-                  onValueChange={(v) => field.onChange(v || undefined)}
-                  placeholder={
-                    departments.length === 0
-                      ? "No departments yet"
-                      : "Select a department"
-                  }
-                  disabled={departments.length === 0}
-                  options={departments.map((d) => ({ value: d.id, label: d.name }))}
-                />
-              )}
-            />
-          </Field>
-          <Field label="Export" labelOnly>
-            <Controller
-              control={control}
-              name="export"
-              render={({ field }) => (
-                <Segmented
-                  ariaLabel="Export"
-                  options={YES_NO_SEGMENTED}
-                  value={
-                    field.value === undefined ? undefined : field.value ? "yes" : "no"
-                  }
-                  onChange={(v) =>
-                    field.onChange(v === undefined ? undefined : v === "yes")
-                  }
-                />
-              )}
-            />
-          </Field>
+        {/* Currency → Country → Export. Country auto-sets Currency + address country. */}
+        <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
           <Field label="Currency" labelOnly>
             <Controller
               control={control}
@@ -665,8 +749,28 @@ export function KycForm({
                 <Select
                   ariaLabel="Country"
                   value={field.value ?? "India"}
-                  onValueChange={field.onChange}
+                  onValueChange={(v) =>
+                    applyCountry(v as (typeof INQUIRY_COUNTRIES)[number])
+                  }
                   options={INQUIRY_COUNTRIES.map((c) => ({ value: c, label: c }))}
+                />
+              )}
+            />
+          </Field>
+          <Field label="Export" labelOnly>
+            <Controller
+              control={control}
+              name="export"
+              render={({ field }) => (
+                <Segmented
+                  ariaLabel="Export"
+                  options={YES_NO_SEGMENTED}
+                  value={
+                    field.value === undefined ? undefined : field.value ? "yes" : "no"
+                  }
+                  onChange={(v) =>
+                    field.onChange(v === undefined ? undefined : v === "yes")
+                  }
                 />
               )}
             />
@@ -674,7 +778,162 @@ export function KycForm({
         </div>
       </SectionCard>
 
-      {/* ── 3 · Addresses ────────────────────────────────────────────── */}
+      {/* ── 3 · Contact Person ───────────────────────────────────────── */}
+      <SectionCard
+        title="Contact Person"
+        inlineHint
+        hint="The first contact is saved as the client's primary — auto-fetched on enquiries."
+      >
+        {/* Owning department for this client (moved here from Registration). */}
+        <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
+          <Field label="Department" labelOnly>
+            <Controller
+              control={control}
+              name="departmentId"
+              render={({ field }) => (
+                <Select
+                  ariaLabel="Department"
+                  value={field.value ?? ""}
+                  onValueChange={(v) => field.onChange(v || undefined)}
+                  placeholder={
+                    departments.length === 0 ? "No departments yet" : "Select a department"
+                  }
+                  disabled={departments.length === 0}
+                  options={departments.map((d) => ({ value: d.id, label: d.name }))}
+                />
+              )}
+            />
+          </Field>
+        </div>
+
+        {/* Primary contact */}
+        <div className="flex flex-col gap-3">
+          <GroupHeader n={1} label="Contact" />
+          <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
+            <Field id="kyc-cfirst" label="First Name">
+              <input id="kyc-cfirst" type="text" className="nt-input" {...register("contactFirstName")} />
+            </Field>
+            <Field id="kyc-clast" label="Last Name">
+              <input id="kyc-clast" type="text" className="nt-input" {...register("contactLastName")} />
+            </Field>
+            <Field id="kyc-cno" label="Contact No">
+              <input id="kyc-cno" type="tel" className="nt-input" {...register("contactNo")} />
+            </Field>
+            <Field id="kyc-cemail" label="Email">
+              <input id="kyc-cemail" type="email" className="nt-input" {...register("contactEmail")} />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+            <Field id="kyc-cdesig" label="Designation">
+              <input
+                id="kyc-cdesig"
+                type="text"
+                className="nt-input"
+                placeholder="e.g. Purchase Manager"
+                {...register("contactDesignation")}
+              />
+            </Field>
+            <Field id="kyc-cnotes" label="Contact Notes">
+              <Controller
+                control={control}
+                name="contactNotes"
+                render={({ field }) => (
+                  <NotesField
+                    id="kyc-cnotes"
+                    ariaLabel="Contact Notes"
+                    rows={2}
+                    placeholder="Notes about this contact"
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+            </Field>
+          </div>
+        </div>
+
+        {/* Additional contacts */}
+        {additionalContactFields.map((field, idx) => (
+          <div key={field.id} className="flex flex-col gap-3">
+            <GroupHeader
+              n={idx + 2}
+              label="Contact"
+              action={
+                <button
+                  type="button"
+                  onClick={() => removeContact(idx)}
+                  aria-label={`Remove contact ${idx + 2}`}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-hairline px-2.5 py-1.5 text-[12px] font-semibold text-ink-subtle transition hover:border-[#f0b4b4] hover:bg-[#fdf3f3] hover:text-[#d32f2f]"
+                >
+                  <X className="h-[15px] w-[15px]" />
+                  Remove
+                </button>
+              }
+            />
+            <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
+              <Field id={`kyc-ac${idx}-first`} label="First Name" required>
+                <input id={`kyc-ac${idx}-first`} type="text" className="nt-input" {...register(`additionalContacts.${idx}.firstName`)} />
+              </Field>
+              <Field id={`kyc-ac${idx}-last`} label="Last Name">
+                <input id={`kyc-ac${idx}-last`} type="text" className="nt-input" {...register(`additionalContacts.${idx}.lastName`)} />
+              </Field>
+              <Field id={`kyc-ac${idx}-no`} label="Contact No">
+                <input id={`kyc-ac${idx}-no`} type="tel" className="nt-input" {...register(`additionalContacts.${idx}.contactNo`)} />
+              </Field>
+              <Field id={`kyc-ac${idx}-email`} label="Email">
+                <input id={`kyc-ac${idx}-email`} type="email" className="nt-input" {...register(`additionalContacts.${idx}.email`)} />
+              </Field>
+            </div>
+            <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+              <Field id={`kyc-ac${idx}-desig`} label="Designation">
+                <input
+                  id={`kyc-ac${idx}-desig`}
+                  type="text"
+                  className="nt-input"
+                  placeholder="e.g. Purchase Manager"
+                  {...register(`additionalContacts.${idx}.designation`)}
+                />
+              </Field>
+              <Field id={`kyc-ac${idx}-notes`} label="Notes">
+                <Controller
+                  control={control}
+                  name={`additionalContacts.${idx}.notes`}
+                  render={({ field: nf }) => (
+                    <NotesField
+                      id={`kyc-ac${idx}-notes`}
+                      ariaLabel="Contact notes"
+                      rows={2}
+                      placeholder="Notes about this contact"
+                      value={nf.value ?? ""}
+                      onChange={nf.onChange}
+                    />
+                  )}
+                />
+              </Field>
+            </div>
+          </div>
+        ))}
+
+        <button
+          type="button"
+          onClick={() =>
+            appendContact({
+              firstName: "",
+              lastName: "",
+              designation: "",
+              contactNo: "",
+              email: "",
+              notes: "",
+            })
+          }
+          className="inline-flex w-max items-center gap-1.5 rounded-lg border border-dashed border-[#c9c9ea] bg-[#f4f4fd] px-4 py-2.5 text-[13px] font-bold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#eeeefb]"
+        >
+          <Plus className="h-4 w-4" />
+          Add Contact
+        </button>
+      </SectionCard>
+
+      {/* ── 4 · Addresses ────────────────────────────────────────────── */}
       <SectionCard
         title="Addresses"
         inlineHint
@@ -696,7 +955,7 @@ export function KycForm({
                         onClick={() => copyFromBilling(idx)}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-[#c9c9ea] bg-[#f4f4fd] px-2.5 py-1.5 text-[12px] font-bold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#eeeefb]"
                       >
-                        Copy from billing address
+                        Same as Billing Address
                       </button>
                     )}
                     {idx >= 1 && (
@@ -767,7 +1026,17 @@ export function KycForm({
                   <input id={`kyc-addr${idx}-country`} type="text" className="nt-input" placeholder="e.g. India" {...register(`addresses.${idx}.country`)} />
                 </Field>
                 <Field id={`kyc-addr${idx}-pin`} label="Pin Code">
-                  <input id={`kyc-addr${idx}-pin`} type="text" className="nt-input" {...register(`addresses.${idx}.pinCode`)} />
+                  <input
+                    id={`kyc-addr${idx}-pin`}
+                    type="text"
+                    inputMode="numeric"
+                    className="nt-input"
+                    {...register(`addresses.${idx}.pinCode`, {
+                      onChange: (e) => {
+                        e.target.value = e.target.value.replace(/[^0-9]/g, "");
+                      },
+                    })}
+                  />
                 </Field>
               </div>
             </div>
@@ -786,7 +1055,7 @@ export function KycForm({
               line4: "",
               city: "",
               state: "",
-              country: "",
+              country: getValues("country") ?? "",
               pinCode: "",
             })
           }
@@ -797,169 +1066,79 @@ export function KycForm({
         </button>
       </SectionCard>
 
-      {/* ── 4 · Contact Person ───────────────────────────────────────── */}
-      <SectionCard
-        title="Contact Person"
-        inlineHint
-        hint="The first contact is saved as the client's primary — auto-fetched on enquiries."
-      >
-        {/* Primary contact */}
-        <div className="flex flex-col gap-3">
-          <GroupHeader n={1} label="Contact" />
-          <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
-            <Field id="kyc-cfirst" label="First Name">
-              <input id="kyc-cfirst" type="text" className="nt-input" {...register("contactFirstName")} />
-            </Field>
-            <Field id="kyc-clast" label="Last Name">
-              <input id="kyc-clast" type="text" className="nt-input" {...register("contactLastName")} />
-            </Field>
-            <Field id="kyc-cno" label="Contact No">
-              <input id="kyc-cno" type="tel" className="nt-input" {...register("contactNo")} />
-            </Field>
-            <Field id="kyc-cemail" label="Email">
-              <input id="kyc-cemail" type="email" className="nt-input" {...register("contactEmail")} />
-            </Field>
-          </div>
-          <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-            <Field id="kyc-cdesig" label="Designation">
-              <input
-                id="kyc-cdesig"
-                type="text"
-                className="nt-input"
-                placeholder="e.g. Purchase Manager"
-                {...register("contactDesignation")}
-              />
-            </Field>
-            <Field id="kyc-cnotes" label="Contact Notes">
-              <input
-                id="kyc-cnotes"
-                type="text"
-                className="nt-input"
-                placeholder="Notes about this contact"
-                {...register("contactNotes")}
-              />
-            </Field>
-          </div>
-        </div>
-
-        {/* Additional contacts */}
-        {additionalContactFields.map((field, idx) => (
-          <div key={field.id} className="flex flex-col gap-3">
-            <GroupHeader
-              n={idx + 2}
-              label="Contact"
-              action={
-                <button
-                  type="button"
-                  onClick={() => removeContact(idx)}
-                  aria-label={`Remove contact ${idx + 2}`}
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-hairline px-2.5 py-1.5 text-[12px] font-semibold text-ink-subtle transition hover:border-[#f0b4b4] hover:bg-[#fdf3f3] hover:text-[#d32f2f]"
-                >
-                  <X className="h-[15px] w-[15px]" />
-                  Remove
-                </button>
-              }
-            />
-            <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
-              <Field id={`kyc-ac${idx}-first`} label="First Name" required>
-                <input id={`kyc-ac${idx}-first`} type="text" className="nt-input" {...register(`additionalContacts.${idx}.firstName`)} />
-              </Field>
-              <Field id={`kyc-ac${idx}-last`} label="Last Name">
-                <input id={`kyc-ac${idx}-last`} type="text" className="nt-input" {...register(`additionalContacts.${idx}.lastName`)} />
-              </Field>
-              <Field id={`kyc-ac${idx}-no`} label="Contact No">
-                <input id={`kyc-ac${idx}-no`} type="tel" className="nt-input" {...register(`additionalContacts.${idx}.contactNo`)} />
-              </Field>
-              <Field id={`kyc-ac${idx}-email`} label="Email">
-                <input id={`kyc-ac${idx}-email`} type="email" className="nt-input" {...register(`additionalContacts.${idx}.email`)} />
-              </Field>
-            </div>
-            <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-              <Field id={`kyc-ac${idx}-desig`} label="Designation">
-                <input
-                  id={`kyc-ac${idx}-desig`}
-                  type="text"
-                  className="nt-input"
-                  placeholder="e.g. Purchase Manager"
-                  {...register(`additionalContacts.${idx}.designation`)}
-                />
-              </Field>
-              <Field id={`kyc-ac${idx}-notes`} label="Notes">
-                <input
-                  id={`kyc-ac${idx}-notes`}
-                  type="text"
-                  className="nt-input"
-                  placeholder="Notes about this contact"
-                  {...register(`additionalContacts.${idx}.notes`)}
-                />
-              </Field>
-            </div>
-          </div>
-        ))}
-
-        <button
-          type="button"
-          onClick={() =>
-            appendContact({
-              firstName: "",
-              lastName: "",
-              designation: "",
-              contactNo: "",
-              email: "",
-              notes: "",
-            })
-          }
-          className="inline-flex w-max items-center gap-1.5 rounded-lg border border-dashed border-[#c9c9ea] bg-[#f4f4fd] px-4 py-2.5 text-[13px] font-bold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#eeeefb]"
-        >
-          <Plus className="h-4 w-4" />
-          Add Contact
-        </button>
-      </SectionCard>
-
       {/* ── 5 · Commercial & Credit ──────────────────────────────────── */}
       <SectionCard
         title="Commercial & Credit"
         inlineHint
         hint="Payment terms, credit limits, freight and logistics details."
       >
-        <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
-          <Field id="kyc-payterms" label="Payment Terms">
-            <input
-              id="kyc-payterms"
-              type="text"
-              className="nt-input"
-              placeholder="e.g. 50% advance, 50% on delivery"
-              {...register("paymentTerms")}
+        <div className="grid grid-cols-6 gap-3 max-lg:grid-cols-3 max-md:grid-cols-2">
+          <Field label="Payment Terms" labelOnly>
+            <Controller
+              control={control}
+              name="paymentTerms"
+              render={({ field }) => (
+                <Select
+                  ariaLabel="Payment Terms"
+                  value={field.value ?? ""}
+                  onValueChange={(v) => field.onChange(v || undefined)}
+                  placeholder="Select payment terms"
+                  options={paymentTermsList.map((t) => ({ value: t, label: t }))}
+                />
+              )}
             />
           </Field>
-          <Field id="kyc-freight" label="Freight Charges">
-            <input id="kyc-freight" type="text" className="nt-input" {...register("freightCharges")} />
-          </Field>
-          <Field id="kyc-creditdays" label="Credit Days">
-            <input
-              id="kyc-creditdays"
-              type="number"
-              min={0}
-              step={1}
-              className="nt-input"
-              placeholder="e.g. 30"
-              {...register("creditDays", { setValueAs: toOptionalNumber })}
+          <Field label="Freight Charges" labelOnly>
+            <Controller
+              control={control}
+              name="freightCharges"
+              render={({ field }) => (
+                <Select
+                  ariaLabel="Freight Charges"
+                  value={field.value ?? ""}
+                  onValueChange={(v) => field.onChange(v || undefined)}
+                  placeholder="Select freight terms"
+                  options={freightList.map((t) => ({ value: t, label: t }))}
+                />
+              )}
             />
           </Field>
-          <Field id="kyc-creditlimit" label="Credit Limit">
-            <input
-              id="kyc-creditlimit"
-              type="number"
-              min={0}
-              step={0.01}
-              className="nt-input"
-              placeholder="e.g. 500000"
-              {...register("creditLimit", { setValueAs: toOptionalNumber })}
+          <Field label="Credit Days" labelOnly>
+            <Controller
+              control={control}
+              name="creditDays"
+              render={({ field }) => (
+                <Select
+                  ariaLabel="Credit Days"
+                  value={field.value != null ? String(field.value) : ""}
+                  onValueChange={(v) => field.onChange(v || undefined)}
+                  placeholder="Select credit days"
+                  options={creditDaysList.map((d) => ({
+                    value: d,
+                    label: /^\d+$/.test(d) ? `${d} days` : d,
+                  }))}
+                />
+              )}
             />
           </Field>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+          <Field label="Credit Limit" labelOnly>
+            <Controller
+              control={control}
+              name="creditLimit"
+              render={({ field }) => (
+                <Select
+                  ariaLabel="Credit Limit"
+                  value={field.value != null ? String(field.value) : ""}
+                  onValueChange={(v) => field.onChange(v || undefined)}
+                  placeholder="Select credit limit"
+                  options={creditLimitList.map((c) => ({
+                    value: c,
+                    label: /^\d+$/.test(c) ? `₹${Number(c).toLocaleString("en-IN")}` : c,
+                  }))}
+                />
+              )}
+            />
+          </Field>
           <Field label="Transporter" labelOnly>
             <Controller
               control={control}
@@ -970,41 +1149,59 @@ export function KycForm({
                   value={field.value ?? ""}
                   onValueChange={(v) => field.onChange(v || undefined)}
                   placeholder="Select transporter"
-                  options={TRANSPORTER_OPTIONS.map((t) => ({ value: t, label: t }))}
+                  options={transporterList.map((t) => ({ value: t, label: t }))}
                 />
               )}
             />
           </Field>
-          <Field id="kyc-qtydev" label="Quantity Deviation">
-            <input
-              id="kyc-qtydev"
-              type="text"
-              className="nt-input"
-              placeholder="e.g. +/- 10%"
-              {...register("qtyDeviation")}
+          <Field label="Quantity Deviation" labelOnly>
+            <Controller
+              control={control}
+              name="qtyDeviation"
+              render={({ field }) => (
+                <Select
+                  ariaLabel="Quantity Deviation"
+                  value={field.value ?? ""}
+                  onValueChange={(v) => field.onChange(v || undefined)}
+                  placeholder="Select deviation"
+                  options={qtyDeviationList.map((t) => ({ value: t, label: t }))}
+                />
+              )}
             />
           </Field>
         </div>
 
         <Field id="kyc-otherrefs" label="Other References">
-          <textarea
-            id="kyc-otherrefs"
-            rows={2}
-            className="nt-input resize-y"
-            style={{ fontWeight: 400 }}
-            placeholder="Any other references or notes relevant to this client"
-            {...register("otherReferences")}
+          <Controller
+            control={control}
+            name="otherReferences"
+            render={({ field }) => (
+              <NotesField
+                id="kyc-otherrefs"
+                ariaLabel="Other References"
+                rows={2}
+                placeholder="Any other references or notes relevant to this client"
+                value={field.value ?? ""}
+                onChange={field.onChange}
+              />
+            )}
           />
         </Field>
 
         <Field id="kyc-notes" label="Client Notes">
-          <textarea
-            id="kyc-notes"
-            rows={3}
-            className="nt-input resize-y"
-            style={{ fontWeight: 400 }}
-            placeholder="Any general notes about this client"
-            {...register("notes")}
+          <Controller
+            control={control}
+            name="notes"
+            render={({ field }) => (
+              <NotesField
+                id="kyc-notes"
+                ariaLabel="Client Notes"
+                rows={3}
+                placeholder="Any general notes about this client"
+                value={field.value ?? ""}
+                onChange={field.onChange}
+              />
+            )}
           />
         </Field>
       </SectionCard>
@@ -1129,8 +1326,9 @@ export function KycForm({
         )}
 
         <div className="flex flex-col gap-3">
-          <GroupHeader n={1} label="Business Card" />
-          <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+          <GroupHeader n={1} label="Business Card & Documents" />
+          {/* Front / Back / Other sit close together as fixed tiles. */}
+          <div className="flex flex-wrap items-start gap-4">
             <CardUpload
               label="Front"
               url={cardFront}
@@ -1144,6 +1342,12 @@ export function KycForm({
               uploading={uploading.back}
               onPick={(f) => void onPickCard(f, "back")}
               onClear={() => setValue("businessCardBackUrl", undefined)}
+            />
+            <OtherDocsUpload
+              urls={cardOther}
+              uploading={uploading.other}
+              onPick={(files) => void onPickOther(files)}
+              onRemove={removeOther}
             />
           </div>
         </div>
@@ -1288,7 +1492,7 @@ function CardUpload({
 }) {
   const inputRef = React.useRef<HTMLInputElement>(null);
   return (
-    <Field label={`Business Card — ${label}`} labelOnly>
+    <Field label={label} labelOnly>
       <input
         ref={inputRef}
         type="file"
@@ -1339,6 +1543,105 @@ function CardUpload({
           </span>
         </button>
       )}
+    </Field>
+  );
+}
+
+/** True for blob URLs whose pathname ends in an image extension. */
+function isImageUrl(url: string): boolean {
+  return /\.(jpe?g|png|webp|heic)(?:$|\?)/i.test(url);
+}
+
+/** Human filename from a blob URL (drops the query + path prefix). */
+function fileNameFromUrl(url: string): string {
+  try {
+    const last = url.split("/").pop()?.split("?")[0] ?? "file";
+    return decodeURIComponent(last) || "file";
+  } catch {
+    return "file";
+  }
+}
+
+/**
+ * "Other" documents tile — a multi-file uploader for the rest of the client's
+ * scans (images or PDFs). Each uploaded blob shows as a 120px tile (thumbnail
+ * for images, a file chip for PDFs) with a remove x, followed by the dashed
+ * add tile. Mirrors CardUpload's look so the three sit together.
+ */
+function OtherDocsUpload({
+  urls,
+  uploading,
+  onPick,
+  onRemove,
+}: {
+  urls: string[];
+  uploading: boolean;
+  onPick: (files: FileList | null) => void;
+  onRemove: (url: string) => void;
+}) {
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  return (
+    <Field label="Other" labelOnly>
+      <input
+        ref={inputRef}
+        type="file"
+        multiple
+        accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
+        className="hidden"
+        aria-label="Other documents"
+        onChange={(e) => {
+          onPick(e.target.files);
+          e.target.value = ""; // allow re-picking the same file after a remove
+        }}
+      />
+      <div className="flex flex-wrap items-start gap-3">
+        {urls.map((url) => (
+          <div
+            key={url}
+            className="relative inline-block size-[120px] overflow-hidden rounded-xl border border-hairline bg-surface-soft"
+          >
+            {isImageUrl(url) ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={url} alt="Document" className="size-full object-cover" />
+            ) : (
+              <a
+                href={url}
+                target="_blank"
+                rel="noreferrer"
+                className="flex size-full flex-col items-center justify-center gap-1.5 px-2 text-center text-ink-subtle hover:text-ink-strong transition-colors"
+              >
+                <FileText size={22} />
+                <span className="line-clamp-2 break-all text-[10.5px] font-semibold">
+                  {fileNameFromUrl(url)}
+                </span>
+              </a>
+            )}
+            <button
+              type="button"
+              aria-label="Remove document"
+              onClick={() => onRemove(url)}
+              className="absolute right-1 top-1 inline-flex size-[22px] items-center justify-center rounded-full bg-white/90 text-ink-strong shadow-sm border border-hairline hover:bg-white transition-colors"
+            >
+              <X size={13} strokeWidth={2.6} />
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          className="inline-flex size-[120px] flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-hairline-strong text-ink-subtle hover:text-ink-strong hover:border-ink-subtle transition-colors disabled:opacity-60"
+        >
+          {uploading ? (
+            <Loader2 size={18} style={{ animation: "spinFast 0.8s linear infinite" }} />
+          ) : (
+            <Plus size={18} />
+          )}
+          <span className="text-[11.5px] font-semibold">
+            {uploading ? "Uploading" : "Add files"}
+          </span>
+        </button>
+      </div>
     </Field>
   );
 }

@@ -390,6 +390,8 @@ export const clients = pgTable(
     // Business-card scans (Vercel Blob, optional — never block save).
     businessCardFrontUrl: text("business_card_front_url"),
     businessCardBackUrl: text("business_card_back_url"),
+    // Additional document/scan URLs beyond the two business-card sides.
+    businessCardOtherUrls: text("business_card_other_urls").array(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -541,6 +543,47 @@ export const masterOptions = pgTable(
 export type MasterOption = typeof masterOptions.$inferSelect;
 export type NewMasterOption = typeof masterOptions.$inferInsert;
 
+/**
+ * Per-form "Custom" dropdown lists — form-scoped option lists that do NOT
+ * belong in the shared Masters module (e.g. a form's Payment Terms / Freight
+ * choices). Keyed by (formKey, listKey); each form's "Custom" sidebar editor
+ * manages its own lists. Shared/cross-form lists stay in `master_options`.
+ */
+export const formCustomOptions = pgTable(
+  "form_custom_options",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // Owning form family, e.g. "kyc", "sample" (matches FORM_DRAFT_KINDS).
+    formKey: text("form_key").notNull(),
+    // The specific list within that form, e.g. "payment_terms", "freight".
+    listKey: text("list_key").notNull(),
+    label: text("label").notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(100),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("form_custom_options_key_label_uidx").on(
+      t.formKey,
+      t.listKey,
+      sql`lower(${t.label})`,
+    ),
+    index("form_custom_options_lookup_idx").on(
+      t.formKey,
+      t.listKey,
+      t.isActive,
+      t.sortOrder,
+    ),
+  ],
+);
+export type FormCustomOption = typeof formCustomOptions.$inferSelect;
+export type NewFormCustomOption = typeof formCustomOptions.$inferInsert;
+
 // ── Inquiry module (Phase 2) ────────────────────────────────────
 export const enquiryStatusEnum = pgEnum("enquiry_status", ENQUIRY_STATUSES);
 export const feasibilityStatusEnum = pgEnum("feasibility_status", FEASIBILITY_STATUSES);
@@ -665,6 +708,8 @@ export const inquiryItems = pgTable(
     shape: text("shape"),                               // INQUIRY_SHAPES value
     outerDia: numeric("outer_dia"), innerDia: numeric("inner_dia"),
     length: numeric("length"), width: numeric("width"), thickness: numeric("thickness"),
+    // Unit the dimension values are expressed in (mm / cm / m / inch).
+    dimensionUnit: text("dimension_unit").default("mm"),
     dimensionNotes: text("dimension_notes"),
     gradeId: uuid("grade_id").references(() => masterOptions.id, { onDelete: "set null" }),
     gradeCustomer: text("grade_customer"),

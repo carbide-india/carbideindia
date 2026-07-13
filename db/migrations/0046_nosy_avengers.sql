@@ -1,0 +1,1 @@
+ALTER TABLE "clients" ADD COLUMN "business_card_other_urls" text[];

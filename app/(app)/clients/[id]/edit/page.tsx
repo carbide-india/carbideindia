@@ -4,6 +4,7 @@ import { listMasterOptions } from "@/lib/queries/masters";
 import { listEmployeeOptions } from "@/lib/queries/employees";
 import { getClientForEdit } from "@/lib/queries/clients";
 import { getClientDocuments } from "@/lib/queries/client-documents";
+import { listCustomOptionsMap } from "@/lib/queries/custom-lists";
 import { DashboardHeader } from "@/components/layout/header";
 import { DashboardFooter } from "@/components/layout/footer";
 import { KycForm } from "@/components/clients/kyc-form";
@@ -19,7 +20,7 @@ export default async function EditClientPage({ params }: PageProps) {
   await requireAdmin();
   const { id } = await params;
 
-  const [client, customerTypes, industryTypes, productTypes, departments, employees, documents] =
+  const [client, customerTypes, industryTypes, productTypes, departments, employees, documents, kycLists] =
     await Promise.all([
       getClientForEdit(id),
       listMasterOptions("customer_type"),
@@ -28,6 +29,7 @@ export default async function EditClientPage({ params }: PageProps) {
       listMasterOptions("department"),
       listEmployeeOptions(),
       getClientDocuments(id),
+      listCustomOptionsMap("kyc"),
     ]);
 
   if (!client) notFound();
@@ -62,6 +64,12 @@ export default async function EditClientPage({ params }: PageProps) {
           initialValues={client}
           clientCode={clientCode}
           documents={documents}
+          paymentTermsOptions={kycLists["payment_terms"]}
+          freightOptions={kycLists["freight_charges"]}
+          creditDaysOptions={kycLists["credit_days"]}
+          creditLimitOptions={kycLists["credit_limit"]}
+          qtyDeviationOptions={kycLists["qty_deviation"]}
+          transporterOptions={kycLists["transporter"]}
         />
       </main>
       <DashboardFooter />

@@ -79,6 +79,7 @@ function toClientColumns(v: {
   meetingDate?: string; meetingStart?: string; meetingEnd?: string;
   meetingNotes?: string; kycSalesPersonId?: string;
   businessCardFrontUrl?: string; businessCardBackUrl?: string;
+  businessCardOtherUrls?: string[];
 }): ClientPatch {
   const patch: ClientPatch = stripUndefined({
     customerTypeIds: v.customerTypeIds,
@@ -113,6 +114,7 @@ function toClientColumns(v: {
     kycSalesPersonId: v.kycSalesPersonId,
     businessCardFrontUrl: v.businessCardFrontUrl,
     businessCardBackUrl: v.businessCardBackUrl,
+    businessCardOtherUrls: v.businessCardOtherUrls,
   });
   if (v.meetingDate !== undefined) patch.kycMeetingDate = new Date(v.meetingDate);
   return patch;

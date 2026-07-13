@@ -15,6 +15,7 @@ import { createClientMeeting } from "@/app/(app)/meetings/actions";
 import { useFormDraft } from "@/components/drafts/use-form-draft";
 import { fireToast } from "@/lib/toast";
 import { Select } from "@/components/ui/select";
+import { NotesField } from "@/components/ui/notes-field";
 import { SearchableSelect } from "@/components/inquiries/searchable-select";
 import {
   Field,
@@ -502,13 +503,18 @@ export function MeetingForm({
         )}
 
         <Field id="mtg-notes" label="Meeting Notes">
-          <textarea
-            id="mtg-notes"
-            rows={4}
-            className="nt-input resize-y"
-            style={{ fontWeight: 400 }}
-            placeholder="What was discussed, decisions, action items"
-            {...register("meetingNotes")}
+          <Controller
+            control={control}
+            name="meetingNotes"
+            render={({ field }) => (
+              <NotesField
+                id="mtg-notes"
+                rows={4}
+                placeholder="What was discussed, decisions, action items"
+                value={field.value ?? ""}
+                onChange={field.onChange}
+              />
+            )}
           />
         </Field>
 

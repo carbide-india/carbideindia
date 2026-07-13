@@ -10,6 +10,12 @@ import { FORM_DRAFT_META, type FormDraftKind } from "@/lib/drafts/form-drafts";
 import type { FormDraftListItem } from "@/lib/queries/form-drafts";
 import { fireToast } from "@/lib/toast";
 
+/** Capitalize the first letter of every word, leaving existing caps/acronyms
+ *  intact (so "abc pvt ltd" → "Abc Pvt Ltd", "ACME Ltd" stays "ACME Ltd"). */
+function titleCase(s: string): string {
+  return s.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 function timeAgo(d: Date): string {
   const s = Math.max(1, Math.round((Date.now() - new Date(d).getTime()) / 1000));
   if (s < 60) return `${s}s ago`;
@@ -67,7 +73,7 @@ export function FormDraftsList({
                 <FileText className="h-[18px] w-[18px]" />
               </span>
               <div className="min-w-0">
-                <p className="truncate text-[14px] font-bold text-ink-strong">{d.label}</p>
+                <p className="truncate text-[14px] font-bold text-ink-strong">{titleCase(d.label)}</p>
                 <p className="text-[12px] text-ink-subtle tabular-nums">
                   {d.completeness}% filled · {timeAgo(d.updatedAt)}
                 </p>

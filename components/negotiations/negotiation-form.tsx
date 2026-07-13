@@ -21,6 +21,7 @@ import type { EmployeeOption } from "@/lib/queries/employees";
 import { formatDate } from "@/lib/format";
 import { fireToast } from "@/lib/toast";
 import { Select } from "@/components/ui/select";
+import { NotesField } from "@/components/ui/notes-field";
 import {
   Field,
   MiniField,
@@ -494,12 +495,18 @@ export function NegotiationForm({
         </Field>
 
         <Field id="ng-notes" label="Negotiation Notes">
-          <textarea
-            id="ng-notes"
-            rows={4}
-            className="nt-input resize-y"
-            placeholder="Counter-offers, customer feedback, next steps..."
-            {...register("negotiationNotes")}
+          <Controller
+            control={control}
+            name="negotiationNotes"
+            render={({ field }) => (
+              <NotesField
+                id="ng-notes"
+                rows={4}
+                placeholder="Counter-offers, customer feedback, next steps..."
+                value={field.value ?? ""}
+                onChange={field.onChange}
+              />
+            )}
           />
         </Field>
       </SectionCard>

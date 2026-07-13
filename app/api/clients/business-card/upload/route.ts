@@ -9,12 +9,15 @@ export const runtime = "nodejs";
  *  hardcodes it.) */
 const BUSINESS_CARDS_PATHNAME_PREFIX = "business-cards/";
 
-/** Business-card scans are images only — rendered via plain <img> on the form. */
+/** Business-card scans + "Other" document tiles: images render via plain
+ *  <img>; PDFs are allowed for the "Other" documents slot (shown as a file
+ *  chip). Front/Back stay image-only via the form's own client-side gate. */
 const ALLOWED_IMAGE_TYPES = new Set([
   "image/jpeg",
   "image/png",
   "image/webp",
   "image/heic",
+  "application/pdf",
 ]);
 
 /** 25 MB — phone-camera shots of a business card, not large document scans. */
@@ -61,7 +64,7 @@ export async function POST(request: Request): Promise<NextResponse> {
           }
         }
         if (!ALLOWED_IMAGE_TYPES.has(contentType)) {
-          throw new Error("Only JPEG, PNG, WebP or HEIC images are allowed.");
+          throw new Error("Only JPEG, PNG, WebP, HEIC images or PDF files are allowed.");
         }
 
         return {

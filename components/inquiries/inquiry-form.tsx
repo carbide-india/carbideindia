@@ -21,6 +21,7 @@ import { draftHasContent } from "@/lib/drafts/enquiry-draft";
 import { Plus, X } from "lucide-react";
 import { fireToast } from "@/lib/toast";
 import { Select } from "@/components/ui/select";
+import { NotesField } from "@/components/ui/notes-field";
 import { INDIA_STATES, citiesForState } from "@/lib/data/india-states-cities";
 import { SearchableSelect } from "./searchable-select";
 import { Field, SectionCard, GroupHeader } from "./form-field";
@@ -541,45 +542,6 @@ export function InquiryForm({
           </Field>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-          <Field id="inq-addr1" label="Address Line 1">
-            <input
-              id="inq-addr1"
-              type="text"
-              className="nt-input"
-              placeholder="Unit No./Block No., Floor, Building Name"
-              {...register("addressLine1")}
-            />
-          </Field>
-          <Field id="inq-addr2" label="Address Line 2">
-            <input
-              id="inq-addr2"
-              type="text"
-              className="nt-input"
-              placeholder="Street Name, Sector Name"
-              {...register("addressLine2")}
-            />
-          </Field>
-          <Field id="inq-addr3" label="Address Line 3">
-            <input
-              id="inq-addr3"
-              type="text"
-              className="nt-input"
-              placeholder="Area"
-              {...register("addressLine3")}
-            />
-          </Field>
-          <Field id="inq-addr4" label="Address Line 4">
-            <input
-              id="inq-addr4"
-              type="text"
-              className="nt-input"
-              placeholder="Nearby Landmark"
-              {...register("addressLine4")}
-            />
-          </Field>
-        </div>
-
         <div className="flex flex-col gap-3">
           <GroupHeader n={1} label="Contact" />
           <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
@@ -674,6 +636,45 @@ export function InquiryForm({
           <Plus className="h-4 w-4" />
           Add Contact
         </button>
+
+        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+          <Field id="inq-addr1" label="Address Line 1">
+            <input
+              id="inq-addr1"
+              type="text"
+              className="nt-input"
+              placeholder="Unit No./Block No., Floor, Building Name"
+              {...register("addressLine1")}
+            />
+          </Field>
+          <Field id="inq-addr2" label="Address Line 2">
+            <input
+              id="inq-addr2"
+              type="text"
+              className="nt-input"
+              placeholder="Street Name, Sector Name"
+              {...register("addressLine2")}
+            />
+          </Field>
+          <Field id="inq-addr3" label="Address Line 3">
+            <input
+              id="inq-addr3"
+              type="text"
+              className="nt-input"
+              placeholder="Area"
+              {...register("addressLine3")}
+            />
+          </Field>
+          <Field id="inq-addr4" label="Address Line 4">
+            <input
+              id="inq-addr4"
+              type="text"
+              className="nt-input"
+              placeholder="Nearby Landmark"
+              {...register("addressLine4")}
+            />
+          </Field>
+        </div>
       </SectionCard>
 
       {/* ── 2 · Checklist ────────────────────────────────────────────── */}
@@ -747,13 +748,18 @@ export function InquiryForm({
           </Field>
         </div>
         <Field id="inq-notes" label="Enquiry Notes">
-          <textarea
-            id="inq-notes"
-            rows={3}
-            className="nt-input resize-y"
-            style={{ fontWeight: 400 }}
-            placeholder="Anything the team should know about this enquiry"
-            {...register("enquiryNotes")}
+          <Controller
+            control={control}
+            name="enquiryNotes"
+            render={({ field }) => (
+              <NotesField
+                id="inq-notes"
+                rows={3}
+                placeholder="Anything the team should know about this enquiry"
+                value={field.value ?? ""}
+                onChange={field.onChange}
+              />
+            )}
           />
         </Field>
       </SectionCard>

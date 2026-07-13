@@ -107,8 +107,9 @@ export function EnquiryLaunchpad() {
       {/* Card grid */}
       <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {filtered.map((f) => (
-          <div
+          <Link
             key={f.key}
+            href={f.href}
             className="group flex flex-col rounded-xl border border-[#e6e8ec] bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#c7ccf5] hover:shadow-[0_10px_26px_rgba(30,47,102,0.10)]"
           >
             <div className="grid h-11 w-11 place-items-center rounded-lg bg-[#eef1fb] transition group-hover:bg-[#e2e8fb]">
@@ -116,15 +117,14 @@ export function EnquiryLaunchpad() {
             </div>
             <h3 className="mt-4 text-[17px] font-extrabold tracking-tight text-[#1e2f66]">{f.title}</h3>
             <p className="mt-1.5 min-h-[58px] flex-1 text-[13px] font-medium leading-[1.55] text-[#4b5563]">{f.desc}</p>
-            <Link
-              href={f.href}
-              className="mt-3 inline-flex h-[34px] w-max items-center gap-2 rounded-md border border-[#d5d8de] px-3 text-[11px] tracking-[0.1em] text-[#1e2f66] transition hover:border-[#2b46b5] hover:bg-[#f5f7ff] hover:text-[#2b46b5]"
+            <span
+              className="mt-3 inline-flex h-[34px] w-max items-center gap-2 rounded-md border border-[#d5d8de] px-3 text-[11px] tracking-[0.1em] text-[#1e2f66] transition group-hover:border-[#2b46b5] group-hover:bg-[#f5f7ff] group-hover:text-[#2b46b5]"
               style={{ fontFamily: MONO }}
             >
               START FORM
               <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-            </Link>
-          </div>
+            </span>
+          </Link>
         ))}
       </div>
 

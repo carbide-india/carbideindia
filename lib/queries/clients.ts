@@ -12,7 +12,7 @@ import {
   type ClientAddress,
   type ClientBankAccount,
 } from "@/db/schema";
-import type { GstRegistrationType } from "@/db/enums";
+import type { GstRegistrationType, ClientGrade } from "@/db/enums";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 import { getClientAddresses, getClientBankAccounts } from "@/lib/queries/client-children";
 import type {
@@ -94,6 +94,17 @@ export interface ClientRegisterRow {
   isExport: boolean | null;
   isActive: boolean;
   createdAt: Date;
+  /** Client rating A / B / C (null when unrated). */
+  grade: ClientGrade | null;
+  /** Free-form categorization tags (Mining / Defense / …). */
+  tags: string[];
+  /** KYC sales person — id + resolved name (null when unset / deleted). */
+  salesPersonId: string | null;
+  salesPersonName: string | null;
+  /** Primary contact person — display name + reachability (null when none). */
+  contactName: string | null;
+  contactDesignation: string | null;
+  contactNo: string | null;
 }
 
 /**
@@ -117,6 +128,9 @@ export async function listClientsForRegister(): Promise<ClientRegisterRow[]> {
       isExport: clients.export,
       isActive: clients.isActive,
       createdAt: clients.createdAt,
+      grade: clients.grade,
+      tags: clients.tags,
+      salesPersonId: clients.kycSalesPersonId,
     })
     .from(clients);
 
@@ -142,21 +156,72 @@ export async function listClientsForRegister(): Promise<ClientRegisterRow[]> {
       .map((id) => typeNameById.get(id))
       .filter((n): n is string => n !== undefined);
 
+  // Batch-resolve KYC sales-person ids → names in one lookup.
+  const salesPersonIds = [
+    ...new Set(rows.map((r) => r.salesPersonId).filter((id): id is string => Boolean(id))),
+  ];
+  const salesPersonNameById = new Map<string, string>();
+  if (salesPersonIds.length > 0) {
+    const empRows = await db
+      .select({ id: employees.id, name: employees.name })
+      .from(employees)
+      .where(inArray(employees.id, salesPersonIds));
+    for (const e of empRows) salesPersonNameById.set(e.id, e.name);
+  }
+
+  // Batch-fetch every primary contact (one query), keyed by client id.
+  const primaryContacts = await db
+    .select({
+      clientId: clientContacts.clientId,
+      firstName: clientContacts.firstName,
+      lastName: clientContacts.lastName,
+      designation: clientContacts.designation,
+      contactNo: clientContacts.contactNo,
+    })
+    .from(clientContacts)
+    .where(eq(clientContacts.isPrimary, true));
+  const contactByClient = new Map<
+    string,
+    { name: string; designation: string | null; contactNo: string | null }
+  >();
+  for (const c of primaryContacts) {
+    // First primary wins (a client should have exactly one).
+    if (contactByClient.has(c.clientId)) continue;
+    const name = [c.firstName, c.lastName].filter(Boolean).join(" ").trim();
+    contactByClient.set(c.clientId, {
+      name,
+      designation: c.designation,
+      contactNo: c.contactNo,
+    });
+  }
+
   return rows
-    .map((r) => ({
-      id: r.id,
-      name: r.name,
-      clientCode: r.clientCode,
-      city: r.city,
-      state: r.state,
-      gstin: r.gstin,
-      customerTypeNames: resolveNames(r.customerTypeIds),
-      industryTypeNames: resolveNames(r.industryTypeIds),
-      creditDays: r.creditDays,
-      isExport: r.isExport,
-      isActive: r.isActive,
-      createdAt: r.createdAt,
-    }))
+    .map((r) => {
+      const contact = contactByClient.get(r.id) ?? null;
+      return {
+        id: r.id,
+        name: r.name,
+        clientCode: r.clientCode,
+        city: r.city,
+        state: r.state,
+        gstin: r.gstin,
+        customerTypeNames: resolveNames(r.customerTypeIds),
+        industryTypeNames: resolveNames(r.industryTypeIds),
+        creditDays: r.creditDays,
+        isExport: r.isExport,
+        isActive: r.isActive,
+        createdAt: r.createdAt,
+        grade: r.grade,
+        tags: r.tags ?? [],
+        salesPersonId: r.salesPersonId,
+        salesPersonName: r.salesPersonId
+          ? salesPersonNameById.get(r.salesPersonId) ?? null
+          : null,
+        contactName: contact && contact.name ? contact.name : null,
+        contactDesignation: contact?.designation ?? null,
+        contactNo: contact?.contactNo ?? null,
+      };
+    })
     .sort((a, b) =>
       a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
     );
@@ -244,6 +309,7 @@ export interface ClientEditValues {
   kycSalesPersonId?: string;
   businessCardFrontUrl?: string;
   businessCardBackUrl?: string;
+  businessCardOtherUrls?: string[];
   // ── Credit & banking (migration 0020) ──
   creditDays?: number;
   creditLimit?: number;
@@ -357,6 +423,7 @@ export async function getClientForEdit(
     kycSalesPersonId: row.kycSalesPersonId ?? undefined,
     businessCardFrontUrl: row.businessCardFrontUrl ?? undefined,
     businessCardBackUrl: row.businessCardBackUrl ?? undefined,
+    businessCardOtherUrls: row.businessCardOtherUrls ?? [],
     // ── Credit & banking (migration 0020) ──
     creditDays: row.creditDays ?? undefined,
     creditLimit: row.creditLimit != null ? Number(row.creditLimit) : undefined,

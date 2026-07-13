@@ -23,6 +23,7 @@ import { useFormDraft } from "@/components/drafts/use-form-draft";
 import { fireToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { Select } from "@/components/ui/select";
+import { NotesField } from "@/components/ui/notes-field";
 import { LocationSelect } from "@/components/samples/location-select";
 import { AudioNoteRecorder } from "@/components/samples/audio-note-recorder";
 import {
@@ -366,13 +367,18 @@ export function SampleForm({
         </div>
 
         <Field id="smp-notes" label="Sample Notes">
-          <textarea
-            id="smp-notes"
-            rows={3}
-            className="nt-input resize-y"
-            style={{ fontWeight: 400 }}
-            placeholder="Anything the team should know about this sample"
-            {...register("sampleNotes")}
+          <Controller
+            control={control}
+            name="sampleNotes"
+            render={({ field }) => (
+              <NotesField
+                id="smp-notes"
+                rows={3}
+                placeholder="Anything the team should know about this sample"
+                value={field.value ?? ""}
+                onChange={field.onChange}
+              />
+            )}
           />
         </Field>
       </SectionCard>
@@ -631,13 +637,18 @@ export function SampleForm({
         </div>
 
         <Field id="smp-process-notes" label="Sample Process Notes">
-          <textarea
-            id="smp-process-notes"
-            rows={3}
-            className="nt-input resize-y"
-            style={{ fontWeight: 400 }}
-            placeholder="How the sample was (or should be) processed"
-            {...register("processNotes")}
+          <Controller
+            control={control}
+            name="processNotes"
+            render={({ field }) => (
+              <NotesField
+                id="smp-process-notes"
+                rows={3}
+                placeholder="How the sample was (or should be) processed"
+                value={field.value ?? ""}
+                onChange={field.onChange}
+              />
+            )}
           />
         </Field>
       </SectionCard>

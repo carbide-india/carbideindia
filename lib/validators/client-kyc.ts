@@ -125,6 +125,8 @@ const ClientKycFieldsSchema = z.object({
   kycSalesPersonId: z.string().uuid().optional(),
   businessCardFrontUrl: OptionalText(2000),
   businessCardBackUrl: OptionalText(2000),
+  // Additional document/scan URLs (the "Other" tile) — already-uploaded blobs.
+  businessCardOtherUrls: z.array(z.string().trim().max(2000)).optional(),
 });
 
 export const CreateClientKycSchema = ClientKycFieldsSchema;

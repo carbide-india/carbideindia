@@ -74,6 +74,7 @@ export function buildKycClientPatch(v: Kyc): Partial<ClientInsert> {
     kycSalesPersonId: v.kycSalesPersonId ?? null,
     businessCardFrontUrl: v.businessCardFrontUrl ?? null,
     businessCardBackUrl: v.businessCardBackUrl ?? null,
+    businessCardOtherUrls: v.businessCardOtherUrls ?? null,
     notes: v.notes ?? null,
   };
 }

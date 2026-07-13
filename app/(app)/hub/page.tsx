@@ -30,7 +30,7 @@ const MODULES: {
   },
   {
     key: "enquiries",
-    title: "ENQUIRIES",
+    title: "Forms",
     desc: "Manage incoming requests, client quotations, and sales pipeline tracking.",
     href: "/enquiries" as Route,
     Icon: FileText,
@@ -83,7 +83,7 @@ export default async function HubPage() {
         <div className="mx-auto flex h-[80px] w-full max-w-[1320px] items-center gap-6 px-8">
           <Link href={"/hub" as Route} className="flex shrink-0 items-center gap-3" aria-label="Carbide India hub">
             <img src="/brand/logo.png" alt="" className="h-11 w-auto" style={{ display: "block" }} />
-            <span className="text-[21px] font-extrabold tracking-tight text-[#1a2a5e]">CARBIDE INDIA</span>
+            <span className="text-[21px] font-extrabold tracking-tight text-[#3f3f94]">CARBIDE INDIA</span>
           </Link>
 
           <HubSearch />
@@ -111,9 +111,6 @@ export default async function HubPage() {
         <h1 className="hub-in text-[44px] font-extrabold leading-[1.1] tracking-tight text-[#0f172a]">
           Welcome back, {firstName}
         </h1>
-        <p className="hub-in mt-2 text-[19px] font-medium text-[#4b5563]" style={{ animationDelay: ".05s" }}>
-          Choose your workspace to get started
-        </p>
 
         {/* Module cards */}
         <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">

@@ -3,6 +3,7 @@ import { requireUser, getCurrentEmployee } from "@/lib/auth/current";
 import { getFormDraft } from "@/lib/queries/form-drafts";
 import { listMasterOptions } from "@/lib/queries/masters";
 import { listEmployeeOptions } from "@/lib/queries/employees";
+import { listCustomOptionsMap } from "@/lib/queries/custom-lists";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
 import { UserMenuServer } from "@/components/header/user-menu-server";
 import { loadLookups, specRefKinds } from "@/lib/import/lookups";
@@ -28,13 +29,14 @@ export default async function NewClientKycPage({
   const sp = await searchParams;
   const draftParam = typeof sp.draft === "string" ? sp.draft : undefined;
   const draftPayload = draftParam ? await getFormDraft("kyc", draftParam) : null;
-  const [customerTypes, industryTypes, productTypes, departments, employees] =
+  const [customerTypes, industryTypes, productTypes, departments, employees, kycLists] =
     await Promise.all([
       listMasterOptions("customer_type"),
       listMasterOptions("industry_type"),
       listMasterOptions("product_type"),
       listMasterOptions("department"),
       listEmployeeOptions(),
+      listCustomOptionsMap("kyc"),
     ]);
 
   // Admins get a Bulk Upload entry in the sidebar (opens the client import modal).
@@ -65,6 +67,12 @@ export default async function NewClientKycPage({
           productTypes={productTypes}
           departments={departments}
           employees={employees}
+          paymentTermsOptions={kycLists["payment_terms"]}
+          freightOptions={kycLists["freight_charges"]}
+          creditDaysOptions={kycLists["credit_days"]}
+          creditLimitOptions={kycLists["credit_limit"]}
+          qtyDeviationOptions={kycLists["qty_deviation"]}
+          transporterOptions={kycLists["transporter"]}
           enableDrafts
           resumeDraftId={draftPayload ? draftParam : undefined}
           initialValues={draftPayload ? (draftPayload as Partial<KycFormValues>) : undefined}

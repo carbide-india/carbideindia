@@ -22,6 +22,7 @@ export const ProductItemSchema = z.object({
   drawingRevisionNo: OptionalText(60),
   shape:             z.enum(INQUIRY_SHAPES).optional(),
   outerDia: ItemNum, innerDia: ItemNum, length: ItemNum, width: ItemNum, thickness: ItemNum,
+  dimensionUnit: z.string().trim().max(20).optional(),
   dimensionNotes: OptionalText(2000),
   gradeId:     z.string().uuid().optional(),
   gradeCustomer: OptionalText(120),

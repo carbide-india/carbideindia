@@ -1,0 +1,107 @@
+/**
+ * Per-form "Custom" dropdown lists — the form-scoped option lists that live
+ * outside the shared Masters module. Each form family that has custom lists
+ * declares them here; this registry drives BOTH the "Custom" editor UI and the
+ * seed/fallback defaults used until an admin edits a list.
+ *
+ * Shared / cross-form lists (Customer Type, Industry Type, …) stay in the
+ * Masters module — do NOT add those here.
+ *
+ * No DB / server-only import — safe on client + server.
+ */
+
+export interface CustomListDef {
+  /** listKey stored on form_custom_options.list_key. */
+  key: string;
+  /** Human title shown in the editor + as the field label. */
+  label: string;
+  hint?: string;
+  /** "number" lists format their labels (e.g. credit days/limit). */
+  kind?: "text" | "number";
+  /** Seed + fallback options (used until the list is edited). */
+  defaults: string[];
+}
+
+export interface FormCustomListsDef {
+  formKey: string;
+  formLabel: string;
+  /** Route of this form's Custom editor page. */
+  editorRoute: string;
+  lists: CustomListDef[];
+}
+
+export const CUSTOM_LISTS: Record<string, FormCustomListsDef> = {
+  kyc: {
+    formKey: "kyc",
+    formLabel: "Client KYC",
+    editorRoute: "/clients/custom",
+    lists: [
+      {
+        key: "payment_terms",
+        label: "Payment Terms",
+        defaults: [
+          "Advance",
+          "50% Advance, 50% on Delivery",
+          "Against Delivery",
+          "30 Days Credit",
+          "45 Days Credit",
+          "60 Days Credit",
+          "As per PO",
+        ],
+      },
+      {
+        key: "freight_charges",
+        label: "Freight Charges",
+        defaults: ["Paid", "To Pay", "Extra at Actuals", "Included", "Ex-Works"],
+      },
+      {
+        key: "credit_days",
+        label: "Credit Days",
+        kind: "number",
+        defaults: ["0", "15", "30", "45", "60", "90"],
+      },
+      {
+        key: "credit_limit",
+        label: "Credit Limit",
+        kind: "number",
+        defaults: ["50000", "100000", "250000", "500000", "1000000"],
+      },
+      {
+        key: "qty_deviation",
+        label: "Quantity Deviation",
+        defaults: ["±5%", "±10%", "±15%", "±20%", "As per PO"],
+      },
+      {
+        key: "transporter",
+        label: "Transporter",
+        defaults: [
+          "Blue Dart",
+          "DTDC",
+          "VRL",
+          "Gati",
+          "Delhivery",
+          "Professional Couriers",
+          "Other",
+        ],
+      },
+    ],
+  },
+};
+
+/** Is `listKey` a real list for `formKey`? Guards the server actions. */
+export function isKnownCustomList(formKey: string, listKey: string): boolean {
+  return Boolean(CUSTOM_LISTS[formKey]?.lists.some((l) => l.key === listKey));
+}
+
+/**
+ * The custom-lists editor a route segment maps to (for the sidebar "Custom"
+ * button). The clients family (and its /contacts book) own the KYC lists.
+ */
+export function customEditorForSegment(
+  seg: string,
+): { route: string; formKey: string } | null {
+  const formKey = seg === "clients" || seg === "contacts" ? "kyc" : null;
+  if (!formKey) return null;
+  const def = CUSTOM_LISTS[formKey];
+  return def ? { route: def.editorRoute, formKey } : null;
+}

@@ -67,7 +67,7 @@ export function genericDraftLabel(
     const v = payload[f];
     if (typeof v === "string" && v.trim()) return v.trim();
   }
-  return `Untitled ${meta.noun.toLowerCase()}`;
+  return `Untitled ${meta.noun}`;
 }
 
 /** Guard: skip essentially-empty payloads so typing nothing never saves a draft. */
