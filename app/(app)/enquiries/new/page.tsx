@@ -5,6 +5,7 @@ import { listClientOptions } from "@/lib/queries/clients";
 import { listEmployeeOptions } from "@/lib/queries/employees";
 import { listMasterOptions, getShapeProfiles } from "@/lib/queries/masters";
 import { getEnquiryDraft } from "@/lib/queries/enquiry-drafts";
+import { listCustomOptionsMap } from "@/lib/queries/custom-lists";
 import type { InquiryFormValues } from "@/components/inquiries/inquiry-form";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +23,7 @@ export default async function EnquiriesNewPage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const draftParam = typeof sp.draft === "string" ? sp.draft : undefined;
 
-  const [clients, employees, grades, tolerances, conditions, departments, shapes, shapeProfiles] = await Promise.all([
+  const [clients, employees, grades, tolerances, conditions, departments, shapes, shapeProfiles, enquiryLists] = await Promise.all([
     listClientOptions(),
     listEmployeeOptions(),
     listMasterOptions("internal_grade"),
@@ -31,6 +32,7 @@ export default async function EnquiriesNewPage({ searchParams }: PageProps) {
     listMasterOptions("department"),
     listMasterOptions("shape"),
     getShapeProfiles(),
+    listCustomOptionsMap("enquiry"),
   ]);
 
   const draftPayload = draftParam ? await getEnquiryDraft(draftParam) : null;
@@ -54,6 +56,9 @@ export default async function EnquiriesNewPage({ searchParams }: PageProps) {
         departments={departments}
         shapeProfiles={shapeProfiles.byName}
         pickerMasters={pickerMasters}
+        stateOptions={enquiryLists["state"]}
+        cityOptions={enquiryLists["city"]}
+        unitOptions={enquiryLists["unit"]}
         defaultSalesPersonId={me.id}
         enableDrafts
         resumeDraftId={draftPayload ? draftParam : undefined}

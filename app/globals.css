@@ -1580,8 +1580,10 @@ html[data-density="compact"] body {
   transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease, transform 120ms ease;
 }
 .nt-input::placeholder {
-  color: var(--color-ink-subtle);
-  font-weight: 500;
+  /* Lighter + normal-weight so placeholders read as hints, not filled values. */
+  color: #aab0bd;
+  font-weight: 400;
+  opacity: 1;
 }
 .nt-input:hover {
   border-color: #9aa2bd;

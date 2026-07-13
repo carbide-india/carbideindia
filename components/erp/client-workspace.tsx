@@ -70,6 +70,9 @@ interface ClientWorkspaceProps {
   timeline: ClientTimelineEntry[];
   documents: ClientDocument[];
   isAdmin: boolean;
+  /** When true, render content only (no AppShell) — the page supplies the new
+   *  module-shell chrome instead of the legacy ERP rail. */
+  embedded?: boolean;
 }
 
 const NAV: ReadonlyArray<RailGroup> = [
@@ -139,10 +142,11 @@ export function ClientWorkspace({
   timeline,
   documents,
   isAdmin,
+  embedded,
 }: ClientWorkspaceProps) {
   const [tab, setTab] = React.useState<TabKey>("overview");
 
-  const newEnquiryHref = `/inquiries/new?clientId=${header.id}` as Route;
+  const newEnquiryHref = "/enquiries/new" as Route;
 
   const tabBody: Record<TabKey, React.ReactNode> = {
     overview: (
@@ -176,16 +180,7 @@ export function ClientWorkspace({
     ),
   };
 
-  return (
-    <AppShell
-      nav={NAV}
-      collapseKey="erp-client-shell-collapsed"
-      breadcrumb={[
-        { label: "Sales", href: "/clients" },
-        { label: "Clients", href: "/clients" },
-        { label: header.name },
-      ]}
-    >
+  const content = (
       <div className="flex flex-col gap-6">
         {/* Workspace header */}
         <div
@@ -343,6 +338,20 @@ export function ClientWorkspace({
           <div className="p-6 max-md:p-4">{tabBody[tab]}</div>
         </div>
       </div>
+  );
+
+  if (embedded) return content;
+  return (
+    <AppShell
+      nav={NAV}
+      collapseKey="erp-client-shell-collapsed"
+      breadcrumb={[
+        { label: "Sales", href: "/clients" },
+        { label: "Clients", href: "/clients" },
+        { label: header.name },
+      ]}
+    >
+      {content}
     </AppShell>
   );
 }

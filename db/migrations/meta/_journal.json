@@ -337,6 +337,13 @@
       "when": 1783946057761,
       "tag": "0048_mysterious_barracuda",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1783963073281,
+      "tag": "0049_loose_cable",
+      "breakpoints": true
     }
   ]
 }

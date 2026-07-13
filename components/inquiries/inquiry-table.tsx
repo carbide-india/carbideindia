@@ -29,11 +29,18 @@ import {
 import type { InquiryListItem } from "@/lib/queries/inquiries";
 import type { EmployeeOption } from "@/lib/queries/employees";
 
-export const NEW_INQUIRY_ROUTE: Route = "/inquiries/new";
+export const NEW_INQUIRY_ROUTE: Route = "/enquiries/new";
 
 interface Props {
   rows: InquiryListItem[];
   employees: EmployeeOption[];
+  /**
+   * "enquiry" (default) is the Enquiry Register — enquiry columns only.
+   * "feasibility" is the Primary Feasibility queue — shows the feasibility
+   * status column, feasibility bulk action, and deep-links rows to the
+   * feasibility tab.
+   */
+  variant?: "enquiry" | "feasibility";
 }
 
 /**
@@ -43,7 +50,14 @@ interface Props {
  * rows at most). The sales-person filter matches on the joined name, which is
  * all the row carries.
  */
-export function InquiryTable({ rows, employees }: Props) {
+export function InquiryTable({ rows, employees, variant = "enquiry" }: Props) {
+  const hrefFor = React.useCallback(
+    (id: string): Route =>
+      (variant === "feasibility"
+        ? `/enquiries/feasibility/${id}`
+        : `/enquiries/register/${id}`) as Route,
+    [variant],
+  );
   const columns = React.useMemo<RegisterColumn<InquiryListItem>[]>(
     () => [
       {
@@ -54,7 +68,7 @@ export function InquiryTable({ rows, employees }: Props) {
         sortValue: (r) => r.smNumber,
         cell: (r) => (
           <Link
-            href={`/enquiries/register/${r.id}` as Route}
+            href={hrefFor(r.id)}
             className="font-semibold text-ink-strong hover:underline"
             style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}
           >
@@ -115,32 +129,38 @@ export function InquiryTable({ rows, employees }: Props) {
           <span className="text-ink-soft">{r.salesPersonName ?? "—"}</span>
         ),
       },
-      {
-        id: "enquiryStatus",
-        header: "Enquiry",
-        width: "128px",
-        sortValue: (r) => ENQUIRY_STATUS_LABELS[r.enquiryStatus],
-        cell: (r) => (
-          <Chip
-            label={ENQUIRY_STATUS_LABELS[r.enquiryStatus]}
-            tone={ENQUIRY_STATUS_COLORS[r.enquiryStatus]}
-          />
-        ),
-      },
-      {
-        id: "feasibilityStatus",
-        header: "Feasibility",
-        width: "148px",
-        sortValue: (r) => FEASIBILITY_STATUS_LABELS[r.feasibilityStatus],
-        cell: (r) => (
-          <Chip
-            label={FEASIBILITY_STATUS_LABELS[r.feasibilityStatus]}
-            tone={FEASIBILITY_STATUS_COLORS[r.feasibilityStatus]}
-          />
-        ),
-      },
+      // Register shows Enquiry status; the Feasibility queue shows Feasibility.
+      ...(variant === "feasibility"
+        ? ([
+            {
+              id: "feasibilityStatus",
+              header: "Feasibility",
+              width: "148px",
+              sortValue: (r) => FEASIBILITY_STATUS_LABELS[r.feasibilityStatus],
+              cell: (r) => (
+                <Chip
+                  label={FEASIBILITY_STATUS_LABELS[r.feasibilityStatus]}
+                  tone={FEASIBILITY_STATUS_COLORS[r.feasibilityStatus]}
+                />
+              ),
+            },
+          ] as RegisterColumn<InquiryListItem>[])
+        : ([
+            {
+              id: "enquiryStatus",
+              header: "Enquiry",
+              width: "128px",
+              sortValue: (r) => ENQUIRY_STATUS_LABELS[r.enquiryStatus],
+              cell: (r) => (
+                <Chip
+                  label={ENQUIRY_STATUS_LABELS[r.enquiryStatus]}
+                  tone={ENQUIRY_STATUS_COLORS[r.enquiryStatus]}
+                />
+              ),
+            },
+          ] as RegisterColumn<InquiryListItem>[])),
     ],
-    [],
+    [variant, hrefFor],
   );
 
   const filters = React.useMemo<FilterConfig<InquiryListItem>[]>(
@@ -177,18 +197,33 @@ export function InquiryTable({ rows, employees }: Props) {
       rows={rows}
       getRowId={(r) => r.id}
       columns={columns}
-      getOpenHref={(r) => `/enquiries/register/${r.id}` as Route}
+      getOpenHref={(r) => hrefFor(r.id)}
       filters={filters}
-      exportFilename="enquiries"
+      exportFilename={variant === "feasibility" ? "feasibility" : "enquiries"}
       bulkActions={[
-        {
-          label: "Set status",
-          options: ENQUIRY_STATUSES.map((s) => ({
-            value: s,
-            label: ENQUIRY_STATUS_LABELS[s],
-          })),
-          onApply: (ids, value) => setEnquiryStatusBulk(ids, value),
-        },
+        ...(variant === "feasibility"
+          ? [
+              {
+                label: "Set feasibility",
+                options: FEASIBILITY_STATUSES.map((s) => ({
+                  value: s,
+                  label: FEASIBILITY_STATUS_LABELS[s],
+                })),
+                onApply: (ids: string[], value: string) =>
+                  setFeasibilityStatusBulk(ids, value),
+              },
+            ]
+          : [
+              {
+                label: "Set status",
+                options: ENQUIRY_STATUSES.map((s) => ({
+                  value: s,
+                  label: ENQUIRY_STATUS_LABELS[s],
+                })),
+                onApply: (ids: string[], value: string) =>
+                  setEnquiryStatusBulk(ids, value),
+              },
+            ]),
         {
           label: "Set priority",
           options: INQUIRY_PRIORITIES.map((p) => ({
@@ -198,21 +233,21 @@ export function InquiryTable({ rows, employees }: Props) {
           onApply: (ids, value) => setEnquiryPriorityBulk(ids, value),
         },
         {
-          label: "Set feasibility",
-          options: FEASIBILITY_STATUSES.map((s) => ({
-            value: s,
-            label: FEASIBILITY_STATUS_LABELS[s],
-          })),
-          onApply: (ids, value) => setFeasibilityStatusBulk(ids, value),
-        },
-        {
           label: "Assign sales person",
           options: employees.map((e) => ({ value: e.id, label: e.name })),
           onApply: (ids, value) => assignEnquirySalesPersonBulk(ids, value),
         },
       ]}
-      emptyTitle="No enquiries yet — create the first one."
-      emptyHint="New enquiries appear here, one SM number each."
+      emptyTitle={
+        variant === "feasibility"
+          ? "No enquiries to check yet."
+          : "No enquiries yet — create the first one."
+      }
+      emptyHint={
+        variant === "feasibility"
+          ? "Enquiries appear here to run their primary feasibility check."
+          : "New enquiries appear here, one SM number each."
+      }
     />
   );
 }

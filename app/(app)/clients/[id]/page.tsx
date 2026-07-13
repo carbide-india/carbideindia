@@ -12,6 +12,8 @@ import {
   getClientTimeline,
 } from "@/lib/queries/client-workspace";
 import { ClientWorkspace } from "@/components/erp/client-workspace";
+import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
+import { UserMenuServer } from "@/components/header/user-menu-server";
 
 export const dynamic = "force-dynamic";
 
@@ -52,16 +54,19 @@ export default async function ClientWorkspacePage({ params }: PageProps) {
     ]);
 
   return (
-    <ClientWorkspace
-      header={header}
-      kpis={kpis}
-      enquiries={enquiries}
-      pipeline={pipeline}
-      products={products}
-      financials={financials}
-      timeline={timeline}
-      documents={documents}
-      isAdmin
-    />
+    <EnquiryModuleShell title="Client Record" userMenu={<UserMenuServer />}>
+      <ClientWorkspace
+        header={header}
+        kpis={kpis}
+        enquiries={enquiries}
+        pipeline={pipeline}
+        products={products}
+        financials={financials}
+        timeline={timeline}
+        documents={documents}
+        isAdmin
+        embedded
+      />
+    </EnquiryModuleShell>
   );
 }

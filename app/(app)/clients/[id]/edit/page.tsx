@@ -70,6 +70,9 @@ export default async function EditClientPage({ params }: PageProps) {
           creditLimitOptions={kycLists["credit_limit"]}
           qtyDeviationOptions={kycLists["qty_deviation"]}
           transporterOptions={kycLists["transporter"]}
+          bankOptions={kycLists["bank_name"]}
+          accountTypeOptions={kycLists["account_type"]}
+          stateOptions={kycLists["state"]}
         />
       </main>
       <DashboardFooter />

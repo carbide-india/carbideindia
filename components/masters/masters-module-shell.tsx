@@ -19,6 +19,7 @@ import {
   Truck,
   Layers,
   Building2,
+  Boxes,
   LayoutGrid,
   PanelLeftClose,
   PanelLeftOpen,
@@ -44,6 +45,7 @@ const KIND_ICON: Record<MasterKind, typeof Users> = {
 
 // Derive the header title from the route's [kind] segment.
 function titleFor(pathname: string): string {
+  if (pathname.startsWith("/items")) return "Product Master";
   const kind = pathname.split("/")[2] as MasterKind | undefined;
   if (kind && kind in MASTER_KIND_LABELS) return MASTER_KIND_LABELS[kind];
   return "Masters";
@@ -158,6 +160,25 @@ export function MastersModuleShell({
             </span>
 
             <nav className="flex flex-col gap-2 pb-2">
+              {/* Product Master (the Item Master) sits at the very top. */}
+              {(() => {
+                const base =
+                  "mst-nav-item flex h-[44px] items-center gap-3 rounded-xl border px-3.5 text-[13.5px] transition";
+                const isActive = pathname.startsWith("/items");
+                return (
+                  <Link
+                    href={"/items" as Route}
+                    className={
+                      isActive
+                        ? `${base} border-[#3f3f94] bg-[#3f3f94] font-bold text-white shadow-[0_2px_8px_rgba(63,63,148,0.25)]`
+                        : `${base} border-[#e6e8ec] bg-white font-semibold text-[#3a4152] hover:border-[#c9c9ea] hover:bg-[#f4f4fd] hover:text-[#3f3f94]`
+                    }
+                  >
+                    <Boxes className="h-[18px] w-[18px] shrink-0" />
+                    Product Master
+                  </Link>
+                );
+              })()}
               {MASTER_KINDS.map((kind, i) => {
                 const href = `/masters/${kind}` as Route;
                 const isActive = pathname === `/masters/${kind}`;

@@ -324,8 +324,9 @@ export function QuotationForm({
               }
             />
 
-            {/* Product identity — one dense line. */}
-            <div className="grid grid-cols-10 gap-2.5 max-xl:grid-cols-5 max-md:grid-cols-2">
+            {/* Product identity — one dense line; bottom-align so the input
+                boxes line up even when some labels wrap to two lines. */}
+            <div className="grid grid-cols-10 items-end gap-2.5 max-xl:grid-cols-5 max-md:grid-cols-2">
               <Field
                 id={`lines.${index}.custProductName`}
                 label="Customer Product Name"
@@ -508,7 +509,7 @@ export function QuotationForm({
             onClick={() => append({ ...EMPTY_LINE })}
             className="inline-flex items-center gap-2 rounded-chip border border-brand bg-brand/8 px-4 py-2.5 text-[13px] font-semibold text-brand transition-colors hover:bg-brand/12"
           >
-            + Add line
+            + Add Product
           </button>
         </div>
       </SectionCard>

@@ -2,12 +2,14 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Plus, X, Loader2 } from "lucide-react";
+import { Plus, X, Loader2, ChevronUp, ChevronDown, Search } from "lucide-react";
 import {
   addCustomOption,
   renameCustomOption,
   removeCustomOption,
   seedCustomListDefaults,
+  moveCustomOption,
+  clearCustomList,
 } from "@/app/(app)/_actions/custom-lists";
 import { fireToast } from "@/lib/toast";
 import type { CustomListView } from "@/lib/queries/custom-lists";
@@ -15,9 +17,10 @@ import type { CustomListView } from "@/lib/queries/custom-lists";
 type ActionResult = { ok: true } | { ok: false; error: string };
 
 /**
- * The per-form "Custom" lists editor — one card per list. A list backed by DB
- * rows is fully editable (rename / remove / add); an un-seeded list shows the
- * registry defaults as read-only suggestions with a one-click import.
+ * The per-form "Custom Dropdown Master" editor. Cards flow in a dense masonry
+ * so short lists pack tight and never leave gaps. Each card: search (for long
+ * lists), a scrollable option list, reorder up/down, rename, remove, add, and a
+ * one-click import of the registry defaults for un-seeded lists.
  */
 export function CustomListsEditor({
   formKey,
@@ -27,7 +30,7 @@ export function CustomListsEditor({
   lists: CustomListView[];
 }) {
   return (
-    <div className="grid grid-cols-3 gap-5 max-lg:grid-cols-2 max-md:grid-cols-1">
+    <div className="gap-5 [column-fill:_balance] columns-1 sm:columns-2 xl:columns-3">
       {lists.map((l) => (
         <ListCard key={l.key} formKey={formKey} list={l} />
       ))}
@@ -39,6 +42,7 @@ function ListCard({ formKey, list }: { formKey: string; list: CustomListView }) 
   const router = useRouter();
   const [pending, start] = React.useTransition();
   const [draft, setDraft] = React.useState("");
+  const [query, setQuery] = React.useState("");
 
   function run(fn: () => Promise<ActionResult>) {
     start(async () => {
@@ -51,21 +55,58 @@ function ListCard({ formKey, list }: { formKey: string; list: CustomListView }) 
     });
   }
 
+  const q = query.trim().toLowerCase();
+  const shown = q ? list.options.filter((o) => o.label.toLowerCase().includes(q)) : list.options;
+  const many = list.options.length > 8;
+  const canReorder = list.seeded && !q; // order is meaningless while filtering
+
   return (
-    <section className="rounded-section border border-hairline bg-surface-card p-5" style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}>
+    <section
+      className="mb-5 inline-block w-full break-inside-avoid rounded-section border border-hairline bg-surface-card p-5 align-top"
+      style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}
+    >
       <div className="mb-3 flex items-baseline justify-between gap-2">
-        <h3 className="text-[14px] font-extrabold text-ink-strong">{list.label}</h3>
-        {!list.seeded && (
+        <h3 className="flex items-center gap-2 text-[14px] font-extrabold text-ink-strong">
+          {list.label}
+          <span className="rounded-full bg-[#efeffb] px-2 py-0.5 text-[11px] font-bold tabular-nums text-[#3f3f94]">
+            {list.options.length}
+          </span>
+        </h3>
+        {list.seeded ? (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => run(() => clearCustomList(formKey, list.key))}
+            className="shrink-0 text-[12px] font-bold text-ink-subtle transition hover:text-[#d32f2f] hover:underline disabled:opacity-50"
+          >
+            Clear list
+          </button>
+        ) : (
           <button
             type="button"
             disabled={pending}
             onClick={() => run(() => seedCustomListDefaults(formKey, list.key))}
-            className="text-[12px] font-bold text-[#3f3f94] transition hover:underline disabled:opacity-50"
+            className="shrink-0 text-[12px] font-bold text-[#3f3f94] transition hover:underline disabled:opacity-50"
           >
             Use default options
           </button>
         )}
       </div>
+
+      {list.hint && <p className="mb-2 text-[12px] text-ink-subtle">{list.hint}</p>}
+
+      {many && (
+        <div className="mb-2 flex h-9 items-center gap-2 rounded-lg border border-hairline bg-surface-soft px-2.5">
+          <Search className="h-[15px] w-[15px] shrink-0 text-ink-subtle" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={`Search ${list.label.toLowerCase()}…`}
+            className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-[#aab0bd]"
+            aria-label={`Search ${list.label}`}
+          />
+        </div>
+      )}
 
       {!list.seeded && (
         <p className="mb-2 text-[12px] text-ink-subtle">
@@ -73,23 +114,31 @@ function ListCard({ formKey, list }: { formKey: string; list: CustomListView }) 
         </p>
       )}
 
-      <div className="flex flex-col gap-1.5">
-        {list.options.map((o) =>
-          list.seeded ? (
-            <OptionRow
-              key={o.id}
-              label={o.label}
-              onRename={(label) => run(() => renameCustomOption(o.id, label, formKey))}
-              onRemove={() => run(() => removeCustomOption(o.id, formKey))}
-            />
-          ) : (
-            <div
-              key={o.id}
-              className="flex items-center rounded-lg border border-dashed border-hairline px-3 py-1.5 text-[13px] text-ink-subtle"
-            >
-              {o.label}
-            </div>
-          ),
+      <div className="flex max-h-[300px] flex-col gap-1.5 overflow-y-auto pr-0.5">
+        {shown.length === 0 ? (
+          <p className="py-2 text-[13px] text-ink-subtle">No matches.</p>
+        ) : (
+          shown.map((o, i) =>
+            list.seeded ? (
+              <OptionRow
+                key={o.id}
+                label={o.label}
+                canMoveUp={canReorder && i > 0}
+                canMoveDown={canReorder && i < shown.length - 1}
+                onMoveUp={() => run(() => moveCustomOption(formKey, list.key, o.id, "up"))}
+                onMoveDown={() => run(() => moveCustomOption(formKey, list.key, o.id, "down"))}
+                onRename={(label) => run(() => renameCustomOption(o.id, label, formKey))}
+                onRemove={() => run(() => removeCustomOption(o.id, formKey))}
+              />
+            ) : (
+              <div
+                key={o.id}
+                className="rounded-lg border border-dashed border-hairline px-3 py-1.5 text-[13px] text-ink-subtle"
+              >
+                {o.label}
+              </div>
+            ),
+          )
         )}
       </div>
 
@@ -125,17 +174,45 @@ function ListCard({ formKey, list }: { formKey: string; list: CustomListView }) 
 
 function OptionRow({
   label,
+  canMoveUp,
+  canMoveDown,
+  onMoveUp,
+  onMoveDown,
   onRename,
   onRemove,
 }: {
   label: string;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
   onRename: (label: string) => void;
   onRemove: () => void;
 }) {
   const [val, setVal] = React.useState(label);
   React.useEffect(() => setVal(label), [label]);
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1.5">
+      <div className="flex shrink-0 flex-col">
+        <button
+          type="button"
+          onClick={onMoveUp}
+          disabled={!canMoveUp}
+          aria-label="Move up"
+          className="grid h-[18px] w-6 place-items-center rounded text-ink-subtle transition hover:text-[#3f3f94] disabled:opacity-25"
+        >
+          <ChevronUp className="h-[14px] w-[14px]" />
+        </button>
+        <button
+          type="button"
+          onClick={onMoveDown}
+          disabled={!canMoveDown}
+          aria-label="Move down"
+          className="grid h-[18px] w-6 place-items-center rounded text-ink-subtle transition hover:text-[#3f3f94] disabled:opacity-25"
+        >
+          <ChevronDown className="h-[14px] w-[14px]" />
+        </button>
+      </div>
       <input
         value={val}
         onChange={(e) => setVal(e.target.value)}

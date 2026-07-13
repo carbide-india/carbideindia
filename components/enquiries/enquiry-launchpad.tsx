@@ -90,10 +90,10 @@ export function EnquiryLaunchpad() {
     <div>
       {/* Header + filter */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-[34px] font-extrabold leading-tight tracking-tight text-[#1e2f66]">
+        <h1 className="text-[34px] font-extrabold leading-tight tracking-tight text-[#3f3f94]">
           Select a Form to Proceed!
         </h1>
-        <div className="flex h-[42px] w-full max-w-[300px] items-center gap-2 rounded-lg border border-[#dfe1e6] bg-white px-3 focus-within:border-[#2b46b5] focus-within:ring-2 focus-within:ring-[#2b46b5]/20">
+        <div className="flex h-[42px] w-full max-w-[300px] items-center gap-2 rounded-lg border border-[#dfe1e6] bg-white px-3 focus-within:border-[#3f3f94] focus-within:ring-2 focus-within:ring-[#3f3f94]/20">
           <Search className="h-4 w-4 shrink-0 text-[#9aa0ab]" />
           <input
             value={q}
@@ -113,12 +113,12 @@ export function EnquiryLaunchpad() {
             className="group flex flex-col rounded-xl border border-[#e6e8ec] bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#c7ccf5] hover:shadow-[0_10px_26px_rgba(30,47,102,0.10)]"
           >
             <div className="grid h-11 w-11 place-items-center rounded-lg bg-[#eef1fb] transition group-hover:bg-[#e2e8fb]">
-              <f.Icon className="h-[22px] w-[22px] text-[#2b46b5]" strokeWidth={1.9} />
+              <f.Icon className="h-[22px] w-[22px] text-[#3f3f94]" strokeWidth={1.9} />
             </div>
-            <h3 className="mt-4 text-[17px] font-extrabold tracking-tight text-[#1e2f66]">{f.title}</h3>
+            <h3 className="mt-4 text-[17px] font-extrabold tracking-tight text-[#3f3f94]">{f.title}</h3>
             <p className="mt-1.5 min-h-[58px] flex-1 text-[13px] font-medium leading-[1.55] text-[#4b5563]">{f.desc}</p>
             <span
-              className="mt-3 inline-flex h-[34px] w-max items-center gap-2 rounded-md border border-[#d5d8de] px-3 text-[11px] tracking-[0.1em] text-[#1e2f66] transition group-hover:border-[#2b46b5] group-hover:bg-[#f5f7ff] group-hover:text-[#2b46b5]"
+              className="mt-3 inline-flex h-[34px] w-max items-center gap-2 rounded-md border border-[#d5d8de] px-3 text-[11px] tracking-[0.1em] text-[#3f3f94] transition group-hover:border-[#3f3f94] group-hover:bg-[#f5f7ff] group-hover:text-[#3f3f94]"
               style={{ fontFamily: MONO }}
             >
               START FORM

@@ -73,6 +73,9 @@ export default async function NewClientKycPage({
           creditLimitOptions={kycLists["credit_limit"]}
           qtyDeviationOptions={kycLists["qty_deviation"]}
           transporterOptions={kycLists["transporter"]}
+          bankOptions={kycLists["bank_name"]}
+          accountTypeOptions={kycLists["account_type"]}
+          stateOptions={kycLists["state"]}
           enableDrafts
           resumeDraftId={draftPayload ? draftParam : undefined}
           initialValues={draftPayload ? (draftPayload as Partial<KycFormValues>) : undefined}

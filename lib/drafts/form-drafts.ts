@@ -21,18 +21,20 @@ export interface FormDraftMeta {
   noun: string;
   newRoute: string;
   draftsRoute: string;
+  /** Per-form Recycle Bin route. */
+  recycleBinRoute: string;
   /** Ordered field names tried, in order, to derive a one-line draft label. */
   labelFields: string[];
 }
 
 export const FORM_DRAFT_META: Record<FormDraftKind, FormDraftMeta> = {
-  kyc: { noun: "Client KYC", newRoute: "/clients/new", draftsRoute: "/clients/drafts", labelFields: ["name", "companyName"] },
-  sample: { noun: "Sample", newRoute: "/samples/new", draftsRoute: "/samples/drafts", labelFields: ["sampleNo", "sampleNotes"] },
-  costing: { noun: "Costing", newRoute: "/costings/new", draftsRoute: "/costings/drafts", labelFields: ["custProductName", "itemCode"] },
-  quotation: { noun: "Quotation", newRoute: "/quotations/new", draftsRoute: "/quotations/drafts", labelFields: ["quoteNo", "companyName"] },
-  negotiation: { noun: "Negotiation", newRoute: "/negotiations/new", draftsRoute: "/negotiations/drafts", labelFields: ["negotiationNo", "companyName"] },
-  "sales-order": { noun: "Sales Order", newRoute: "/sales-orders/new", draftsRoute: "/sales-orders/drafts", labelFields: ["poNumber", "companyName"] },
-  meeting: { noun: "Meeting", newRoute: "/meetings/new", draftsRoute: "/meetings/drafts", labelFields: ["companyName", "clientName", "title"] },
+  kyc: { noun: "Client KYC", newRoute: "/clients/new", draftsRoute: "/clients/drafts", recycleBinRoute: "/clients/recycle-bin", labelFields: ["name", "companyName"] },
+  sample: { noun: "Sample", newRoute: "/samples/new", draftsRoute: "/samples/drafts", recycleBinRoute: "/samples/recycle-bin", labelFields: ["sampleNo", "sampleNotes"] },
+  costing: { noun: "Costing", newRoute: "/costings/new", draftsRoute: "/costings/drafts", recycleBinRoute: "/costings/recycle-bin", labelFields: ["custProductName", "itemCode"] },
+  quotation: { noun: "Quotation", newRoute: "/quotations/new", draftsRoute: "/quotations/drafts", recycleBinRoute: "/quotations/recycle-bin", labelFields: ["quoteNo", "companyName"] },
+  negotiation: { noun: "Negotiation", newRoute: "/negotiations/new", draftsRoute: "/negotiations/drafts", recycleBinRoute: "/negotiations/recycle-bin", labelFields: ["negotiationNo", "companyName"] },
+  "sales-order": { noun: "Sales Order", newRoute: "/sales-orders/new", draftsRoute: "/sales-orders/drafts", recycleBinRoute: "/sales-orders/recycle-bin", labelFields: ["poNumber", "companyName"] },
+  meeting: { noun: "Meeting", newRoute: "/meetings/new", draftsRoute: "/meetings/drafts", recycleBinRoute: "/meetings/recycle-bin", labelFields: ["companyName", "clientName", "title"] },
 };
 
 const KINDS = new Set<string>(FORM_DRAFT_KINDS);

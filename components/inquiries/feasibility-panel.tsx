@@ -226,7 +226,27 @@ export function FeasibilityPanel({
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-6" noValidate>
-      {/* ── SM-level summary ─────────────────────────────────────────── */}
+      {/* ── Product specs first — review each product, then mark its checks. */}
+      {products.map((p, i) => (
+        <SectionCard key={p.id}>
+          <GroupHeader n={i + 1} label={p.custProductName || p.itemCode || "Product"} />
+          <ProductFeasibilityContext product={p} inquiry={inquiry} />
+          <div className="grid grid-cols-5 gap-3 max-lg:grid-cols-3 max-md:grid-cols-1">
+            {CHECKS.map((c) => (
+              <VerdictCell
+                key={c.key}
+                control={control}
+                register={register}
+                base={`products.${p.id}`}
+                label={c.label}
+                k={c.key}
+              />
+            ))}
+          </div>
+        </SectionCard>
+      ))}
+
+      {/* ── SM-level summary + actions (after the per-product checks). ─── */}
       <SectionCard
         title="Feasibility"
         inlineHint
@@ -250,12 +270,14 @@ export function FeasibilityPanel({
               control={control}
               name="sm.feasPriority"
               render={({ field }) => (
-                <Segmented
-                  size="lg"
-                  options={PRIORITY_OPTS}
-                  value={field.value}
-                  onChange={field.onChange}
+                <Select
                   ariaLabel="Feasibility priority"
+                  value={field.value ?? ""}
+                  onValueChange={(v) =>
+                    field.onChange((v || undefined) as (typeof PRIORITY_OPTS)[number]["value"] | undefined)
+                  }
+                  placeholder="Select priority"
+                  options={PRIORITY_OPTS.map((o) => ({ value: o.value, label: o.label }))}
                 />
               )}
             />
@@ -265,12 +287,15 @@ export function FeasibilityPanel({
               control={control}
               name="sm.feasExport"
               render={({ field }) => (
-                <Segmented
-                  size="lg"
-                  options={YES_NO}
-                  value={field.value === undefined ? undefined : field.value ? "yes" : "no"}
-                  onChange={(v) => field.onChange(v === undefined ? undefined : v === "yes")}
+                <Select
                   ariaLabel="Export"
+                  value={field.value === undefined ? "" : field.value ? "yes" : "no"}
+                  onValueChange={(v) => field.onChange(v === "" ? undefined : v === "yes")}
+                  placeholder="Select"
+                  options={[
+                    { value: "yes", label: "Yes" },
+                    { value: "no", label: "No" },
+                  ]}
                 />
               )}
             />
@@ -309,26 +334,6 @@ export function FeasibilityPanel({
           />
         </Field>
       </SectionCard>
-
-      {/* ── One card per product ─────────────────────────────────────── */}
-      {products.map((p, i) => (
-        <SectionCard key={p.id}>
-          <GroupHeader n={i + 1} label={p.custProductName || p.itemCode || "Product"} />
-          <ProductFeasibilityContext product={p} inquiry={inquiry} />
-          <div className="grid grid-cols-5 gap-3 max-lg:grid-cols-3 max-md:grid-cols-1">
-            {CHECKS.map((c) => (
-              <VerdictCell
-                key={c.key}
-                control={control}
-                register={register}
-                base={`products.${p.id}`}
-                label={c.label}
-                k={c.key}
-              />
-            ))}
-          </div>
-        </SectionCard>
-      ))}
 
       {/* ── Footer: status + save ────────────────────────────────────── */}
       <div className="flex items-center justify-between border-t border-hairline pt-4">

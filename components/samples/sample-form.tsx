@@ -25,7 +25,6 @@ import { cn } from "@/lib/utils";
 import { Select } from "@/components/ui/select";
 import { NotesField } from "@/components/ui/notes-field";
 import { LocationSelect } from "@/components/samples/location-select";
-import { AudioNoteRecorder } from "@/components/samples/audio-note-recorder";
 import {
   Field,
   MiniField,
@@ -499,24 +498,16 @@ export function SampleForm({
                   />
                 </MiniField>
                 <MiniField label="Notes" className="w-full">
-                  <textarea
-                    rows={2}
-                    className="nt-input resize-y"
-                    style={{ fontWeight: 400 }}
-                    aria-label={`${row.label} notes`}
-                    placeholder={`Notes about the ${row.label.toLowerCase()} stage`}
-                    {...register(row.notes)}
-                  />
-                </MiniField>
-                <MiniField label="Voice Note" className="w-full">
                   <Controller
                     control={control}
-                    name={row.audio}
+                    name={row.notes}
                     render={({ field }) => (
-                      <AudioNoteRecorder
-                        value={field.value || undefined}
-                        onChange={(url) => field.onChange(url ?? "")}
-                        label={`${row.label} voice note`}
+                      <NotesField
+                        ariaLabel={`${row.label} notes`}
+                        rows={2}
+                        placeholder={`Notes about the ${row.label.toLowerCase()} stage`}
+                        value={(field.value as string | undefined) ?? ""}
+                        onChange={field.onChange}
                       />
                     )}
                   />
@@ -562,7 +553,7 @@ export function SampleForm({
 
       {/* ── 5 · Reports & Processing ─────────────────────────────────── */}
       <SectionCard title="Reports & Processing">
-        <div className="grid grid-cols-3 gap-4 max-lg:grid-cols-2 max-md:grid-cols-1 items-start">
+        <div className="grid grid-cols-[1fr_auto_auto] gap-5 max-lg:grid-cols-1 items-start">
         <Field label="Sample Reports Uploaded">
           <Controller
             control={control}

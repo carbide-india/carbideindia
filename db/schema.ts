@@ -2088,9 +2088,13 @@ export const formDrafts = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    // Recycle Bin: when set, the draft is soft-deleted (recycled) at this time.
+    // Recycled either manually or by the 10-draft-per-form cap; purged 48h later.
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
     index("form_drafts_owner_form_updated_idx").on(t.ownerId, t.formKey, t.updatedAt),
+    index("form_drafts_owner_deleted_idx").on(t.ownerId, t.deletedAt),
   ],
 );
 

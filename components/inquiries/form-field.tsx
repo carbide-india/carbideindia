@@ -178,6 +178,8 @@ interface SegmentedProps<T extends string> {
    * the form's other boxes. "sm" (default) is the compact inline pill.
    */
   size?: "sm" | "lg";
+  /** "brand" fills the active option with indigo + a prominent focus ring. */
+  activeTone?: "default" | "brand";
 }
 
 /**
@@ -191,6 +193,7 @@ export function Segmented<T extends string>({
   allowClear = true,
   ariaLabel,
   size = "sm",
+  activeTone = "default",
 }: SegmentedProps<T>) {
   const lg = size === "lg";
   return (
@@ -200,7 +203,7 @@ export function Segmented<T extends string>({
       className={cn(
         lg
           ? "flex min-h-[54px] w-full items-stretch gap-1.5 rounded-[12px] border-[1.5px] border-[#c3c9db] p-1.5"
-          : "inline-flex items-center gap-1 rounded-chip border border-hairline bg-surface-soft p-1 self-start",
+          : "inline-flex items-center gap-1.5 rounded-chip border border-hairline bg-surface-soft p-1.5 self-start",
       )}
       style={
         lg
@@ -232,7 +235,9 @@ export function Segmented<T extends string>({
                 ? "flex-1 px-3 text-[14px]"
                 : "px-3 py-1.5 text-[13px]",
               active
-                ? "bg-white text-ink-strong border border-hairline-strong shadow-sm"
+                ? activeTone === "brand"
+                  ? "bg-brand text-white border-[1.5px] border-brand shadow-[0_0_0_3px_rgba(63,63,148,0.25)]"
+                  : "bg-white text-ink-strong border border-hairline-strong shadow-sm"
                 : "text-ink-muted hover:text-ink-strong border border-transparent",
             )}
           >

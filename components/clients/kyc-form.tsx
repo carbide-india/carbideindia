@@ -31,6 +31,8 @@ import { NotesField } from "@/components/ui/notes-field";
 import { useFormDraft } from "@/components/drafts/use-form-draft";
 import type { MasterOptionItem } from "@/lib/queries/masters";
 import type { EmployeeOption } from "@/lib/queries/employees";
+import { COUNTRIES, INDIAN_STATES } from "@/lib/data/geo";
+import { BANKS, ACCOUNT_TYPES } from "@/lib/data/banks";
 import { ClientDocuments } from "@/components/clients/client-documents";
 import type { ClientDocument } from "@/lib/queries/client-documents";
 
@@ -54,6 +56,9 @@ interface Props {
   creditLimitOptions?: string[];
   qtyDeviationOptions?: string[];
   transporterOptions?: string[];
+  bankOptions?: string[];
+  accountTypeOptions?: string[];
+  stateOptions?: string[];
   /** When set, the form edits this client in place (admin "Edit client")
    *  instead of onboarding a new one. */
   editClientId?: string;
@@ -169,6 +174,9 @@ export function KycForm({
   creditLimitOptions,
   qtyDeviationOptions,
   transporterOptions,
+  bankOptions,
+  accountTypeOptions,
+  stateOptions,
   editClientId,
   initialValues,
   clientCode,
@@ -183,6 +191,9 @@ export function KycForm({
   const creditLimitList = creditLimitOptions?.length ? creditLimitOptions : CREDIT_LIMIT_PRESET;
   const qtyDeviationList = qtyDeviationOptions?.length ? qtyDeviationOptions : QTY_DEVIATION_PRESET;
   const transporterList = transporterOptions?.length ? transporterOptions : TRANSPORTER_OPTIONS;
+  const bankList = bankOptions?.length ? bankOptions : BANKS;
+  const accountTypeList = accountTypeOptions?.length ? accountTypeOptions : ACCOUNT_TYPES;
+  const stateList = stateOptions?.length ? stateOptions : INDIAN_STATES;
   const isEdit = Boolean(editClientId);
   const draftsOn = Boolean(enableDrafts) && !isEdit;
   const router = useRouter();
@@ -560,7 +571,7 @@ export function KycForm({
                       No product types yet — add them in Admin &#8594; Masters.
                     </p>
                   ) : (
-                    <div className="flex flex-wrap gap-2">
+                    <div className="grid grid-cols-7 gap-2 max-xl:grid-cols-5 max-lg:grid-cols-4 max-md:grid-cols-2">
                       {productTypes.map((opt) => {
                         const checked = selected.includes(opt.id);
                         return (
@@ -577,7 +588,7 @@ export function KycForm({
                               )
                             }
                             className={cn(
-                              "inline-flex items-center gap-2 rounded-chip border-[1.75px] px-3 py-2 text-[13px] font-semibold transition-colors",
+                              "flex w-full items-center gap-2 rounded-chip border-[1.75px] px-2.5 py-2 text-[12.5px] font-semibold leading-tight transition-colors",
                               checked
                                 ? "border-brand bg-brand/8 text-ink-strong"
                                 : "border-[#9199b6] bg-surface-card text-ink-strong hover:border-[#6f78a0] hover:bg-[#f3f4f8]",
@@ -599,9 +610,6 @@ export function KycForm({
                       })}
                     </div>
                   )}
-                  <p className="text-[12px] text-ink-subtle">
-                    {selected.length} selected
-                  </p>
                 </>
               );
             }}
@@ -725,8 +733,8 @@ export function KycForm({
           </p>
         )}
 
-        {/* Currency → Country → Export. Country auto-sets Currency + address country. */}
-        <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
+        {/* Currency → Country → Export — narrow, aligned to the 5-col row above. */}
+        <div className="grid grid-cols-5 gap-4 max-lg:grid-cols-3 max-md:grid-cols-1">
           <Field label="Currency" labelOnly>
             <Controller
               control={control}
@@ -764,6 +772,7 @@ export function KycForm({
               render={({ field }) => (
                 <Segmented
                   ariaLabel="Export"
+                  activeTone="brand"
                   options={YES_NO_SEGMENTED}
                   value={
                     field.value === undefined ? undefined : field.value ? "yes" : "no"
@@ -784,28 +793,6 @@ export function KycForm({
         inlineHint
         hint="The first contact is saved as the client's primary — auto-fetched on enquiries."
       >
-        {/* Owning department for this client (moved here from Registration). */}
-        <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
-          <Field label="Department" labelOnly>
-            <Controller
-              control={control}
-              name="departmentId"
-              render={({ field }) => (
-                <Select
-                  ariaLabel="Department"
-                  value={field.value ?? ""}
-                  onValueChange={(v) => field.onChange(v || undefined)}
-                  placeholder={
-                    departments.length === 0 ? "No departments yet" : "Select a department"
-                  }
-                  disabled={departments.length === 0}
-                  options={departments.map((d) => ({ value: d.id, label: d.name }))}
-                />
-              )}
-            />
-          </Field>
-        </div>
-
         {/* Primary contact */}
         <div className="flex flex-col gap-3">
           <GroupHeader n={1} label="Contact" />
@@ -823,7 +810,7 @@ export function KycForm({
               <input id="kyc-cemail" type="email" className="nt-input" {...register("contactEmail")} />
             </Field>
           </div>
-          <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+          <div className="grid grid-cols-4 gap-4 max-lg:grid-cols-2 max-md:grid-cols-1">
             <Field id="kyc-cdesig" label="Designation">
               <input
                 id="kyc-cdesig"
@@ -831,6 +818,24 @@ export function KycForm({
                 className="nt-input"
                 placeholder="e.g. Purchase Manager"
                 {...register("contactDesignation")}
+              />
+            </Field>
+            <Field label="Department" labelOnly>
+              <Controller
+                control={control}
+                name="departmentId"
+                render={({ field }) => (
+                  <Select
+                    ariaLabel="Department"
+                    value={field.value ?? ""}
+                    onValueChange={(v) => field.onChange(v || undefined)}
+                    placeholder={
+                      departments.length === 0 ? "No departments yet" : "Select a department"
+                    }
+                    disabled={departments.length === 0}
+                    options={departments.map((d) => ({ value: d.id, label: d.name }))}
+                  />
+                )}
               />
             </Field>
             <Field id="kyc-cnotes" label="Contact Notes">
@@ -841,7 +846,7 @@ export function KycForm({
                   <NotesField
                     id="kyc-cnotes"
                     ariaLabel="Contact Notes"
-                    rows={2}
+                    rows={1}
                     placeholder="Notes about this contact"
                     value={field.value ?? ""}
                     onChange={field.onChange}
@@ -1019,11 +1024,39 @@ export function KycForm({
                 <Field id={`kyc-addr${idx}-city`} label="City">
                   <input id={`kyc-addr${idx}-city`} type="text" className="nt-input" {...register(`addresses.${idx}.city`)} />
                 </Field>
-                <Field id={`kyc-addr${idx}-state`} label="State">
-                  <input id={`kyc-addr${idx}-state`} type="text" className="nt-input" {...register(`addresses.${idx}.state`)} />
+                <Field label="State" labelOnly>
+                  <Controller
+                    control={control}
+                    name={`addresses.${idx}.state`}
+                    render={({ field }) => (
+                      <Select
+                        ariaLabel="State"
+                        value={field.value ?? ""}
+                        onValueChange={(v) => field.onChange(v || undefined)}
+                        placeholder="Select state"
+                        searchable
+                        searchPlaceholder="Search states"
+                        options={stateList.map((s) => ({ value: s, label: s }))}
+                      />
+                    )}
+                  />
                 </Field>
-                <Field id={`kyc-addr${idx}-country`} label="Country">
-                  <input id={`kyc-addr${idx}-country`} type="text" className="nt-input" placeholder="e.g. India" {...register(`addresses.${idx}.country`)} />
+                <Field label="Country" labelOnly>
+                  <Controller
+                    control={control}
+                    name={`addresses.${idx}.country`}
+                    render={({ field }) => (
+                      <Select
+                        ariaLabel="Country"
+                        value={field.value ?? ""}
+                        onValueChange={(v) => field.onChange(v || undefined)}
+                        placeholder="Select country"
+                        searchable
+                        searchPlaceholder="Search countries"
+                        options={COUNTRIES.map((c) => ({ value: c, label: c }))}
+                      />
+                    )}
+                  />
                 </Field>
                 <Field id={`kyc-addr${idx}-pin`} label="Pin Code">
                   <input
@@ -1171,39 +1204,42 @@ export function KycForm({
           </Field>
         </div>
 
-        <Field id="kyc-otherrefs" label="Other References">
-          <Controller
-            control={control}
-            name="otherReferences"
-            render={({ field }) => (
-              <NotesField
-                id="kyc-otherrefs"
-                ariaLabel="Other References"
-                rows={2}
-                placeholder="Any other references or notes relevant to this client"
-                value={field.value ?? ""}
-                onChange={field.onChange}
-              />
-            )}
-          />
-        </Field>
+        {/* Other References + Client Notes side by side to save vertical space. */}
+        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+          <Field id="kyc-otherrefs" label="Other References">
+            <Controller
+              control={control}
+              name="otherReferences"
+              render={({ field }) => (
+                <NotesField
+                  id="kyc-otherrefs"
+                  ariaLabel="Other References"
+                  rows={2}
+                  placeholder="Any other references or notes relevant to this client"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+          </Field>
 
-        <Field id="kyc-notes" label="Client Notes">
-          <Controller
-            control={control}
-            name="notes"
-            render={({ field }) => (
-              <NotesField
-                id="kyc-notes"
-                ariaLabel="Client Notes"
-                rows={3}
-                placeholder="Any general notes about this client"
-                value={field.value ?? ""}
-                onChange={field.onChange}
-              />
-            )}
-          />
-        </Field>
+          <Field id="kyc-notes" label="Client Notes">
+            <Controller
+              control={control}
+              name="notes"
+              render={({ field }) => (
+                <NotesField
+                  id="kyc-notes"
+                  ariaLabel="Client Notes"
+                  rows={2}
+                  placeholder="Any general notes about this client"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+          </Field>
+        </div>
       </SectionCard>
 
       {/* ── 6 · Bank Details ─────────────────────────────────────────── */}
@@ -1249,8 +1285,22 @@ export function KycForm({
                   &#8627; Same as company
                 </button>
               </Field>
-              <Field id={`kyc-bank${idx}-name`} label="Bank Name">
-                <input id={`kyc-bank${idx}-name`} type="text" className="nt-input" placeholder="e.g. State Bank of India" {...register(`bankAccounts.${idx}.bankName`)} />
+              <Field label="Bank Name" labelOnly>
+                <Controller
+                  control={control}
+                  name={`bankAccounts.${idx}.bankName`}
+                  render={({ field }) => (
+                    <Select
+                      ariaLabel="Bank Name"
+                      value={field.value ?? ""}
+                      onValueChange={(v) => field.onChange(v || undefined)}
+                      placeholder="Select a bank"
+                      searchable
+                      searchPlaceholder="Search banks"
+                      options={bankList.map((b) => ({ value: b, label: b }))}
+                    />
+                  )}
+                />
               </Field>
               <Field id={`kyc-bank${idx}-accno`} label="Account No">
                 <input id={`kyc-bank${idx}-accno`} type="text" className="nt-input" {...register(`bankAccounts.${idx}.accountNo`)} />
@@ -1264,8 +1314,20 @@ export function KycForm({
               <Field id={`kyc-bank${idx}-branch`} label="Branch">
                 <input id={`kyc-bank${idx}-branch`} type="text" className="nt-input" placeholder="e.g. Ambad, Nashik" {...register(`bankAccounts.${idx}.branch`)} />
               </Field>
-              <Field id={`kyc-bank${idx}-type`} label="Account Type">
-                <input id={`kyc-bank${idx}-type`} type="text" className="nt-input" placeholder="e.g. Current / Savings" {...register(`bankAccounts.${idx}.accountType`)} />
+              <Field label="Account Type" labelOnly>
+                <Controller
+                  control={control}
+                  name={`bankAccounts.${idx}.accountType`}
+                  render={({ field }) => (
+                    <Select
+                      ariaLabel="Account Type"
+                      value={field.value ?? ""}
+                      onValueChange={(v) => field.onChange(v || undefined)}
+                      placeholder="Select account type"
+                      options={accountTypeList.map((t) => ({ value: t, label: t }))}
+                    />
+                  )}
+                />
               </Field>
             </div>
 
@@ -1461,9 +1523,6 @@ function MasterChips({
                   })}
                 </div>
               )}
-              <p className="text-[12px] text-ink-subtle">
-                {selected.length} selected
-              </p>
             </>
           );
         }}

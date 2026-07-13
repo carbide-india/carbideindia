@@ -235,49 +235,28 @@ export function SoForm({
         inlineHint
         hint="Pick the SM -- company, sales person and products auto-fetch. Link the quotation to pull its pricing."
       >
-        <Field label="Enquiry (SM)" labelOnly required>
-          <Controller
-            control={control}
-            name="inquiryId"
-            render={({ field }) => (
-              <Select
-                value={field.value ?? ""}
-                onValueChange={(v) => void onPickInquiry(v || undefined)}
-                placeholder="Select an enquiry..."
-                searchPlaceholder="Search SM number or company..."
-                searchable
-                ariaLabel="Linked enquiry"
-                options={inquiries.map((o) => ({
-                  value: o.id,
-                  label: `${o.smNumber} — ${o.companyName}`,
-                }))}
-              />
-            )}
-          />
-        </Field>
-
-        {(snapshot || autofetching) && (
-          <div className="flex flex-col gap-3 rounded-xl border border-hairline bg-surface-soft px-4 py-3">
-            <div className="flex flex-wrap items-start gap-x-8 gap-y-2">
-              <Caption label="Company">
-                {autofetching ? "..." : snapshot?.companyName ?? "—"}
-              </Caption>
-              <Caption label="Enquiry Date">
-                {autofetching
-                  ? "..."
-                  : snapshot?.enquiryDate
-                    ? formatDate(new Date(snapshot.enquiryDate))
-                    : "—"}
-              </Caption>
-              <Caption label="Sales Person">
-                {autofetching ? "..." : snapshot?.salesPersonName ?? "—"}
-              </Caption>
-            </div>
-            {!autofetching && snapshot && <SmDetailsRow snapshot={snapshot} />}
-          </div>
-        )}
-
-        <div className="grid grid-cols-3 gap-4 max-lg:grid-cols-3 max-md:grid-cols-1">
+        {/* Enquiry · Linked Quotation · SO No · Quotation Link — one line. */}
+        <div className="grid grid-cols-4 gap-4 max-lg:grid-cols-2 max-md:grid-cols-1">
+          <Field label="Enquiry (SM)" labelOnly required>
+            <Controller
+              control={control}
+              name="inquiryId"
+              render={({ field }) => (
+                <Select
+                  value={field.value ?? ""}
+                  onValueChange={(v) => void onPickInquiry(v || undefined)}
+                  placeholder="Select an enquiry..."
+                  searchPlaceholder="Search SM number or company..."
+                  searchable
+                  ariaLabel="Linked enquiry"
+                  options={inquiries.map((o) => ({
+                    value: o.id,
+                    label: `${o.smNumber} — ${o.companyName}`,
+                  }))}
+                />
+              )}
+            />
+          </Field>
           <Field label="Linked Quotation" labelOnly>
             <Select
               value={quoteId}
@@ -312,6 +291,27 @@ export function SoForm({
             />
           </Field>
         </div>
+
+        {(snapshot || autofetching) && (
+          <div className="flex flex-col gap-3 rounded-xl border border-hairline bg-surface-soft px-4 py-3">
+            <div className="flex flex-wrap items-start gap-x-8 gap-y-2">
+              <Caption label="Company">
+                {autofetching ? "..." : snapshot?.companyName ?? "—"}
+              </Caption>
+              <Caption label="Enquiry Date">
+                {autofetching
+                  ? "..."
+                  : snapshot?.enquiryDate
+                    ? formatDate(new Date(snapshot.enquiryDate))
+                    : "—"}
+              </Caption>
+              <Caption label="Sales Person">
+                {autofetching ? "..." : snapshot?.salesPersonName ?? "—"}
+              </Caption>
+            </div>
+            {!autofetching && snapshot && <SmDetailsRow snapshot={snapshot} />}
+          </div>
+        )}
       </SectionCard>
 
       {/* -- 2 . Products & Pricing (per-line editor) --------------------- */}
@@ -433,7 +433,7 @@ export function SoForm({
             onClick={() => append({ ...EMPTY_LINE })}
             className="inline-flex items-center gap-2 rounded-chip border border-brand bg-brand/8 px-4 py-2.5 text-[13px] font-semibold text-brand transition-colors hover:bg-brand/12"
           >
-            + Add line
+            + Add Product
           </button>
         </div>
       </SectionCard>
@@ -498,6 +498,7 @@ export function SoForm({
                   value={field.value ? "yes" : "no"}
                   onChange={(v) => field.onChange(v === "yes")}
                   allowClear={false}
+                  activeTone="brand"
                   ariaLabel="Customer SO sent"
                 />
               )}

@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { formCustomOptions } from "@/db/schema";
@@ -77,6 +77,69 @@ export async function removeCustomOption(id: string, formKey: string): Promise<R
       .where(eq(formCustomOptions.id, id));
   } catch {
     return { ok: false, error: "Couldn't remove that option." };
+  }
+  revalidateFor(formKey);
+  return { ok: true };
+}
+
+/** Reorder: swap an option with its neighbour (up/down) within its list. */
+export async function moveCustomOption(
+  formKey: string,
+  listKey: string,
+  id: string,
+  direction: "up" | "down",
+): Promise<Result> {
+  await requireUser();
+  if (!isKnownCustomList(formKey, listKey)) return { ok: false, error: "Unknown list." };
+  try {
+    const rows = await db
+      .select({ id: formCustomOptions.id, sortOrder: formCustomOptions.sortOrder })
+      .from(formCustomOptions)
+      .where(
+        and(
+          eq(formCustomOptions.formKey, formKey),
+          eq(formCustomOptions.listKey, listKey),
+          eq(formCustomOptions.isActive, true),
+        ),
+      )
+      .orderBy(asc(formCustomOptions.sortOrder), asc(formCustomOptions.label));
+    const idx = rows.findIndex((r) => r.id === id);
+    if (idx < 0) return { ok: false, error: "Option not found." };
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= rows.length) return { ok: true }; // already at the edge
+    const a = rows[idx]!;
+    const b = rows[swapIdx]!;
+    // Swap their sort orders → they swap positions.
+    await db.update(formCustomOptions).set({ sortOrder: b.sortOrder }).where(eq(formCustomOptions.id, a.id));
+    await db.update(formCustomOptions).set({ sortOrder: a.sortOrder }).where(eq(formCustomOptions.id, b.id));
+  } catch {
+    return { ok: false, error: "Couldn't reorder." };
+  }
+  revalidateFor(formKey);
+  return { ok: true };
+}
+
+/** Clear a whole list (deactivate every option) → reverts it to the defaults
+ *  preview, so "Use default options" can be undone. */
+export async function clearCustomList(
+  formKey: string,
+  listKey: string,
+): Promise<Result> {
+  await requireUser();
+  if (!isKnownCustomList(formKey, listKey)) return { ok: false, error: "Unknown list." };
+  try {
+    await db
+      .update(formCustomOptions)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(
+        and(
+          eq(formCustomOptions.formKey, formKey),
+          eq(formCustomOptions.listKey, listKey),
+          eq(formCustomOptions.isActive, true),
+        ),
+      );
+  } catch {
+    return { ok: false, error: "Couldn't clear the list." };
   }
   revalidateFor(formKey);
   return { ok: true };

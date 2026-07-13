@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import type { Route } from "next";
 import {
   Bell,
@@ -17,6 +17,7 @@ import {
   Contact,
   SlidersHorizontal,
   ClipboardCheck,
+  Trash2,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
@@ -33,6 +34,8 @@ interface NavDef {
   ready: boolean;
   /** returns true when this item should show active for the given path */
   active?: (path: string) => boolean;
+  /** Section key — a greyed divider is drawn where this changes. */
+  group?: "overview" | "create" | "records" | "config";
 }
 
 // "Create New Form" opens the CURRENT form family's own new page — each form
@@ -79,15 +82,25 @@ function navFor(pathname: string): NavDef[] {
   // dedicated /enquiries/drafts. /contacts maps to the clients family.
   const draftKind = draftKindForSegment(familySeg(pathname));
   const draftsRoute = draftKind ? FORM_DRAFT_META[draftKind].draftsRoute : "/enquiries/drafts";
+  // Per-form Recycle Bin — only the generic-draft forms have one (enquiry uses
+  // its own draft store without recycling).
+  const recycleBinRoute = draftKind ? FORM_DRAFT_META[draftKind].recycleBinRoute : null;
+  // "Create New Form" reads as the specific form (e.g. "Create New Enquiry").
+  const createLabel = draftKind
+    ? `Create New ${FORM_DRAFT_META[draftKind].noun}`
+    : familySeg(pathname) === "enquiries" || familySeg(pathname) === "inquiries"
+      ? "Create New Enquiry"
+      : "Create New Form";
   const custom = customEditorForSegment(familySeg(pathname));
   const items: NavDef[] = [
-    { label: "Dashboard", href: "/hub" as Route, Icon: LayoutDashboard, ready: false },
+    { label: "Dashboard", href: "/hub" as Route, Icon: LayoutDashboard, ready: false, group: "overview" },
     {
-      label: "Create New Form",
+      label: createLabel,
       href: newForm as Route,
       Icon: FilePlus2,
       ready: true,
       active: (p) => p.startsWith(newForm),
+      group: "create",
     },
     {
       label: "Drafts",
@@ -95,6 +108,7 @@ function navFor(pathname: string): NavDef[] {
       Icon: Files,
       ready: true,
       active: (p) => p.startsWith(draftsRoute),
+      group: "create",
     },
     (() => {
       const reg = registerFor(pathname);
@@ -103,41 +117,64 @@ function navFor(pathname: string): NavDef[] {
         href: reg.href as Route,
         Icon: FileText,
         ready: true,
+        group: "records" as const,
         active: (p: string) =>
           p === reg.href ||
           (p.startsWith(reg.href) &&
             !p.startsWith(`${reg.href}/new`) &&
             !p.startsWith(`${reg.href}/drafts`) &&
+            !p.startsWith(`${reg.href}/recycle-bin`) &&
             !p.startsWith(`${reg.href}/custom`)),
       };
     })(),
-    {
-      label: "Contact Person Address Book",
-      href: "/contacts" as Route,
-      Icon: Contact,
-      ready: true,
-      active: (p) => p.startsWith("/contacts"),
-    },
+    // Contact Person Address Book — only in the Client KYC (clients) family.
+    ...((familySeg(pathname) === "clients" || familySeg(pathname) === "contacts")
+      ? ([
+          {
+            label: "Contact Person Address Book",
+            href: "/contacts" as Route,
+            Icon: Contact,
+            ready: true,
+            active: (p: string) => p.startsWith("/contacts"),
+            group: "records" as const,
+          },
+        ] as NavDef[])
+      : []),
+    // Recycle Bin — per form, next to that form's Drafts.
+    ...(recycleBinRoute
+      ? ([
+          {
+            label: "Recycle Bin",
+            href: recycleBinRoute as Route,
+            Icon: Trash2,
+            ready: true,
+            active: (p: string) => p.startsWith(recycleBinRoute),
+            group: "records",
+          },
+        ] as NavDef[])
+      : []),
   ];
   // Primary Feasibility launcher — enquiry family only (pick an SM to verify).
   const fam = familySeg(pathname);
   if (fam === "enquiries" || fam === "inquiries") {
     items.push({
       label: "Primary Feasibility",
-      href: "/enquiries/register" as Route,
+      href: "/enquiries/feasibility" as Route,
       Icon: ClipboardCheck,
       ready: true,
       active: (p) => p.startsWith("/enquiries/feasibility"),
+      group: "records",
     });
   }
   // Forms with their own "Custom" dropdown lists get a Custom editor entry.
   if (custom) {
     items.push({
-      label: "Custom",
+      label: "Custom Dropdown Master",
       href: custom.route as Route,
       Icon: SlidersHorizontal,
       ready: true,
       active: (p) => p.startsWith(custom.route),
+      group: "config",
     });
   }
   return items;
@@ -158,9 +195,20 @@ export function EnquiryModuleShell({
 }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  // The page title now lives in the header (beside the search).
-  const pageTitle =
-    title ?? (pathname.startsWith("/enquiries/new") ? "New Enquiry" : "Forms");
+  // The header shows the current form MODULE name (e.g. "Client KYC") on every
+  // one of its sub-pages — Master, Drafts, Contact Book, Recycle Bin, Custom —
+  // so the top title never just repeats the page's own <h1> below it.
+  const headerSeg = familySeg(pathname);
+  const headerKind = draftKindForSegment(headerSeg);
+  const pageTitle = headerKind
+    ? FORM_DRAFT_META[headerKind].noun
+    : headerSeg === "enquiries" || headerSeg === "inquiries"
+      ? // The enquiry module reads as "New Enquiry" everywhere except the
+        // form-selection launchpad, which stays "Forms".
+        pathname === "/enquiries"
+        ? "Forms"
+        : "New Enquiry"
+      : title ?? "Forms";
   // Sidebar is hidden entirely on the launchpad (form selection).
   const showSidebar = pathname !== "/enquiries";
   const nav = navFor(pathname);
@@ -193,20 +241,20 @@ export function EnquiryModuleShell({
           {showSidebar && (
             <Link
               href={"/enquiries" as Route}
-              className="flex h-9 shrink-0 items-center gap-2 rounded-lg border border-[#e5e7eb] px-3.5 text-[13.5px] font-bold text-[#3a4152] transition hover:border-[#3f3f94] hover:bg-[#efeffb] hover:text-[#3f3f94] active:scale-95"
+              className="group flex h-9 shrink-0 items-center gap-2 rounded-lg bg-[linear-gradient(135deg,#4a4ab5_0%,#2f2f6f_100%)] px-3.5 text-[13.5px] font-bold text-white shadow-[0_4px_12px_rgba(63,63,148,0.38)] ring-1 ring-white/10 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(63,63,148,0.52)] hover:brightness-110 active:translate-y-0 active:scale-95"
               aria-label="Back to all forms"
             >
-              <ArrowLeft className="h-[17px] w-[17px]" />
+              <ArrowLeft className="h-[17px] w-[17px] transition-transform duration-200 group-hover:-translate-x-0.5" />
               Back to Forms
             </Link>
           )}
           {/* Hub sits immediately before the module title. */}
           <Link
             href={"/hub" as Route}
-            className="flex h-10 shrink-0 items-center gap-2 rounded-lg border border-[#dcdce8] px-4 text-[15px] font-extrabold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#efeffb] active:scale-95"
+            className="group flex h-10 shrink-0 items-center gap-2 rounded-lg bg-[linear-gradient(135deg,#4a4ab5_0%,#2f2f6f_100%)] px-4 text-[15px] font-extrabold text-white shadow-[0_4px_12px_rgba(63,63,148,0.38)] ring-1 ring-white/10 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(63,63,148,0.52)] hover:brightness-110 active:translate-y-0 active:scale-95"
             aria-label="Back to hub"
           >
-            <LayoutGrid className="h-[19px] w-[19px]" strokeWidth={2.4} />
+            <LayoutGrid className="h-[19px] w-[19px] transition-transform duration-200 group-hover:scale-110" strokeWidth={2.4} />
             Hub
           </Link>
           <span className="ml-1 shrink-0 text-[26px] font-black leading-none tracking-tight text-[#3f3f94]">
@@ -262,39 +310,49 @@ export function EnquiryModuleShell({
               </Link>
 
               <nav className="mt-4 flex flex-col gap-1.5">
-                {nav.map((n) => {
+                {nav.map((n, i) => {
+                  const prev = nav[i - 1];
+                  // A greyed divider separates each section (overview / create /
+                  // records / config) so items read as groups, not floating text.
+                  const showDivider =
+                    i > 0 && !!n.group && !!prev?.group && n.group !== prev.group;
                   const isActive = n.ready && (n.active ? n.active(pathname) : false);
                   const base =
                     "flex h-[44px] items-center gap-3 rounded-lg px-3.5 text-[14px] transition";
-                  if (!n.ready) {
-                    return (
-                      <span
-                        key={n.label}
-                        title="Coming soon"
-                        className={`${base} cursor-default font-semibold text-[#b3b8c2]`}
-                      >
-                        <n.Icon className="h-[19px] w-[19px]" />
-                        {n.label}
-                      </span>
-                    );
-                  }
                   return (
-                    <Link
-                      key={n.label}
-                      href={n.href}
-                      className={
-                        isActive
-                          ? `${base} bg-[#3f3f94] font-bold text-white shadow-[0_2px_8px_rgba(63,63,148,0.30)]`
-                          : `${base} font-semibold text-[#3a4152] hover:bg-[#efeffb] hover:text-[#3f3f94]`
-                      }
-                    >
-                      <n.Icon className="h-[19px] w-[19px]" />
-                      {n.label}
-                    </Link>
+                    <Fragment key={n.label}>
+                      {showDivider && <div className="my-1.5 h-px bg-[#eceef4]" />}
+                      {!n.ready ? (
+                        <span
+                          title="Coming soon"
+                          className={`${base} cursor-default font-semibold text-[#b3b8c2]`}
+                        >
+                          <n.Icon className="h-[19px] w-[19px]" />
+                          {n.label}
+                        </span>
+                      ) : (
+                        <Link
+                          href={n.href}
+                          className={
+                            isActive
+                              ? `${base} bg-[#3f3f94] font-bold text-white shadow-[0_2px_8px_rgba(63,63,148,0.30)]`
+                              : `${base} font-semibold text-[#3a4152] hover:bg-[#efeffb] hover:text-[#3f3f94]`
+                          }
+                        >
+                          <n.Icon className="h-[19px] w-[19px]" />
+                          {n.label}
+                        </Link>
+                      )}
+                    </Fragment>
                   );
                 })}
 
-                {bulkUpload}
+                {bulkUpload && (
+                  <>
+                    <div className="my-1.5 h-px bg-[#eceef4]" />
+                    {bulkUpload}
+                  </>
+                )}
               </nav>
 
               <div className="mt-auto flex flex-col gap-1.5">

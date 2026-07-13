@@ -157,7 +157,7 @@ export default async function HubPage() {
           </div>
           <div className="flex items-center gap-4">
             <Link
-              href={"/inquiries/new" as Route}
+              href={"/enquiries/new" as Route}
               className="flex h-[50px] items-center gap-2.5 rounded-xl bg-[#1e2f66] px-6 text-[14px] font-semibold tracking-[0.06em] text-white shadow-[0_2px_8px_rgba(30,47,102,0.25)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#18274f] hover:shadow-[0_8px_20px_rgba(30,47,102,0.32)]"
               style={{ fontFamily: MONO }}
             >

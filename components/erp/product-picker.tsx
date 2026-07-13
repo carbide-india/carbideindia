@@ -73,8 +73,9 @@ export function ProductPicker({
 
   const { data: hits = [], isFetching } = useQuery({
     queryKey: ["material-search", q],
-    queryFn: () => searchItemsAction({ q, limit: 8 }),
-    enabled: open && q.length >= 2,
+    // Empty q browses the newest Product Master items; typing filters them.
+    queryFn: () => searchItemsAction({ q, limit: 10 }),
+    enabled: open,
     staleTime: 20_000,
     placeholderData: (prev) => prev,
   });
@@ -152,16 +153,21 @@ export function ProductPicker({
           style={{ boxShadow: "0 20px 48px -16px rgba(15,23,42,0.32)" }}
         >
           <div className="max-h-[340px] overflow-y-auto p-1.5">
-            {q.length < 2 ? (
+            {hits.length === 0 && !isFetching ? (
               <p className="px-3 py-6 text-center text-[13px] text-ink-subtle">
-                Type at least 2 characters to search existing materials.
-              </p>
-            ) : hits.length === 0 && !isFetching ? (
-              <p className="px-3 py-6 text-center text-[13px] text-ink-subtle">
-                No material matches &ldquo;{q}&rdquo;.
+                {q.length >= 2
+                  ? `No material matches “${q}”.`
+                  : "No products in the Product Master yet."}
               </p>
             ) : (
-              hits.map((h) => <HitRow key={h.id} hit={h} onPick={pick} />)
+              <>
+                {q.length < 2 && (
+                  <p className="px-3 pb-1 pt-2 text-[11px] font-bold uppercase tracking-[0.1em] text-ink-subtle">
+                    Recent products from the Product Master
+                  </p>
+                )}
+                {hits.map((h) => <HitRow key={h.id} hit={h} onPick={pick} />)}
+              </>
             )}
           </div>
           <button

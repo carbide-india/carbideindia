@@ -1,73 +1,20 @@
-import { DashboardHeader } from "@/components/layout/header";
-import { DashboardFooter } from "@/components/layout/footer";
-import { InquiryForm } from "@/components/inquiries/inquiry-form";
-import { BackLink } from "@/components/ui/back-link";
-import { requireUser, getCurrentEmployee } from "@/lib/auth/current";
-import { listClientOptions } from "@/lib/queries/clients";
-import { listEmployeeOptions } from "@/lib/queries/employees";
-import { listMasterOptions, getShapeProfiles } from "@/lib/queries/masters";
-import { BulkUploadButton } from "@/components/import/bulk-upload-button";
+import { redirect } from "next/navigation";
+import type { Route } from "next";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewInquiryPage() {
-  const me = await requireUser();
-  const currentEmployee = await getCurrentEmployee();
-  const [clients, employees, grades, tolerances, conditions, shapes, shapeProfiles] =
-    await Promise.all([
-      listClientOptions(),
-      listEmployeeOptions(),
-      listMasterOptions("internal_grade"),
-      listMasterOptions("tolerance"),
-      listMasterOptions("condition"),
-      listMasterOptions("shape"),
-      getShapeProfiles(),
-    ]);
-
-  const pickerMasters = {
-    shapes,
-    grades,
-    tolerances,
-    conditions,
-    shapeProfilesById: shapeProfiles.byId,
-  };
-
-  return (
-    <>
-      <DashboardHeader generatedAt={new Date()} />
-      <main className="mx-auto max-w-[980px] px-12 max-md:px-4 pt-8 pb-16">
-        <div className="mb-4">
-          <BackLink href="/inquiries" label="Enquiries" />
-        </div>
-        <header className="mb-6">
-          <div className="text-[10px] uppercase tracking-[0.18em] text-ink-subtle font-bold">
-            Sales · Enquiry Register
-          </div>
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-display-lg text-ink-strong mt-1">New Enquiry</h1>
-              <p className="text-body-lg text-ink-subtle mt-1">
-                Capture the enquiry exactly as it came in — the SM number is
-                assigned automatically on save.
-              </p>
-            </div>
-            {currentEmployee?.isAdmin && (
-              <BulkUploadButton href="/inquiries/import" />
-            )}
-          </div>
-        </header>
-        <InquiryForm
-          clients={clients}
-          employees={employees}
-          grades={grades}
-          tolerances={tolerances}
-          conditions={conditions}
-          shapeProfiles={shapeProfiles.byName}
-          pickerMasters={pickerMasters}
-          defaultSalesPersonId={me.id}
-        />
-      </main>
-      <DashboardFooter />
-    </>
-  );
+/**
+ * The New Enquiry form now lives in the Forms module shell at
+ * `/enquiries/new`. This legacy WMS-chrome route just redirects there so any
+ * old link (client record, hub, bookmarks) lands on the redesigned form. The
+ * `draft` param is preserved for resume.
+ */
+export default async function LegacyNewInquiryRedirect({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const draft = typeof sp.draft === "string" ? `?draft=${encodeURIComponent(sp.draft)}` : "";
+  redirect(`/enquiries/new${draft}` as Route);
 }

@@ -483,6 +483,7 @@ export function MeetingForm({
                 value={field.value ?? "regular_order"}
                 onChange={(v) => field.onChange(v ?? "regular_order")}
                 allowClear={false}
+                activeTone="brand"
                 ariaLabel="Purpose of meeting"
               />
             )}

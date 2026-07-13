@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
 import { FileText, Trash2, ArrowUpRight } from "lucide-react";
-import { deleteFormDraft } from "@/app/(app)/_actions/form-drafts";
+import { recycleFormDraft } from "@/app/(app)/_actions/form-drafts";
 import { FORM_DRAFT_META, type FormDraftKind } from "@/lib/drafts/form-drafts";
 import type { FormDraftListItem } from "@/lib/queries/form-drafts";
 import { fireToast } from "@/lib/toast";
@@ -41,11 +41,11 @@ export function FormDraftsList({
   async function remove(id: string) {
     setPending(id);
     try {
-      await deleteFormDraft(kind, id);
-      fireToast({ message: "Draft deleted." });
+      await recycleFormDraft(kind, id);
+      fireToast({ message: "Moved to Recycle Bin." });
       router.refresh();
     } catch {
-      fireToast({ message: "Couldn't delete the draft.", type: "error" });
+      fireToast({ message: "Couldn't move the draft.", type: "error" });
     } finally {
       setPending(null);
     }
@@ -92,7 +92,8 @@ export function FormDraftsList({
               type="button"
               onClick={() => remove(d.id)}
               disabled={pending === d.id}
-              aria-label="Delete draft"
+              aria-label="Move draft to Recycle Bin"
+              title="Move to Recycle Bin"
               className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-hairline text-ink-subtle transition hover:border-[#f0b4b4] hover:bg-[#fdf3f3] hover:text-[#d32f2f] disabled:opacity-50"
             >
               <Trash2 className="h-[16px] w-[16px]" />

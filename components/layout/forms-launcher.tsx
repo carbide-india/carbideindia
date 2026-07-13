@@ -66,7 +66,7 @@ const ACTIVE_CARDS: ActiveCard[] = [
     name: "Enquiry",
     Icon: FileSearch,
     desc: "Log a new sales enquiry — SM number auto-assigned.",
-    href: "/inquiries/new" as Route,
+    href: "/enquiries/new" as Route,
     registerHref: "/inquiries" as Route,
   },
   {

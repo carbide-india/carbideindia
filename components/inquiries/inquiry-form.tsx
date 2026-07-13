@@ -25,7 +25,7 @@ import { NotesField } from "@/components/ui/notes-field";
 import { INDIA_STATES, citiesForState } from "@/lib/data/india-states-cities";
 import { SearchableSelect } from "./searchable-select";
 import { Field, SectionCard, GroupHeader } from "./form-field";
-import { ClientAutofillSection } from "./client-autofill";
+import { ClientTypeToggle, ExistingClientPicker } from "./client-autofill";
 import { ProductsSection } from "./products-section";
 import { ChecklistSection } from "./checklist-section";
 import type { ClientAutofill, ClientOption } from "@/lib/queries/clients";
@@ -56,6 +56,10 @@ interface Props {
    * needed in create mode (the ProductsSection is hidden on edit).
    */
   pickerMasters?: PickerMasters;
+  /** Enquiry "Custom Dropdown Master" lists — each falls back to a built-in. */
+  stateOptions?: string[];
+  cityOptions?: string[];
+  unitOptions?: string[];
   /** Current employee — preselected as the assigned sales person. */
   defaultSalesPersonId: string;
   /**
@@ -99,12 +103,17 @@ export function InquiryForm({
   departments = [],
   shapeProfiles,
   pickerMasters,
+  stateOptions,
+  cityOptions,
+  unitOptions,
   defaultSalesPersonId,
   editInquiryId,
   initialValues,
   enableDrafts,
   resumeDraftId,
 }: Props) {
+  // Custom-master lists fall back to the built-in datasets.
+  const stateList = stateOptions?.length ? stateOptions : INDIA_STATES;
   const isEdit = editInquiryId !== undefined;
   const draftsOn = Boolean(enableDrafts) && !isEdit;
   const router = useRouter();
@@ -308,22 +317,28 @@ export function InquiryForm({
     <form onSubmit={submit} className="flex flex-col gap-6" noValidate>
       {/* ── 1 · Client ───────────────────────────────────────────────── */}
       <SectionCard>
-        {/* Client Type (left) + Company Name (fills the right space) — two aligned boxes */}
+        {/* Client Type · (Existing Client, when Old) · Company Name — one line. */}
         <div className="flex flex-wrap items-start gap-4">
           <div className="w-[268px] max-md:w-full">
-            <ClientAutofillSection
+            <ClientTypeToggle
               mode={clientMode}
               onModeChange={(m) => {
                 setValue("clientMode", m);
                 if (m === "new") setValue("clientId", undefined);
               }}
-              clientId={clientId}
-              onClientChange={(id) => setValue("clientId", id)}
-              clients={clients}
-              onAutofill={applyAutofill}
-              error={errors.clientId?.message}
             />
           </div>
+          {clientMode === "old" && (
+            <div className="w-[300px] max-md:w-full">
+              <ExistingClientPicker
+                clientId={clientId}
+                onClientChange={(id) => setValue("clientId", id)}
+                clients={clients}
+                onAutofill={applyAutofill}
+                error={errors.clientId?.message}
+              />
+            </div>
+          )}
           <div className="min-w-[280px] flex-1">
             <Field id="inq-company" label="Company Name" required>
               <input
@@ -463,7 +478,7 @@ export function InquiryForm({
                         setValue("city", "");
                         if (v) setCityGateError(false);
                       }}
-                      options={INDIA_STATES}
+                      options={stateList}
                       placeholder="Select state"
                       searchPlaceholder="Search states"
                     />
@@ -482,7 +497,12 @@ export function InquiryForm({
                           id="inq-city"
                           value={field.value || undefined}
                           onChange={(v) => field.onChange(v ?? "")}
-                          options={citiesForState(selectedState)}
+                          options={[
+                            ...new Set([
+                              ...citiesForState(selectedState),
+                              ...(cityOptions ?? []),
+                            ]),
+                          ]}
                           placeholder="Select city"
                           searchPlaceholder="Search cities"
                           emptyText="No cities match."
@@ -698,6 +718,7 @@ export function InquiryForm({
           conditions={conditions}
           shapeProfiles={shapeProfiles}
           pickerMasters={pickerMasters}
+          unitOptions={unitOptions}
         />
       )}
 

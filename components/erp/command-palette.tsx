@@ -57,7 +57,7 @@ const NAV_ACTIONS: ReadonlyArray<NavAction> = [
   { id: "nav-clients", label: "Client Master", hint: "g c", Icon: Building2, href: "/clients" as Route },
   { id: "nav-jobcards", label: "Job Cards", hint: "g j", Icon: ClipboardList, href: "/job-cards" as Route },
   { id: "nav-masters", label: "Masters", Icon: Layers, href: "/masters" as Route },
-  { id: "act-new-enquiry", label: "New Enquiry", hint: "c e", Icon: Plus, href: "/inquiries/new" as Route },
+  { id: "act-new-enquiry", label: "New Enquiry", hint: "c e", Icon: Plus, href: "/enquiries/new" as Route },
   { id: "act-new-item", label: "New Item", hint: "c i", Icon: Plus, href: "/items/new" as Route },
 ];
 

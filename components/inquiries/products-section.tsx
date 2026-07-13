@@ -12,6 +12,7 @@ import {
 import { Trash2 } from "lucide-react";
 import { INQUIRY_SHAPES, QUANTITY_UOMS } from "@/db/enums";
 import { Select } from "@/components/ui/select";
+import { NotesField } from "@/components/ui/notes-field";
 import { Field, SectionCard, GroupHeader } from "./form-field";
 import { toOptionalNumber } from "./checklist-section";
 import type { InquiryFormValues } from "./inquiry-form";
@@ -37,6 +38,8 @@ interface Props {
   shapeProfiles: Record<string, ShapeConfig>;
   /** Masters for the SAP-style Material Search / create-new mini-form. */
   pickerMasters: PickerMasters;
+  /** Enquiry Custom Dropdown Master — dimension Unit list (falls back to defaults). */
+  unitOptions?: string[];
 }
 
 /** Units a product's dimensions can be expressed in. */
@@ -79,7 +82,9 @@ export function ProductsSection({
   conditions,
   shapeProfiles,
   pickerMasters,
+  unitOptions,
 }: Props) {
+  const unitList = unitOptions?.length ? unitOptions : DIMENSION_UNITS;
   const { fields, append, remove } = useFieldArray({ control, name: "products" });
   // Per-row attached Item (from the Material Search). Keyed by field.id so it
   // survives reorder/removal; presence pins the picker chip + drives the
@@ -198,8 +203,10 @@ export function ProductsSection({
             </Field>
           </div>
 
-          {/* Shape + dimensions — one row (only the dims the shape uses, mm). */}
-          <div className="grid grid-cols-6 gap-3 max-lg:grid-cols-3 max-md:grid-cols-2">
+          {/* Shape + Unit + dimensions on one line — auto-fit so the visible
+              boxes stretch to fill the row (no wasted space, no truncation)
+              however many dimensions the chosen shape shows. */}
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3 max-md:grid-cols-2">
             <Field id={`products.${index}.shape`} label="Shape">
               <Controller
                 control={control}
@@ -236,7 +243,7 @@ export function ProductsSection({
                     id={`products.${index}.dimensionUnit`}
                     value={f.value ?? "mm"}
                     onValueChange={(v) => f.onChange(v || "mm")}
-                    options={DIMENSION_UNITS.map((u) => ({ value: u, label: u }))}
+                    options={unitList.map((u) => ({ value: u, label: u }))}
                   />
                 )}
               />
@@ -275,12 +282,19 @@ export function ProductsSection({
             id={`products.${index}.dimensionNotes`}
             label="Dimension Notes"
           >
-            <input
-              id={`products.${index}.dimensionNotes`}
-              type="text"
-              className="nt-input"
-              placeholder="e.g. as per drawing rev. B, chamfer both ends"
-              {...register(`products.${index}.dimensionNotes`)}
+            <Controller
+              control={control}
+              name={`products.${index}.dimensionNotes`}
+              render={({ field: nf }) => (
+                <NotesField
+                  id={`products.${index}.dimensionNotes`}
+                  ariaLabel="Dimension Notes"
+                  rows={2}
+                  placeholder="e.g. as per drawing rev. B, chamfer both ends"
+                  value={nf.value ?? ""}
+                  onChange={nf.onChange}
+                />
+              )}
             />
           </Field>
 

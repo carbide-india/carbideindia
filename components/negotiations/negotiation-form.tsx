@@ -477,6 +477,7 @@ export function NegotiationForm({
                   value={field.value}
                   onChange={field.onChange}
                   allowClear={false}
+                  activeTone="brand"
                   ariaLabel="Negotiation status"
                 />
               )}

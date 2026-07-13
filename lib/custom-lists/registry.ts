@@ -10,6 +10,18 @@
  * No DB / server-only import — safe on client + server.
  */
 
+import { BANKS, ACCOUNT_TYPES } from "@/lib/data/banks";
+import { INDIAN_STATES } from "@/lib/data/geo";
+import { INDIA_STATES } from "@/lib/data/india-states-cities";
+
+/** Convenience default cities for the enquiry City list (the form still merges
+ *  these with the built-in per-state cities). */
+const MAJOR_CITIES = [
+  "Mumbai", "Delhi", "Bengaluru", "Hyderabad", "Chennai", "Kolkata", "Pune",
+  "Ahmedabad", "Surat", "Nashik", "Nagpur", "Jaipur", "Indore", "Coimbatore",
+  "Ludhiana", "Rajkot", "Faridabad", "Gurugram", "Noida", "Vadodara",
+];
+
 export interface CustomListDef {
   /** listKey stored on form_custom_options.list_key. */
   key: string;
@@ -84,6 +96,49 @@ export const CUSTOM_LISTS: Record<string, FormCustomListsDef> = {
           "Other",
         ],
       },
+      {
+        key: "state",
+        label: "State",
+        hint: "The State dropdown on client addresses.",
+        defaults: [...INDIAN_STATES],
+      },
+      {
+        key: "account_type",
+        label: "Account Type",
+        hint: "Bank Details → Account Type.",
+        defaults: [...ACCOUNT_TYPES],
+      },
+      {
+        key: "bank_name",
+        label: "Bank Name",
+        hint: "Bank Details → Bank Name (searchable).",
+        defaults: [...BANKS],
+      },
+    ],
+  },
+  enquiry: {
+    formKey: "enquiry",
+    formLabel: "New Enquiry",
+    editorRoute: "/enquiries/custom",
+    lists: [
+      {
+        key: "unit",
+        label: "Unit",
+        hint: "Dimension unit on each product.",
+        defaults: ["mm", "cm", "m", "inch"],
+      },
+      {
+        key: "state",
+        label: "State",
+        hint: "The State dropdown (India).",
+        defaults: [...INDIA_STATES],
+      },
+      {
+        key: "city",
+        label: "City",
+        hint: "Extra cities — merged on top of the built-in per-state list.",
+        defaults: [...MAJOR_CITIES],
+      },
     ],
   },
 };
@@ -100,7 +155,12 @@ export function isKnownCustomList(formKey: string, listKey: string): boolean {
 export function customEditorForSegment(
   seg: string,
 ): { route: string; formKey: string } | null {
-  const formKey = seg === "clients" || seg === "contacts" ? "kyc" : null;
+  const formKey =
+    seg === "clients" || seg === "contacts"
+      ? "kyc"
+      : seg === "enquiries" || seg === "inquiries"
+        ? "enquiry"
+        : null;
   if (!formKey) return null;
   const def = CUSTOM_LISTS[formKey];
   return def ? { route: def.editorRoute, formKey } : null;

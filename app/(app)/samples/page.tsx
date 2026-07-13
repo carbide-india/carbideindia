@@ -1,6 +1,5 @@
 import Link from "next/link";
-import type { Route } from "next";
-import { Plus, Upload } from "lucide-react";
+import { Plus } from "lucide-react";
 import {
   SampleTable,
   NEW_SAMPLE_ROUTE,
@@ -10,6 +9,10 @@ import { UserMenuServer } from "@/components/header/user-menu-server";
 import { requireUser } from "@/lib/auth/current";
 import { listSamples } from "@/lib/queries/samples";
 import { listEmployeeOptions } from "@/lib/queries/employees";
+import { loadLookups, specRefKinds } from "@/lib/import/lookups";
+import { sampleImportSpec } from "@/lib/import/specs/sample";
+import { commitSampleImport } from "@/app/(app)/samples/import/actions";
+import { BulkImportModal } from "@/components/import/bulk-import-modal";
 
 export const dynamic = "force-dynamic";
 
@@ -28,16 +31,21 @@ export default async function SamplesPage() {
     listEmployeeOptions(),
   ]);
 
-  // Admins get a Bulk Upload entry in the sidebar (sample import).
-  const bulkUpload = me?.isAdmin ? (
-    <Link
-      href={"/samples/import" as Route}
-      className="flex h-[44px] w-full items-center gap-3 rounded-lg px-3.5 text-[14px] font-semibold text-[#3a4152] transition hover:bg-[#efeffb] hover:text-[#3f3f94]"
-    >
-      <Upload className="h-[19px] w-[19px]" />
-      Bulk Upload
-    </Link>
-  ) : null;
+  // Admins get the animated Bulk Upload modal (template download → parse → fix
+  // → import), same as the New Sample page — no more legacy import page.
+  const importLookups = me?.isAdmin
+    ? await loadLookups(specRefKinds(sampleImportSpec.fields))
+    : null;
+  const bulkUpload =
+    me?.isAdmin && importLookups ? (
+      <BulkImportModal
+        spec={sampleImportSpec}
+        lookups={importLookups}
+        commit={commitSampleImport}
+        isAdmin
+        triggerClassName="flex h-[44px] w-full items-center gap-3 rounded-lg px-3.5 text-[14px] font-semibold text-[#3a4152] transition hover:bg-[#efeffb] hover:text-[#3f3f94]"
+      />
+    ) : null;
 
   return (
     <EnquiryModuleShell
