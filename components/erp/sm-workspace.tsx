@@ -246,16 +246,16 @@ export function SmWorkspace({
       <div className="flex flex-col gap-6">
         {/* ── Sticky "where am I" header ─────────────────────────────── */}
         <div
-          className="rounded-2xl border border-hairline bg-surface-card p-6 max-md:p-4"
+          className="rounded-section border border-hairline bg-surface-card p-6 max-md:p-4"
           style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}
         >
           <div className="flex flex-wrap items-start justify-between gap-5">
             <div className="min-w-0">
-              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-ink-subtle">
+              <div className="text-[12px] font-bold uppercase tracking-[0.14em] text-ink-subtle">
                 Sales · SM Repo
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-3">
-                <h1 className="font-mono text-[38px] leading-none tracking-tight text-ink-strong break-all">
+                <h1 className="font-mono text-[34px] leading-none tracking-tight text-ink-strong break-all">
                   {header.smNumber}
                 </h1>
                 <Chip
@@ -264,27 +264,10 @@ export function SmWorkspace({
                 />
                 {header.isArchived && <StatusPill tone="slate">Archived</StatusPill>}
               </div>
-              <p className="mt-2 text-[15px] text-ink-muted">
+              <p className="mt-2 text-[14px] text-ink-muted">
                 <span className="font-semibold text-ink-soft">{header.title}</span>
                 <span className="mx-2 text-ink-subtle">·</span>
                 {header.productCount} {header.productCount === 1 ? "product" : "products"}
-              </p>
-              <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-ink-muted">
-                {header.clientId ? (
-                  <Link
-                    href={`/clients/${header.clientId}` as Route}
-                    className="inline-flex items-center gap-1 font-semibold text-brand hover:underline"
-                  >
-                    {header.clientName}
-                    <ArrowUpRight size={13} strokeWidth={2.4} />
-                  </Link>
-                ) : (
-                  <span className="font-semibold text-ink-soft">{header.clientName}</span>
-                )}
-                <span className="text-ink-subtle">·</span>
-                <span>Sales: {header.salesPersonName ?? "Not allocated"}</span>
-                <span className="text-ink-subtle">·</span>
-                <span>Created {formatDate(header.createdAt)}</span>
               </p>
             </div>
             <div className="flex items-center gap-2.5">
@@ -309,6 +292,27 @@ export function SmWorkspace({
             </div>
           </div>
 
+          {/* Client / sales / created — labeled, low-text meta. */}
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <HeaderMeta label="Client">
+              {header.clientId ? (
+                <Link
+                  href={`/clients/${header.clientId}` as Route}
+                  className="inline-flex items-center gap-1 text-brand hover:underline"
+                >
+                  {header.clientName}
+                  <ArrowUpRight size={13} strokeWidth={2.4} />
+                </Link>
+              ) : (
+                header.clientName
+              )}
+            </HeaderMeta>
+            <HeaderMeta label="Sales person">
+              {header.salesPersonName ?? "Not allocated"}
+            </HeaderMeta>
+            <HeaderMeta label="Created">{formatDate(header.createdAt)}</HeaderMeta>
+          </div>
+
           {/* Pipeline stepper — server-derived position (Enq → Invoice). */}
           <div className="mt-5 rounded-xl border border-hairline bg-surface-soft px-4 py-3">
             <Stepper current={header.stageIndex} className="max-w-full" />
@@ -316,7 +320,7 @@ export function SmWorkspace({
 
           {/* Next-action strip. */}
           {header.nextAction && (
-            <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-brand/30 bg-brand/[0.04] px-4 py-3">
+            <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-brand/30 bg-brand/[0.06] px-4 py-3">
               <StatusPill tone="brand" size="sm" hideDot>
                 Next
               </StatusPill>
@@ -330,7 +334,11 @@ export function SmWorkspace({
                 <button
                   type="button"
                   onClick={() => header.nextAction?.tab && setTab(header.nextAction.tab as TabKey)}
-                  className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+                  className="ml-auto inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+                  style={{
+                    background: "linear-gradient(135deg, #3F3F94 0%, #6d6dcf 100%)",
+                    boxShadow: "0 3px 8px -2px rgba(63,63,148,0.55)",
+                  }}
                 >
                   Go
                   <ArrowUpRight size={14} strokeWidth={2.4} />
@@ -566,13 +574,16 @@ function OverviewTab({
     <div className="flex flex-col gap-8">
       {/* Next action + blockers */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="rounded-xl border border-brand/30 bg-brand/[0.04] p-4">
-          <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink-subtle">
+        <div
+          className="rounded-section border border-brand/30 bg-brand/[0.06] p-5"
+          style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}
+        >
+          <div className="text-[12px] font-bold uppercase tracking-[0.14em] text-ink-subtle">
             Next action
           </div>
           {header.nextAction ? (
             <>
-              <div className="mt-1.5 text-[16px] font-bold text-ink-strong">
+              <div className="mt-2 text-[15px] font-bold text-ink-strong">
                 {header.nextAction.label}
               </div>
               {header.nextAction.hint && (
@@ -582,7 +593,11 @@ function OverviewTab({
                 <button
                   type="button"
                   onClick={() => header.nextAction?.tab && onGoTab(header.nextAction.tab as TabKey)}
-                  className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+                  style={{
+                    background: "linear-gradient(135deg, #3F3F94 0%, #6d6dcf 100%)",
+                    boxShadow: "0 3px 8px -2px rgba(63,63,148,0.55)",
+                  }}
                 >
                   Go to {PIPELINE_STAGE_LABELS[header.nextAction.stage]}
                   <ArrowUpRight size={14} strokeWidth={2.4} />
@@ -590,17 +605,20 @@ function OverviewTab({
               )}
             </>
           ) : (
-            <div className="mt-1.5 text-[15px] font-semibold text-ink-strong">
+            <div className="mt-2 text-[14px] font-semibold text-ink-strong">
               In production — sales pipeline complete.
             </div>
           )}
         </div>
-        <div className="rounded-xl border border-hairline bg-surface-soft p-4">
-          <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink-subtle">
+        <div
+          className="rounded-section border border-hairline bg-surface-card p-5"
+          style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}
+        >
+          <div className="text-[12px] font-bold uppercase tracking-[0.14em] text-ink-subtle">
             Blockers
           </div>
           {blockers.length > 0 ? (
-            <ul className="mt-2 flex flex-col gap-1.5">
+            <ul className="mt-2.5 flex flex-col gap-1.5">
               {blockers.map((b) => (
                 <li key={b} className="flex items-start gap-2 text-[13px] text-ink-strong">
                   <TriangleAlert
@@ -614,20 +632,26 @@ function OverviewTab({
               ))}
             </ul>
           ) : (
-            <p className="mt-2 text-[13px] text-ink-muted">No blockers — clear to proceed.</p>
+            <p className="mt-2.5 text-[13px] text-ink-muted">No blockers — clear to proceed.</p>
           )}
         </div>
       </div>
 
       {/* Pipeline health */}
-      <Section title="Pipeline health" subtitle="Where each product line sits">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div
+        className="rounded-section border border-hairline bg-surface-card p-5"
+        style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}
+      >
+        <div className="text-[12px] font-bold uppercase tracking-[0.14em] text-ink-subtle">
+          Pipeline health
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <HealthStat n={products.length} label="Products" />
           <HealthStat n={costedCount} label="Costed" />
           <HealthStat n={readyCount} label="Ready to quote" />
           <HealthStat n={noItemCount} label="Unlinked" warn={noItemCount > 0} />
         </div>
-      </Section>
+      </div>
 
       {/* Products mini-list + client card */}
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.4fr_1fr]">
@@ -688,6 +712,17 @@ function OverviewTab({
       <Section title="Recent activity">
         <AuditHistory entries={auditEntries.slice(0, 5)} />
       </Section>
+    </div>
+  );
+}
+
+function HeaderMeta({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink-subtle">
+        {label}
+      </div>
+      <div className="mt-1 truncate text-[13.5px] font-semibold text-ink-strong">{children}</div>
     </div>
   );
 }
@@ -780,25 +815,32 @@ function ProductCard({
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 rounded-2xl border bg-surface-card p-4",
+        "flex flex-col gap-3 rounded-section border p-5",
         product.noItem ? "border-amber/50" : "border-hairline",
       )}
-      style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}
+      style={{
+        background: "var(--color-surface-soft)",
+        boxShadow: "0 1px 3px rgba(15,23,42,0.04)",
+      }}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink-subtle">
-            Product {index + 1}
-          </div>
-          <div className="mt-0.5 truncate text-[15px] font-bold text-ink-strong">
-            {product.custProductName ?? product.shapeName ?? "Unnamed product"}
-          </div>
+      <div className="flex items-center gap-3">
+        <span
+          className="grid h-[28px] min-w-[28px] shrink-0 place-items-center rounded-full px-2 text-[12.5px] font-extrabold text-white tabular-nums"
+          style={{
+            background: "linear-gradient(135deg, #3F3F94 0%, #6d6dcf 100%)",
+            boxShadow: "0 3px 8px -2px rgba(63,63,148,0.55)",
+          }}
+        >
+          {index + 1}
+        </span>
+        <div className="min-w-0 flex-1 truncate text-[14.5px] font-extrabold tracking-tight text-ink-strong">
+          {product.custProductName ?? product.shapeName ?? "Unnamed product"}
         </div>
         <button
           type="button"
           onClick={() => onOpenItem(product.id)}
           aria-label="Open item drawer"
-          className="shrink-0 rounded-lg border border-hairline p-1.5 text-ink-subtle transition-colors hover:border-brand hover:text-brand"
+          className="shrink-0 rounded-lg border border-hairline bg-surface-card p-1.5 text-ink-subtle transition-colors hover:border-brand hover:text-brand"
         >
           <PanelRightOpen size={15} strokeWidth={2.2} />
         </button>
@@ -818,7 +860,7 @@ function ProductCard({
       {/* Spec chips */}
       <div className="flex flex-wrap gap-1.5">
         {product.itemCode && (
-          <span className="inline-flex items-center gap-1 rounded-full border border-hairline bg-surface-soft px-2 py-0.5 font-mono text-[11px] font-semibold text-ink-strong">
+          <span className="inline-flex items-center gap-1 rounded-full border border-hairline bg-surface-card px-2 py-0.5 font-mono text-[11px] font-semibold text-ink-strong">
             {product.itemCode}
           </span>
         )}
