@@ -12,6 +12,8 @@ import { createItem, updateItem } from "@/app/(app)/items/actions";
 import { fireToast } from "@/lib/toast";
 import { Select } from "@/components/ui/select";
 import { Field } from "@/components/inquiries/form-field";
+import { NotesField } from "@/components/ui/notes-field";
+import { BackLink } from "@/components/ui/back-link";
 import { FoldingSection, useFoldingForm } from "@/components/forms/folding-section";
 import { buildItemCode, deriveSizeCode } from "@/lib/item-master/item-code";
 import type { MasterOptionWithCode } from "@/lib/queries/masters";
@@ -38,7 +40,20 @@ interface Props {
   editItemId?: string;
   /** Prefill values for edit mode — shaped like the form's input fields. */
   initialValues?: Partial<ItemFormValues>;
+  /** Compact page header rendered inline with the live-code preview chip. */
+  title?: string;
+  subtitle?: string;
+  backHref?: Route;
+  backLabel?: string;
 }
+
+/** Dimension unit options (mm / cm / m / inch). */
+const UNIT_OPTIONS = [
+  { value: "mm", label: "mm" },
+  { value: "cm", label: "cm" },
+  { value: "m", label: "m" },
+  { value: "inch", label: "inch" },
+];
 
 /** Size-class options — shown alongside the auto-derived value so user can override. */
 const SIZE_CODE_OPTIONS = [
@@ -67,6 +82,10 @@ export function ItemForm({
   shapeProfiles,
   editItemId,
   initialValues,
+  title,
+  subtitle,
+  backHref,
+  backLabel,
 }: Props) {
   const isEdit = Boolean(editItemId);
   const router = useRouter();
@@ -122,6 +141,7 @@ export function ItemForm({
       partTag: "",
       hsnCode: "",
       uom: "Nos",
+      dimensionUnit: "mm",
       altUom: "",
       // Edit mode prefill — overrides the empty defaults field-by-field.
       ...initialValues,
@@ -160,7 +180,7 @@ export function ItemForm({
   // validation on Continue. All item fields are optional client-side (the
   // server enforces shape-required dims), so Continue mostly just advances.
   const SECTION_FIELDS: string[][] = [
-    ["shapeId", "internalGradeId", "toleranceId", "conditionId", "sizeCode", "costingType", "gradeCustomer", "gradeNameForCust", "outerDia", "innerDia", "length", "width", "thickness", "dimensionNotes"],
+    ["shapeId", "internalGradeId", "toleranceId", "conditionId", "sizeCode", "costingType", "gradeCustomer", "gradeNameForCust", "outerDia", "innerDia", "length", "width", "thickness", "dimensionUnit", "dimensionNotes"],
     ["hsnCode", "uom", "altUom", "altUomConversion"],
     ["partNo", "partDescription1", "partDescription2", "partDescription3", "partDescription4", "partTag"],
   ];
@@ -249,23 +269,50 @@ export function ItemForm({
 
   const firstFieldError = Object.values(errors)[0]?.message as string | undefined;
 
+  // Live code preview chip — rendered inline in the compact header (or on its
+  // own when the form is used without a title).
+  const previewChip = (
+    <div
+      className="inline-flex items-center gap-3 rounded-chip border border-hairline px-4 py-2.5"
+      style={{ background: "color-mix(in srgb, var(--color-brand) 6%, white)" }}
+    >
+      <span className="text-[11px] uppercase tracking-[0.16em] font-bold text-ink-subtle">
+        Preview
+      </span>
+      <span
+        className="font-bold tracking-tight text-ink-strong"
+        style={{ fontFamily: "var(--font-mono)", fontSize: 15 }}
+      >
+        {displayCode}
+      </span>
+    </div>
+  );
+
+  const hasHeader = Boolean(title || subtitle || backHref);
+
   return (
     <form onSubmit={submit} className="flex flex-col gap-6" noValidate>
-      {/* ── Live code preview chip ─────────────────────────────────── */}
-      <div
-        className="inline-flex items-center gap-3 self-start rounded-chip border border-hairline px-4 py-2.5"
-        style={{ background: "color-mix(in srgb, var(--color-brand) 6%, white)" }}
-      >
-        <span className="text-[11px] uppercase tracking-[0.16em] font-bold text-ink-subtle">
-          Preview
-        </span>
-        <span
-          className="font-bold tracking-tight text-ink-strong"
-          style={{ fontFamily: "var(--font-mono)", fontSize: 15 }}
-        >
-          {displayCode}
-        </span>
-      </div>
+      {/* ── Compact header — back link + title + live preview on ≤2 rows ── */}
+      {hasHeader ? (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          {backHref && (
+            <BackLink href={backHref} label={backLabel ?? "Back"} />
+          )}
+          {title && (
+            <h1 className="text-[24px] font-black leading-none tracking-tight text-[#3f3f94]">
+              {title}
+            </h1>
+          )}
+          <div className="sm:ml-auto">{previewChip}</div>
+          {subtitle && (
+            <p className="w-full font-mono text-[13px] text-ink-subtle break-all">
+              {subtitle}
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="self-start">{previewChip}</div>
+      )}
 
       {/* ── 1 · Classification ───────────────────────────────────── */}
       <FoldingSection
@@ -276,30 +323,30 @@ export function ItemForm({
         hint="These fields drive the internal item code — required for the code to be meaningful."
         summary={displayCode}
       >
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-          <Field id="item-shape" label="Shape" labelOnly>
-            <Controller
-              control={control}
-              name="shapeId"
-              render={({ field }) => (
-                <Select
-                  id="item-shape"
-                  value={field.value ?? ""}
-                  onValueChange={(v) => field.onChange(v || undefined)}
-                  placeholder="Select shape"
-                  searchable
-                  options={shapes.map((s) => ({
-                    value: s.id,
-                    label: `${s.name}${s.code ? ` (${s.code})` : ""}`,
-                  }))}
-                />
-              )}
-            />
-          </Field>
-        </div>
-
-        {/* Dimensions — appear inline right after Shape, driven by it. */}
-        <div className="grid grid-cols-3 gap-4 max-md:grid-cols-2 max-sm:grid-cols-1">
+        {/* Shape + dimensions + unit on one line — Shape spans two columns so
+            it stays wide enough; the visible dims + Unit fill the rest. */}
+        <div className="grid grid-cols-6 gap-3 max-lg:grid-cols-3 max-sm:grid-cols-2">
+          <div className="col-span-2 max-lg:col-span-3 max-sm:col-span-2">
+            <Field id="item-shape" label="Shape" labelOnly>
+              <Controller
+                control={control}
+                name="shapeId"
+                render={({ field }) => (
+                  <Select
+                    id="item-shape"
+                    value={field.value ?? ""}
+                    onValueChange={(v) => field.onChange(v || undefined)}
+                    placeholder="Select shape"
+                    searchable
+                    options={shapes.map((s) => ({
+                      value: s.id,
+                      label: `${s.name}${s.code ? ` (${s.code})` : ""}`,
+                    }))}
+                  />
+                )}
+              />
+            </Field>
+          </div>
           {DIM_FIELDS.map((f) => {
             const rule = shapeConfig.dims[f];
             if (rule === "hidden") return null;
@@ -307,7 +354,7 @@ export function ItemForm({
               <Field
                 key={f}
                 id={`item-${f}`}
-                label={`${DIM_LABELS[f]} (mm)${rule === "required" ? " *" : ""}`}
+                label={`${DIM_LABELS[f]}${rule === "required" ? " *" : ""}`}
               >
                 <input
                   id={`item-${f}`}
@@ -321,19 +368,43 @@ export function ItemForm({
               </Field>
             );
           })}
+          <Field id="item-dim-unit" label="Unit" labelOnly>
+            <Controller
+              control={control}
+              name="dimensionUnit"
+              render={({ field }) => (
+                <Select
+                  id="item-dim-unit"
+                  value={field.value ?? "mm"}
+                  onValueChange={(v) => field.onChange(v || "mm")}
+                  placeholder="Unit"
+                  options={UNIT_OPTIONS}
+                />
+              )}
+            />
+          </Field>
         </div>
         <Field id="item-dim-notes" label="Dimension Notes">
-          <textarea
-            id="item-dim-notes"
-            rows={2}
-            className="nt-input resize-y"
-            style={{ fontWeight: 400 }}
-            placeholder="Special notes about dimensions"
-            {...register("dimensionNotes")}
+          <Controller
+            control={control}
+            name="dimensionNotes"
+            render={({ field }) => (
+              <NotesField
+                id="item-dim-notes"
+                value={field.value ?? ""}
+                onChange={field.onChange}
+                rows={1}
+                placeholder="Special notes about dimensions"
+                ariaLabel="Dimension notes"
+              />
+            )}
           />
         </Field>
 
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+        {/* Grade · Condition · Tolerance · Size · Costing · customer grades —
+            all on one line (wraps to 3 / 2 columns on smaller screens).
+            items-end keeps the controls bottom-aligned even if a label wraps. */}
+        <div className="grid grid-cols-7 items-end gap-3 max-lg:grid-cols-3 max-sm:grid-cols-2">
           <Field id="item-grade" label="Internal Grade" labelOnly>
             <Controller
               control={control}
@@ -343,7 +414,7 @@ export function ItemForm({
                   id="item-grade"
                   value={field.value ?? ""}
                   onValueChange={(v) => field.onChange(v || undefined)}
-                  placeholder="Select grade"
+                  placeholder="Grade"
                   searchable
                   options={grades.map((g) => ({
                     value: g.id,
@@ -363,7 +434,7 @@ export function ItemForm({
                   id="item-condition"
                   value={field.value ?? ""}
                   onValueChange={(v) => field.onChange(v || undefined)}
-                  placeholder="Select condition"
+                  placeholder="Condition"
                   searchable
                   options={conditions.map((c) => ({
                     value: c.id,
@@ -383,7 +454,7 @@ export function ItemForm({
                   id="item-tolerance"
                   value={field.value ?? ""}
                   onValueChange={(v) => field.onChange(v || undefined)}
-                  placeholder="Select tolerance (or leave XXX)"
+                  placeholder="XXX"
                   searchable
                   options={tolerances.map((t) => ({
                     value: t.id,
@@ -393,10 +464,8 @@ export function ItemForm({
               )}
             />
           </Field>
-        </div>
 
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-          <Field id="item-size" label="Size Class (optional — auto-derived from dims)" labelOnly>
+          <Field id="item-size" label="Size" labelOnly>
             <Controller
               control={control}
               name="sizeCode"
@@ -405,7 +474,7 @@ export function ItemForm({
                   id="item-size"
                   value={field.value ?? ""}
                   onValueChange={(v) => field.onChange(v || undefined)}
-                  placeholder="Auto from dimensions"
+                  placeholder="Auto"
                   options={[{ value: "", label: "— Auto —" }, ...SIZE_CODE_OPTIONS]}
                 />
               )}
@@ -423,7 +492,7 @@ export function ItemForm({
                   onValueChange={(v) =>
                     field.onChange(v ? (v as typeof COSTING_TYPES[number]) : undefined)
                   }
-                  placeholder="Select costing type"
+                  placeholder="Costing"
                   options={COSTING_TYPES.map((ct) => ({
                     value: ct,
                     label: COSTING_TYPE_LABELS[ct],
@@ -432,25 +501,37 @@ export function ItemForm({
               )}
             />
           </Field>
-        </div>
 
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-          <Field id="item-grade-cust" label="Grade (Customer)">
-            <input
-              id="item-grade-cust"
-              type="text"
-              className="nt-input"
-              placeholder="Customer's grade designation"
-              {...register("gradeCustomer")}
+          <Field id="item-grade-cust" label="Cust. Grade" labelOnly>
+            <Controller
+              control={control}
+              name="gradeCustomer"
+              render={({ field }) => (
+                <Select
+                  id="item-grade-cust"
+                  value={field.value ?? ""}
+                  onValueChange={(v) => field.onChange(v ?? "")}
+                  placeholder="Grade"
+                  searchable
+                  options={grades.map((g) => ({ value: g.name, label: g.name }))}
+                />
+              )}
             />
           </Field>
-          <Field id="item-grade-name-cust" label="Grade Name for Customer">
-            <input
-              id="item-grade-name-cust"
-              type="text"
-              className="nt-input"
-              placeholder="How we present the grade"
-              {...register("gradeNameForCust")}
+          <Field id="item-grade-name-cust" label="Cust. Grade Name" labelOnly>
+            <Controller
+              control={control}
+              name="gradeNameForCust"
+              render={({ field }) => (
+                <Select
+                  id="item-grade-name-cust"
+                  value={field.value ?? ""}
+                  onValueChange={(v) => field.onChange(v ?? "")}
+                  placeholder="Grade name"
+                  searchable
+                  options={grades.map((g) => ({ value: g.name, label: g.name }))}
+                />
+              )}
             />
           </Field>
         </div>
@@ -465,7 +546,7 @@ export function ItemForm({
         hint="HSN code (GST) and the unit of measure. Alt UoM lets you record a secondary unit and its conversion to the base UoM."
         summary={watch("hsnCode") ? `HSN ${watch("hsnCode")} · ${watch("uom") ?? "Nos"}` : (watch("uom") ?? "Nos")}
       >
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+        <div className="grid grid-cols-4 gap-4 max-lg:grid-cols-2 max-sm:grid-cols-1">
           <Field id="item-hsn" label="HSN Code">
             <input
               id="item-hsn"
@@ -535,38 +616,26 @@ export function ItemForm({
             />
           </Field>
         </div>
-        <Field id="item-desc1" label="Part Description 1">
-          <input
-            id="item-desc1"
-            type="text"
-            className="nt-input"
-            {...register("partDescription1")}
-          />
-        </Field>
-        <Field id="item-desc2" label="Part Description 2">
-          <input
-            id="item-desc2"
-            type="text"
-            className="nt-input"
-            {...register("partDescription2")}
-          />
-        </Field>
-        <Field id="item-desc3" label="Part Description 3">
-          <input
-            id="item-desc3"
-            type="text"
-            className="nt-input"
-            {...register("partDescription3")}
-          />
-        </Field>
-        <Field id="item-desc4" label="Part Description 4">
-          <input
-            id="item-desc4"
-            type="text"
-            className="nt-input"
-            {...register("partDescription4")}
-          />
-        </Field>
+        {([1, 2, 3, 4] as const).map((n) => {
+          const fieldName = `partDescription${n}` as const;
+          return (
+            <Field key={n} id={`item-desc${n}`} label={`Part Description ${n}`}>
+              <Controller
+                control={control}
+                name={fieldName}
+                render={({ field }) => (
+                  <NotesField
+                    id={`item-desc${n}`}
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    rows={1}
+                    ariaLabel={`Part description ${n}`}
+                  />
+                )}
+              />
+            </Field>
+          );
+        })}
       </FoldingSection>
 
       {(serverError ?? firstFieldError) && (

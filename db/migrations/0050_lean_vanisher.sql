@@ -1,0 +1,1 @@
+ALTER TABLE "items" ADD COLUMN "dimension_unit" text DEFAULT 'mm';

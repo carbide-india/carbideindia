@@ -816,9 +816,10 @@ export const items = pgTable(
     gradeCustomer: text("grade_customer"),
     gradeNameForCust: text("grade_name_for_cust"),
 
-    // Dimensions (mm, 2 decimals).
+    // Dimensions + the unit they're expressed in (mm / cm / m / inch).
     outerDia: numeric("outer_dia"), innerDia: numeric("inner_dia"),
     length: numeric("length"), width: numeric("width"), thickness: numeric("thickness"),
+    dimensionUnit: text("dimension_unit").default("mm"),
     dimensionNotes: text("dimension_notes"),
 
     // Part identity + quotation insert lines.

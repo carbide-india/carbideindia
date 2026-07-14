@@ -7,6 +7,8 @@ import { getAuditLog } from "@/lib/queries/audit";
 import { getItemStageCounts, stageFromCounts } from "@/lib/queries/item-stage";
 import { getItemWhereUsed } from "@/lib/queries/item-where-used";
 import { ItemWorkspace } from "@/components/erp/item-workspace";
+import { MastersModuleShell } from "@/components/masters/masters-module-shell";
+import { UserMenuServer } from "@/components/header/user-menu-server";
 
 export const dynamic = "force-dynamic";
 
@@ -43,14 +45,16 @@ export default async function ItemDetailPage({ params }: PageProps) {
   const stageIndex = stageFromCounts(counts, item.status);
 
   return (
-    <ItemWorkspace
-      item={item}
-      auditEntries={auditEntries}
-      documents={documents}
-      counts={counts}
-      whereUsed={whereUsed}
-      stageIndex={stageIndex}
-      isAdmin={me.isAdmin}
-    />
+    <MastersModuleShell userMenu={<UserMenuServer />}>
+      <ItemWorkspace
+        item={item}
+        auditEntries={auditEntries}
+        documents={documents}
+        counts={counts}
+        whereUsed={whereUsed}
+        stageIndex={stageIndex}
+        isAdmin={me.isAdmin}
+      />
+    </MastersModuleShell>
   );
 }

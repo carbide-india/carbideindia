@@ -31,6 +31,7 @@ export interface ItemListItem {
   length: string | null;
   width: string | null;
   thickness: string | null;
+  dimensionUnit: string | null;
   dimensionNotes: string | null;
   altUom: string | null;
   altUomConversion: string | null;
@@ -78,6 +79,7 @@ export async function listItems(): Promise<ItemListItem[]> {
       length: items.length,
       width: items.width,
       thickness: items.thickness,
+      dimensionUnit: items.dimensionUnit,
       dimensionNotes: items.dimensionNotes,
       altUom: items.altUom,
       altUomConversion: items.altUomConversion,
@@ -149,6 +151,7 @@ export interface ItemEditValues {
   length?: string;
   width?: string;
   thickness?: string;
+  dimensionUnit?: string;
   dimensionNotes: string;
   hsnCode: string;
   uom: string;
@@ -189,6 +192,7 @@ export async function getItemForEdit(id: string): Promise<ItemEditValues | null>
     length: str(item.length),
     width: str(item.width),
     thickness: str(item.thickness),
+    dimensionUnit: str(item.dimensionUnit) ?? "mm",
     dimensionNotes: text(item.dimensionNotes),
     hsnCode: text(item.hsnCode),
     uom: item.uom ?? "Nos",

@@ -6,12 +6,7 @@ import type { Route } from "next";
 import {
   Pencil,
   PanelRightOpen,
-  Boxes,
-  FileText,
   Building2,
-  ClipboardList,
-  Layers,
-  LayoutDashboard,
   ArrowUpRight,
   Factory,
 } from "lucide-react";
@@ -27,7 +22,6 @@ import type {
   CostHistoryRow,
   QuotePriceRow,
 } from "@/lib/queries/item-where-used";
-import { AppShell, type RailGroup } from "@/components/erp/app-shell";
 import { Stepper } from "@/components/erp/stepper";
 import { StatusPill, ITEM_STATUS_PILL, type PillTone } from "@/components/erp/status-pill";
 import { DetailGrid, type DetailField } from "@/components/erp/detail-grid";
@@ -64,31 +58,6 @@ interface ItemWorkspaceProps {
   stageIndex: number;
   isAdmin: boolean;
 }
-
-const NAV: ReadonlyArray<RailGroup> = [
-  {
-    label: "Product",
-    items: [{ href: "/items", label: "Item Master", Icon: Boxes }],
-  },
-  {
-    label: "Sales",
-    items: [
-      { href: "/inquiries", label: "Enquiries", Icon: FileText },
-      { href: "/clients", label: "Clients", Icon: Building2 },
-    ],
-  },
-  {
-    label: "Production",
-    items: [{ href: "/job-cards", label: "Job Cards", Icon: ClipboardList }],
-  },
-  {
-    label: "Setup",
-    items: [
-      { href: "/masters", label: "Masters", Icon: Layers },
-      { href: "/", label: "Dashboard", Icon: LayoutDashboard },
-    ],
-  },
-];
 
 type TabKey =
   | "overview"
@@ -320,15 +289,30 @@ export function ItemWorkspace({
   );
 
   return (
-    <AppShell
-      nav={NAV}
-      breadcrumb={[
-        { label: "Product", href: "/items" },
-        { label: "Item Master", href: "/items" },
-        { label: item.itemCode },
-      ]}
-      contextBarExtra={<Stepper current={stageIndex} className="max-w-full" />}
-    >
+    <div className="mx-auto w-full max-w-[1600px]">
+      {/* Breadcrumb */}
+      <nav className="mb-4 flex items-center gap-1.5 text-[13px] text-ink-subtle">
+        <Link href={"/items" as Route} className="font-semibold transition hover:text-[#3f3f94]">
+          Product
+        </Link>
+        <span className="text-ink-subtle">›</span>
+        <Link href={"/items" as Route} className="font-semibold transition hover:text-[#3f3f94]">
+          Product Master
+        </Link>
+        <span className="text-ink-subtle">›</span>
+        <span className="min-w-0 truncate font-semibold text-ink-strong" style={{ fontFamily: "var(--font-mono)" }}>
+          {item.itemCode}
+        </span>
+      </nav>
+
+      {/* Lifecycle stepper */}
+      <div
+        className="mb-6 overflow-hidden rounded-2xl border border-hairline bg-surface-card p-4"
+        style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}
+      >
+        <Stepper current={stageIndex} className="max-w-full" />
+      </div>
+
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <div className="flex min-w-0 flex-1 flex-col gap-6">
           <div className="rounded-2xl border border-hairline bg-surface-card p-6 max-md:p-4" style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}>
@@ -430,7 +414,7 @@ export function ItemWorkspace({
           },
         ]}
       />
-    </AppShell>
+    </div>
   );
 }
 

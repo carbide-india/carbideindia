@@ -26,8 +26,9 @@ export const CreateItemSchema = z.object({
   conditionId: z.string().uuid().optional(),
   gradeCustomer: OptText(120),
   gradeNameForCust: OptText(120),
-  // Dimensions (mm).
+  // Dimensions + the unit they're expressed in (mm / cm / m / inch).
   outerDia: Num, innerDia: Num, length: Num, width: Num, thickness: Num,
+  dimensionUnit: OptText(8),
   dimensionNotes: OptText(2000),
   // Part identity + quotation lines.
   partNo: OptText(120),

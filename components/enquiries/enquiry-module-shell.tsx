@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { HubSearch } from "@/components/hub/hub-search";
+import { ModuleTitleBadge } from "@/components/layout/module-title-badge";
 import { draftKindForSegment, FORM_DRAFT_META } from "@/lib/drafts/form-drafts";
 import { customEditorForSegment } from "@/lib/custom-lists/registry";
 import { cn } from "@/lib/utils";
@@ -241,7 +242,7 @@ export function EnquiryModuleShell({
           {showSidebar && (
             <Link
               href={"/enquiries" as Route}
-              className="group flex h-9 shrink-0 items-center gap-2 rounded-lg bg-[linear-gradient(135deg,#4a4ab5_0%,#2f2f6f_100%)] px-3.5 text-[13.5px] font-bold text-white shadow-[0_4px_12px_rgba(63,63,148,0.38)] ring-1 ring-white/10 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(63,63,148,0.52)] hover:brightness-110 active:translate-y-0 active:scale-95"
+              className="group flex h-9 shrink-0 items-center gap-2 rounded-lg bg-[#3f3f94] px-3.5 text-[13.5px] font-bold text-white shadow-[0_4px_12px_rgba(63,63,148,0.38)] ring-1 ring-white/10 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(63,63,148,0.52)] hover:brightness-110 active:translate-y-0 active:scale-95"
               aria-label="Back to all forms"
             >
               <ArrowLeft className="h-[17px] w-[17px] transition-transform duration-200 group-hover:-translate-x-0.5" />
@@ -251,15 +252,14 @@ export function EnquiryModuleShell({
           {/* Hub sits immediately before the module title. */}
           <Link
             href={"/hub" as Route}
-            className="group flex h-10 shrink-0 items-center gap-2 rounded-lg bg-[linear-gradient(135deg,#4a4ab5_0%,#2f2f6f_100%)] px-4 text-[15px] font-extrabold text-white shadow-[0_4px_12px_rgba(63,63,148,0.38)] ring-1 ring-white/10 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(63,63,148,0.52)] hover:brightness-110 active:translate-y-0 active:scale-95"
+            className="group flex h-10 shrink-0 items-center gap-2 rounded-lg bg-[#3f3f94] px-4 text-[15px] font-extrabold text-white shadow-[0_4px_12px_rgba(63,63,148,0.38)] ring-1 ring-white/10 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(63,63,148,0.52)] hover:brightness-110 active:translate-y-0 active:scale-95"
             aria-label="Back to hub"
           >
-            <LayoutGrid className="h-[19px] w-[19px] transition-transform duration-200 group-hover:scale-110" strokeWidth={2.4} />
+            <ArrowLeft className="h-[16px] w-[16px] transition-transform duration-200 group-hover:-translate-x-0.5" strokeWidth={2.6} />
+            <LayoutGrid className="h-[19px] w-[19px]" strokeWidth={2.4} />
             Hub
           </Link>
-          <span className="ml-1 shrink-0 text-[26px] font-black leading-none tracking-tight text-[#3f3f94]">
-            {pageTitle}
-          </span>
+          <ModuleTitleBadge title={pageTitle} />
         </div>
 
         {/* Middle zone — centered search. */}

@@ -10,6 +10,7 @@ import {
   getSortedRowModel,
   getPaginationRowModel,
   getFilteredRowModel,
+  getExpandedRowModel,
   useReactTable,
   type ColumnDef,
   type VisibilityState,
@@ -31,6 +32,7 @@ import {
   ArrowUpRight,
   Pencil,
   Check,
+  MoreHorizontal,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -100,6 +102,32 @@ export interface RegisterColumn<TRow> {
    * alongside `width` on a `table-fixed` table. Used for long free-text columns.
    */
   truncate?: boolean;
+  /**
+   * Wrap this column's text onto multiple lines instead of a single nowrap line.
+   * Pairs with a fixed `width` so a long value (e.g. a product name) stays fully
+   * visible within a narrow column, growing the row height as needed.
+   */
+  wrap?: boolean;
+  /**
+   * Freeze this column to the left edge so it stays visible while the table
+   * scrolls horizontally. Pinned columns MUST declare a fixed `width` (px). The
+   * leftmost affordance columns (row menu + select checkbox) are auto-frozen
+   * whenever any column is pinned, keeping the frozen block contiguous.
+   */
+  pinnedLeft?: boolean;
+}
+
+/** One entry in a row's three-dot actions menu. */
+export interface RowMenuItem<TRow> {
+  key: string;
+  label: string;
+  Icon?: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
+  /** Navigates here on select. */
+  href?: Route;
+  /** Called on select (ignored when `href` is set). */
+  onSelect?: (row: TRow) => void;
+  /** Render in the destructive (red) tone. */
+  danger?: boolean;
 }
 
 export interface FilterConfig<TRow> {
@@ -157,6 +185,27 @@ export interface RegisterDataTableProps<TRow> {
    * control group in the bulk bar. Supersedes `bulkAction` when provided.
    */
   bulkActions?: BulkActionConfig[];
+  /**
+   * When provided, each row shows a three-dot menu of these actions instead of
+   * the default hover open/edit icons. `rowMenuPlacement` controls whether the
+   * menu column sits at the left edge (default "right").
+   */
+  rowMenu?: (row: TRow) => RowMenuItem<TRow>[];
+  rowMenuPlacement?: "left" | "right";
+  /**
+   * Hide the built-in toolbar search input — used when the page renders its own
+   * search elsewhere (e.g. beside the page title) and feeds it via `externalQuery`.
+   */
+  hideToolbarSearch?: boolean;
+  /** Controlled search text. When set, overrides the internal search box. */
+  externalQuery?: string;
+  /**
+   * When provided, each row gets a left chevron and can expand in place to show
+   * this node (a decoded detail panel). Row-body clicks toggle the expansion
+   * instead of opening. Keeps the visible columns few so there's no horizontal
+   * scroll — the rest of the fields live in the expanded panel.
+   */
+  renderExpanded?: (row: TRow) => React.ReactNode;
   emptyTitle: string;
   emptyHint?: string;
 }
@@ -204,6 +253,11 @@ export function RegisterDataTable<TRow>({
   showExport = true,
   bulkAction,
   bulkActions,
+  rowMenu,
+  rowMenuPlacement = "right",
+  hideToolbarSearch = false,
+  externalQuery,
+  renderExpanded,
   emptyTitle,
   emptyHint,
 }: RegisterDataTableProps<TRow>) {
@@ -217,11 +271,13 @@ export function RegisterDataTable<TRow>({
     [bulkActions, bulkAction],
   );
 
-  // Fixed-layout kicks in only when at least one column declares a width; when
-  // none do, the table keeps its original auto layout (unchanged for the other
-  // registers).
+  // Fixed-layout kicks in only when at least one NON-pinned column declares a
+  // width; when none do, the table keeps its original auto layout (unchanged for
+  // the other registers). Pinned columns declare widths purely to compute their
+  // sticky offsets and must NOT flip the whole table to table-fixed (that would
+  // fit-to-container and kill the horizontal scroll the freeze relies on).
   const hasWidths = React.useMemo(
-    () => columns.some((c) => c.width),
+    () => columns.some((c) => c.width && !c.pinnedLeft),
     [columns],
   );
 
@@ -269,7 +325,10 @@ export function RegisterDataTable<TRow>({
   }, [tableKey, columnVisibility]);
 
   // -- Global search + faceted filters (client-side state) --------------------
-  const [query, setQuery] = React.useState("");
+  // `query` is the effective search text: the controlled `externalQuery` when a
+  // page drives search from elsewhere, otherwise the internal toolbar input.
+  const [internalQuery, setInternalQuery] = React.useState("");
+  const query = externalQuery !== undefined ? externalQuery : internalQuery;
   const [debouncedQuery, setDebouncedQuery] = React.useState("");
   React.useEffect(() => {
     const t = setTimeout(() => setDebouncedQuery(query.trim().toLowerCase()), 250);
@@ -384,12 +443,13 @@ export function RegisterDataTable<TRow>({
       meta: {
         align: c.align ?? "left",
         truncate: c.truncate ?? false,
+        wrap: c.wrap ?? false,
         // Hover title for truncated cells: the column's text value.
         title: c.truncate && c.sortValue ? (row: TRow) => asText(c.sortValue!(row)) : undefined,
       },
     }));
 
-    const actions: ColumnDef<TRow> = {
+    const defaultActions: ColumnDef<TRow> = {
       id: "__actions",
       enableSorting: false,
       enableHiding: false,
@@ -403,8 +463,49 @@ export function RegisterDataTable<TRow>({
       ),
     };
 
-    return [select, ...body, actions];
-  }, [columns, getOpenHref, onRowOpen, getEditHref]);
+    const menuCol: ColumnDef<TRow> = {
+      id: "__menu",
+      enableSorting: false,
+      enableHiding: false,
+      header: () => <span className="sr-only">Row actions</span>,
+      cell: ({ row }) => <RowMenu row={row.original} items={rowMenu!(row.original)} />,
+    };
+
+    const expanderCol: ColumnDef<TRow> = {
+      id: "__expander",
+      enableSorting: false,
+      enableHiding: false,
+      header: () => <span className="sr-only">Expand</span>,
+      cell: ({ row }) => (
+        <button
+          type="button"
+          aria-label={row.getIsExpanded() ? "Collapse row" : "Expand row"}
+          aria-expanded={row.getIsExpanded()}
+          onClick={(e) => {
+            e.stopPropagation();
+            row.toggleExpanded();
+          }}
+          className="grid size-7 place-items-center rounded-lg text-ink-subtle transition hover:bg-surface-soft hover:text-ink-strong"
+        >
+          <ChevronRight
+            className={cn("h-4 w-4 transition-transform", row.getIsExpanded() && "rotate-90")}
+            strokeWidth={2.6}
+          />
+        </button>
+      ),
+    };
+    const lead = renderExpanded ? [expanderCol] : [];
+
+    // Placement resolution:
+    //  • rowMenu + left  → menu is the first (leftmost) column, no right actions
+    //  • rowMenu + right → menu replaces the right actions column
+    //  • no rowMenu      → default hover open/edit icons on the right
+    if (rowMenu && rowMenuPlacement === "left") {
+      return [...lead, menuCol, select, ...body];
+    }
+    const right = rowMenu ? menuCol : defaultActions;
+    return [...lead, select, ...body, right];
+  }, [columns, getOpenHref, onRowOpen, getEditHref, rowMenu, rowMenuPlacement, renderExpanded]);
 
   // -- TanStack table instance ------------------------------------------------
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -420,9 +521,11 @@ export function RegisterDataTable<TRow>({
     onRowSelectionChange: setRowSelection,
     enableRowSelection: true,
     getRowId: (row) => getRowId(row),
+    getRowCanExpand: () => Boolean(renderExpanded),
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     initialState: { pagination: { pageIndex: 0, pageSize: DEFAULT_PAGE_SIZE } },
     autoResetPageIndex: false,
@@ -444,6 +547,35 @@ export function RegisterDataTable<TRow>({
     if (table.getState().pagination.pageIndex > maxIndex) table.setPageIndex(maxIndex);
   }, [filteredRows, table, pageSize]);
 
+  // -- Frozen (sticky-left) columns -------------------------------------------
+  // Build a map of leaf-column-id → { left offset, width, last }. The frozen
+  // block is the contiguous leftmost run: the row-menu + select affordances,
+  // then every leading column flagged `pinnedLeft`, stopping at the first
+  // un-pinned body column.
+  const MENU_W = 46;
+  const SELECT_W = 46;
+  const pinned = React.useMemo(() => {
+    const map = new Map<string, { left: number; width: number; last: boolean }>();
+    if (!columns.some((c) => c.pinnedLeft)) return map;
+    const visibleBody = columns.filter((c) => columnVisibility[c.id] !== false);
+    let left = 0;
+    const push = (id: string, width: number) => {
+      map.set(id, { left, width, last: false });
+      left += width;
+    };
+    if (rowMenu && rowMenuPlacement === "left") push("__menu", MENU_W);
+    push("__select", SELECT_W);
+    for (const c of visibleBody) {
+      if (!c.pinnedLeft) break;
+      const w = c.width ? parseFloat(c.width) : 160;
+      push(c.id, Number.isFinite(w) ? w : 160);
+    }
+    const ids = [...map.keys()];
+    const lastId = ids[ids.length - 1];
+    if (lastId) map.get(lastId)!.last = true;
+    return map;
+  }, [columns, columnVisibility, rowMenu, rowMenuPlacement]);
+
   const totalFiltered = table.getPrePaginationRowModel().rows.length;
   const pageIndex = table.getState().pagination.pageIndex;
   const rangeStart = totalFiltered === 0 ? 0 : pageIndex * pageSize + 1;
@@ -458,7 +590,7 @@ export function RegisterDataTable<TRow>({
     Object.values(dateFilters).some((r) => r.from || r.to);
 
   function clearFilters() {
-    setQuery("");
+    setInternalQuery("");
     setSelectFilters({});
     setDateFilters({});
   }
@@ -507,32 +639,34 @@ export function RegisterDataTable<TRow>({
     <div>
       {/* Toolbar ------------------------------------------------------------- */}
       <div className="mb-4 flex items-center gap-2 flex-wrap">
-        <label className="relative flex-1 min-w-[220px] max-w-md">
-          <Search
-            size={15}
-            strokeWidth={2.2}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle pointer-events-none"
-          />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search"
-            aria-label="Search rows"
-            className="w-full rounded-chip border border-hairline bg-surface-card pl-9 pr-8 py-2 text-[14px] text-ink-strong placeholder:text-ink-subtle outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
-            style={{ boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)" }}
-          />
-          {query && (
-            <button
-              type="button"
-              onClick={() => setQuery("")}
-              aria-label="Clear search"
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-subtle hover:text-ink-strong transition-colors"
-            >
-              <X size={15} strokeWidth={2.4} />
-            </button>
-          )}
-        </label>
+        {!hideToolbarSearch && (
+          <label className="relative flex-1 min-w-[220px] max-w-md">
+            <Search
+              size={15}
+              strokeWidth={2.2}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle pointer-events-none"
+            />
+            <input
+              type="search"
+              value={internalQuery}
+              onChange={(e) => setInternalQuery(e.target.value)}
+              placeholder="Search"
+              aria-label="Search rows"
+              className="w-full rounded-chip border border-hairline bg-surface-card pl-9 pr-8 py-2 text-[14px] text-ink-strong placeholder:text-ink-subtle outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
+              style={{ boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)" }}
+            />
+            {internalQuery && (
+              <button
+                type="button"
+                onClick={() => setInternalQuery("")}
+                aria-label="Clear search"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-subtle hover:text-ink-strong transition-colors"
+              >
+                <X size={15} strokeWidth={2.4} />
+              </button>
+            )}
+          </label>
+        )}
 
         {filters.map((f) =>
           f.type === "select" ? (
@@ -665,6 +799,7 @@ export function RegisterDataTable<TRow>({
                     const canSort = h.column.getCanSort();
                     const sorted = h.column.getIsSorted(); // false | "asc" | "desc"
                     const node = flexRender(h.column.columnDef.header, h.getContext());
+                    const pin = pinned.get(h.id);
                     return (
                       <th
                         key={h.id}
@@ -676,10 +811,24 @@ export function RegisterDataTable<TRow>({
                               : undefined
                         }
                         className={cn(
-                          "sticky top-0 z-10 px-4 py-4 whitespace-nowrap",
+                          "sticky top-0 px-4 py-4 whitespace-nowrap",
+                          pin ? "z-30" : "z-20",
                           align === "right" ? "text-right" : "text-left",
                         )}
-                        style={{ background: "var(--color-surface-soft)" }}
+                        style={{
+                          background: "var(--color-surface-soft)",
+                          ...(pin
+                            ? {
+                                left: pin.left,
+                                width: pin.width,
+                                minWidth: pin.width,
+                                maxWidth: pin.width,
+                                boxShadow: pin.last
+                                  ? "8px 0 8px -8px rgba(15,23,42,0.18)"
+                                  : undefined,
+                              }
+                            : {}),
+                        }}
                       >
                         {canSort ? (
                           <button
@@ -716,18 +865,27 @@ export function RegisterDataTable<TRow>({
             <tbody>
               {table.getRowModel().rows.map((row, i) => {
                 const href = getOpenHref(row.original);
+                const expanded = Boolean(renderExpanded) && row.getIsExpanded();
                 return (
+                  <React.Fragment key={row.id}>
                   <tr
-                    key={row.id}
-                    className="group/row border-b border-hairline last:border-b-0 transition-colors hover:bg-surface-soft cursor-pointer"
+                    className={cn(
+                      "group/row border-b border-hairline transition-colors hover:bg-surface-soft cursor-pointer",
+                      expanded ? "border-b-0 bg-surface-soft" : "last:border-b-0",
+                    )}
                     style={{
-                      background: i % 2 === 1 ? "rgba(15, 23, 42, 0.012)" : undefined,
+                      background:
+                        !expanded && i % 2 === 1 ? "rgba(15, 23, 42, 0.012)" : undefined,
                     }}
                     onClick={(e) => {
                       // Ignore clicks that originate on interactive children
                       // (checkbox, links, action buttons).
                       const t = e.target as HTMLElement;
                       if (t.closest("button, a, input, select, [role='checkbox']")) return;
+                      if (renderExpanded) {
+                        row.toggleExpanded();
+                        return;
+                      }
                       if (onRowOpen) {
                         onRowOpen(row.original);
                         return;
@@ -741,6 +899,7 @@ export function RegisterDataTable<TRow>({
                         | {
                             align?: string;
                             truncate?: boolean;
+                            wrap?: boolean;
                             title?: (row: TRow) => string;
                           }
                         | undefined;
@@ -748,6 +907,8 @@ export function RegisterDataTable<TRow>({
                       const isSelect = colId === "__select";
                       const isActions = colId === "__actions";
                       const truncate = Boolean(meta?.truncate);
+                      const wrap = Boolean(meta?.wrap);
+                      const pin = pinned.get(colId);
                       const rendered = flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext(),
@@ -756,13 +917,30 @@ export function RegisterDataTable<TRow>({
                         <td
                           key={cell.id}
                           className={cn(
-                            "px-4 whitespace-nowrap",
+                            "px-4",
+                            wrap ? "whitespace-normal break-words align-top" : "whitespace-nowrap",
                             cellPadY,
                             align === "right" ? "text-right" : "text-left",
                             isSelect ? "w-10" : "",
                             isActions ? "w-0" : "",
                             truncate ? "overflow-hidden" : "",
+                            pin
+                              ? "sticky z-10 overflow-hidden bg-surface-card group-hover/row:bg-surface-soft"
+                              : "",
                           )}
+                          style={
+                            pin
+                              ? {
+                                  left: pin.left,
+                                  width: pin.width,
+                                  minWidth: pin.width,
+                                  maxWidth: pin.width,
+                                  boxShadow: pin.last
+                                    ? "8px 0 8px -8px rgba(15,23,42,0.18)"
+                                    : undefined,
+                                }
+                              : undefined
+                          }
                         >
                           {truncate ? (
                             <span
@@ -778,6 +956,14 @@ export function RegisterDataTable<TRow>({
                       );
                     })}
                   </tr>
+                  {expanded && (
+                    <tr className="border-b border-hairline bg-surface-soft last:border-b-0">
+                      <td colSpan={table.getVisibleLeafColumns().length} className="px-4 pb-4 pt-1">
+                        {renderExpanded!(row.original)}
+                      </td>
+                    </tr>
+                  )}
+                  </React.Fragment>
                 );
               })}
             </tbody>
@@ -890,6 +1076,49 @@ function RowActions({
         </Link>
       )}
     </span>
+  );
+}
+
+function RowMenu<TRow>({
+  row,
+  items,
+}: {
+  row: TRow;
+  items: RowMenuItem<TRow>[];
+}) {
+  const router = useRouter();
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label="Row actions"
+          title="Actions"
+          className="inline-flex size-8 items-center justify-center rounded-lg border border-hairline bg-surface-card text-ink-soft transition-all hover:border-brand hover:text-brand"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <MoreHorizontal size={16} strokeWidth={2.4} />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        {items.map((it) => (
+          <DropdownMenuItem
+            key={it.key}
+            danger={it.danger}
+            onSelect={(e) => {
+              e.preventDefault();
+              if (it.href) router.push(it.href);
+              else it.onSelect?.(row);
+            }}
+          >
+            <span className="inline-flex w-4 justify-center">
+              {it.Icon ? <it.Icon size={14} strokeWidth={2.2} /> : null}
+            </span>
+            {it.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

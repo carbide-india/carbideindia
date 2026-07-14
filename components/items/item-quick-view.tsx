@@ -6,6 +6,7 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { Pencil, Power, X } from "lucide-react";
 import { COSTING_TYPE_LABELS } from "@/db/enums";
+import { formatDate } from "@/lib/format";
 import { fireToast } from "@/lib/toast";
 import { deactivateItem, reactivateItem } from "@/app/(app)/items/actions";
 import type { ItemListItem } from "@/lib/queries/items";
@@ -116,6 +117,14 @@ export function ItemQuickView({ item, isAdmin, onClose }: Props) {
       ],
       hidden: !item.partNo && !item.partDescription1,
     },
+    {
+      title: "Record",
+      rows: [
+        ["Status", item.isActive ? "Active" : "Inactive"],
+        ["Created", formatDate(item.createdAt)],
+        ["Last Updated", formatDate(item.updatedAt)],
+      ],
+    },
   ];
 
   return (
@@ -158,10 +167,16 @@ export function ItemQuickView({ item, isAdmin, onClose }: Props) {
           </button>
         </div>
 
-        <div className="flex flex-col gap-7 px-7 py-7">
-          {sections.map((section) => (
-            <QuickViewSection key={section.title} section={section} />
-          ))}
+        <div className="px-7 py-6">
+          <div className="overflow-hidden rounded-xl border border-hairline">
+            <table className="w-full border-collapse text-left">
+              <tbody>
+                {sections.map((section) => (
+                  <QuickViewSection key={section.title} section={section} />
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <div className="flex flex-wrap justify-end gap-2 border-t border-hairline px-7 py-4">
@@ -229,22 +244,30 @@ function QuickViewSection({ section }: { section: Section }) {
   );
   if (visible.length === 0) return null;
   return (
-    <section>
-      <h3 className="mb-4 pb-2 border-b border-hairline text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
-        {section.title}
-      </h3>
-      <dl className="grid grid-cols-2 gap-x-8 gap-y-4">
-        {visible.map(([label, value]) => (
-          <div key={label} className="flex flex-col gap-1">
-            <dt className="text-[12px] uppercase tracking-wide font-semibold text-ink-subtle">
-              {label}
-            </dt>
-            <dd className="text-[16px] leading-snug text-ink-strong font-medium break-words">
-              {value}
-            </dd>
-          </div>
-        ))}
-      </dl>
-    </section>
+    <>
+      {/* Section band spanning both columns. */}
+      <tr>
+        <th
+          colSpan={2}
+          scope="colgroup"
+          className="bg-surface-soft px-4 py-2 text-left text-[11px] uppercase tracking-[0.14em] font-bold text-ink-subtle border-y border-hairline"
+        >
+          {section.title}
+        </th>
+      </tr>
+      {visible.map(([label, value]) => (
+        <tr key={label} className="border-b border-hairline last:border-b-0">
+          <th
+            scope="row"
+            className="w-[40%] whitespace-nowrap px-4 py-2.5 align-top text-[12.5px] font-semibold uppercase tracking-wide text-ink-subtle"
+          >
+            {label}
+          </th>
+          <td className="px-4 py-2.5 align-top text-[14px] font-medium leading-snug text-ink-strong break-words">
+            {value}
+          </td>
+        </tr>
+      ))}
+    </>
   );
 }

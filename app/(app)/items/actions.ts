@@ -191,6 +191,7 @@ export async function createItem(input: CreateItemInput): Promise<Result> {
         drawingRevisionNo: v.drawingRevisionNo ?? null,
         qty: v.qty != null ? String(v.qty) : null,
         costingType: v.costingType ?? null,
+        dimensionUnit: v.dimensionUnit ?? "mm",
         createdById: me.id,
         ...specColumns(spec),
       })
@@ -351,6 +352,7 @@ export async function updateItem(
         length: dims.length != null ? String(dims.length) : null,
         width: dims.width != null ? String(dims.width) : null,
         thickness: dims.thickness != null ? String(dims.thickness) : null,
+        dimensionUnit: v.dimensionUnit ?? "mm",
         dimensionNotes: v.dimensionNotes ?? null,
         partNo: v.partNo ?? null,
         partDescription1: v.partDescription1 ?? null,

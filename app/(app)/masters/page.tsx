@@ -7,9 +7,10 @@ export const metadata = { title: "Masters — Carbide India" };
 
 /**
  * App-level Masters hub. Admin-only. The module is organised per master-kind
- * workbench; the index redirects to the first kind (Customer Type).
+ * workbench; the index lands on Product Master (the Item Master), the module's
+ * primary workbench.
  */
 export default async function MastersPage() {
   await requireAdmin();
-  redirect("/masters/customer_type" as Route);
+  redirect("/items" as Route);
 }

@@ -1,15 +1,11 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { Route } from "next";
 import {
-  ArrowLeft,
   ChevronDown,
   PlusCircle,
   Download,
-  History,
   ArrowUpDown,
   Search,
   Pencil,
@@ -21,7 +17,6 @@ import {
   Eye,
   EyeOff,
   RotateCcw,
-  Info,
 } from "lucide-react";
 import type { MasterOption } from "@/db/schema";
 import type { MasterKind } from "@/db/enums";
@@ -55,8 +50,8 @@ export function MasterKindWorkbench({
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
 
-  // New-form card
-  const [formOpen, setFormOpen] = React.useState(true);
+  // Add modal
+  const [addOpen, setAddOpen] = React.useState(false);
   const [name, setName] = React.useState("");
   const [bulkOpen, setBulkOpen] = React.useState(false);
   const [bulkText, setBulkText] = React.useState("");
@@ -67,7 +62,6 @@ export function MasterKindWorkbench({
   const [filter, setFilter] = React.useState<FilterMode>("all");
   const [advOpen, setAdvOpen] = React.useState(false);
   const [bulkMenuOpen, setBulkMenuOpen] = React.useState(false);
-  const [historyOpen, setHistoryOpen] = React.useState(false);
 
   // Row interaction
   const [editingId, setEditingId] = React.useState<string | null>(null);
@@ -76,6 +70,16 @@ export function MasterKindWorkbench({
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
 
   const singular = label.endsWith("s") ? label.slice(0, -1) : label;
+
+  // Close the Add modal on Escape.
+  React.useEffect(() => {
+    if (!addOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setAddOpen(false);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [addOpen]);
 
   const filtered = React.useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -91,8 +95,6 @@ export function MasterKindWorkbench({
           : b.name.localeCompare(a.name),
       );
   }, [options, filter, search, sortDir]);
-
-  const activeCount = options.filter((o) => o.isActive).length;
 
   // ── mutations ───────────────────────────────────────────────
   function afterWrite(ok: boolean, error: string | undefined, successMsg: string) {
@@ -131,6 +133,7 @@ export function MasterKindWorkbench({
       if (res.ok) {
         setBulkText("");
         setBulkOpen(false);
+        setAddOpen(false);
         fireToast({
           message: `Added ${res.created}${res.skipped ? `, skipped ${res.skipped} duplicate(s)` : ""}.`,
           type: "success",
@@ -311,170 +314,56 @@ export function MasterKindWorkbench({
         }}
       />
 
-      {/* Actions row — title now lives in the module header. */}
-      <div className="mst-head relative mt-2 flex items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => setHistoryOpen((v) => !v)}
-            className="inline-flex h-[38px] items-center gap-2 rounded-lg border border-[#e6e8ec] bg-white px-3.5 text-[13px] font-semibold text-[#3a4152] transition hover:border-[#c9c9ea] hover:text-[#3f3f94]"
-          >
-            <History className="h-[16px] w-[16px]" />
-            History / Logs
-          </button>
-          <button
-            type="button"
-            onClick={exportCsv}
-            className="inline-flex h-[38px] items-center gap-2 rounded-lg border border-[#e6e8ec] bg-white px-3.5 text-[13px] font-semibold text-[#3a4152] transition hover:border-[#c9c9ea] hover:text-[#3f3f94]"
-          >
-            <Download className="h-[16px] w-[16px]" />
-            Export
-            <ChevronDown className="h-[14px] w-[14px] opacity-60" />
-          </button>
-
-          {historyOpen && (
-            <>
-              <div className="fixed inset-0 z-20" onClick={() => setHistoryOpen(false)} />
-              <div className="mst-pop absolute right-0 top-[46px] z-30 w-[280px] rounded-xl border border-[#e6e8ec] bg-white p-4 shadow-[0_16px_40px_rgba(63,63,148,0.16)]">
-                <div className="flex items-center gap-2 text-[13px] font-bold text-[#3f3f94]">
-                  <Info className="h-4 w-4" />
-                  Change history
-                </div>
-                <p className="mt-2 text-[12.5px] font-medium leading-relaxed text-[#6b7280]">
-                  Every create, rename, activate and delete is already recorded to
-                  the settings audit log. A visual timeline for this master lands in
-                  the next iteration.
-                </p>
-              </div>
-            </>
-          )}
-      </div>
-
-      {/* ── New form card ───────────────────────────────────────── */}
-      <div className="mt-6 overflow-hidden rounded-2xl border border-[#e6e8ec] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-        <button
-          type="button"
-          onClick={() => setFormOpen((v) => !v)}
-          className="flex w-full items-center justify-between px-5 py-4 text-left"
-        >
-          <span className="inline-flex items-center gap-2.5 text-[15px] font-extrabold text-[#3f3f94]">
-            <PlusCircle className="h-[19px] w-[19px] text-[#3f3f94]" />
-            New {singular}
-          </span>
-          <ChevronDown
-            className={`h-5 w-5 text-[#9aa0ab] transition-transform duration-300 ${
-              formOpen ? "rotate-180" : ""
-            }`}
-          />
-        </button>
-
-        <div
-          className="grid transition-all duration-300 ease-out"
-          style={{
-            gridTemplateRows: formOpen ? "1fr" : "0fr",
-            opacity: formOpen ? 1 : 0,
-          }}
-        >
-          <div className="overflow-hidden">
-            <div className="border-t border-[#eef0f3] px-5 py-5">
-              <label
-                className="mb-1.5 block text-[11px] font-bold tracking-[0.14em] text-[#8a90a0]"
-                style={{ fontFamily: MONO }}
+      {/* Header — title · search · sort · actions (Product-Master style). */}
+      <div className="mst-head mb-5 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-3.5">
+          <h1 className="text-[26px] font-black leading-none tracking-tight text-[#3f3f94]">
+            {label}
+          </h1>
+          <label className="relative w-[280px] max-w-full">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-[16px] w-[16px] -translate-y-1/2 text-[#9aa0ab]" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={`Search ${label.toLowerCase()}`}
+              className="h-[40px] w-full rounded-lg border border-[#e6e8ec] bg-white pl-9 pr-8 text-[14px] text-[#3f3f94] outline-none transition placeholder:text-[#adb2bd] focus:border-[#3f3f94] focus:ring-2 focus:ring-[#3f3f94]/15"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                aria-label="Clear search"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#9aa0ab] transition hover:text-[#3f3f94]"
               >
-                NAME
-              </label>
-              <div className="flex flex-wrap items-center gap-2.5">
-                <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleCreate();
-                  }}
-                  placeholder={`Enter ${singular} name`}
-                  className="h-[42px] min-w-[240px] flex-1 rounded-lg border border-[#dfe1e6] bg-white px-3.5 text-[14px] text-[#3f3f94] outline-none transition placeholder:text-[#adb2bd] focus:border-[#3f3f94] focus:ring-2 focus:ring-[#3f3f94]/20"
-                />
-                <button
-                  type="button"
-                  onClick={() => setName("")}
-                  className="h-[42px] rounded-lg border border-[#dfe1e6] bg-white px-4 text-[13px] font-semibold text-[#6b7280] transition hover:bg-[#f5f6f8]"
-                >
-                  Clear
-                </button>
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={handleCreate}
-                  className="inline-flex h-[42px] items-center gap-2 rounded-lg bg-[#3f3f94] px-5 text-[13px] font-bold text-white transition hover:-translate-y-0.5 hover:bg-[#2f2f6f] hover:shadow-[0_8px_20px_rgba(63,63,148,0.28)] disabled:translate-y-0 disabled:opacity-50"
-                >
-                  <Check className="h-4 w-4" />
-                  Save
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBulkOpen((v) => !v)}
-                  className="inline-flex h-[42px] items-center gap-2 rounded-lg border border-[#dfe1e6] bg-white px-4 text-[13px] font-semibold text-[#3a4152] transition hover:border-[#c9c9ea] hover:text-[#3f3f94]"
-                >
-                  <ListPlus className="h-[16px] w-[16px]" />
-                  Bulk add
-                </button>
-              </div>
-
-              {bulkOpen && (
-                <div className="mst-pop mt-4 rounded-xl border border-[#eef0f3] bg-[#fafbfc] p-4">
-                  <label
-                    className="mb-1.5 block text-[11px] font-bold tracking-[0.14em] text-[#8a90a0]"
-                    style={{ fontFamily: MONO }}
-                  >
-                    PASTE MANY — ONE PER LINE
-                  </label>
-                  <textarea
-                    value={bulkText}
-                    onChange={(e) => setBulkText(e.target.value)}
-                    rows={5}
-                    placeholder={`Value one\nValue two\nValue three`}
-                    className="w-full resize-y rounded-lg border border-[#dfe1e6] bg-white px-3.5 py-2.5 text-[14px] text-[#3f3f94] outline-none transition placeholder:text-[#adb2bd] focus:border-[#3f3f94] focus:ring-2 focus:ring-[#3f3f94]/20"
-                  />
-                  <div className="mt-3 flex items-center gap-2.5">
-                    <button
-                      type="button"
-                      disabled={pending}
-                      onClick={handleBulk}
-                      className="inline-flex h-[38px] items-center gap-2 rounded-lg bg-[#3f3f94] px-4 text-[13px] font-bold text-white transition hover:bg-[#2f2f6f] disabled:opacity-50"
-                    >
-                      <ListPlus className="h-4 w-4" />
-                      Add all
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setBulkText("");
-                        setBulkOpen(false);
-                      }}
-                      className="h-[38px] rounded-lg border border-[#dfe1e6] bg-white px-4 text-[13px] font-semibold text-[#6b7280] transition hover:bg-[#f5f6f8]"
-                    >
-                      Cancel
-                    </button>
-                    <span className="text-[12px] font-medium text-[#9aa0ab]">
-                      {bulkText.split("\n").filter((s) => s.trim()).length} value(s)
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </label>
+          <label className="inline-flex items-center gap-2 text-[13px] text-[#8a90a0]">
+            <ArrowUpDown className="h-[14px] w-[14px]" />
+            <span className="font-semibold">Sort</span>
+            <select
+              value={sortDir}
+              onChange={(e) => setSortDir(e.target.value as "asc" | "desc")}
+              aria-label="Sort by name"
+              className="rounded-lg border border-[#e6e8ec] bg-white px-2.5 py-1.5 text-[13px] font-semibold text-[#3f3f94] outline-none focus:border-[#3f3f94]"
+            >
+              <option value="asc">Name (A→Z)</option>
+              <option value="desc">Name (Z→A)</option>
+            </select>
+          </label>
         </div>
-      </div>
 
-      {/* ── Data Table ──────────────────────────────────────────── */}
-      <div className="mt-6 overflow-hidden rounded-2xl border border-[#e6e8ec] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eef0f3] px-5 py-4">
-          <div>
-            <h2 className="text-[15px] font-extrabold text-[#3f3f94]">Data Table</h2>
-            <p className="text-[12.5px] font-medium text-[#8a90a0] tabular-nums">
-              {options.length} option{options.length === 1 ? "" : "s"} total ·{" "}
-              {activeCount} active
-            </p>
-          </div>
-          <div className="relative flex items-center gap-2">
+        <div className="relative flex items-center gap-2">
+            {/* Export — moved here, beside Advanced Filter. */}
+            <button
+              type="button"
+              onClick={exportCsv}
+              className="inline-flex h-[36px] items-center gap-2 rounded-lg border border-[#e6e8ec] bg-white px-3 text-[12.5px] font-semibold text-[#3a4152] transition hover:border-[#c9c9ea] hover:text-[#3f3f94]"
+            >
+              <Download className="h-[15px] w-[15px]" />
+              Export
+            </button>
             {/* Advanced filter */}
             <button
               type="button"
@@ -581,32 +470,20 @@ export function MasterKindWorkbench({
                 </div>
               </>
             )}
-          </div>
+          {/* + Add {singular} — opens the add modal. */}
+          <button
+            type="button"
+            onClick={() => setAddOpen(true)}
+            className="inline-flex h-[40px] items-center gap-2 rounded-lg bg-[#3f3f94] px-4 text-[13.5px] font-bold text-white transition hover:-translate-y-0.5 hover:bg-[#2f2f6f] hover:shadow-[0_8px_20px_rgba(63,63,148,0.28)] active:translate-y-0"
+          >
+            <PlusCircle className="h-[17px] w-[17px]" />
+            Add {singular}
+          </button>
         </div>
+      </div>
 
-        {/* Search */}
-        <div className="border-b border-[#eef0f3] px-5 py-3">
-          <div className="flex h-[40px] items-center gap-2.5 rounded-lg border border-[#e6e8ec] bg-[#fafbfc] px-3 transition focus-within:border-[#3f3f94] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#3f3f94]/15">
-            <Search className="h-[17px] w-[17px] shrink-0 text-[#9aa0ab]" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search name"
-              className="min-w-0 flex-1 bg-transparent text-[14px] text-[#3f3f94] outline-none placeholder:text-[#adb2bd]"
-            />
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch("")}
-                className="text-[#9aa0ab] transition hover:text-[#3f3f94]"
-                aria-label="Clear search"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-        </div>
-
+      {/* ── List ───────────────────────────────────────────────────── */}
+      <div className="overflow-hidden rounded-2xl border border-[#e6e8ec] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
         {/* Table header */}
         <div className="flex items-center gap-3 border-b border-[#eef0f3] bg-[#fafbfc] px-5 py-2.5">
           <input
@@ -786,6 +663,111 @@ export function MasterKindWorkbench({
           </ul>
         )}
       </div>
+
+      {/* ── Add modal — single add + bulk add ─────────────────────── */}
+      {addOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/30 p-4 sm:p-10"
+          onClick={() => setAddOpen(false)}
+        >
+          <div
+            className="mst-pop w-[min(92vw,540px)] overflow-hidden rounded-2xl bg-white shadow-[0_24px_60px_rgba(15,23,42,0.28)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-[#eef0f3] px-6 py-4">
+              <h3 className="inline-flex items-center gap-2 text-[16px] font-extrabold text-[#3f3f94]">
+                <PlusCircle className="h-[19px] w-[19px]" />
+                Add {singular}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setAddOpen(false)}
+                aria-label="Close"
+                className="grid h-8 w-8 place-items-center rounded-lg text-[#9aa0ab] transition hover:bg-[#f5f6f8] hover:text-[#3f3f94]"
+              >
+                <X className="h-[18px] w-[18px]" />
+              </button>
+            </div>
+
+            <div className="px-6 py-5">
+              <label
+                className="mb-1.5 block text-[11px] font-bold tracking-[0.14em] text-[#8a90a0]"
+                style={{ fontFamily: MONO }}
+              >
+                NAME
+              </label>
+              <div className="flex flex-wrap items-center gap-2.5">
+                <input
+                  autoFocus
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleCreate();
+                  }}
+                  placeholder={`Enter ${singular} name`}
+                  className="h-[42px] min-w-[200px] flex-1 rounded-lg border border-[#dfe1e6] bg-white px-3.5 text-[14px] text-[#3f3f94] outline-none transition placeholder:text-[#adb2bd] focus:border-[#3f3f94] focus:ring-2 focus:ring-[#3f3f94]/20"
+                />
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={handleCreate}
+                  className="inline-flex h-[42px] items-center gap-2 rounded-lg bg-[#3f3f94] px-5 text-[13px] font-bold text-white transition hover:-translate-y-0.5 hover:bg-[#2f2f6f] hover:shadow-[0_8px_20px_rgba(63,63,148,0.28)] disabled:translate-y-0 disabled:opacity-50"
+                >
+                  <Check className="h-4 w-4" />
+                  Save
+                </button>
+              </div>
+              <p className="mt-2 text-[12px] font-medium text-[#9aa0ab]">
+                Press Enter to add — the field clears so you can keep adding.
+              </p>
+
+              {/* Bulk add */}
+              <div className="mt-5 border-t border-[#eef0f3] pt-4">
+                <button
+                  type="button"
+                  onClick={() => setBulkOpen((v) => !v)}
+                  className="inline-flex h-[38px] items-center gap-2 rounded-lg border border-[#dfe1e6] bg-white px-4 text-[13px] font-semibold text-[#3a4152] transition hover:border-[#c9c9ea] hover:text-[#3f3f94]"
+                >
+                  <ListPlus className="h-[16px] w-[16px]" />
+                  {bulkOpen ? "Hide bulk add" : "Bulk add (paste many)"}
+                </button>
+
+                {bulkOpen && (
+                  <div className="mst-pop mt-4 rounded-xl border border-[#eef0f3] bg-[#fafbfc] p-4">
+                    <label
+                      className="mb-1.5 block text-[11px] font-bold tracking-[0.14em] text-[#8a90a0]"
+                      style={{ fontFamily: MONO }}
+                    >
+                      PASTE MANY — ONE PER LINE
+                    </label>
+                    <textarea
+                      value={bulkText}
+                      onChange={(e) => setBulkText(e.target.value)}
+                      rows={5}
+                      placeholder={`Value one\nValue two\nValue three`}
+                      className="w-full resize-y rounded-lg border border-[#dfe1e6] bg-white px-3.5 py-2.5 text-[14px] text-[#3f3f94] outline-none transition placeholder:text-[#adb2bd] focus:border-[#3f3f94] focus:ring-2 focus:ring-[#3f3f94]/20"
+                    />
+                    <div className="mt-3 flex items-center gap-2.5">
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={handleBulk}
+                        className="inline-flex h-[38px] items-center gap-2 rounded-lg bg-[#3f3f94] px-4 text-[13px] font-bold text-white transition hover:bg-[#2f2f6f] disabled:opacity-50"
+                      >
+                        <ListPlus className="h-4 w-4" />
+                        Add all
+                      </button>
+                      <span className="text-[12px] font-medium text-[#9aa0ab]">
+                        {bulkText.split("\n").filter((s) => s.trim()).length} value(s)
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
