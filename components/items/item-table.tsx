@@ -257,23 +257,6 @@ export function ItemTable({ rows, isAdmin }: Props) {
 
 /* ── Product card ──────────────────────────────────────────────────────── */
 
-// Soft, varied accent palette — a product's shape picks its stripe colour so
-// cards read as visually distinct at a glance.
-const ACCENTS = [
-  "#3f3f94",
-  "#0e7490",
-  "#b45309",
-  "#15803d",
-  "#7c3aed",
-  "#be123c",
-  "#0369a1",
-];
-function accentFor(key: string): string {
-  let h = 0;
-  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
-  return ACCENTS[h % ACCENTS.length]!;
-}
-
 function ProductCard({
   item,
   isAdmin,
@@ -285,7 +268,6 @@ function ProductCard({
   onQuickView: () => void;
   onToggle: () => void;
 }) {
-  const accent = accentFor(item.shapeName ?? item.itemCode);
   const dims = composeDims(item);
 
   const specs: ReadonlyArray<readonly [string, string | null]> = [
@@ -299,17 +281,7 @@ function ProductCard({
   const shownSpecs = specs.filter(([, v]) => v);
 
   return (
-    <div
-      className="group relative flex flex-col overflow-hidden rounded-2xl border border-hairline bg-surface-card p-5 pl-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#c7ccf5] hover:shadow-[0_14px_30px_rgba(63,63,148,0.13)]"
-      style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.05)" }}
-    >
-      {/* Left shape-colour accent stripe. */}
-      <span
-        className="absolute inset-y-0 left-0 w-1.5"
-        style={{ background: accent }}
-        aria-hidden
-      />
-
+    <div className="group flex flex-col rounded-2xl border-2 border-[#2b303b] bg-surface-card p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#3f3f94] hover:shadow-[0_14px_30px_rgba(63,63,148,0.16)]">
       {/* Top: status + actions menu. */}
       <div className="mb-2.5 flex items-start justify-between gap-2">
         {item.isActive ? (
@@ -334,24 +306,25 @@ function ProductCard({
         {item.itemCode}
       </Link>
 
-      {/* Decoded spec — each attribute in its own tile so the card reads
-          cleanly and every value is easy to scan. */}
+      {/* Decoded spec — compact inline tiles: the label sits in front of the
+          value on a single line, so each attribute takes minimal height. */}
       {shownSpecs.length > 0 && (
-        <dl className="mt-4 grid grid-cols-2 gap-2">
+        <dl className="mt-3 grid grid-cols-2 gap-1.5">
           {shownSpecs.map(([label, value]) => (
             <div
               key={label}
               className={
-                "rounded-lg border border-hairline bg-surface-soft px-3 py-2" +
+                "flex items-baseline gap-2 rounded-md border border-hairline bg-surface-soft px-2.5 py-1.5" +
                 (label === "Dimensions" ? " col-span-2" : "")
               }
             >
-              <dt className="text-[10px] font-bold uppercase tracking-[0.08em] text-ink-subtle">
+              <dt className="shrink-0 text-[9.5px] font-bold uppercase tracking-[0.04em] text-ink-subtle">
                 {label}
               </dt>
               <dd
-                className="mt-0.5 text-[13px] font-bold text-ink-strong break-words"
+                className="min-w-0 flex-1 truncate text-[12.5px] font-bold text-ink-strong"
                 style={label === "Dimensions" ? { fontFamily: "var(--font-mono)", fontWeight: 700 } : undefined}
+                title={value ?? undefined}
               >
                 {value}
               </dd>
@@ -360,23 +333,23 @@ function ProductCard({
         </dl>
       )}
 
-      {/* Customer + product — boxed, with the product name made prominent. */}
-      <div className="mt-2 grid grid-cols-1 gap-2">
-        <div className="rounded-lg border border-hairline bg-surface-card px-3 py-2">
-          <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-ink-subtle">
+      {/* Customer + product — compact inline rows (label in front of value). */}
+      <div className="mt-1.5 grid grid-cols-1 gap-1.5">
+        <div className="flex items-baseline gap-2 rounded-md border border-hairline bg-surface-card px-2.5 py-1.5">
+          <span className="shrink-0 text-[9.5px] font-bold uppercase tracking-[0.04em] text-ink-subtle">
             Customer
-          </div>
-          <div className="mt-0.5 text-[13.5px] font-semibold text-ink-strong break-words">
+          </span>
+          <span className="min-w-0 flex-1 text-[12.5px] font-semibold text-ink-strong break-words">
             {item.customerName ?? "—"}
-          </div>
+          </span>
         </div>
-        <div className="rounded-lg border border-hairline bg-surface-card px-3 py-2">
-          <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-ink-subtle">
+        <div className="flex items-baseline gap-2 rounded-md border border-hairline bg-surface-card px-2.5 py-1.5">
+          <span className="shrink-0 text-[9.5px] font-bold uppercase tracking-[0.04em] text-ink-subtle">
             Product
-          </div>
-          <div className="mt-0.5 text-[14px] font-bold leading-snug text-ink-strong break-words">
+          </span>
+          <span className="min-w-0 flex-1 text-[13px] font-bold text-ink-strong break-words">
             {item.custProductName ?? "—"}
-          </div>
+          </span>
         </div>
       </div>
 
