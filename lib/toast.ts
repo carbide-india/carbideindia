@@ -19,7 +19,7 @@ const ERROR_RE =
   /\b(could ?n'?t|cannot|can'?t|fail(ed|ure)?|error|invalid|too many|denied|not allowed|no permission|unable|wrong|stale|forbidden)\b/i;
 
 /**
- * App-wide toast — backed by sonner (premium, accessible, stacked). Signature
+ * App-wide toast - backed by sonner (premium, accessible, stacked). Signature
  * is unchanged from the legacy event-bus version so every existing call site
  * keeps working; an optional `type` overrides the auto colour.
  */

@@ -13,7 +13,7 @@ import {
 } from "@/app/(app)/_actions/saved-views";
 
 /**
- * SavedViewsBar (ERP redesign — Phase 3).
+ * SavedViewsBar (ERP redesign - Phase 3).
  *
  * A bar listing a register module's saved views (from `lib/views/saved-views.ts`
  * + `_actions/saved-views.ts`): apply / create-from-current / rename / delete.
@@ -21,7 +21,7 @@ import {
  *
  * This phase it's mounted as a minimal, non-disruptive demo on the Item register
  * toolbar. Full register integration (nuqs-encoded configs, pinned filters)
- * lands in Phase 9 — hence `getCurrentConfig`/`onApply` are optional hooks the
+ * lands in Phase 9 - hence `getCurrentConfig`/`onApply` are optional hooks the
  * host wires later; without them the bar still lists, creates, renames, deletes.
  */
 

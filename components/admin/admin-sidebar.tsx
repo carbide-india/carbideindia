@@ -74,7 +74,7 @@ export function AdminSidebar({ adminName, adminEmail, avatarUrl }: Props) {
         borderRight: "1px solid rgba(255, 255, 255, 0.08)",
       }}
     >
-      {/* Brighter radial accent washes — mirror the public-app header treatment */}
+      {/* Brighter radial accent washes - mirror the public-app header treatment */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
@@ -88,7 +88,7 @@ export function AdminSidebar({ adminName, adminEmail, avatarUrl }: Props) {
           footer is pinned via flex; the nav area scrolls if it ever grows
           beyond the available height. */}
       <div className="relative flex flex-col h-full overflow-hidden">
-        {/* Brand block — logo on a white panel so the indigo block in the
+        {/* Brand block - logo on a white panel so the indigo block in the
             logo stays visible against the dark sidebar surface. */}
         <div className="px-6 pt-8 pb-6 shrink-0">
           <div
@@ -165,7 +165,7 @@ export function AdminSidebar({ adminName, adminEmail, avatarUrl }: Props) {
           </div>
         </div>
 
-        {/* Nav items — scrollable if they ever exceed the available height */}
+        {/* Nav items - scrollable if they ever exceed the available height */}
         <nav className="px-3 flex flex-col gap-1 flex-1 overflow-y-auto min-h-0">
           {NAV.map((item) => {
             const Icon = item.icon;
@@ -215,7 +215,7 @@ export function AdminSidebar({ adminName, adminEmail, avatarUrl }: Props) {
           })}
         </nav>
 
-        {/* Footer — pinned to the bottom of the sticky h-screen aside */}
+        {/* Footer - pinned to the bottom of the sticky h-screen aside */}
         <div
           className="px-3 pb-6 pt-3 shrink-0"
           style={{ borderTop: "1px solid rgba(255, 255, 255, 0.10)" }}

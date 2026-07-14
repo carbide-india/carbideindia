@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { retryFailedDispatches } from "@/lib/notifications/retry";
 
 /**
- * Phase 2.1 — retry the failed notification dispatch log rows.
+ * Phase 2.1 - retry the failed notification dispatch log rows.
  *
  * Picks up to 50 rows where `status='failed' AND next_attempt_at <= now()
  * AND attempt_count < 3` (set in `notification_dispatch_log`), re-runs
@@ -10,14 +10,14 @@ import { retryFailedDispatches } from "@/lib/notifications/retry";
  * Rows that hit the attempt cap are stamped `failed_terminal` and stop
  * being picked.
  *
- * Authentication: same pattern as `/api/cron/digest` — requires
+ * Authentication: same pattern as `/api/cron/digest` - requires
  *   Authorization: Bearer <CRON_SECRET>
  * which Vercel Cron supplies automatically when CRON_SECRET is set in
  * the project's env. Local testing:
  *   curl -X POST http://localhost:3000/api/cron/retry-dispatch \
  *        -H "Authorization: Bearer $CRON_SECRET"
  *
- * Runs on the Node runtime — postgres-js needs Node APIs.
+ * Runs on the Node runtime - postgres-js needs Node APIs.
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

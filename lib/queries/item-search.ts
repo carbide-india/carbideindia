@@ -4,16 +4,16 @@ import { db } from "@/lib/db";
 import { items, masterOptions } from "@/db/schema";
 
 /**
- * SAP-style Material Search (ERP redesign — Phase 9a, §7 "Product Picker").
+ * SAP-style Material Search (ERP redesign - Phase 9a, §7 "Product Picker").
  *
  * Autocomplete over `items` for the Product Picker. Matches item code (highest
  * signal), internal part name / no, dimensions, grade / shape / tolerance /
- * condition NAMES (joined live — a master rename is reflected immediately, no
+ * condition NAMES (joined live - a master rename is reflected immediately, no
  * stale index), and the full where-used customer set + customer drawing (via a
- * live `inquiry_items → inquiries → clients` join — NO materialized view; a
+ * live `inquiry_items → inquiries → clients` join - NO materialized view; a
  * reused item is findable by a new customer immediately).
  *
- * Ranking is a lightweight ILIKE hybrid (no tsvector generated column — this
+ * Ranking is a lightweight ILIKE hybrid (no tsvector generated column - this
  * phase is query-only, additive, no migration): exact/prefix item-code matches
  * rank first, then the rest, newest-first. `reusedCount` (indexed count over the
  * where-used tables) is the trust signal "pick this, it's canonical". Shape /

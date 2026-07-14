@@ -23,7 +23,7 @@ export interface AgendaTask {
   subject: string | null;
   description: string | null;
   dueYmd: string; // IST calendar day, yyyy-mm-dd
-  /** Done after its due date — drives the "Late" badge. */
+  /** Done after its due date - drives the "Late" badge. */
   late?: boolean;
 }
 
@@ -34,7 +34,7 @@ interface DayCol {
 }
 
 interface Props {
-  /** Today in IST (yyyy-mm-dd) — the overdue boundary. */
+  /** Today in IST (yyyy-mm-dd) - the overdue boundary. */
   todayYmd: string;
   /** Up to 6 upcoming day columns, today first (IST). */
   days: DayCol[];
@@ -49,7 +49,7 @@ const DAY_CHOICES = [3, 4, 5, 6] as const;
 
 /**
  * "My Day" agenda board. Date-wise kanban with a selectable 3/4/5/6-day
- * window. Cards are draggable (#7) — drop a task onto a day column to
+ * window. Cards are draggable (#7) - drop a task onto a day column to
  * reschedule its due date there (optimistic, with rollback on failure).
  * Clicking a card still opens the focused task. The welcome banner + view
  * toggle live in the parent MyDayWorkspace.
@@ -60,7 +60,7 @@ export function AgendaBoard({ todayYmd, days, tasks, isAdmin }: Props) {
   const [dayCount, setDayCount] = React.useState<number>(5);
   const [overCol, setOverCol] = React.useState<string | null>(null);
 
-  // Edge auto-scroll while dragging — native HTML5 drag won't scroll the
+  // Edge auto-scroll while dragging - native HTML5 drag won't scroll the
   // horizontal board near its edges, so a card couldn't reach an off-screen
   // day column. A rAF loop scrolls the board when the pointer nears an edge.
   const scrollRef = React.useRef<HTMLDivElement>(null);
@@ -115,7 +115,7 @@ export function AgendaBoard({ todayYmd, days, tasks, isAdmin }: Props) {
   const shownDays = days.slice(0, dayCount);
   const lastYmd = shownDays.length ? shownDays[shownDays.length - 1]!.ymd : "";
 
-  // Lists are small (a person's open tasks) — plain derivation each render
+  // Lists are small (a person's open tasks) - plain derivation each render
   // is cheap and sidesteps the manual-memo lint on the inline lastYmd dep.
   const overdueItems = items.filter((t) => t.dueYmd < todayYmd);
   const byDay = new Map<string, AgendaTask[]>();
@@ -163,7 +163,7 @@ export function AgendaBoard({ todayYmd, days, tasks, isAdmin }: Props) {
 
   return (
     <div>
-      {/* Lifecycle buckets — Due Now · Upcoming · Overdue · Not Due. */}
+      {/* Lifecycle buckets - Due Now · Upcoming · Overdue · Not Due. */}
       <div className="mb-7 grid grid-cols-4 gap-4 max-lg:grid-cols-2 max-sm:grid-cols-1">
         {buckets.map((b) => {
           const Icon = b.icon;

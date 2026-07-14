@@ -9,31 +9,31 @@ import { recordAudit } from "@/lib/audit/record";
 import type { ItemStatus } from "@/db/enums";
 
 /**
- * Guaranteed Item-Sync Contract (ERP redesign — Phase 4, §3.3–3.7).
+ * Guaranteed Item-Sync Contract (ERP redesign - Phase 4, §3.3-3.7).
  *
  * This module is the SINGLE contract writer that turns a product spec into an
  * Item row, inside the caller's transaction, with the three invariants:
  *
- *   I1 — Totality:   every product line ends with a non-null item_id.
- *   I2 — Fingerprint: one fingerprint ⇒ exactly one Item, forever (dedup UNIQUE
+ *   I1 - Totality:   every product line ends with a non-null item_id.
+ *   I2 - Fingerprint: one fingerprint ⇒ exactly one Item, forever (dedup UNIQUE
  *                     + onConflictDoNothing + re-select under a row-lock).
- *   I3 — Nothing hidden: an incomplete spec still yields a visible, searchable
+ *   I3 - Nothing hidden: an incomplete spec still yields a visible, searchable
  *                        Item in status='draft' (provenance-salted dedup key).
  *
- * It writes SPEC columns only (shape/grade/tolerance/condition/dims/hsn/uom) —
+ * It writes SPEC columns only (shape/grade/tolerance/condition/dims/hsn/uom) -
  * NEVER customer/qty/sm snapshot columns (those belong on inquiry_items).
  */
 
 /** The transaction handle drizzle hands to a `db.transaction` callback. */
 export type DrizzleTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
-/** Either the live db or a transaction — both expose select/insert/update/execute. */
+/** Either the live db or a transaction - both expose select/insert/update/execute. */
 export type DbOrTx = typeof db | DrizzleTx;
 
 /**
- * The product spec — the SSOT-clean subset that describes a physical item.
+ * The product spec - the SSOT-clean subset that describes a physical item.
  * Deliberately excludes customerName / smNumber / qty / inquiryId (customer-
  * scoped data never lands on `items`). `shapeId` is the resolved shape master
- * uuid (callers holding legacy shape TEXT must resolve it first — see the
+ * uuid (callers holding legacy shape TEXT must resolve it first - see the
  * backfill's normalizeShapeName path).
  */
 export interface ItemSpec {
@@ -76,7 +76,7 @@ export interface AuditActor {
   name?: string | null;
 }
 
-/** Stable synthetic dedup key for a draft — salted by the source line so two
+/** Stable synthetic dedup key for a draft - salted by the source line so two
  *  different incomplete products never collapse into one draft (I3). */
 export function draftDedupKey(inquiryItemId: string): string {
   return `draft:${inquiryItemId}`;
@@ -168,7 +168,7 @@ const s = (v: number | null | undefined): string | null =>
 const strOr = (v: string | null | undefined): string | null => (v == null || v === "" ? null : v);
 
 /**
- * The SPEC-ONLY column payload written to `items`. NO customer/qty/sm columns —
+ * The SPEC-ONLY column payload written to `items`. NO customer/qty/sm columns -
  * those live on inquiry_items (invariant §2.8.2). `sizeCode` is honored when
  * supplied, else derived from the present dimensions.
  */
@@ -201,7 +201,7 @@ export function specColumns(spec: ItemSpec): Record<string, unknown> {
   };
 }
 
-/** Draw the next item serial (single nextval — seq & code never diverge). */
+/** Draw the next item serial (single nextval - seq & code never diverge). */
 async function nextItemSeq(tx: DbOrTx): Promise<number> {
   const rows = (await tx.execute(sql`SELECT nextval('item_seq_seq')::int AS seq`)) as unknown as { seq: number }[];
   return Number(rows[0]?.seq ?? 0);
@@ -226,7 +226,7 @@ async function codeFor(tx: DbOrTx, spec: ItemSpec, seq: number, status: "active"
 
 /**
  * THE CONTRACT (§3.4). Transaction-aware. Classifies the spec (NEVER rejects an
- * incomplete one — it becomes a draft), dedups under a row-lock, and creates the
+ * incomplete one - it becomes a draft), dedups under a row-lock, and creates the
  * Item with a single serial draw + onConflictDoNothing + race re-select. Returns
  * the item id to link back onto the source line.
  */
@@ -250,7 +250,7 @@ export async function syncProductToItem(
     return { itemId: existing[0].id, itemCode: existing[0].itemCode, status: existing[0].status, reused: true, missing };
   }
 
-  // 3. create — single serial draw so seq & item_code never diverge.
+  // 3. create - single serial draw so seq & item_code never diverge.
   const seq = await nextItemSeq(tx);
   const itemCode = await codeFor(tx, spec, seq, status);
   const [row] = await tx
@@ -295,8 +295,8 @@ export type CompleteItemResult =
  * Complete a draft Item → active (§3.6). If a filled spec is still incomplete it
  * stays a draft. Otherwise: if an active TWIN with the real fingerprint already
  * exists, repoint every reference from the draft to the twin and archive the
- * draft (merge, never hard-delete). Else promote the draft IN PLACE — same id,
- * real code — so every referencing row instantly points at an active Item.
+ * draft (merge, never hard-delete). Else promote the draft IN PLACE - same id,
+ * real code - so every referencing row instantly points at an active Item.
  */
 export async function completeItem(
   tx: DrizzleTx,
@@ -331,7 +331,7 @@ export async function completeItem(
     return { ok: true, itemId: twin.id, itemCode: twin.itemCode, merged: true };
   }
 
-  // Promote in place — same id, fresh serial + real code.
+  // Promote in place - same id, fresh serial + real code.
   const seq = await nextItemSeq(tx);
   const itemCode = await codeFor(tx, filledSpec, seq, "active");
   const [row] = await tx
@@ -380,7 +380,7 @@ export async function repointItemReferences(tx: DrizzleTx, fromId: string, toId:
   await tx.update(costings).set({ itemId: toId, updatedAt: new Date() }).where(eq(costings.itemId, fromId));
 }
 
-/** Archive a merged-away draft (never hard-delete — preserves the audit trail). */
+/** Archive a merged-away draft (never hard-delete - preserves the audit trail). */
 async function archiveDraftItem(tx: DrizzleTx, itemId: string): Promise<void> {
   await tx
     .update(items)

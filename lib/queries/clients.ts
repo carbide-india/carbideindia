@@ -24,7 +24,7 @@ import type {
  * Active client names, alphabetical (case-insensitive). Drives the
  * "Client Name" picker on the New Task / Edit Task forms.
  *
- * Cached under the `clients` tag — the roster is identical for every
+ * Cached under the `clients` tag - the roster is identical for every
  * user and changes only when an admin creates/renames a client or any
  * authed user uses "+ Add new client" (both write paths call
  * `updateTag(CACHE_TAGS.clients)`). 10-min TTL is just a safety net
@@ -54,7 +54,7 @@ export interface ClientOption {
 }
 
 /**
- * Active clients as id+name pairs — drives the "Old client" picker on the
+ * Active clients as id+name pairs - drives the "Old client" picker on the
  * New Inquiry form (the picker needs the id to call the autofill endpoint,
  * unlike the task form's name-only roster). Same cache tag + TTL as
  * `listActiveClientNames`.
@@ -66,7 +66,7 @@ export const listClientOptions = unstable_cache(
       .from(clients)
       .where(eq(clients.isActive, true))
       .orderBy(asc(clients.name));
-    // Locale-aware re-sort — same reasoning as listActiveClientNames.
+    // Locale-aware re-sort - same reasoning as listActiveClientNames.
     return rows.sort((a, b) =>
       a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
     );
@@ -98,10 +98,10 @@ export interface ClientRegisterRow {
   grade: ClientGrade | null;
   /** Free-form categorization tags (Mining / Defense / …). */
   tags: string[];
-  /** KYC sales person — id + resolved name (null when unset / deleted). */
+  /** KYC sales person - id + resolved name (null when unset / deleted). */
   salesPersonId: string | null;
   salesPersonName: string | null;
-  /** Primary contact person — display name + reachability (null when none). */
+  /** Primary contact person - display name + reachability (null when none). */
   contactName: string | null;
   contactDesignation: string | null;
   contactNo: string | null;
@@ -240,7 +240,7 @@ export interface ClientAutofill {
   addressLine3: string | null;
   addressLine4: string | null;
   pinCode: string | null;
-  // ── Carbide KYC type/product masters (Phase 2) — ids drive form prefill,
+  // ── Carbide KYC type/product masters (Phase 2) - ids drive form prefill,
   //    the resolved names feed name-string fields (e.g. meeting Client Type). ──
   customerTypeId: string | null;
   industryTypeId: string | null;
@@ -263,7 +263,7 @@ export interface ClientAutofill {
 /**
  * Full KYC values for the admin "Edit client" form, shaped to match the
  * KycForm's input fields (nulls folded to "" / undefined / [] so RHF
- * defaultValues prefill cleanly). Covers only the columns the form edits —
+ * defaultValues prefill cleanly). Covers only the columns the form edits -
  * currency/country/export are intentionally absent (the form has no inputs
  * for them, so the edit must never touch those columns). Admin-only caller.
  */
@@ -344,7 +344,7 @@ export async function getClientForEdit(
     .select()
     .from(clientContacts)
     .where(eq(clientContacts.clientId, clientId));
-  // Normalized children (ERP Phase 2) — drive the multi-address / multi-bank
+  // Normalized children (ERP Phase 2) - drive the multi-address / multi-bank
   // editors. Map DB rows → validator-input shape (null → undefined).
   const [addressRows, bankRows] = await Promise.all([
     getClientAddresses(clientId),
@@ -462,11 +462,11 @@ export interface ClientRecord extends Client {
   productTypeNames: string[];
   /** Full name of the KYC sales person employee (null if unset or deleted). */
   salesPersonName: string | null;
-  /** All contacts for this client — primary contact first, then additional. */
+  /** All contacts for this client - primary contact first, then additional. */
   contacts: ClientContact[];
-  /** Normalized addresses (ERP Phase 2) — ordered by type then sort order. */
+  /** Normalized addresses (ERP Phase 2) - ordered by type then sort order. */
   addresses: ClientAddress[];
-  /** Normalized bank accounts (ERP Phase 2) — primary first, then sort order. */
+  /** Normalized bank accounts (ERP Phase 2) - primary first, then sort order. */
   bankAccounts: ClientBankAccount[];
 }
 
@@ -516,7 +516,7 @@ export async function getClientRecord(
     salesPersonName = sp?.name ?? null;
   }
 
-  // ── 4. Contacts — primary first, then additional ──
+  // ── 4. Contacts - primary first, then additional ──
   const allContacts = await db
     .select()
     .from(clientContacts)
@@ -549,7 +549,7 @@ export async function getClientRecord(
 /**
  * Old-client auto-fetch for the inquiry form: the client's KYC block plus
  * its primary contact (if any). The inquiry snapshots these values at
- * creation; it never references this table again. Uncached — fetched
+ * creation; it never references this table again. Uncached - fetched
  * per-click when the user picks an existing client.
  */
 export async function getClientAutofill(

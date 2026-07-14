@@ -126,7 +126,7 @@ export function StatusTable({
   const [query, setQuery] = React.useState("");
   const [selectedDept, setSelectedDept] = React.useState<string | null>(null);
 
-  // Whole-row navigation — anyone can click anywhere on the row (or
+  // Whole-row navigation - anyone can click anywhere on the row (or
   // Tab to it and hit Enter/Space) to drill into that person's tasks.
   const hrefFor = React.useCallback(
     (employeeId: string): Route => {
@@ -257,7 +257,7 @@ export function StatusTable({
                       {flexRender(h.column.columnDef.header, h.getContext())}
                     </th>
                   ))}
-                  {/* Chevron column header — silent, just claims width */}
+                  {/* Chevron column header - silent, just claims width */}
                   <th aria-hidden style={{ width: 36 }} />
                 </tr>
               ))}
@@ -300,7 +300,7 @@ export function StatusTable({
                         )}
                       </td>
                     ))}
-                    {/* Chevron — telegraphs the row is a link target */}
+                    {/* Chevron - telegraphs the row is a link target */}
                     <td
                       className="status-row-chevron px-2"
                       aria-hidden

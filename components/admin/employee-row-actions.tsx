@@ -76,7 +76,7 @@ export function EmployeeRowActions({
   const canReactivate = !employee.isActive;
   const canDelete = !isSelf;
 
-  // Fetch impact counts the moment the delete dialog opens — so the user sees
+  // Fetch impact counts the moment the delete dialog opens - so the user sees
   // exactly what they're about to nuke before they type the email.
   useEffect(() => {
     if (!deleteOpen) {
@@ -104,7 +104,7 @@ export function EmployeeRowActions({
         const d = res.deleted;
         fireToast({
           message: d
-            ? `Deleted ${employee.name} — ${d.tasks} tasks, ${d.taskEvents} events.`
+            ? `Deleted ${employee.name} - ${d.tasks} tasks, ${d.taskEvents} events.`
             : `Deleted ${employee.name}.`,
         });
         setDeleteOpen(false);
@@ -154,7 +154,7 @@ export function EmployeeRowActions({
   }
 
   // Resend only makes sense while the account is active and the invitee
-  // hasn't signed in yet — passwords + resets are Clerk-managed now.
+  // hasn't signed in yet - passwords + resets are Clerk-managed now.
   const canResend = employee.isActive && isInvited;
   const showSeparator = canResend || canDeactivate || canReactivate;
   const showDeleteSeparator = canDelete;
@@ -224,7 +224,7 @@ export function EmployeeRowActions({
         managerOptions={managerOptions}
       />
 
-      {/* Hard-delete dialog — typed-email gate prevents accidental clicks. */}
+      {/* Hard-delete dialog - typed-email gate prevents accidental clicks. */}
       <Dialog.Root open={deleteOpen} onOpenChange={setDeleteOpen}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/40 z-[90]" />

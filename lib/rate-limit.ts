@@ -1,25 +1,25 @@
 import "server-only";
 
 /**
- * Phase 3.3 — per-actor sliding-window rate limiter.
+ * Phase 3.3 - per-actor sliding-window rate limiter.
  *
  * In-memory by design: every Vercel function instance keeps its own
  * counters. For our small-team scale that's fine and avoids a network
  * round-trip on every write. If we ever need cross-instance enforcement,
  * swap the `buckets` Map for a Vercel KV / Redis call behind the same
- * `rateLimit(key, kind)` signature — no caller changes.
+ * `rateLimit(key, kind)` signature - no caller changes.
  *
  * Defaults (per-user, per-rolling-60s):
- *   - write: 60   — the typical user can't physically click that fast;
+ *   - write: 60   - the typical user can't physically click that fast;
  *                   a compromised session hammering the API hits this
  *                   well below DB saturation.
- *   - read:  600  — page renders + RSC prefetches add up quickly, so
+ *   - read:  600  - page renders + RSC prefetches add up quickly, so
  *                   reads get a 10× ceiling. Mostly a safety net for
  *                   automated scrapers / runaway loops.
  *
  * Returns:
- *   { ok: true }                       — proceed.
- *   { ok: false, retryAfterMs: ... }   — too fast; caller maps to 429.
+ *   { ok: true }                       - proceed.
+ *   { ok: false, retryAfterMs: ... }   - too fast; caller maps to 429.
  */
 
 export type RateLimitKind = "write" | "read";
@@ -35,7 +35,7 @@ const LIMITS: Record<RateLimitKind, { max: number; windowMs: number }> = {
 const buckets = new Map<string, number[]>();
 
 /**
- * Periodic prune so an idle key doesn't sit forever. Cheap — runs at
+ * Periodic prune so an idle key doesn't sit forever. Cheap - runs at
  * most once per `PRUNE_INTERVAL_MS` per Node instance.
  */
 const PRUNE_INTERVAL_MS = 5 * 60_000;
@@ -64,7 +64,7 @@ export interface RateLimitResult {
 /**
  * Records an attempt by `actorId` against the `kind` bucket and decides
  * whether it's allowed. Caller passes the actor id (Clerk user id or
- * employee.id is fine — both unique-per-actor). Failure returns the ms
+ * employee.id is fine - both unique-per-actor). Failure returns the ms
  * until the oldest in-window entry ages out, so the caller can echo a
  * Retry-After header.
  */
@@ -113,7 +113,7 @@ export function rateLimitOrError(
   };
 }
 
-/** Test-only helper — wipes the in-memory buckets. */
+/** Test-only helper - wipes the in-memory buckets. */
 export function __resetRateLimitForTests(): void {
   buckets.clear();
   lastPruneAt = 0;

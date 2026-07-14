@@ -23,7 +23,7 @@ export function SettingsTabIntegrations({
    *  legacy builds; renders nothing when empty. */
   dispatchFailures?: DispatchFailureRow[];
   dispatchTotals?: Totals;
-  /** Phase 5.2 surface — active recurring task templates. */
+  /** Phase 5.2 surface - active recurring task templates. */
   recurringTemplates?: RecurringTemplateRow[];
 }) {
   return (

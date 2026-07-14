@@ -24,7 +24,7 @@ import { fireToast } from "@/lib/toast";
 import { Field, MiniField, SectionCard } from "@/components/inquiries/form-field";
 import { StatusPicker } from "@/components/inquiries/status-picker";
 
-/** Slim link block for the header — resolved server-side from inquiryId. */
+/** Slim link block for the header - resolved server-side from inquiryId. */
 export interface NegotiationInquiryLink {
   id: string;
   smNumber: string;
@@ -40,9 +40,9 @@ interface Props {
 
 /** numeric-string → ₹, em-dash when unset/unparseable. */
 function money(value: string | null): string {
-  if (value == null || value === "") return "—";
+  if (value == null || value === "") return "-";
   const n = Number(value);
-  return Number.isFinite(n) ? formatInr(n) : "—";
+  return Number.isFinite(n) ? formatInr(n) : "-";
 }
 
 /** Money <input> → number | undefined (no NaN); 0 is a valid amount. */
@@ -59,7 +59,7 @@ function numDefault(value: string | null): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
-/** The editable slice of the negotiation — RHF holds these <input>-shaped
+/** The editable slice of the negotiation - RHF holds these <input>-shaped
  *  values; the dirty-only patch ships only changed keys. */
 interface NegotiationEditValues {
   custProductName: string;
@@ -84,9 +84,9 @@ const NUMERIC_KEYS = new Set<keyof NegotiationEditValues>([
 ]);
 
 /**
- * Negotiation detail — breadcrumb + header (negotiationNo, company · enquiry
+ * Negotiation detail - breadcrumb + header (negotiationNo, company · enquiry
  * date · linked SM chip · negotiation-status chip · New Negotiation), sticky
- * sidebar (Negotiation Status StatusPicker — the live pipeline mutator, sales
+ * sidebar (Negotiation Status StatusPicker - the live pipeline mutator, sales
  * person, Created/by, Open Register), read cards for Pricing + Timeline + Notes
  * plus ONE dirty-only edit form (mirrors the quotation detail).
  */
@@ -120,7 +120,7 @@ export function NegotiationDetail({ negotiation, employees, inquiryLink, lines }
   } = useForm<NegotiationEditValues>({ defaultValues: defaults });
 
   const onSubmit = handleSubmit(async (values) => {
-    // Dirty-only patch — the action's strip-undefined + no-op short-circuit
+    // Dirty-only patch - the action's strip-undefined + no-op short-circuit
     // handles the rest. Empty text inputs fold to undefined (UpdateNegotiation's
     // OptionalText keeps them out of the patch).
     const patch = Object.fromEntries(
@@ -175,7 +175,7 @@ export function NegotiationDetail({ negotiation, employees, inquiryLink, lines }
             {negotiation.negotiationNo}
           </h1>
           <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[14.5px] text-ink-muted">
-            {negotiation.companyName ?? "—"}
+            {negotiation.companyName ?? "-"}
             <span aria-hidden className="text-ink-subtle">
               ·
             </span>
@@ -235,9 +235,9 @@ export function NegotiationDetail({ negotiation, employees, inquiryLink, lines }
           {/* Timeline (read) */}
           <SectionCard title="Timeline & Validity">
             <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-              <ReadStat label="Development Time" value={negotiation.developmentTime ?? "—"} />
-              <ReadStat label="Delivery Time" value={negotiation.deliveryTime ?? "—"} />
-              <ReadStat label="Validity" value={negotiation.validity ?? "—"} />
+              <ReadStat label="Development Time" value={negotiation.developmentTime ?? "-"} />
+              <ReadStat label="Delivery Time" value={negotiation.deliveryTime ?? "-"} />
+              <ReadStat label="Validity" value={negotiation.validity ?? "-"} />
             </div>
           </SectionCard>
 
@@ -247,7 +247,7 @@ export function NegotiationDetail({ negotiation, employees, inquiryLink, lines }
               className="text-[14px] text-ink-strong whitespace-pre-wrap"
               style={{ lineHeight: 1.55 }}
             >
-              {negotiation.negotiationNotes?.trim() || "—"}
+              {negotiation.negotiationNotes?.trim() || "-"}
             </p>
           </SectionCard>
 
@@ -255,7 +255,7 @@ export function NegotiationDetail({ negotiation, employees, inquiryLink, lines }
           {lines.length > 0 && (
             <SectionCard
               title="Negotiation Lines"
-              hint="Editing here updates Line 1 — additional lines are read-only."
+              hint="Editing here updates Line 1 - additional lines are read-only."
             >
               <div className="flex flex-col gap-4">
                 {lines.map((line, idx) => (
@@ -269,7 +269,7 @@ export function NegotiationDetail({ negotiation, employees, inquiryLink, lines }
           <form onSubmit={onSubmit} className="flex flex-col gap-6" noValidate>
             <SectionCard
               title="Product"
-              hint="Customer product, quantity and part — only changed fields are saved."
+              hint="Customer product, quantity and part - only changed fields are saved."
             >
               <Field id="nd-product" label="Cust Product Name">
                 <input id="nd-product" type="text" className="nt-input" {...register("custProductName")} />
@@ -293,7 +293,7 @@ export function NegotiationDetail({ negotiation, employees, inquiryLink, lines }
               </div>
             </SectionCard>
 
-            <SectionCard title="Pricing" hint="All amounts in ₹ — only changed fields are saved.">
+            <SectionCard title="Pricing" hint="All amounts in ₹ - only changed fields are saved.">
               <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
                 <MiniField label="Final Cost">
                   <MoneyInput
@@ -388,7 +388,7 @@ export function NegotiationDetail({ negotiation, employees, inquiryLink, lines }
               ariaLabel="Negotiation status"
             />
           </div>
-          <SidebarRow label="Sales Person" value={salesPerson ?? "—"} />
+          <SidebarRow label="Sales Person" value={salesPerson ?? "-"} />
           {negotiation.quotationLink && (
             <div className="flex flex-col gap-0.5">
               <span className="text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
@@ -474,8 +474,8 @@ function NegotiationLineCard({ line, lineNo }: { line: NegotiationLineWithSpec; 
         )}
       </div>
       <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
-        <LineStat label="Qty" value={line.qty ?? "—"} />
-        <LineStat label="Part No" value={spec.partNo ?? "—"} />
+        <LineStat label="Qty" value={line.qty ?? "-"} />
+        <LineStat label="Part No" value={spec.partNo ?? "-"} />
       </div>
       <div className="grid grid-cols-3 gap-4 border-t border-hairline pt-3 max-md:grid-cols-1">
         <ReadStat label="Final Cost" value={money(line.finalCost)} />
@@ -483,9 +483,9 @@ function NegotiationLineCard({ line, lineNo }: { line: NegotiationLineWithSpec; 
         <ReadStat label="Quote Price" value={money(line.quotePrice)} emphasis />
       </div>
       <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-        <LineStat label="Development Time" value={line.developmentTime ?? "—"} />
-        <LineStat label="Delivery Time" value={line.deliveryTime ?? "—"} />
-        <LineStat label="Validity" value={line.validity ?? "—"} />
+        <LineStat label="Development Time" value={line.developmentTime ?? "-"} />
+        <LineStat label="Delivery Time" value={line.deliveryTime ?? "-"} />
+        <LineStat label="Validity" value={line.validity ?? "-"} />
       </div>
     </div>
   );

@@ -21,7 +21,7 @@ interface Props {
 }
 
 /**
- * "Subject" picker — a fully-styled searchable combobox. The dropdown is a
+ * "Subject" picker - a fully-styled searchable combobox. The dropdown is a
  * portalled Radix Popover so it floats above the form rather than overlapping
  * the fields below. Type to filter, ↑/↓ + Enter to pick, Tab to confirm + move
  * on, and a "+ Add new subject" row that flips into an inline add input.

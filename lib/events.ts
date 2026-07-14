@@ -9,7 +9,7 @@
  * `field_updated`).  The remaining types from the spec (status_changed,
  * reassigned, transferred_external, priority_changed, due_changed,
  * archived, restored, commented) are reserved here so the union is
- * forward-compatible — M2.2 / M2.3 will wire their Server Actions
+ * forward-compatible - M2.2 / M2.3 will wire their Server Actions
  * to emit those values without changing this file.
  */
 
@@ -17,7 +17,7 @@ export const TASK_EVENT_TYPES = [
   // M2.1:
   "created",
   "field_updated",
-  // Reserved (M2.2+ — Server Actions to be added in later plans):
+  // Reserved (M2.2+ - Server Actions to be added in later plans):
   "status_changed",
   "reassigned",
   "transferred_external",
@@ -41,8 +41,8 @@ export const EDITABLE_TASK_FIELDS = [
   "priority",
   "dueAt",
   "notes",
-  "tags", // Tier-3 — tracked in field_updated events the same way as the others.
-  // Tier-4 — GCal-style scheduling fields.
+  "tags", // Tier-3 - tracked in field_updated events the same way as the others.
+  // Tier-4 - GCal-style scheduling fields.
   "startsAt",
   "endsAt",
   "allDay",

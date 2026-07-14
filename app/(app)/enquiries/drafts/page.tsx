@@ -6,7 +6,7 @@ import { DraftsList } from "@/components/enquiries/drafts-list";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Drafts — Carbide India",
+  title: "Drafts - Carbide India",
 };
 
 const MONO = "var(--font-mono-display)";
@@ -30,7 +30,7 @@ export default async function EnquiryDraftsPage() {
         )}
       </div>
       <p className="mt-2 max-w-[620px] text-[15px] font-medium leading-relaxed text-[#4b5563]">
-        Resume an unfinished enquiry — everything you type on the New Enquiry form auto-saves here until it&rsquo;s submitted.
+        Resume an unfinished enquiry - everything you type on the New Enquiry form auto-saves here until it&rsquo;s submitted.
       </p>
 
       <DraftsList drafts={drafts} />

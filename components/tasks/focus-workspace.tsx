@@ -69,7 +69,7 @@ export function FocusWorkspace({
   const [showShortcuts, setShowShortcuts] = React.useState(false);
   const [isFullscreen, setIsFullscreen] = React.useState(false);
 
-  // Track when the user landed on this focus session — surfaced as a
+  // Track when the user landed on this focus session - surfaced as a
   // gentle "Working on this for ~Xm" counter at the bottom of the hero.
   const sessionStart = React.useRef(Date.now());
   const [elapsedLabel, setElapsedLabel] = React.useState("just now");
@@ -123,7 +123,7 @@ export function FocusWorkspace({
     <main className="relative min-h-dvh overflow-hidden text-white">
       <BackgroundFX />
 
-      {/* Top bar — minimal: back + fullscreen + shortcut hint */}
+      {/* Top bar - minimal: back + fullscreen + shortcut hint */}
       <TopBar
         taskId={task.id}
         isFullscreen={isFullscreen}
@@ -132,7 +132,7 @@ export function FocusWorkspace({
       />
 
       <div className="relative z-10 grid grid-cols-[280px_minmax(0,1fr)_320px] max-xl:grid-cols-[240px_minmax(0,1fr)_280px] max-lg:grid-cols-1 max-md:grid-cols-1 gap-8 max-md:gap-5 px-10 max-md:px-4 pt-24 pb-16 max-w-[1600px] mx-auto">
-        {/* LEFT — Pomodoro timer */}
+        {/* LEFT - Pomodoro timer */}
         <motion.aside
           initial={{ opacity: 0, x: -16 }}
           animate={{ opacity: 1, x: 0 }}
@@ -141,7 +141,7 @@ export function FocusWorkspace({
           <FocusTimer />
         </motion.aside>
 
-        {/* CENTER — task hero */}
+        {/* CENTER - task hero */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -151,7 +151,7 @@ export function FocusWorkspace({
           <TaskHero task={task} elapsedLabel={elapsedLabel} />
         </motion.div>
 
-        {/* RIGHT — quick actions */}
+        {/* RIGHT - quick actions */}
         <motion.aside
           initial={{ opacity: 0, x: 16 }}
           animate={{ opacity: 1, x: 0 }}
@@ -205,7 +205,7 @@ export function FocusWorkspace({
 function BackgroundFX() {
   return (
     <>
-      {/* Base gradient — warm-dark, mirrors login + projects hero */}
+      {/* Base gradient - warm-dark, mirrors login + projects hero */}
       <div
         aria-hidden
         className="absolute inset-0 -z-10"
@@ -405,7 +405,7 @@ function TaskHero({ task, elapsedLabel }: { task: TaskShape; elapsedLabel: strin
         </span>
       </div>
 
-      {/* Title — big, but not movie-poster */}
+      {/* Title - big, but not movie-poster */}
       <h1
         style={{
           fontFamily: "var(--font-serif)",
@@ -422,7 +422,7 @@ function TaskHero({ task, elapsedLabel }: { task: TaskShape; elapsedLabel: strin
         {task.title}
       </h1>
 
-      {/* Description body — readable prose */}
+      {/* Description body - readable prose */}
       {task.description && (
         <p
           className="mt-7 whitespace-pre-wrap"
@@ -612,7 +612,7 @@ function FocusTimer() {
   }, [preset.id]);
 
   // Tick down once per second when running. Persist via setInterval +
-  // local state — accurate enough for a focus timer; no wall-clock drift
+  // local state - accurate enough for a focus timer; no wall-clock drift
   // correction since we're not building a stopwatch.
   React.useEffect(() => {
     if (state !== "running") return;
@@ -620,11 +620,11 @@ function FocusTimer() {
       setRemaining((r) => {
         if (r <= 1) {
           setState("done");
-          // Best-effort notify — fires once when the timer hits 0.
+          // Best-effort notify - fires once when the timer hits 0.
           if (typeof window !== "undefined" && "Notification" in window) {
             try {
               new Notification(`${preset.label} session complete`, {
-                body: "Time's up — take a moment.",
+                body: "Time's up - take a moment.",
               });
             } catch {
               /* ignore */
@@ -875,7 +875,7 @@ function QuickActions({
       );
       if (!res.ok) {
         fireToast({
-          message: res.error === "stale" ? "Task was updated elsewhere — refreshing." : res.message ?? "Could not update status.",
+          message: res.error === "stale" ? "Task was updated elsewhere - refreshing." : res.message ?? "Could not update status.",
         });
         if (res.error === "stale") router.refresh();
         return;
@@ -908,7 +908,7 @@ function QuickActions({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Mark done — primary action */}
+      {/* Mark done - primary action */}
       <button
         type="button"
         onClick={() => changeStatus("done")}

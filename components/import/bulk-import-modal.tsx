@@ -19,8 +19,8 @@ const STEPS = [
 
 /**
  * Bulk-import as an animated modal (replaces the standalone /import page).
- * Wraps the proven ImportWorkbench — template download, parse, inline fix,
- * commit — and closes + refreshes on success via ImportWorkbench's onDone.
+ * Wraps the proven ImportWorkbench - template download, parse, inline fix,
+ * commit - and closes + refreshes on success via ImportWorkbench's onDone.
  */
 export function BulkImportModal({
   spec,
@@ -83,10 +83,10 @@ export function BulkImportModal({
             </span>
             <div className="min-w-0 flex-1">
               <Dialog.Title className="text-[20px] font-extrabold tracking-tight text-[#1e2f66]">
-                Bulk Import — {spec.title === "enquiry" ? "Enquiries" : `${spec.title}s`}
+                Bulk Import - {spec.title === "enquiry" ? "Enquiries" : `${spec.title}s`}
               </Dialog.Title>
               <Dialog.Description id="bulk-desc" className="mt-0.5 text-[13.5px] font-medium text-[#6b7280]">
-                Download the template, fill it in Excel, upload, fix any flagged cells, then import — all here.
+                Download the template, fill it in Excel, upload, fix any flagged cells, then import - all here.
               </Dialog.Description>
             </div>
             <Dialog.Close asChild>

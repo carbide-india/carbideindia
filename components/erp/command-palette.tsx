@@ -28,15 +28,15 @@ import {
 import { commandSearchAction } from "@/app/(app)/_actions/command-search";
 
 /**
- * CommandPalette (ERP redesign — Phase 3).
+ * CommandPalette (ERP redesign - Phase 3).
  *
  * The app-wide ⌘/Ctrl-K palette: jump to any core register/workspace (NAVIGATION
  * actions) + a stub federated record search (Items by code/name, Clients by
- * name/code — top 5 each) wired to `commandSearchAction`. Selecting a record
+ * name/code - top 5 each) wired to `commandSearchAction`. Selecting a record
  * navigates to its page.
  *
  * Mounted once in `(app)/layout.tsx`. Renders NOTHING when closed (a portal that
- * only mounts content on open) — so it never alters existing page output. Built
+ * only mounts content on open) - so it never alters existing page output. Built
  * on Radix Dialog + cmdk (already in the repo); no new heavy deps.
  *
  * Keyboard: ⌘K / Ctrl-K opens, arrows navigate (cmdk), Enter selects, Esc closes.
@@ -150,7 +150,7 @@ export function CommandPalette() {
                   : `Nothing matches "${q}".`}
               </CommandEmpty>
 
-              {/* Records — Items */}
+              {/* Records - Items */}
               {records.items.length > 0 && (
                 <Group label="Items">
                   {records.items.map((r) => (
@@ -177,7 +177,7 @@ export function CommandPalette() {
                 </Group>
               )}
 
-              {/* Records — Clients */}
+              {/* Records - Clients */}
               {records.clients.length > 0 && (
                 <Group label="Clients">
                   {records.clients.map((r) => (

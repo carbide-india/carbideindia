@@ -1,5 +1,5 @@
 /**
- * Circular buffering spinner — a clean SVG ring with a spinning arc, the kind
+ * Circular buffering spinner - a clean SVG ring with a spinning arc, the kind
  * larger products use while content resolves. Inherits `currentColor`, so set
  * the colour with a text utility (defaults to the brand red). Sizes via the
  * `size` prop. Pair with a label via <BufferingState/> for full-page waits.
@@ -74,7 +74,7 @@ export function BufferingState({
 }
 
 /**
- * Viewport-centered buffering overlay for `loading.tsx` files — a single,
+ * Viewport-centered buffering overlay for `loading.tsx` files - a single,
  * consistent "circle + label" shown over the route's skeleton on EVERY slow
  * page, so the loading experience is uniform app-wide (not tasks-only).
  * Pointer-events-none so it never blocks the skeleton beneath it.

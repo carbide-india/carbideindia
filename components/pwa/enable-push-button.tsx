@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { fireToast } from "@/lib/toast";
 
 /**
- * M4 Commit 3c — the per-device "Enable push" affordance.  Lives under
+ * M4 Commit 3c - the per-device "Enable push" affordance.  Lives under
  * /profile's notification-channel card.
  *
  * Lifecycle:
@@ -49,7 +49,7 @@ export function EnablePushButton() {
       .then((reg) => reg.pushManager.getSubscription())
       .then((s) => setSubscribed(!!s))
       .catch(() => {
-        // ignore — assume not subscribed if the lookup blows up
+        // ignore - assume not subscribed if the lookup blows up
       });
   }, []);
 
@@ -137,7 +137,7 @@ export function EnablePushButton() {
         disabled={pending}
         className="rounded-md border border-[#E2E8F0] px-3 py-2 text-sm text-[#0F172A] hover:bg-[#F5F5F7] disabled:opacity-50"
       >
-        ✓ Push enabled — turn off
+        ✓ Push enabled - turn off
       </button>
     );
   }

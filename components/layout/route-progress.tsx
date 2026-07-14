@@ -5,7 +5,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 
 /**
  * Thin top-of-page progress bar that fires the instant a user clicks an
- * in-app link and completes when the new route paints — the signature
+ * in-app link and completes when the new route paints - the signature
  * "it's working" signal large products use.
  *
  * The App Router has no router events, so navigation START is detected by
@@ -46,7 +46,7 @@ export function RouteProgress() {
     clearTimers();
     setActive(true);
     setProgress(8);
-    // Ease toward 90% but never reach it on our own — the route change is
+    // Ease toward 90% but never reach it on our own - the route change is
     // what completes the bar. Bigger steps early, slowing as it fills.
     trickle.current = setInterval(() => {
       setProgress((p) => (p < 90 ? p + Math.max(0.5, (90 - p) * 0.06) : p));
@@ -56,7 +56,7 @@ export function RouteProgress() {
     safety.current = setTimeout(() => finish(), 8000);
   }, [clearTimers, finish]);
 
-  // Navigation START — capture clicks on internal anchors.
+  // Navigation START - capture clicks on internal anchors.
   React.useEffect(() => {
     function onClick(e: MouseEvent) {
       if (
@@ -91,7 +91,7 @@ export function RouteProgress() {
     return () => document.removeEventListener("click", onClick, true);
   }, [pathname, searchParams, start]);
 
-  // Navigation COMPLETE — the route changed (skip the initial mount).
+  // Navigation COMPLETE - the route changed (skip the initial mount).
   const mounted = React.useRef(false);
   React.useEffect(() => {
     if (!mounted.current) {

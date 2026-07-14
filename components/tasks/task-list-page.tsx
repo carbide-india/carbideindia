@@ -40,7 +40,7 @@ interface KpiSpec {
 
 // Six summary cards. The four middle ones (done/pending/critical/urgent) link
 // to the Tasks list with the matching status/priority filter applied; the two
-// new ones (notApproved/notRead) are display-only — they don't map to the
+// new ones (notApproved/notRead) are display-only - they don't map to the
 // existing status/priority filter dimensions.
 const KPI_SPECS: KpiSpec[] = [
   { key: "notApproved", label: "NOT APPROVED", sublabel: "Declined or awaiting sign-off", tone: "rose"   },
@@ -94,7 +94,7 @@ export function TaskListPage({
   const counts = computeStatCounts(rows);
 
   // Build each card's destination by overriding the relevant filter dimension
-  // on top of the current filters — so date/employee/department scope carries
+  // on top of the current filters - so date/employee/department scope carries
   // over, and the other status/priority filter is cleared for a clean view.
   function cardHref(key: "done" | "pending" | "critical" | "urgent"): Route {
     const base = { ...filters };
@@ -163,7 +163,7 @@ export function TaskListPage({
         )}
       </header>
 
-      {/* KPI summary — 4 stat cards in the same visual language as the
+      {/* KPI summary - 4 stat cards in the same visual language as the
           main dashboard tiles. Each card has a top channel-color bar,
           font-black label, big count, sublabel. */}
       <div className="mb-7 grid grid-cols-6 gap-3 max-xl:grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1">
@@ -262,7 +262,7 @@ function StatCard({
           background: `linear-gradient(90deg, var(--color-${spec.tone}), var(--color-${spec.tone}-deep))`,
         }}
       />
-      {/* Tinted icon chip — adds colour + visual anchor without hurting
+      {/* Tinted icon chip - adds colour + visual anchor without hurting
           the white card's readability. */}
       <span
         aria-hidden

@@ -42,7 +42,7 @@ export interface ItemListItem {
 }
 
 /**
- * Item register list — joins the four master FK columns to their names so the
+ * Item register list - joins the four master FK columns to their names so the
  * table can show shape/grade/condition/tolerance without round-trips. Ordered
  * newest-first. No server filter needed; the table does client-side filtering.
  */
@@ -96,7 +96,7 @@ export async function listItems(): Promise<ItemListItem[]> {
     .orderBy(desc(items.createdAt), desc(items.seq));
 }
 
-/** Full item row with resolved master names — for the detail page. */
+/** Full item row with resolved master names - for the detail page. */
 export interface ItemDetail extends Item {
   shapeName: string | null;
   gradeName: string | null;
@@ -113,7 +113,7 @@ export async function getItemById(id: string): Promise<ItemDetail | null> {
   const [row] = await db
     .select({
       // Full canonical item row (incl. Phase-2 status + write-once origin_*
-      // provenance). Spread avoids naming individual snapshot/origin columns —
+      // provenance). Spread avoids naming individual snapshot/origin columns -
       // origin_* stay display-only and are never used for usage/dedup/search.
       ...getTableColumns(items),
       shapeName: shape.name,
@@ -134,7 +134,7 @@ export async function getItemById(id: string): Promise<ItemDetail | null> {
 
 /**
  * Item shaped for the edit form's input fields (mirrors `ItemFormValues`).
- * Numeric DB columns come back as strings — that's fine, the form's zod coerces
+ * Numeric DB columns come back as strings - that's fine, the form's zod coerces
  * them. Nulls fold to "" / undefined so RHF's controlled inputs stay happy.
  */
 export interface ItemEditValues {

@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
  * Back / Forward navigation pills mounted at the leftmost end of the
  * header, just before the brand cluster. Browser history doesn't expose
  * a reliable "can go back/forward" signal across browsers, so we don't
- * try to gray-out — buttons always feel clickable; if there's nothing
+ * try to gray-out - buttons always feel clickable; if there's nothing
  * to navigate to, router.back/forward simply no-ops.
  */
 export function NavHistoryButtons() {

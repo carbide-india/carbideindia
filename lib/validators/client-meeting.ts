@@ -21,7 +21,7 @@ const MeetingTime = z
   .refine((v) => !v || /^\d{2}:\d{2}$/.test(v), { message: "Use HH:MM" });
 
 /**
- * Base field set shared by Create/Update — same base-object + derive pattern
+ * Base field set shared by Create/Update - same base-object + derive pattern
  * as lib/validators/sample.ts (zod v4 has no `.innerType()` to unwrap). The
  * purpose-"other"-requires-specify refinement lives on Create only; Update
  * derives from this default-less base so edits don't re-demand defaults.
@@ -35,7 +35,7 @@ const ClientMeetingFieldsSchema = z.object({
   salesEmail: OptionalText(160),
   clientId: z.string().uuid().optional(),
   companyName: Trimmed(160).min(1, "Company name is required"),
-  // Contact Person — first name required; the rest optional.
+  // Contact Person - first name required; the rest optional.
   contactFirstName: Trimmed(80).min(1, "Contact first name is required"),
   contactLastName: OptionalText(80),
   contactPersonDesignation: OptionalText(120),
@@ -53,8 +53,8 @@ const ClientMeetingFieldsSchema = z.object({
 });
 
 /**
- * Create — purpose defaults to its first option. "Other" purpose must carry a
- * typed specify value. (No selfie gate — proof-of-visit selfie was dropped.)
+ * Create - purpose defaults to its first option. "Other" purpose must carry a
+ * typed specify value. (No selfie gate - proof-of-visit selfie was dropped.)
  */
 export const CreateClientMeetingSchema = ClientMeetingFieldsSchema.extend({
   purpose: z.enum(MEETING_PURPOSES).default("regular_order"),
@@ -70,7 +70,7 @@ export const CreateClientMeetingSchema = ClientMeetingFieldsSchema.extend({
 export type CreateClientMeetingInput = z.input<typeof CreateClientMeetingSchema>;
 
 /**
- * Patch-shaped schema for edits — every field optional, unknown keys rejected,
+ * Patch-shaped schema for edits - every field optional, unknown keys rejected,
  * empty patches rejected. Derived from the default-less base object so the
  * required base fields never block a single-field edit, and `.partial()`
  * doesn't inject the purpose default into every patch.

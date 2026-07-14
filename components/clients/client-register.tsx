@@ -17,6 +17,8 @@ import {
   Power,
   Search,
   X,
+  SlidersHorizontal,
+  Check,
 } from "lucide-react";
 import { formatDate } from "@/lib/format";
 import {
@@ -24,6 +26,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { MultiSelect } from "@/components/ui/multi-select";
@@ -50,13 +53,149 @@ const W_CONTACT = 168;
 const LEFT_COMPANY = W_ACTIONS;
 const LEFT_CONTACT = W_ACTIONS + W_COMPANY;
 
+// ── Optional (hideable) columns - everything past the three frozen ones. Driven
+//    by one config so header + body + the Columns menu stay in sync. ──
+interface OptCol {
+  id: string;
+  label: string;
+  width: number;
+  align?: "right";
+  cell: (r: ClientRegisterRow) => React.ReactNode;
+}
+const dash = <span className="text-[#b3b8c2]">-</span>;
+const OPT_COLUMNS: OptCol[] = [
+  { id: "grade", label: "Grade", width: 64, cell: (r) => <GradeBadge grade={r.grade} /> },
+  {
+    id: "clientCode",
+    label: "Client Code",
+    width: 110,
+    cell: (r) => (
+      <span className="text-[#6b7280]" style={{ fontFamily: "var(--font-mono)", fontSize: 12.5 }}>
+        {r.clientCode ?? "-"}
+      </span>
+    ),
+  },
+  {
+    id: "customerType",
+    label: "Customer Type",
+    width: 150,
+    cell: (r) =>
+      r.customerTypeNames.length ? (
+        <span className="text-[#6b7280]">{r.customerTypeNames.join(", ")}</span>
+      ) : (
+        dash
+      ),
+  },
+  {
+    id: "industryType",
+    label: "Industry Type",
+    width: 150,
+    cell: (r) =>
+      r.industryTypeNames.length ? (
+        <span className="text-[#6b7280]">{r.industryTypeNames.join(", ")}</span>
+      ) : (
+        dash
+      ),
+  },
+  {
+    id: "tags",
+    label: "Tags",
+    width: 150,
+    cell: (r) =>
+      r.tags.length ? (
+        <span className="flex flex-wrap gap-1">
+          {r.tags.map((t) => (
+            <span
+              key={t}
+              className="inline-flex items-center rounded-full bg-[#eef0ff] px-2 py-0.5 text-[11px] font-semibold text-[#3f3f94]"
+            >
+              {t}
+            </span>
+          ))}
+        </span>
+      ) : (
+        dash
+      ),
+  },
+  {
+    id: "salesPerson",
+    label: "Sales Person",
+    width: 140,
+    cell: (r) => (r.salesPersonName ? <span className="text-[#6b7280]">{r.salesPersonName}</span> : dash),
+  },
+  {
+    id: "location",
+    label: "Location",
+    width: 130,
+    cell: (r) => {
+      const loc = [r.city, r.state].filter(Boolean).join(", ");
+      return loc ? <span className="text-[#6b7280]">{loc}</span> : dash;
+    },
+  },
+  {
+    id: "gstin",
+    label: "GSTIN",
+    width: 150,
+    cell: (r) => (
+      <span className="tabular-nums text-[#6b7280]" style={{ fontSize: 12 }}>
+        {r.gstin ?? dash}
+      </span>
+    ),
+  },
+  {
+    id: "trade",
+    label: "Trade",
+    width: 80,
+    cell: (r) =>
+      r.isExport === true ? (
+        <span className="inline-flex items-center rounded-full bg-[#eaf3ff] px-2 py-0.5 text-[11px] font-semibold text-[#1d4ed8]">
+          Export
+        </span>
+      ) : (
+        <span className="text-[12.5px] text-[#6b7280]">Domestic</span>
+      ),
+  },
+  {
+    id: "credit",
+    label: "Credit",
+    width: 72,
+    align: "right",
+    cell: (r) => (
+      <span className="tabular-nums text-[#6b7280]">{r.creditDays != null ? r.creditDays : "-"}</span>
+    ),
+  },
+  {
+    id: "status",
+    label: "Status",
+    width: 96,
+    cell: (r) =>
+      r.isActive ? (
+        <span className="text-[12.5px] text-[#6b7280]">Active</span>
+      ) : (
+        <span className="inline-flex items-center rounded-full bg-[rgba(15,23,42,0.05)] px-2 py-0.5 text-[11px] font-semibold text-[#8a90a0]">
+          Inactive
+        </span>
+      ),
+  },
+  {
+    id: "created",
+    label: "Created",
+    width: 100,
+    cell: (r) => (
+      <span className="tabular-nums text-[12.5px] text-[#6b7280]">{formatDate(r.createdAt)}</span>
+    ),
+  },
+];
+const COLS_STORAGE_KEY = "carbide.clients.hiddenCols";
+
 /**
- * Client Master register — a bespoke dense table (not the shared
+ * Client Master register - a bespoke dense table (not the shared
  * RegisterDataTable) so it can carry the three product-owner requirements the
  * generic table can't: a left-pinned ⋮ row-action menu, three frozen columns
  * (Actions · Company · Contact Person) that stay put during horizontal scroll,
  * and wrapping 13px cells. Filtering is URL-driven (nuqs) over the already-
- * loaded rows; a KPI row (incl. the Domestic Client Master count) sits above.
+ * loaded rows; the KPI row above doubles as quick filters, and a Columns menu
+ * hides the optional columns.
  */
 export function ClientRegister({ rows, isAdmin }: Props) {
   const [quickView, setQuickView] = React.useState<ClientRegisterRow | null>(
@@ -69,7 +208,7 @@ export function ClientRegister({ rows, isAdmin }: Props) {
     const active = rows.filter((r) => r.isActive).length;
     const withGstin = rows.filter((r) => Boolean(r.gstin)).length;
     const exportClients = rows.filter((r) => r.isExport === true).length;
-    // Domestic = export explicitly false OR unset (null) — anything not export.
+    // Domestic = export explicitly false OR unset (null) - anything not export.
     const domestic = rows.filter((r) => r.isExport !== true).length;
     return { total, active, withGstin, exportClients, domestic };
   }, [rows]);
@@ -90,10 +229,36 @@ export function ClientRegister({ rows, isAdmin }: Props) {
     parseAsString.withDefault(""),
   );
   const [trade, setTrade] = useQueryState("trade", parseAsString.withDefault(""));
+  const [status, setStatus] = useQueryState("status", parseAsString.withDefault(""));
+  const [gstin, setGstin] = useQueryState("gstin", parseAsString.withDefault(""));
   const [tags, setTags] = useQueryState(
     "tags",
     parseAsArrayOf(parseAsString).withDefault([]),
   );
+
+  // ── Column visibility (client-side, persisted) ──
+  const [hiddenCols, setHiddenCols] = React.useState<Record<string, boolean>>({});
+  React.useEffect(() => {
+    try {
+      const raw = localStorage.getItem(COLS_STORAGE_KEY);
+      if (raw) setHiddenCols(JSON.parse(raw) as Record<string, boolean>);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  React.useEffect(() => {
+    try {
+      localStorage.setItem(COLS_STORAGE_KEY, JSON.stringify(hiddenCols));
+    } catch {
+      /* ignore */
+    }
+  }, [hiddenCols]);
+  const visibleCols = React.useMemo(
+    () => OPT_COLUMNS.filter((c) => !hiddenCols[c.id]),
+    [hiddenCols],
+  );
+  const tableMinWidth =
+    W_ACTIONS + W_COMPANY + W_CONTACT + visibleCols.reduce((s, c) => s + c.width, 0);
 
   // ── Filter option lists derived from the loaded rows (only relevant values). ──
   const options = React.useMemo(() => {
@@ -147,12 +312,15 @@ export function ClientRegister({ rows, isAdmin }: Props) {
         return false;
       if (trade === "export" && r.isExport !== true) return false;
       if (trade === "domestic" && r.isExport === true) return false;
+      if (status === "active" && !r.isActive) return false;
+      if (status === "inactive" && r.isActive) return false;
+      if (gstin === "has" && !r.gstin) return false;
       // Tags: match rows carrying ANY of the selected tags.
       if (tags.length > 0 && !tags.some((t) => r.tags.includes(t)))
         return false;
       return true;
     });
-  }, [rows, q, grade, salesPerson, customerType, industryType, trade, tags]);
+  }, [rows, q, grade, salesPerson, customerType, industryType, trade, status, gstin, tags]);
 
   const hasFilters =
     Boolean(q) ||
@@ -161,6 +329,8 @@ export function ClientRegister({ rows, isAdmin }: Props) {
     Boolean(customerType) ||
     Boolean(industryType) ||
     Boolean(trade) ||
+    Boolean(status) ||
+    Boolean(gstin) ||
     tags.length > 0;
 
   function clearFilters() {
@@ -170,26 +340,54 @@ export function ClientRegister({ rows, isAdmin }: Props) {
     setCustomerType("");
     setIndustryType("");
     setTrade("");
+    setStatus("");
+    setGstin("");
     setTags([]);
   }
 
   const selectClass =
-    "rounded-chip border border-[#dcdce8] bg-white px-3 py-2 text-[13px] font-semibold text-[#3a4152] outline-none focus:border-[#3f3f94]";
+    "shrink-0 rounded-chip border border-[#dcdce8] bg-white px-3 py-2 text-[13px] font-semibold text-[#3a4152] outline-none focus:border-[#3f3f94]";
 
   return (
     <>
-      {/* KPI cards ---------------------------------------------------------- */}
+      {/* KPI cards - also act as quick filters ------------------------------ */}
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <StatCard label="Total Clients" value={stats.total} accent />
-        <StatCard label="Domestic Client Master" value={stats.domestic} />
-        <StatCard label="Active" value={stats.active} />
-        <StatCard label="Export Clients" value={stats.exportClients} />
-        <StatCard label="With GSTIN" value={stats.withGstin} />
+        <StatCard
+          label="Total Clients"
+          value={stats.total}
+          accent
+          selected={!hasFilters}
+          onClick={clearFilters}
+        />
+        <StatCard
+          label="Domestic Client Master"
+          value={stats.domestic}
+          selected={trade === "domestic"}
+          onClick={() => setTrade(trade === "domestic" ? "" : "domestic")}
+        />
+        <StatCard
+          label="Active"
+          value={stats.active}
+          selected={status === "active"}
+          onClick={() => setStatus(status === "active" ? "" : "active")}
+        />
+        <StatCard
+          label="Export Clients"
+          value={stats.exportClients}
+          selected={trade === "export"}
+          onClick={() => setTrade(trade === "export" ? "" : "export")}
+        />
+        <StatCard
+          label="With GSTIN"
+          value={stats.withGstin}
+          selected={gstin === "has"}
+          onClick={() => setGstin(gstin === "has" ? "" : "has")}
+        />
       </div>
 
-      {/* Filter bar --------------------------------------------------------- */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <label className="relative min-w-[220px] flex-1 max-w-md">
+      {/* Filter bar - single line (scrolls horizontally if the viewport is narrow). */}
+      <div className="mb-4 flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]">
+        <label className="relative w-[200px] min-w-[160px] flex-1">
           <Search
             size={15}
             strokeWidth={2.2}
@@ -281,7 +479,7 @@ export function ClientRegister({ rows, isAdmin }: Props) {
         </select>
 
         {options.tags.length > 0 && (
-          <div className="rounded-chip border border-[#dcdce8] bg-white px-3 py-2">
+          <div className="shrink-0 rounded-chip border border-[#dcdce8] bg-white px-3 py-2">
             <MultiSelect
               options={options.tags.map((t) => ({ value: t, label: t }))}
               selected={tags}
@@ -292,19 +490,18 @@ export function ClientRegister({ rows, isAdmin }: Props) {
           </div>
         )}
 
+        {/* Columns - hide/show optional columns. */}
+        <ColumnsMenu hidden={hiddenCols} setHidden={setHiddenCols} />
+
         {hasFilters && (
           <button
             type="button"
             onClick={clearFilters}
-            className="px-2 py-2 text-[13px] font-semibold text-[#6b7280] transition-colors hover:text-[#3a4152]"
+            className="shrink-0 px-2 py-2 text-[13px] font-semibold text-[#6b7280] transition-colors hover:text-[#3a4152]"
           >
             Clear filters
           </button>
         )}
-
-        <span className="ml-auto text-[12.5px] font-semibold tabular-nums text-[#6b7280]">
-          {filtered.length} of {rows.length}
-        </span>
       </div>
 
       {/* Table -------------------------------------------------------------- */}
@@ -313,7 +510,7 @@ export function ClientRegister({ rows, isAdmin }: Props) {
           <p className="text-[15px] font-bold text-[#3a4152]">
             {hasFilters
               ? "No clients match these filters."
-              : "No clients yet — onboard the first one."}
+              : "No clients yet - onboard the first one."}
           </p>
           <p className="mt-1.5 text-[13px] text-[#6b7280]">
             {hasFilters ? (
@@ -336,7 +533,7 @@ export function ClientRegister({ rows, isAdmin }: Props) {
         >
           <table
             className="w-full border-separate text-[13px]"
-            style={{ borderSpacing: 0, minWidth: 1180 }}
+            style={{ borderSpacing: 0, minWidth: tableMinWidth }}
           >
             <thead>
               <tr className="text-left text-[11px] font-bold uppercase tracking-[0.06em] text-[#6b7280]">
@@ -349,20 +546,11 @@ export function ClientRegister({ rows, isAdmin }: Props) {
                 <Th sticky left={LEFT_CONTACT} width={W_CONTACT} corner lastFrozen>
                   Contact Person
                 </Th>
-                <Th width={64}>Grade</Th>
-                <Th width={110}>Client Code</Th>
-                <Th width={150}>Customer Type</Th>
-                <Th width={150}>Industry Type</Th>
-                <Th width={150}>Tags</Th>
-                <Th width={140}>Sales Person</Th>
-                <Th width={130}>Location</Th>
-                <Th width={150}>GSTIN</Th>
-                <Th width={80}>Trade</Th>
-                <Th width={72} align="right">
-                  Credit
-                </Th>
-                <Th width={96}>Status</Th>
-                <Th width={100}>Created</Th>
+                {visibleCols.map((c) => (
+                  <Th key={c.id} width={c.width} align={c.align}>
+                    {c.label}
+                  </Th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -402,91 +590,14 @@ export function ClientRegister({ rows, isAdmin }: Props) {
                         )}
                       </div>
                     ) : (
-                      <span className="text-[#b3b8c2]">—</span>
+                      <span className="text-[#b3b8c2]">-</span>
                     )}
                   </Td>
-                  <Td className="align-top">
-                    <GradeBadge grade={r.grade} />
-                  </Td>
-                  <Td className="align-top">
-                    <span
-                      className="text-[#6b7280]"
-                      style={{ fontFamily: "var(--font-mono)", fontSize: 12.5 }}
-                    >
-                      {r.clientCode ?? "—"}
-                    </span>
-                  </Td>
-                  <Td className="align-top text-[#6b7280]">
-                    {r.customerTypeNames.length ? (
-                      r.customerTypeNames.join(", ")
-                    ) : (
-                      <span className="text-[#b3b8c2]">—</span>
-                    )}
-                  </Td>
-                  <Td className="align-top text-[#6b7280]">
-                    {r.industryTypeNames.length ? (
-                      r.industryTypeNames.join(", ")
-                    ) : (
-                      <span className="text-[#b3b8c2]">—</span>
-                    )}
-                  </Td>
-                  <Td className="align-top">
-                    {r.tags.length ? (
-                      <span className="flex flex-wrap gap-1">
-                        {r.tags.map((t) => (
-                          <span
-                            key={t}
-                            className="inline-flex items-center rounded-full bg-[#eef0ff] px-2 py-0.5 text-[11px] font-semibold text-[#3f3f94]"
-                          >
-                            {t}
-                          </span>
-                        ))}
-                      </span>
-                    ) : (
-                      <span className="text-[#b3b8c2]">—</span>
-                    )}
-                  </Td>
-                  <Td className="align-top text-[#6b7280]">
-                    {r.salesPersonName ?? <span className="text-[#b3b8c2]">—</span>}
-                  </Td>
-                  <Td className="align-top text-[#6b7280]">
-                    {[r.city, r.state].filter(Boolean).join(", ") || (
-                      <span className="text-[#b3b8c2]">—</span>
-                    )}
-                  </Td>
-                  <Td className="align-top">
-                    <span className="tabular-nums text-[#6b7280]" style={{ fontSize: 12 }}>
-                      {r.gstin ?? <span className="text-[#b3b8c2]">—</span>}
-                    </span>
-                  </Td>
-                  <Td className="align-top">
-                    {r.isExport === true ? (
-                      <span className="inline-flex items-center rounded-full bg-[#eaf3ff] px-2 py-0.5 text-[11px] font-semibold text-[#1d4ed8]">
-                        Export
-                      </span>
-                    ) : (
-                      <span className="text-[12.5px] text-[#6b7280]">Domestic</span>
-                    )}
-                  </Td>
-                  <Td align="right" className="align-top">
-                    <span className="tabular-nums text-[#6b7280]">
-                      {r.creditDays != null ? r.creditDays : "—"}
-                    </span>
-                  </Td>
-                  <Td className="align-top">
-                    {r.isActive ? (
-                      <span className="text-[12.5px] text-[#6b7280]">Active</span>
-                    ) : (
-                      <span className="inline-flex items-center rounded-full bg-[rgba(15,23,42,0.05)] px-2 py-0.5 text-[11px] font-semibold text-[#8a90a0]">
-                        Inactive
-                      </span>
-                    )}
-                  </Td>
-                  <Td className="align-top">
-                    <span className="tabular-nums text-[12.5px] text-[#6b7280]">
-                      {formatDate(r.createdAt)}
-                    </span>
-                  </Td>
+                  {visibleCols.map((c) => (
+                    <Td key={c.id} width={c.width} align={c.align} className="align-top">
+                      {c.cell(r)}
+                    </Td>
+                  ))}
                 </tr>
               ))}
             </tbody>
@@ -506,7 +617,75 @@ export function ClientRegister({ rows, isAdmin }: Props) {
 }
 
 // ---------------------------------------------------------------------------
-// Table cell primitives — frozen-column bookkeeping in one place.
+// Columns hide/show menu
+// ---------------------------------------------------------------------------
+
+function ColumnsMenu({
+  hidden,
+  setHidden,
+}: {
+  hidden: Record<string, boolean>;
+  setHidden: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
+}) {
+  const hiddenCount = OPT_COLUMNS.filter((c) => hidden[c.id]).length;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-chip border border-[#dcdce8] bg-white px-3 py-2 text-[13px] font-semibold text-[#3a4152] transition hover:border-[#c9c9ea] hover:text-[#3f3f94]"
+        >
+          <SlidersHorizontal size={14} strokeWidth={2.2} />
+          Columns
+          {hiddenCount > 0 && (
+            <span className="rounded-full bg-[#3f3f94] px-1.5 text-[10px] font-bold text-white tabular-nums">
+              {hiddenCount}
+            </span>
+          )}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="max-h-[70vh] overflow-y-auto">
+        <DropdownMenuLabel>Show columns</DropdownMenuLabel>
+        {OPT_COLUMNS.map((c) => {
+          const visible = !hidden[c.id];
+          return (
+            <DropdownMenuItem
+              key={c.id}
+              className="text-[14px]"
+              onSelect={(e) => {
+                e.preventDefault();
+                setHidden((prev) => ({ ...prev, [c.id]: visible }));
+              }}
+            >
+              <span className="inline-flex w-4 justify-center">
+                {visible ? <Check size={14} strokeWidth={2.6} /> : null}
+              </span>
+              {c.label}
+            </DropdownMenuItem>
+          );
+        })}
+        {hiddenCount > 0 && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-[14px]"
+              onSelect={(e) => {
+                e.preventDefault();
+                setHidden({});
+              }}
+            >
+              <span className="inline-flex w-4 justify-center" />
+              Show all
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Table cell primitives - frozen-column bookkeeping in one place.
 // ---------------------------------------------------------------------------
 
 /** Shared sticky styling for a frozen header/body cell. */
@@ -600,7 +779,7 @@ function Td({
 }
 
 function GradeBadge({ grade }: { grade: ClientGrade | null }) {
-  if (!grade) return <span className="text-[#b3b8c2]">—</span>;
+  if (!grade) return <span className="text-[#b3b8c2]">-</span>;
   const tone =
     grade === "A"
       ? { bg: "#eef0ff", fg: "#3f3f94" }
@@ -618,7 +797,7 @@ function GradeBadge({ grade }: { grade: ClientGrade | null }) {
 }
 
 // ---------------------------------------------------------------------------
-// Row action ⋮ menu — actions live in a plain array so new ones just append.
+// Row action ⋮ menu - actions live in a plain array so new ones just append.
 // ---------------------------------------------------------------------------
 
 function RowMenu({
@@ -745,25 +924,37 @@ function StatCard({
   label,
   value,
   accent,
+  selected,
+  onClick,
 }: {
   label: string;
   value: number;
   accent?: boolean;
+  selected?: boolean;
+  onClick?: () => void;
 }) {
   return (
-    <div
-      className="rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3.5"
-      style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={`rounded-2xl border bg-white px-4 py-3.5 text-left transition-all duration-150 hover:-translate-y-0.5 hover:border-[#c9c9ea] hover:shadow-[0_8px_20px_-10px_rgba(63,63,148,0.4)] ${
+        selected ? "border-[#3f3f94] ring-2 ring-[#3f3f94]/25" : "border-[#e5e7eb]"
+      }`}
+      style={{ boxShadow: selected ? undefined : "0 1px 3px rgba(15,23,42,0.04)" }}
     >
-      <div className="text-[11px] font-bold uppercase tracking-[0.10em] text-[#9aa0ab]">
-        {label}
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[11px] font-bold uppercase tracking-[0.10em] text-[#9aa0ab]">
+          {label}
+        </div>
+        {selected && <Check size={14} strokeWidth={3} className="shrink-0 text-[#3f3f94]" />}
       </div>
       <div
         className="mt-1.5 text-[28px] font-bold leading-none tabular-nums"
-        style={{ color: accent ? "#3f3f94" : "#1f2430" }}
+        style={{ color: accent || selected ? "#3f3f94" : "#1f2430" }}
       >
         {value}
       </div>
-    </div>
+    </button>
   );
 }

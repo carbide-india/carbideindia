@@ -7,7 +7,7 @@ import { CustomListsEditor } from "@/components/custom-lists/custom-lists-editor
 export const dynamic = "force-dynamic";
 
 /**
- * Client KYC "Custom" lists — the form-scoped dropdowns (Payment Terms,
+ * Client KYC "Custom" lists - the form-scoped dropdowns (Payment Terms,
  * Freight, Credit Days, …) that don't belong in the shared Masters module.
  */
 export default async function ClientCustomListsPage() {

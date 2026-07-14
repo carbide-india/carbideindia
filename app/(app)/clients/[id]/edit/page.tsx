@@ -50,7 +50,7 @@ export default async function EditClientPage({ params }: PageProps) {
           </div>
           <h1 className="text-display-lg text-ink-strong mt-1">{client.name}</h1>
           <p className="text-body-lg text-ink-subtle mt-1">
-            Edit every detail of this client — company, contact, meeting and
+            Edit every detail of this client - company, contact, meeting and
             business cards. Option lists are managed in Admin &#8594; Masters.
           </p>
         </header>

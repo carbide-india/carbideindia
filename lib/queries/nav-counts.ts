@@ -8,15 +8,15 @@ import { CACHE_TAGS } from "@/lib/cache-tags";
 /**
  * Nav-badge task counters.
  *
- * `activeTasks` is the count of OPEN work — unarchived tasks still in a
+ * `activeTasks` is the count of OPEN work - unarchived tasks still in a
  * pending status (Not Read, Not Started, Initiated, Follow-ups, Need
  * Help/Info). Terminal states (done / approved / not_approved / cancelled /
  * transferred) are deliberately excluded so the badge reflects "work to do"
  * and drops as tasks are completed, rather than ballooning with every
  * approved-but-never-archived row. `archivedTasks` is the soft-deleted total.
  *
- * Both invalidate via `revalidateTag(CACHE_TAGS.tasks)` — fired by every
- * create / status-change / archive / restore path — so the badge stays live;
+ * Both invalidate via `revalidateTag(CACHE_TAGS.tasks)` - fired by every
+ * create / status-change / archive / restore path - so the badge stays live;
  * the 60s `revalidate` is just a safety net.
  */
 const fetchTaskTotals = unstable_cache(
@@ -48,7 +48,7 @@ export async function getNavCounts(args?: {
   archivedTasks: number;
   inboxUnread: number;
 }> {
-  // Unread count is per-user — kept out of the shared cache. The two
+  // Unread count is per-user - kept out of the shared cache. The two
   // task totals are now one cache lookup that hits Postgres at most
   // once per minute (or until a task mutation invalidates the tag).
   const [totals, inboxUnread] = await Promise.all([

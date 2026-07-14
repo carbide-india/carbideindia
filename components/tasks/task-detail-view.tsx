@@ -59,7 +59,7 @@ interface Props {
   subjects: string[];
   /** Project tree nodes for the Edit Task "Project" link. */
   projectNodes?: { id: string; label: string }[];
-  /** Current user — drives the comment composer avatar.  Optional so the
+  /** Current user - drives the comment composer avatar.  Optional so the
    *  page route can defer fetching it; falls back to "You". */
   me?: {
     id: string;
@@ -200,7 +200,7 @@ const PRIORITY_LABEL_SHORT: Record<string, string> = {
  * The showcase task-detail wrapper.
  *
  * Two-column editorial layout (~62% / ~38%) with a sticky right rail
- * containing three stacked sections — Status & meta, Action rail, Audit
+ * containing three stacked sections - Status & meta, Action rail, Audit
  * feed timeline.  Below 1024px the rail collapses below the main column.
  *
  * - Hash-driven dialogs (#approve / #reassign / #transfer / #cancel)
@@ -228,7 +228,7 @@ export function TaskDetailView({
   const [reassignOpen, setReassignOpen] = useState(false);
   const expectedUpdatedAt = task.updatedAt.toISOString();
 
-  // Hash-driven dialog open — preserves the row-action menu deep-links.
+  // Hash-driven dialog open - preserves the row-action menu deep-links.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const hash = window.location.hash;
@@ -252,7 +252,7 @@ export function TaskDetailView({
   }, []);
 
   const tone = STATUS_TONE[task.status];
-  // Viewer's role on this task — drives the banner inside ActionRail.
+  // Viewer's role on this task - drives the banner inside ActionRail.
   const myRole: "doer" | "initiator" | "both" | null = useMemo(() => {
     if (!me) return null;
     const isDoer = task.doerId === me.id;
@@ -284,7 +284,7 @@ export function TaskDetailView({
 
   return (
     <div className="relative">
-      {/* Plain background (sir's changes #11) — the decorative "constellation"
+      {/* Plain background (sir's changes #11) - the decorative "constellation"
           dots/lines on the left edge were removed; a faint radial wash stays
           for a touch of depth without distracting from the content. */}
       <div
@@ -296,7 +296,7 @@ export function TaskDetailView({
         }}
       />
 
-      {/* TOP HEADER STRIP — back/forward affordance, status, priority pill
+      {/* TOP HEADER STRIP - back/forward affordance, status, priority pill
           on the left; Focus / Duplicate / Edit Task on the right.  Sits
           above the two-column grid so the task body below feels like the
           subject of the page, not a panel-within-a-panel. */}
@@ -314,9 +314,9 @@ export function TaskDetailView({
       )}
 
       <div className="grid grid-cols-[minmax(0,1fr)_360px] gap-10 max-lg:grid-cols-1 max-lg:gap-6 max-md:grid-cols-1 max-md:gap-5">
-        {/* LEFT COLUMN — editorial document */}
+        {/* LEFT COLUMN - editorial document */}
         <div className="min-w-0">
-          {/* Recurrence badge — small inline indicator for materialized
+          {/* Recurrence badge - small inline indicator for materialized
               children (with click-through to the template) AND for
               rule-holders themselves. Hidden for non-recurring tasks. */}
           {!editing && (task.recurrenceParentId || task.recurrenceRule) && (
@@ -435,7 +435,7 @@ export function TaskDetailView({
                 }}
                 className="flex flex-col gap-5"
               >
-                {/* TASK BODY CARD — the editorial document container.
+                {/* TASK BODY CARD - the editorial document container.
                     Subtle elevation lifts it off the canvas without
                     looking heavy. */}
                 <section
@@ -445,7 +445,7 @@ export function TaskDetailView({
                       "0 1px 3px rgba(15, 23, 42, 0.04), 0 12px 32px -16px rgba(15, 23, 42, 0.08)",
                   }}
                 >
-                  {/* Top red accent strip — ties the card to the brand */}
+                  {/* Top red accent strip - ties the card to the brand */}
                   <div
                     aria-hidden
                     className="absolute inset-x-0 top-0 h-[3px]"
@@ -458,7 +458,7 @@ export function TaskDetailView({
                   <TaskDetail task={task} />
                 </section>
 
-                {/* ACTIVITY & COMMENTS CARD — composer at the top,
+                {/* ACTIVITY & COMMENTS CARD - composer at the top,
                     timeline below.  Stays on the left so the right rail
                     is purely metadata + actions. */}
                 <ActivityCard
@@ -474,16 +474,16 @@ export function TaskDetailView({
           </AnimatePresence>
         </div>
 
-        {/* RIGHT RAIL — sticky, three stacked sections. Tier-3 mobile fix:
+        {/* RIGHT RAIL - sticky, three stacked sections. Tier-3 mobile fix:
             previously `order-first` shoved the entire audit feed above the
-            task body on small screens. Dropped — Status + ActionRail are
+            task body on small screens. Dropped - Status + ActionRail are
             valuable above, but the audit timeline belongs below the doc. */}
         <aside className="max-md:w-full">
           <div
             className="lg:sticky lg:top-24 flex flex-col gap-4"
             style={{ scrollMarginTop: "6rem" }}
           >
-            {/* (1) Status picker — its own compact card, sits at the
+            {/* (1) Status picker - its own compact card, sits at the
                 top so the eye lands on it first. */}
             <section
               className="rounded-section border border-hairline bg-surface-card px-5 py-4 relative overflow-hidden"
@@ -501,7 +501,7 @@ export function TaskDetailView({
                 canChange={canCommentOnTask /* same gate: any task participant or admin */}
                 isAdmin={me?.isAdmin ?? false}
               />
-              {/* Meta rows directly under the status — keeps the screenshot's
+              {/* Meta rows directly under the status - keeps the screenshot's
                   "status header + meta block" pairing in one card. */}
               <div className="mt-5 pt-4 border-t border-hairline grid grid-cols-1 gap-3.5">
                 {task.taskNo != null && (
@@ -527,7 +527,7 @@ export function TaskDetailView({
                 <MetaRow
                   icon={<CheckCircle2 size={13} strokeWidth={2.4} />}
                   label="Approved"
-                  value={approvedRelative ?? "—"}
+                  value={approvedRelative ?? "-"}
                   emphasized={!!approvedRelative}
                 />
                 {me?.department && (
@@ -543,7 +543,7 @@ export function TaskDetailView({
                   value={PRIORITY_LABEL_SHORT[task.priority] ?? task.priority}
                 />
               </div>
-              {/* Archive / Unarchive — admin-only. Doers manage a task via its
+              {/* Archive / Unarchive - admin-only. Doers manage a task via its
                   status; archiving (which hides it from the board) is an admin
                   power tool, same as permanent delete. */}
               {me?.isAdmin && (
@@ -648,7 +648,7 @@ function InteractiveStatusPill({
           res.error === "forbidden"
             ? "You can't make that transition from your role."
             : res.error === "stale"
-              ? "Task changed by someone else — refreshing."
+              ? "Task changed by someone else - refreshing."
               : res.message ?? "Could not update status.";
         fireToast({ message: msg });
         if (res.error === "stale") router.refresh();
@@ -824,7 +824,7 @@ function MetaRow({
 
 /**
  * Archive / Unarchive toggle for the task detail right rail (sir's changes
- * #11). Optimistic-free but snappy — disables while the action is in flight,
+ * #11). Optimistic-free but snappy - disables while the action is in flight,
  * toasts the outcome, and refreshes so the rest of the page reflects it.
  */
 function ArchiveToggle({ taskId, archived }: { taskId: string; archived: boolean }) {
@@ -863,7 +863,7 @@ function ArchiveToggle({ taskId, archived }: { taskId: string; archived: boolean
 }
 
 /**
- * Top header strip — back/forward nav (visual; navigates the browser
+ * Top header strip - back/forward nav (visual; navigates the browser
  * history), status chip, priority pill, and the right-aligned Focus /
  * Duplicate / Edit Task action buttons.  Matches the design comp's
  * "command bar" above the task body.
@@ -891,7 +891,7 @@ function TopHeaderStrip({
 
   return (
     <div className="mb-6 flex items-center justify-between gap-4 flex-wrap">
-      {/* LEFT — back/forward + status pill + priority chip */}
+      {/* LEFT - back/forward + status pill + priority chip */}
       <div className="flex items-center gap-3 min-w-0">
         <div className="flex items-center gap-1.5 shrink-0">
           <button
@@ -949,7 +949,7 @@ function TopHeaderStrip({
         </span>
       </div>
 
-      {/* RIGHT — action buttons */}
+      {/* RIGHT - action buttons */}
       <div className="flex items-center gap-2 shrink-0">
         <Link
           href={`/tasks/${task.id}/focus` as Route}
@@ -987,7 +987,7 @@ function TopHeaderStrip({
 }
 
 /**
- * Activity & Comments — the left-column section that bundles the comment
+ * Activity & Comments - the left-column section that bundles the comment
  * composer (top) and the audit timeline (below).  Matches the design
  * comp's clear card boundary around discussion-style content.
  */

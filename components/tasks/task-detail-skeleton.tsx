@@ -2,7 +2,7 @@
  * Placeholder UI shown while the task detail page is streaming.
  *
  * Roughly matches the dimensions of `TaskDetailView` so the layout
- * doesn't jump when content arrives — same two-column grid on desktop,
+ * doesn't jump when content arrives - same two-column grid on desktop,
  * single column on mobile. Pure CSS shimmer; no client JS needed.
  */
 export function TaskDetailSkeleton() {
@@ -13,7 +13,7 @@ export function TaskDetailSkeleton() {
       aria-label="Loading task"
       className="grid grid-cols-[minmax(0,1fr)_360px] gap-10 max-lg:grid-cols-1 max-lg:gap-6"
     >
-      {/* LEFT — document */}
+      {/* LEFT - document */}
       <div className="min-w-0">
         {/* Top-right action chips */}
         <div className="flex justify-end gap-2 mb-4">
@@ -31,7 +31,7 @@ export function TaskDetailSkeleton() {
 
         {/* Title (client name) */}
         <Block w="60%" h={22} />
-        {/* Description — large */}
+        {/* Description - large */}
         <div className="mt-3 space-y-2">
           <Block w="100%" h={28} />
           <Block w="92%" h={28} />
@@ -65,7 +65,7 @@ export function TaskDetailSkeleton() {
         </div>
       </div>
 
-      {/* RIGHT — action rail */}
+      {/* RIGHT - action rail */}
       <div className="flex flex-col gap-3">
         {Array.from({ length: 4 }).map((_, i) => (
           <div

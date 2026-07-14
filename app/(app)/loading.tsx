@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PageBuffering } from "@/components/ui/spinner";
 
 /**
- * Dashboard skeleton — sits behind `/` while the server component
+ * Dashboard skeleton - sits behind `/` while the server component
  * resolves all of the home-page rollups + charts. The shapes match the
  * editorial-minimal hero layout (big number row, then chart blocks)
  * so the visual jump on data arrival is minimal. Also the fallback

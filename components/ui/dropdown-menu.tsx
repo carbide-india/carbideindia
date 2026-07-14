@@ -22,7 +22,7 @@ export const DropdownMenuContent = React.forwardRef<
       align={align}
       collisionPadding={collisionPadding}
       className={cn(
-        // z-[100] — above the sticky public-app header (z-50) and the admin
+        // z-[100] - above the sticky public-app header (z-50) and the admin
         // sidebar's stacking context.  Dropdowns must always overlay chrome.
         // overflow-y-auto + Radix's available-height CSS var keeps long menus
         // (e.g. the task row-action menu with 10+ items) inside the viewport

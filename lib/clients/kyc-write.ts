@@ -6,15 +6,15 @@ import type {
 import type { CreateClientKycParsed } from "@/lib/validators/client-kyc";
 
 /**
- * Shared KYC writer helpers (ERP Phase 2 — Customer Master).
+ * Shared KYC writer helpers (ERP Phase 2 - Customer Master).
  *
  * Extracted verbatim from `adminUpdateClientKyc` so the new-client onboarding
  * path (`createClientKyc`) persists the FULL form identically. These are pure
- * functions — no db access — so both server actions can compose them inside
+ * functions - no db access - so both server actions can compose them inside
  * their own `db.transaction`.
  *
  * Callers pass the validator's PARSED output (`safeParse(...).data`), so we type
- * against `z.output` — `isTransporter`/`creditLimit` are already coerced.
+ * against `z.output` - `isTransporter`/`creditLimit` are already coerced.
  */
 
 type ClientInsert = typeof clients.$inferInsert;
@@ -25,7 +25,7 @@ type BankInsert = typeof clientBankAccounts.$inferInsert;
 type Kyc = CreateClientKycParsed;
 
 /**
- * Full overwrite patch for the form-managed `clients` columns — a cleared
+ * Full overwrite patch for the form-managed `clients` columns - a cleared
  * field becomes NULL. EXCLUDES `name` and `updatedAt` (callers set those).
  * Byte-identical to the inline patch object in `adminUpdateClientKyc`.
  */

@@ -1,5 +1,5 @@
 /**
- * Generic per-form drafts — one auto-saved draft store per sales form, keyed by
+ * Generic per-form drafts - one auto-saved draft store per sales form, keyed by
  * `form_drafts.formKey`. The New-Enquiry form keeps its own richer helpers
  * (`lib/drafts/enquiry-draft.ts`); THIS module powers drafts for every OTHER
  * form (KYC, Sample, Costing, Quotation, Negotiation, Sales Order, Meeting).
@@ -86,7 +86,7 @@ export function genericHasContent(payload: Record<string, unknown>): boolean {
   });
 }
 
-/** How full the draft is (0–100), by fraction of top-level fields with a value. */
+/** How full the draft is (0-100), by fraction of top-level fields with a value. */
 export function genericCompleteness(payload: Record<string, unknown>): number {
   const entries = Object.entries(payload).filter(([k]) => k !== "id" && !k.endsWith("At"));
   if (entries.length === 0) return 0;

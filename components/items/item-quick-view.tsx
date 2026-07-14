@@ -12,7 +12,7 @@ import { deactivateItem, reactivateItem } from "@/app/(app)/items/actions";
 import type { ItemListItem } from "@/lib/queries/items";
 
 /*
- * ItemQuickView — instant quick-view popup for the Item Master register.
+ * ItemQuickView - instant quick-view popup for the Item Master register.
  * Renders entirely from the already-loaded ItemListItem row (no fetch), mirroring
  * the Client Master quick-view: overlay + card, closes on overlay click / ✕ /
  * Escape, a <dl> of fields, and footer buttons (Edit / Full record /

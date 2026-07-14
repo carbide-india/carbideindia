@@ -9,7 +9,7 @@ import { backfillDoerCalendar } from "@/lib/google/sync";
 
 export const dynamic = "force-dynamic";
 
-/** OAuth redirect target — exchange the code for a refresh token and store it
+/** OAuth redirect target - exchange the code for a refresh token and store it
  *  on the signed-in employee. */
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
     const redirectUri = `${origin}/api/google/callback`;
     const tokens = await exchangeCode(code, redirectUri);
     if (!tokens.refresh_token) {
-      // No refresh token returned (rare — happens if a prior grant exists and
+      // No refresh token returned (rare - happens if a prior grant exists and
       // Google withholds it). We force prompt=consent on connect to avoid this.
       return NextResponse.redirect(`${back}?google=error`);
     }
@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
       })
       .where(eq(employees.id, me.id));
     // Seed the calendar with the doer's existing active tasks, without
-    // delaying the redirect — best-effort, logs internally.
+    // delaying the redirect - best-effort, logs internally.
     after(() => backfillDoerCalendar(me.id));
     return NextResponse.redirect(`${back}?google=connected`);
   } catch (err) {

@@ -10,7 +10,7 @@ import { deleteClient, reactivateClient } from "@/app/(admin)/admin/clients/acti
 import type { ClientRegisterRow } from "@/lib/queries/clients";
 
 /*
- * ClientQuickView — instant quick-view popup for the Client Master register.
+ * ClientQuickView - instant quick-view popup for the Client Master register.
  * Renders entirely from the already-loaded ClientRegisterRow (no fetch), mirroring
  * the Item Master quick-view: overlay + card, closes on overlay click / ✕ /
  * Escape, a <dl> of fields, and footer buttons (Full record / Edit /

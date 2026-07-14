@@ -29,7 +29,7 @@ export function PunchCard({
         return;
       }
       fireToast({
-        message: kind === "in" ? "Checked in — have a great day!" : "Checked out. See you tomorrow!",
+        message: kind === "in" ? "Checked in - have a great day!" : "Checked out. See you tomorrow!",
       });
       setNote("");
     });
@@ -106,7 +106,7 @@ function Stat({ label, value }: { label: string; value: string | null }) {
         className="text-display-3xs mt-1 tabular-nums"
         style={{ color: value ? "var(--color-ink-strong)" : "var(--color-ink-subtle)" }}
       >
-        {value ?? "—"}
+        {value ?? "-"}
       </div>
     </div>
   );

@@ -69,7 +69,7 @@ export function formatDelta(n: number): string {
 
 import type { TaskStatus, StatusColorToken } from "@/db/enums";
 
-// M5.1 — client-side fallback maps for status labels + colors. Server
+// M5.1 - client-side fallback maps for status labels + colors. Server
 // Components should call `getStatusDisplayMap()` (lib/queries/status-display.ts)
 // instead so admin renames flow through. These exist for purely-client surfaces
 // and as a safety net if a DB read fails.
@@ -77,7 +77,7 @@ export const STATUS_LABELS_FALLBACK: Record<TaskStatus, string> = {
   dont_know:    "Not Read",
   not_started:  "Not Started",
   initiated:    "Initiated",
-  follow_up:    "Follow Up",         // legacy — kept for already-imported rows
+  follow_up:    "Follow Up",         // legacy - kept for already-imported rows
   need_help:    "Need Help",
   on_hold:      "On Hold",
   need_info:    "Need Info",         // Tier-3 NEW

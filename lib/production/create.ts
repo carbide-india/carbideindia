@@ -10,12 +10,12 @@ import {
 import { requireRole } from "@/lib/auth/roles";
 
 /**
- * Phase 7 — thin production-order create path (§11.1). Full workspace/routing UI
+ * Phase 7 - thin production-order create path (§11.1). Full workspace/routing UI
  * lands in Phase 9; this is the minimal, callable, testable seam that turns a
  * Sales Order into shop-floor production orders (one per SO line), anchored on
  * the line's Item. `po_no` is DB-assigned via the production_order_no_seq
  * default, so no allocation logic is needed here (production numbers are NOT
- * statutory / gapless — only invoice/DN are).
+ * statutory / gapless - only invoice/DN are).
  */
 
 export type CreateResult =

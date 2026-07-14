@@ -54,7 +54,7 @@ export function ItemDetail({ item, auditEntries, documents, isAdmin }: Props) {
                 <span className="mx-2 text-ink-subtle">·</span>
               </>
             )}
-            {item.originCustomerName ?? "—"}
+            {item.originCustomerName ?? "-"}
             {item.originSmNumber && (
               <>
                 <span className="mx-2 text-ink-subtle">·</span>
@@ -142,7 +142,7 @@ export function ItemDetail({ item, auditEntries, documents, isAdmin }: Props) {
           />
         </ReadCard>
 
-        {/* Part — only if any part field is set */}
+        {/* Part - only if any part field is set */}
         {hasPartData(item) && (
           <ReadCard title="Part">
             <InfoGrid

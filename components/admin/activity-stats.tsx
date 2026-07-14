@@ -13,7 +13,7 @@ interface Props {
   stats: ActivityStats;
 }
 
-// Icons are pre-rendered ReactNodes — Next 16 RSC rejects passing component
+// Icons are pre-rendered ReactNodes - Next 16 RSC rejects passing component
 // classes across the server→client boundary into AdminKpiTile (client).
 const TILES: ReadonlyArray<{
   key: keyof ActivityStats;

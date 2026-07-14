@@ -42,7 +42,7 @@ interface Props {
   kinds?: readonly MasterKind[];
 }
 
-/** Kinds whose data hasn't arrived yet — the empty-state names the source. */
+/** Kinds whose data hasn't arrived yet - the empty-state names the source. */
 const PENDING_DATA_KINDS: ReadonlySet<MasterKind> = new Set([
   "internal_grade",
   "tolerance",
@@ -129,7 +129,7 @@ export function MasterList({ items, kinds }: Props) {
         return;
       }
 
-      // UPDATE — only send changed fields.
+      // UPDATE - only send changed fields.
       const patch: {
         name?: string;
         sortOrder?: number;
@@ -561,7 +561,7 @@ function EmptyState({ kind }: { kind: MasterKind }) {
         style={{ fontStyle: "italic", fontSize: 22, letterSpacing: "-0.015em" }}
       >
         {PENDING_DATA_KINDS.has(kind)
-          ? "No entries yet — data expected from Alok sir."
+          ? "No entries yet - data expected from Alok sir."
           : `No ${MASTER_KIND_LABELS[kind]} options yet`}
       </p>
       <p
@@ -662,7 +662,7 @@ function BulkCreateMasterDialog({ kind }: { kind: MasterKind }) {
                 rows={8}
                 value={raw}
                 onChange={(e) => setRaw(e.target.value)}
-                placeholder={"Paste values — one per line, or comma-separated"}
+                placeholder={"Paste values - one per line, or comma-separated"}
                 className="w-full rounded-md border border-[#CBD5E1] px-3.5 py-2.5 text-[14px] font-mono resize-y max-h-[40vh]"
               />
               <p className="mt-1.5 text-[13px] text-[#94A3B8] tabular-nums">

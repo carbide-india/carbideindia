@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 
 /**
- * M4 Commit 3c — registers `/sw.js` once per browser session.  This is a
+ * M4 Commit 3c - registers `/sw.js` once per browser session.  This is a
  * client component so it runs in the browser after hydration; it is
  * mounted near the top of `<body>` in `app/layout.tsx`.
  *
@@ -19,7 +19,7 @@ export function RegisterSW() {
     navigator.serviceWorker
       .register("/sw.js")
       .catch((err) => {
-        // Logging only — failure to register the SW must not crash the app.
+        // Logging only - failure to register the SW must not crash the app.
         console.error("[Carbide India] SW register failed", err);
       });
   }, []);

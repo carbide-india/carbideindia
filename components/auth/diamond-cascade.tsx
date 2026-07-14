@@ -4,7 +4,7 @@ const SILVER = "#CDD0D6";
 const SILVER_LIGHT = "#DEE0E5";
 
 /**
- * The diamond checker cascade from Carbide India's business card — a dense
+ * The diamond checker cascade from Carbide India's business card - a dense
  * field of rotated squares in silver with red / indigo accents stepping down
  * from the top-left corner, the tagline running diagonally beside it.
  * Pure decoration (aria-hidden), deterministic layout.
@@ -15,7 +15,7 @@ const SILVER_LIGHT = "#DEE0E5";
 const S = 46; // half-diagonal spacing
 const D = 64; // diamond diagonal
 
-// (col, row, color) — dense upper-left triangle, thinning to a tail,
+// (col, row, color) - dense upper-left triangle, thinning to a tail,
 // accents placed like the card render: reds at the top-right edge, mid
 // and lower tail; indigos mid-left.
 const DIAMONDS: ReadonlyArray<readonly [number, number, string]> = [
@@ -51,7 +51,7 @@ export function DiamondCascade({ className }: { className?: string }) {
           />
         );
       })}
-      {/* Diagonal tagline, indigo with red "Partners" — as printed. */}
+      {/* Diagonal tagline, indigo with red "Partners" - as printed. */}
       <text
         transform="translate(322 56) rotate(45)"
         style={{

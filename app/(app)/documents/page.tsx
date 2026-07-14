@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export default async function DocumentsPage() {
   const me = await requireUser();
-  // The recent-events feed is admin-only — surfaces who renamed / replaced
+  // The recent-events feed is admin-only - surfaces who renamed / replaced
   // / deleted what, which is a moderation surface, not an end-user one.
   const [documents, events] = await Promise.all([
     listDocuments(),

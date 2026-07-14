@@ -12,10 +12,10 @@ type View = "agenda" | "list";
 const VIEW_STORAGE_KEY = "carbide.myday.view.v1";
 
 /**
- * "My Day" — a personal task workspace with two views over the SAME filtered
+ * "My Day" - a personal task workspace with two views over the SAME filtered
  * set (the page's FilterBar drives both):
- *   • Agenda — the day-column board (drag to reschedule).
- *   • List  — the full Tasks-tab table (search + group-by + sort + paging).
+ *   • Agenda - the day-column board (drag to reschedule).
+ *   • List  - the full Tasks-tab table (search + group-by + sort + paging).
  * The welcome banner + the Agenda/List toggle live here so both views share
  * them; the per-view summaries (lifecycle buckets / table toolbar) stay inside
  * each view.

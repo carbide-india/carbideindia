@@ -10,14 +10,14 @@ import { itemDedupKey } from "@/lib/item-master/dedup";
 import type { CreateItemInput } from "@/lib/validators/item";
 
 /**
- * Product Picker server actions (ERP redesign — Phase 9a, §7).
+ * Product Picker server actions (ERP redesign - Phase 9a, §7).
  *
  * Backs the SAP-style Material Search: search-existing-first, create-if-missing.
  * `searchItemsAction` fans out over the where-used search (item-owned columns +
  * live master names + customer set); `createMaterialAction` mints/attaches via
  * the SHARED, unchanged `createItem` path (same dedup/race handling); and
  * `getMaterialSpecForPrefill` returns the product-card-shaped spec so a picked
- * Item pre-fills the enquiry line — letting createInquiry's in-tx item sync
+ * Item pre-fills the enquiry line - letting createInquiry's in-tx item sync
  * dedup back to that exact Item without any change to the create flow.
  */
 
@@ -105,7 +105,7 @@ type CreateResult =
 
 /**
  * Create (or reuse) an Item from the inline mini-form, then return its prefill.
- * Delegates to the SHARED `createItem` (unchanged — same single serial draw,
+ * Delegates to the SHARED `createItem` (unchanged - same single serial draw,
  * dedup and race handling; it already returns `reused`) so no duplicate can be
  * minted, then reshapes the result into the product-line prefill for auto-select.
  */

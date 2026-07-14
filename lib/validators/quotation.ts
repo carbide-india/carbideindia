@@ -43,7 +43,7 @@ export const QuoteLineSchema = z.object({
 export type QuoteLineInput = z.input<typeof QuoteLineSchema>;
 
 /**
- * Base field set shared by Create/Update — same base-object + derive pattern
+ * Base field set shared by Create/Update - same base-object + derive pattern
  * as lib/validators/sample.ts (zod v4 has no `.innerType()` to unwrap).
  * inquiryId is required (a quote is always keyed to an SM); quoteNo is the
  * optional auto-number fallback. Enum fields default to their first option.
@@ -81,7 +81,7 @@ export const CreateQuotationSchema = QuotationFieldsSchema;
 export type CreateQuotationInput = z.input<typeof CreateQuotationSchema>;
 
 /**
- * Patch-shaped schema for edits — every field optional, unknown keys rejected,
+ * Patch-shaped schema for edits - every field optional, unknown keys rejected,
  * empty patches rejected. Defaulted fields are re-declared without their
  * defaults: otherwise `.partial()` would inject the first-option defaults into
  * every patch and an empty `{}` would sail past the nonempty refine.

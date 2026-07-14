@@ -28,7 +28,7 @@ function todayUtcMidnight(): Date {
   return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate()));
 }
 
-/** Sentinel value for ?emp=all — meaning "explicitly show all assignees,
+/** Sentinel value for ?emp=all - meaning "explicitly show all assignees,
  *  do not apply the default-to-me behavior for non-admins". */
 const EMP_ALL = "all";
 

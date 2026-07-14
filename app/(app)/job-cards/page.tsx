@@ -39,7 +39,7 @@ export default async function JobCardsPage() {
             Job Cards
           </h1>
           <p className="text-body-lg text-ink-subtle mt-2 tabular-nums">
-            {rows.length} {rows.length === 1 ? "work order" : "work orders"} —
+            {rows.length} {rows.length === 1 ? "work order" : "work orders"} -
             the production work order. Pick a customer &amp; product to auto-fill
             grade, dimensions &amp; tolerance.
           </p>

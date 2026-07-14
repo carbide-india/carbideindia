@@ -1,5 +1,5 @@
 /**
- * Profile v2 — appearance application.
+ * Profile v2 - appearance application.
  *
  * The user's accent preference is stored as a 6-digit hex. To make it
  * actually re-tint the UI, we map it onto the brand accent CSS variables
@@ -32,7 +32,7 @@ function rgbToHex(r: number, g: number, b: number): string {
 /**
  * Build the CSS custom-property overrides for a given accent hex.
  * Returns an empty object for an invalid hex (caller keeps defaults).
- * Keys are CSS variable names; values are strings — usable both as a
+ * Keys are CSS variable names; values are strings - usable both as a
  * React inline `style` object and via `element.style.setProperty`.
  */
 export function accentVars(hex: string): Record<string, string> {

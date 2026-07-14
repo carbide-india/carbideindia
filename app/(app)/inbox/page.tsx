@@ -10,7 +10,7 @@ import type { TaskStatus, StatusColorToken } from "@/db/enums";
 import { NotificationRow } from "./notification-row";
 import { MarkAllButton } from "./mark-all-button";
 
-// SSR-only for now — realtime push will land with the websocket pass.
+// SSR-only for now - realtime push will land with the websocket pass.
 export const dynamic = "force-dynamic";
 
 interface PageProps {

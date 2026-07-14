@@ -5,7 +5,7 @@ import type {
   ContactPersonRow,
 } from "@/lib/queries/contacts";
 
-/** Pixel widths of the two frozen columns — used to compute sticky `left` offsets. */
+/** Pixel widths of the two frozen columns - used to compute sticky `left` offsets. */
 const COMPANY_W = 216;
 const NAME_W = 188;
 
@@ -19,15 +19,15 @@ const FROZEN_EDGE = "1px solid rgba(63,63,148,0.16)";
 const FROZEN_SHADOW = "6px 0 8px -6px rgba(15,23,42,0.14)";
 
 function fullName(c: ContactPersonRow): string {
-  return [c.firstName, c.lastName].filter(Boolean).join(" ") || "—";
+  return [c.firstName, c.lastName].filter(Boolean).join(" ") || "-";
 }
 
 function cityState(g: ContactCompanyGroup): string {
-  return [g.city, g.state].filter(Boolean).join(", ") || "—";
+  return [g.city, g.state].filter(Boolean).join(", ") || "-";
 }
 
 function GradeBadge({ grade }: { grade: "A" | "B" | "C" | null }) {
-  if (!grade) return <span className="text-ink-subtle">—</span>;
+  if (!grade) return <span className="text-ink-subtle">-</span>;
   const tone: Record<"A" | "B" | "C", string> = {
     A: "bg-[#e8e8fb] text-[#3f3f94]",
     B: "bg-[#eef2f7] text-[#475569]",
@@ -160,10 +160,10 @@ export function ContactAddressBook({
                     )}
                   </td>
                   <td className="px-4 py-2.5 text-ink-soft">
-                    {c.designation ?? "—"}
+                    {c.designation ?? "-"}
                   </td>
                   <td className="px-4 py-2.5 tabular-nums text-ink-soft whitespace-nowrap">
-                    {c.contactNo ?? "—"}
+                    {c.contactNo ?? "-"}
                   </td>
                   <td className="px-4 py-2.5 text-ink-soft break-all">
                     {c.email ? (
@@ -174,7 +174,7 @@ export function ContactAddressBook({
                         {c.email}
                       </a>
                     ) : (
-                      "—"
+                      "-"
                     )}
                   </td>
                   {first && (

@@ -50,9 +50,9 @@ export interface BuiltQuoteLine {
 
 /**
  * The subset of a built line that is actually INSERTED onto `quotation_items`
- * (ERP Phase 6 — migration 0036). The spec/customer-ask MIRROR columns
+ * (ERP Phase 6 - migration 0036). The spec/customer-ask MIRROR columns
  * (custProductName, custDrawingNo, drawingRevisionNo, gradeCustomer,
- * gradeNameForCust, tolerance, condition, partNo) are DROPPED — spec resolves
+ * gradeNameForCust, tolerance, condition, partNo) are DROPPED - spec resolves
  * read-through from `items` via item_id, customer-ask via the provenance
  * inquiry_item (lib/flow/spec-resolve.ts). Only transactional facts + the FK
  * spine remain on the line. The header's line-#1 mirror is fed from the full
@@ -72,7 +72,7 @@ export interface QuoteLineInsert {
 }
 
 /** Project a built line to the kept `quotation_items` insert columns (no spec
- *  mirrors — those read through items/inquiry_item post-migration-0036). */
+ *  mirrors - those read through items/inquiry_item post-migration-0036). */
 export function quoteLineInsert(l: BuiltQuoteLine): QuoteLineInsert {
   return {
     sortOrder: l.sortOrder,

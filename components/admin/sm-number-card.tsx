@@ -12,7 +12,7 @@ interface Props {
 }
 
 /**
- * Sales Module counter — shows the next SM number and lets an admin re-base
+ * Sales Module counter - shows the next SM number and lets an admin re-base
  * the sequence (e.g. to skip past numbers consumed in the old spreadsheet).
  */
 export function SmNumberCard({ nextNumber }: Props) {

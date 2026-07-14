@@ -90,7 +90,7 @@ const MoneyInput = React.forwardRef<
   );
 });
 
-/** Read-only output chip — label + formatted value. */
+/** Read-only output chip - label + formatted value. */
 function OutputRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-0.5">
@@ -255,7 +255,7 @@ export function CostingForm({
         fireToast({ message: res.error, type: "error" });
         return;
       }
-      // Costing saved — retire the draft so it leaves the Drafts inbox.
+      // Costing saved - retire the draft so it leaves the Drafts inbox.
       await discard();
       fireToast({ message: "Costing saved successfully.", type: "success" });
       router.push(("/inquiries/" + inquiryId) as Route);
@@ -701,7 +701,7 @@ export function CostingForm({
         </>
       )}
 
-      {/* 4. Meta — timeline + validity (shared) */}
+      {/* 4. Meta - timeline + validity (shared) */}
       <SectionCard title="Timeline and Validity">
         <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
           <Field id="c-devtime" label="Development Time">

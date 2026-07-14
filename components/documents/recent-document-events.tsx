@@ -7,7 +7,7 @@ interface Props {
 }
 
 /**
- * Phase 3.5 surface — recent document mutations rendered as a vertical
+ * Phase 3.5 surface - recent document mutations rendered as a vertical
  * timeline. Sits below the document library so admins can see at a
  * glance who renamed / replaced / deleted what, and when. Read-only;
  * the audit log itself is append-only (deletes write `event_type =

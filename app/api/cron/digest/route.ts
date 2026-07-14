@@ -60,7 +60,7 @@ function getIstHour(now: Date): number {
 /**
  * Race a promise against a timer. Used in the cron digest loop so a
  * hung SMTP call can't sit forever and starve the Vercel function
- * timeout — we'd rather skip a delivery and log it.
+ * timeout - we'd rather skip a delivery and log it.
  * The timer is `.unref()`ed so it doesn't keep the Node event loop
  * alive on its own.
  */
@@ -89,7 +89,7 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
 async function runDigest(request: Request): Promise<NextResponse> {
   const expected = process.env.CRON_SECRET;
   const header = request.headers.get("authorization");
-  // Constant-shape rejection — never reveal whether CRON_SECRET is set.
+  // Constant-shape rejection - never reveal whether CRON_SECRET is set.
   if (!expected || header !== `Bearer ${expected}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -109,7 +109,7 @@ async function runDigest(request: Request): Promise<NextResponse> {
   const pendingByEmployee = await listPendingByEmployee(now);
 
   // Consider every ACTIVE employee, then (in the loop) skip anyone with zero
-  // pending tasks — no all-clear noise on any channel. Recipients who DO have
+  // pending tasks - no all-clear noise on any channel. Recipients who DO have
   // pending tasks get the digest regardless of per-user opt-out.
   const activeEmployees = await db
     .select({ id: employees.id, email: employees.email, name: employees.name })
@@ -150,7 +150,7 @@ async function runDigest(request: Request): Promise<NextResponse> {
       console.error(`[cron/digest] notification insert failed for ${recipient.id}`, err);
     }
 
-    // 2) Email — sent to everyone with ≥1 pending task, regardless of opt-out
+    // 2) Email - sent to everyone with ≥1 pending task, regardless of opt-out
     //    (mandatory morning briefing).
     try {
       const result = await withTimeout(

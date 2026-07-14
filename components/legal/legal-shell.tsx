@@ -6,7 +6,7 @@ import { ArrowLeft } from "lucide-react";
 interface Props {
   eyebrow: string;
   title: string;
-  /** ISO date like "2026-05-14" — shown as "Last updated " */
+  /** ISO date like "2026-05-14" - shown as "Last updated " */
   lastUpdated: string;
   /** One-paragraph editorial subtitle below the title. */
   intro: string;
@@ -27,7 +27,7 @@ export function LegalShell({ eyebrow, title, lastUpdated, intro, children }: Pro
 
   return (
     <div className="min-h-screen bg-[var(--color-canvas-base)]">
-      {/* Top chrome — Carbide India brand + back-to-sign-in */}
+      {/* Top chrome - Carbide India brand + back-to-sign-in */}
       <header className="sticky top-0 z-40 border-b border-hairline bg-[rgba(250,251,252,0.85)] backdrop-blur-xl">
         <div className="mx-auto max-w-[1200px] flex items-center justify-between px-8 py-4 max-md:px-4">
           <Link

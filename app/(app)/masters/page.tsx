@@ -3,7 +3,7 @@ import type { Route } from "next";
 import { requireAdmin } from "@/lib/auth/current";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Masters — Carbide India" };
+export const metadata = { title: "Masters - Carbide India" };
 
 /**
  * App-level Masters hub. Admin-only. The module is organised per master-kind

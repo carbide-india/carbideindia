@@ -7,7 +7,7 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**
  * A single overdue task row, joined with its doer's name so the digest
- * can render "Jane: 'Send NOC' — 4 days overdue" without a second trip.
+ * can render "Jane: 'Send NOC' - 4 days overdue" without a second trip.
  */
 export interface OverdueTask {
   id: string;
@@ -31,7 +31,7 @@ export interface OverdueTask {
  * their overdue tasks attached.
  *
  * `subject` falls back to the task title when the optional subject
- * column is null — every task has a title so the digest never renders
+ * column is null - every task has a title so the digest never renders
  * "" for an item.
  */
 export async function listOverdueByEmployee(
@@ -100,7 +100,7 @@ export interface PendingTask {
   daysOverdue: number;
 }
 
-/** Raw selected columns before shaping — exported for unit testing. */
+/** Raw selected columns before shaping - exported for unit testing. */
 export interface PendingQueryRow {
   id: string;
   shortId: string | null;
@@ -154,7 +154,7 @@ export function shapePendingRows(
 /**
  * Every pending (non-done, non-archived) task assigned to an active employee,
  * grouped by doer. Used by the 10am daily digest cron. Unlike
- * listOverdueByEmployee, this does NOT filter on due_at — full pending workload,
+ * listOverdueByEmployee, this does NOT filter on due_at - full pending workload,
  * overdue items flagged.
  */
 export async function listPendingByEmployee(

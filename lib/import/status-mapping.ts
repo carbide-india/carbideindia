@@ -4,7 +4,7 @@ const TABLE: Record<string, TaskStatus> = {
   "not started":   "not_started",
   "initiated":     "initiated",
   "follow up":     "follow_up",
-  // need_help retired 2026-06-10 — legacy "need help" rows now import as need_info.
+  // need_help retired 2026-06-10 - legacy "need help" rows now import as need_info.
   "need help":     "need_info",
   "done":          "done",
   "approved":      "approved",

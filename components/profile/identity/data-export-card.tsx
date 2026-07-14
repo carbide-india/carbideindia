@@ -8,9 +8,9 @@ import { SectionHeader } from "./avatar-and-name";
 
 export interface DataExportRow {
   id: string;
-  /** ISO timestamp — props cross the RSC boundary as strings. */
+  /** ISO timestamp - props cross the RSC boundary as strings. */
   requestedAt: string;
-  /** ISO timestamp or null — props cross the RSC boundary as strings. */
+  /** ISO timestamp or null - props cross the RSC boundary as strings. */
   completedAt: string | null;
   filePath: string | null;
   status: "pending" | "processing" | "done" | "failed";
@@ -53,7 +53,7 @@ export function DataExportCard({ recent }: Props) {
         fireToast({ message: res.error });
         return;
       }
-      fireToast({ message: "Export queued — we'll email you the link." });
+      fireToast({ message: "Export queued - we'll email you the link." });
       router.refresh();
     });
   }
@@ -106,7 +106,7 @@ export function DataExportCard({ recent }: Props) {
   }
 
   function fmt(iso: string | null) {
-    if (!iso) return "—";
+    if (!iso) return "-";
     return new Date(iso).toLocaleString();
   }
 

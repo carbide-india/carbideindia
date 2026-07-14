@@ -2,11 +2,11 @@ import Image from "next/image";
 import { headers } from "next/headers";
 import { clientIpFromHeaders } from "@/lib/ip-gate";
 
-export const metadata = { title: "Access Denied — Carbide India" };
+export const metadata = { title: "Access Denied - Carbide India" };
 export const dynamic = "force-dynamic";
 
 /**
- * Branded 403 page. Unreachable for allowed visitors — the middleware
+ * Branded 403 page. Unreachable for allowed visitors - the middleware
  * rewrites IP-blocked requests here (status 403) and redirects allowed
  * visitors who hit /access-denied directly back to the dashboard.
  *

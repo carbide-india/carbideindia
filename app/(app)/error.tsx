@@ -5,8 +5,8 @@ import { RefreshCw } from "lucide-react";
 /**
  * Scoped error boundary for the whole authenticated app shell.
  *
- * Without this, any unhandled throw inside an (app) route — a slow/failed DB
- * query in a server component, or a server action that rejects mid-write —
+ * Without this, any unhandled throw inside an (app) route - a slow/failed DB
+ * query in a server component, or a server action that rejects mid-write -
  * bubbles all the way to the root `app/error.tsx` ("We hit a snag.") and
  * replaces the entire screen, chrome and all.
  *
@@ -22,7 +22,7 @@ export default function AppError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  // Admin-only guards throw "Forbidden" — let the root boundary render its
+  // Admin-only guards throw "Forbidden" - let the root boundary render its
   // dedicated 403 screen for that instead of a generic retry card.
   if (error.message === "Forbidden") throw error;
 
@@ -62,7 +62,7 @@ export default function AppError({
           className="text-body-lg text-ink-muted mt-3 mx-auto"
           style={{ maxWidth: 480, lineHeight: 1.6 }}
         >
-          Something hiccuped — usually the database being slow for a moment.
+          Something hiccuped - usually the database being slow for a moment.
           Your data is safe. Try that again; if it keeps happening, let the
           team know.
         </p>

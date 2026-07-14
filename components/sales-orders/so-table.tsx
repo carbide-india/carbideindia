@@ -20,9 +20,9 @@ interface Props {
 }
 
 function moneyText(value: string | null): string {
-  if (value == null || value === "") return "—";
+  if (value == null || value === "") return "-";
   const n = Number(value);
-  return Number.isFinite(n) ? formatInr(n) : "—";
+  return Number.isFinite(n) ? formatInr(n) : "-";
 }
 
 function moneyNumber(value: string | null): number {
@@ -37,7 +37,7 @@ function soDate(r: SalesOrderListItem): Date {
 }
 
 /**
- * Sales Order register table — a thin config wrapper over the shared
+ * Sales Order register table - a thin config wrapper over the shared
  * RegisterDataTable. The SO has no clean status enum, so the bulk action is a
  * legit two-way SO-Sent toggle.
  */
@@ -67,7 +67,7 @@ export function SoTable({ rows }: Props) {
         exportValue: (r) => r.companyName ?? "",
         cell: (r) => (
           <span className="text-ink-strong font-medium">
-            {r.companyName ?? "—"}
+            {r.companyName ?? "-"}
           </span>
         ),
       },
@@ -94,7 +94,7 @@ export function SoTable({ rows }: Props) {
             className="block max-w-[220px] truncate text-ink-soft"
             title={r.customerPoNo ?? undefined}
           >
-            {r.customerPoNo ?? "—"}
+            {r.customerPoNo ?? "-"}
           </span>
         ),
       },
@@ -164,7 +164,7 @@ export function SoTable({ rows }: Props) {
         ],
         onApply: (ids, value) => setSalesOrderSentBulk(ids, value),
       }}
-      emptyTitle="No sales orders yet — record the first one."
+      emptyTitle="No sales orders yet - record the first one."
       emptyHint="The customer PO and SO documents recorded against each quote appear here."
     />
   );

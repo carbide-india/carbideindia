@@ -20,10 +20,10 @@ import {
 } from "@/db/schema";
 
 /**
- * Item WHERE-USED graph (ERP redesign — Phase 9a, §6 "Product Intelligence").
+ * Item WHERE-USED graph (ERP redesign - Phase 9a, §6 "Product Intelligence").
  *
  * The heart of the Item as a reusable spec: for one `item_id`, resolve every
- * reference across ALL item_id-carrying tables that exist — inquiry_items (+
+ * reference across ALL item_id-carrying tables that exist - inquiry_items (+
  * their inquiries / SMs / clients), quotation_items, negotiation_items,
  * sales_order_items, job_cards, costings, and the Phase-7 downstream entities
  * (production_orders, dispatch_lines, invoice_lines). Every reference is a
@@ -31,9 +31,9 @@ import {
  *
  * PERFORMANCE (< 150ms budget): the reach counts + customer count come from ONE
  * `UNION ALL` pass over the indexed where-used columns (every referencing table
- * carries an `(item_id)` index — Phase 2, migration 0032). The tab detail lists
+ * carries an `(item_id)` index - Phase 2, migration 0032). The tab detail lists
  * (related records, cost history, quote prices) are a small number of focused,
- * indexed queries run concurrently — no per-row N+1.
+ * indexed queries run concurrently - no per-row N+1.
  */
 
 /** Per-stage reach counts for the Reach chips + summary rail. */
@@ -185,7 +185,7 @@ async function fetchCustomers(itemId: string): Promise<ItemCustomer[]> {
 }
 
 /**
- * The clickable related-records list — every SM / quote / neg / SO / job-card /
+ * The clickable related-records list - every SM / quote / neg / SO / job-card /
  * invoice this item touches, newest-first. A handful of small indexed selects
  * (one per referencing table), each limited, then merged + sorted in memory.
  */
@@ -308,7 +308,7 @@ async function fetchRelated(itemId: string): Promise<RelatedRecord[]> {
     out.push({
       kind: "job_card",
       id: r.id,
-      // Job-card detail route arrives later in Phase 9 — keep non-clickable for now.
+      // Job-card detail route arrives later in Phase 9 - keep non-clickable for now.
       href: null,
       label: r.jobCardNo,
       sub: r.customerName,
@@ -318,7 +318,7 @@ async function fetchRelated(itemId: string): Promise<RelatedRecord[]> {
     out.push({
       kind: "invoice",
       id: r.id,
-      // No invoice detail route yet (Phase 7 is data-only) — non-clickable.
+      // No invoice detail route yet (Phase 7 is data-only) - non-clickable.
       href: null,
       label: r.invoiceNo ?? "(draft invoice)",
       sub: null,
@@ -330,7 +330,7 @@ async function fetchRelated(itemId: string): Promise<RelatedRecord[]> {
   return out;
 }
 
-/** Live cost history — all costings linked to this item, chosen-first/newest. */
+/** Live cost history - all costings linked to this item, chosen-first/newest. */
 async function fetchCostHistory(itemId: string): Promise<CostHistoryRow[]> {
   const rows = await db
     .select({
@@ -362,7 +362,7 @@ async function fetchCostHistory(itemId: string): Promise<CostHistoryRow[]> {
 }
 
 /**
- * Quotation price points — prefer the frozen `unit_price` snapshot (the number
+ * Quotation price points - prefer the frozen `unit_price` snapshot (the number
  * the customer actually saw), fall back to the live `quotePrice` for drafts.
  */
 async function fetchQuotePrices(itemId: string): Promise<QuotePriceRow[]> {
@@ -422,7 +422,7 @@ async function fetchLatestProduction(
 
 /**
  * The full where-used aggregate for the Item Workspace. Runs the UNION-ALL reach
- * count and every focused detail query concurrently — all indexed, no N+1.
+ * count and every focused detail query concurrently - all indexed, no N+1.
  */
 export async function getItemWhereUsed(itemId: string): Promise<ItemWhereUsed> {
   const [reach, customers, related, costHistory, quotePrices, latestProduction] =

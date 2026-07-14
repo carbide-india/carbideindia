@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // Client name caps at 120 to leave headroom over the 80 we allow for
-// departments — client names trend longer (e.g. "Lawrence & Mayo").
+// departments - client names trend longer (e.g. "Lawrence & Mayo").
 const NameSchema = z
   .string()
   .trim()

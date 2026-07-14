@@ -18,7 +18,7 @@ function initials(name: string): string {
 }
 
 /**
- * Dark-circle avatar with bold white initials — the dashboard's
+ * Dark-circle avatar with bold white initials - the dashboard's
  * canonical "employee chip." Used everywhere a person is listed:
  * Status table, Aging Heatmap, Top Performers leaderboard, task rows.
  *
@@ -34,7 +34,7 @@ export function EmployeeAvatar({
 }: {
   name: string;
   size?: Size;
-  /** Optional CSS background — defaults to a slate gradient. */
+  /** Optional CSS background - defaults to a slate gradient. */
   background?: string;
   className?: string;
 }) {

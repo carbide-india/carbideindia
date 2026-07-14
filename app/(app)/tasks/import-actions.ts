@@ -107,7 +107,7 @@ export async function commitTaskImport(formData: FormData): Promise<CommitImport
       }
       if (!inserted) continue;
 
-      // Best-effort audit row — never abort the batch over it.
+      // Best-effort audit row - never abort the batch over it.
       try {
         await db.insert(taskEvents).values({
           taskId: inserted.id,
@@ -124,7 +124,7 @@ export async function commitTaskImport(formData: FormData): Promise<CommitImport
           },
         });
       } catch {
-        // ignore — task already created
+        // ignore - task already created
       }
 
       const label = row.subject || row.client;
@@ -150,7 +150,7 @@ export async function commitTaskImport(formData: FormData): Promise<CommitImport
     }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    // Some rows may have committed before the failure — report what we have.
+    // Some rows may have committed before the failure - report what we have.
     return { ok: false, created, skipped, error: `Import stopped after ${created}: ${msg}` };
   }
 

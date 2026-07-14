@@ -24,7 +24,7 @@ function until(d: Date): string {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
-/** Recycled drafts across every form — restore or delete forever; each auto-purges 48h after it was recycled. */
+/** Recycled drafts across every form - restore or delete forever; each auto-purges 48h after it was recycled. */
 export function RecycleBinList({ items }: { items: RecycledDraftItem[] }) {
   const router = useRouter();
   const [pending, setPending] = React.useState<string | null>(null);
@@ -45,7 +45,7 @@ export function RecycleBinList({ items }: { items: RecycledDraftItem[] }) {
   if (items.length === 0) {
     return (
       <div className="rounded-section border border-dashed border-hairline-strong bg-surface-card px-6 py-14 text-center text-[14px] text-ink-subtle">
-        Recycle Bin is empty. Drafts you delete — or that overflow the 10-per-form limit — land
+        Recycle Bin is empty. Drafts you delete - or that overflow the 10-per-form limit - land
         here and are permanently removed 48 hours later.
       </div>
     );

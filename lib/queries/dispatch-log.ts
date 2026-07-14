@@ -23,9 +23,9 @@ export interface DispatchFailureRow {
 }
 
 /**
- * Phase 3.5-companion — list the most recent dispatch failures + terminal
+ * Phase 3.5-companion - list the most recent dispatch failures + terminal
  * giveups for the admin Integrations tab. Surfaces what would otherwise
- * be silent — every email/push send that didn't land, with the error
+ * be silent - every email/push send that didn't land, with the error
  * and how many times we've retried.
  *
  * Caps at `limit` rows (default 50). Joined with `notifications` for the
@@ -77,7 +77,7 @@ export async function listRecentDispatchFailures(opts: {
   }));
 }
 
-/** Quick counts by status — used in the Integrations tab header strip. */
+/** Quick counts by status - used in the Integrations tab header strip. */
 export async function getDispatchLogTotals(): Promise<{
   sent: number;
   skipped: number;

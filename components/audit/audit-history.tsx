@@ -62,9 +62,9 @@ function humanizeField(field: string): string {
 /* ── Value renderer (old/new cell) ─────────────────────────────────────── */
 
 function renderValue(v: unknown): string {
-  if (v === null || v === undefined || v === "") return "—";
+  if (v === null || v === undefined || v === "") return "-";
   if (typeof v === "boolean") return v ? "Yes" : "No";
-  if (Array.isArray(v)) return v.join(", ") || "—";
+  if (Array.isArray(v)) return v.join(", ") || "-";
   return String(v);
 }
 

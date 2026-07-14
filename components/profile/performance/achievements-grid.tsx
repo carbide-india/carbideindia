@@ -8,7 +8,7 @@ import {
 import { SectionHeader } from "@/components/profile/identity/avatar-and-name";
 
 /**
- * Serializable view of an achievement definition — the subset that crosses
+ * Serializable view of an achievement definition - the subset that crosses
  * the RSC→client boundary. Excludes `evaluate` (a function, non-serializable).
  */
 export type AchievementView = Pick<

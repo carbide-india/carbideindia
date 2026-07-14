@@ -3,7 +3,7 @@ import { getOrgSettings } from "@/lib/queries/org-settings";
 import type { WorkflowFlagKey } from "@/db/enums";
 
 /**
- * ERP Phase 8 — per-entity enforced-workflow feature flags (SUPREME SAFETY
+ * ERP Phase 8 - per-entity enforced-workflow feature flags (SUPREME SAFETY
  * CONSTRAINT). A flag is ON only when `org_settings.workflow_flags[key] === true`.
  * ABSENT or `false` === OFF, which is the default and the deploy state: with the
  * flag OFF the app behaves EXACTLY as pre-Phase-8 (independent New-Quotation /

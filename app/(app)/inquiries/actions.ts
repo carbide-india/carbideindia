@@ -28,10 +28,10 @@ import {
 } from "@/lib/validators/inquiry";
 
 /**
- * Inquiry server actions (Phase 2 — sales module write path).
+ * Inquiry server actions (Phase 2 - sales module write path).
  *
  * NOTE on audit logging: there is intentionally none here. `task_events` is
- * FK'd to tasks and `settings_events` is scoped to admin settings — neither
+ * FK'd to tasks and `settings_events` is scoped to admin settings - neither
  * fits inquiry (app-data) writes, and inventing a third audit table is a
  * decision deferred to a later phase.
  */
@@ -52,7 +52,7 @@ function isUuid(v: string): boolean {
 /**
  * Drops keys whose value is `undefined`. The validators' OptionalText fields
  * fold `""` → `undefined`, so a "filled" form patch can legitimately arrive
- * as `{ field: undefined }` — which passes the nonempty refine but must not
+ * as `{ field: undefined }` - which passes the nonempty refine but must not
  * reach `.set()` (and an all-undefined patch must not reach the db at all).
  */
 function stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
@@ -61,7 +61,7 @@ function stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
   ) as Partial<T>;
 }
 
-/** `enquiryDate` is a free string in the validator — guard before `new Date`. */
+/** `enquiryDate` is a free string in the validator - guard before `new Date`. */
 function isParseableDate(s: string): boolean {
   return !Number.isNaN(new Date(s).getTime());
 }
@@ -90,7 +90,7 @@ async function resolveShapeId(tx: DbOrTx, shapeText: string | null | undefined):
 
 /**
  * Build the SSOT-clean ItemSpec from a built inquiry_items product row (shape
- * TEXT + string dims). No customer/qty/sm fields — those never reach `items`.
+ * TEXT + string dims). No customer/qty/sm fields - those never reach `items`.
  */
 async function specFromLine(tx: DbOrTx, r: BuiltProductRow): Promise<ItemSpec> {
   return {
@@ -224,11 +224,11 @@ export async function createInquiry(
         // Insert lines one at a time so we can run the Item-Sync Contract for
         // each INSIDE this transaction (§3.5): every committed product line
         // already carries an item_id (a reused/created Item, possibly a draft).
-        // An incomplete spec does NOT roll back — it becomes a draft Item; only
+        // An incomplete spec does NOT roll back - it becomes a draft Item; only
         // a real DB error rolls back (we never commit a product with no Item).
         for (const r of productRows) {
           // Pre-generate the line id so the Item-Sync Contract can run BEFORE the
-          // insert — the line is then inserted WITH its item_id in a single
+          // insert - the line is then inserted WITH its item_id in a single
           // statement. This satisfies the `inquiry_items.item_id NOT NULL`
           // invariant (I1): a plain NOT NULL column is checked at insert time and
           // cannot be deferred, so an insert-then-update pattern would fail.
@@ -263,7 +263,7 @@ export async function updateInquiry(
   // columns. As a forward-safe net, after the header write we RE-SYNC each
   // still-present inquiry_items line (re-run syncProductToItem and relink
   // item_id if the fingerprint drifted). We deliberately DO NOT delete/reinsert
-  // inquiry_items lines and DO NOT touch costings — a wholesale delete/reinsert
+  // inquiry_items lines and DO NOT touch costings - a wholesale delete/reinsert
   // would cascade-destroy per-line costings/quote links. If the form never
   // edits products, the re-sync is a harmless no-op (fingerprint unchanged →
   // dedup reuse → same item_id).
@@ -513,7 +513,7 @@ export async function setEnquiryStatusBulk(
 
 /**
  * Bulk-set the priority on many inquiries at once (register table's "Set
- * priority" bulk action). Mirrors setEnquiryStatusBulk — validates the priority
+ * priority" bulk action). Mirrors setEnquiryStatusBulk - validates the priority
  * against the enum and the ids are UUID-shaped before a single `inArray` update.
  */
 export async function setEnquiryPriorityBulk(
@@ -544,7 +544,7 @@ export async function setEnquiryPriorityBulk(
 
 /**
  * Bulk-assign a sales person to many inquiries at once (register table's "Assign
- * sales person" bulk action). Mirrors setEnquiryStatusBulk — validates the
+ * sales person" bulk action). Mirrors setEnquiryStatusBulk - validates the
  * employee id is UUID-shaped (along with every inquiry id) before a single
  * `inArray` update.
  */
@@ -574,7 +574,7 @@ export async function assignEnquirySalesPersonBulk(
 
 /**
  * Bulk-set the feasibility status on many inquiries at once (register table's
- * "Set feasibility" bulk action). Mirrors setEnquiryStatusBulk — validates the
+ * "Set feasibility" bulk action). Mirrors setEnquiryStatusBulk - validates the
  * status against the enum and the ids are UUID-shaped before a single `inArray`
  * update.
  */
@@ -605,7 +605,7 @@ export async function setFeasibilityStatusBulk(
 }
 
 /**
- * Archive an enquiry — drops it off the /inquiries register (the list query
+ * Archive an enquiry - drops it off the /inquiries register (the list query
  * filters `is_archived = false`) without destroying any data. The detail page
  * still loads an archived SM if visited directly, and it can be unarchived.
  */
@@ -646,7 +646,7 @@ export async function unarchiveInquiry(id: string): Promise<ActionResult> {
 
 /**
  * Hard-delete an enquiry (admin only). The inquiry_items children cascade-
- * delete via their FK. Intentionally destructive — there is no undo. Use
+ * delete via their FK. Intentionally destructive - there is no undo. Use
  * archiveInquiry for the everyday "get it off my list" case.
  */
 export async function deleteInquiry(id: string): Promise<ActionResult> {
@@ -662,7 +662,7 @@ export async function deleteInquiry(id: string): Promise<ActionResult> {
   return { ok: true };
 }
 
-/** Command-palette search (server action — the palette is a client component). */
+/** Command-palette search (server action - the palette is a client component). */
 export async function searchInquiriesAction(query: string) {
   await requireUser();
   const { searchInquiries } = await import("@/lib/queries/inquiries");
@@ -691,7 +691,7 @@ export async function generateItemForInquiryItem(
 
   try {
     // Thin wrapper over the shared Item-Sync Contract (§3.5): load the line and
-    // run syncProductToItem inside a transaction (reuse/create — never rejects an
+    // run syncProductToItem inside a transaction (reuse/create - never rejects an
     // incomplete spec; it produces a draft), then relink item_id. Keeps the
     // SM-detail "Generate item code" button working through the single writer.
     const result = await db.transaction(async (tx) => {

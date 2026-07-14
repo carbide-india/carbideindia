@@ -89,7 +89,7 @@ interface Props {
 }
 
 /**
- * Section 4 of the New Inquiry form — Checklist. The paper enquiry checklist's
+ * Section 4 of the New Inquiry form - Checklist. The paper enquiry checklist's
  * V / x / # marks become Given / Not Given / Assumed segmented controls;
  * everything is optional except the product description. Per-product details
  * (shape, dimensions, masters, quantity) live in the Products section.
@@ -121,7 +121,7 @@ export function ChecklistSection({
         )}
       </Field>
 
-      {/* Docs given — checkbox chip group */}
+      {/* Docs given - checkbox chip group */}
       <Field label="Docs Given">
         <Controller
           control={control}
@@ -170,7 +170,7 @@ export function ChecklistSection({
         />
       </Field>
 
-      {/* Checklist marks — compact grid */}
+      {/* Checklist marks - compact grid */}
       <div className="grid grid-cols-6 gap-3 max-lg:grid-cols-3 max-md:grid-cols-2">
         <CheckField label="Quantity" name="quantityStatus" assumedKey="quantity" control={control} register={register} />
         <CheckField label="Shape & Dimension" name="shapeDimensionCheck" assumedKey="shapeDimension" control={control} register={register} />

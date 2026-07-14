@@ -12,9 +12,9 @@ import { requireRole } from "@/lib/auth/roles";
 import { nextDocNumber, financialYearLabel } from "@/lib/series/next-number";
 
 /**
- * Phase 7 — thin dispatch (delivery-note) create + issue path (§11.2). The DN
+ * Phase 7 - thin dispatch (delivery-note) create + issue path (§11.2). The DN
  * number is a GAPLESS FY-scoped register, so it is allocated ONLY at the issue
- * transition, inside the same transaction that flips the status — never on the
+ * transition, inside the same transaction that flips the status - never on the
  * draft. Full workspace/PDF is Phase 9.
  */
 

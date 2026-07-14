@@ -18,7 +18,7 @@ type Result<T = unknown> = ({ ok: true } & T) | { ok: false; error: string };
 /**
  * Item drawings/documents live under this prefix. It nests inside the shared
  * `documents/` prefix that /api/documents/upload (the reused private-token
- * route) enforces, so item uploads need no route change — and pinning the
+ * route) enforces, so item uploads need no route change - and pinning the
  * prefix here means a caller can't register an `avatars/` or
  * `client-documents/` blob it doesn't own (which deleteItemDocument's blob
  * cleanup would later reap).
@@ -32,7 +32,7 @@ const TitleSchema = z.string().trim().min(1, "Title is required").max(200, "Titl
  * straight to Vercel Blob via /api/documents/upload, attaching it to an item.
  * Sales-floor open (requireUser, like the item create form). The file itself
  * never passes through the server (Next 1 MB action body cap), only this
- * metadata does — which is fully re-validated here.
+ * metadata does - which is fully re-validated here.
  */
 export async function saveItemDocument(input: {
   itemId: string;
@@ -49,7 +49,7 @@ export async function saveItemDocument(input: {
   const titleRes = TitleSchema.safeParse(input.title);
   if (!titleRes.success) return { ok: false, error: titleRes.error.issues[0]!.message };
 
-  // The storage path is attacker-controllable — pin it under the item-docs
+  // The storage path is attacker-controllable - pin it under the item-docs
   // prefix and run the same shape/size guards the documents actions use.
   if (
     typeof input.storagePath !== "string" ||
@@ -65,7 +65,7 @@ export async function saveItemDocument(input: {
   }
   if (input.sizeBytes > MAX_DOCUMENT_BYTES) return { ok: false, error: "File exceeds 25 MB." };
 
-  // Guard against registering a blob pathname another row already points at —
+  // Guard against registering a blob pathname another row already points at -
   // otherwise deleting this row would delete the other document's file.
   const existing = await db.query.documents.findFirst({
     where: eq(documents.storagePath, input.storagePath),

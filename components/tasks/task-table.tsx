@@ -39,17 +39,17 @@ function pageWindow(current: number, total: number): (number | "ellipsis")[] {
   return pages;
 }
 
-// date-fns `format()` throws RangeError on a null/invalid Date — which would
+// date-fns `format()` throws RangeError on a null/invalid Date - which would
 // crash the ENTIRE table render. Guard every cell so one bad row degrades to
-// "—" instead of taking down the whole list.
+// "-" instead of taking down the whole list.
 function safeFormat(value: unknown, pattern: string): string {
-  if (!value) return "—";
+  if (!value) return "-";
   const d = value instanceof Date ? value : new Date(value as string);
-  return Number.isNaN(d.getTime()) ? "—" : format(d, pattern);
+  return Number.isNaN(d.getTime()) ? "-" : format(d, pattern);
 }
 
 // Due-date urgency for the list. Terminal/finished tasks never read as overdue
-// — only open work is "on fire". `soon` = due within the next 2 days.
+// - only open work is "on fire". `soon` = due within the next 2 days.
 const URGENCY_TERMINAL = new Set<TaskStatus>([
   "done",
   "approved",
@@ -109,7 +109,7 @@ const GROUP_OPTIONS: { key: GroupKey; label: string; Icon: LucideIcon }[] = [
 ];
 
 // The section label a row falls under for the current grouping. NULL/empty
-// values collapse into a single explicit "—" bucket rather than vanishing;
+// values collapse into a single explicit "-" bucket rather than vanishing;
 // status/priority groups use the human label (admin-overridable for status).
 function groupValue(
   row: TaskListRow,
@@ -120,11 +120,11 @@ function groupValue(
   if (by === "priority") return PRIORITY_LABELS[row.priority];
   if (by === "employee") {
     const v = row.doerName?.trim();
-    return v && v.length > 0 ? v : "— Unassigned";
+    return v && v.length > 0 ? v : "- Unassigned";
   }
   const raw = by === "client" ? row.client : row.subject;
   const v = raw?.trim();
-  return v && v.length > 0 ? v : by === "client" ? "— No client" : "— No subject";
+  return v && v.length > 0 ? v : by === "client" ? "- No client" : "- No subject";
 }
 import { CriticalBadge } from "@/components/ui/critical-badge";
 import { PRIORITY_LABELS, TASK_STATUSES, TASK_PRIORITIES } from "@/db/enums";
@@ -226,7 +226,7 @@ function buildColumns(
       cell: (info) => {
         const n = info.getValue<number | null>();
         return n == null ? (
-          <span className="text-ink-subtle">—</span>
+          <span className="text-ink-subtle">-</span>
         ) : (
           <span className="font-bold tabular-nums text-ink-soft" style={{ fontSize: 14 }}>
             #{n}
@@ -250,7 +250,7 @@ function buildColumns(
             {v}
           </span>
         ) : (
-          <span className="text-ink-subtle">—</span>
+          <span className="text-ink-subtle">-</span>
         );
       },
     },
@@ -260,7 +260,7 @@ function buildColumns(
       meta: { narrow: true },
       cell: (info) => (
         <span className="text-body-lg text-ink-muted">
-          {info.getValue<string>() ?? "—"}
+          {info.getValue<string>() ?? "-"}
         </span>
       ),
     },
@@ -383,7 +383,7 @@ export function TaskTable({
     [employees, me, resolvedLabels, resolvedTones],
   );
 
-  // #11 — per-user column visibility, persisted in localStorage. Start
+  // #11 - per-user column visibility, persisted in localStorage. Start
   // empty (all visible) on both server + first client render to avoid a
   // hydration mismatch, then hydrate the saved choice after mount.
   const [columnVisibility, setColumnVisibility] =
@@ -409,7 +409,7 @@ export function TaskTable({
 
   // Click-to-sort state (the user's chosen column) + group-by selection.
   // When grouped, the group column becomes the PRIMARY sort key so rows
-  // cluster, and the user's sort applies within each group — see
+  // cluster, and the user's sort applies within each group - see
   // `effectiveSorting`. We strip the group key out of `sorting` so toggling
   // grouping off restores exactly the user's manual sort.
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -421,7 +421,7 @@ export function TaskTable({
   // mode. Tracked by task id so it survives re-sorts.
   const [focusedId, setFocusedId] = React.useState<string | null>(null);
   const router = useRouter();
-  // Rows per page — user-selectable (10/25/50/100), default 25.
+  // Rows per page - user-selectable (10/25/50/100), default 25.
   const [pageSize, setPageSize] = React.useState<number>(DEFAULT_PAGE_SIZE);
 
   // Free-text search across task no + the human-readable fields. Runs purely
@@ -509,7 +509,7 @@ export function TaskTable({
 
   // Keep the current page valid when the underlying rows change (new filter /
   // refresh). Clamp to the last page rather than always snapping to page 1, so
-  // an inline status edit doesn't yank you back to the top — you only move if
+  // an inline status edit doesn't yank you back to the top - you only move if
   // your page no longer exists (e.g. a filter shrank the result set).
   React.useEffect(() => {
     const maxIndex = Math.max(0, Math.ceil(visibleRows.length / pageSize) - 1);
@@ -531,7 +531,7 @@ export function TaskTable({
     listTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  // J/K/Enter/F — keyboard navigation over the current page's rows. Skips when
+  // J/K/Enter/F - keyboard navigation over the current page's rows. Skips when
   // typing or when a modifier is held, so it never fights ⌘K, browser
   // shortcuts, or text entry. Coexists with the global G-sequences (different
   // keys).
@@ -596,7 +596,7 @@ export function TaskTable({
 
   return (
     <div ref={listTopRef} className="scroll-mt-6">
-      {/* Toolbar: Group-by ▾ · Search · compact pager — all packed left — with
+      {/* Toolbar: Group-by ▾ · Search · compact pager - all packed left - with
           Columns pushed to the far right. Keeps the header compact so the
           table gets the vertical space. */}
       <div className="mb-3 flex items-center gap-3 flex-wrap">
@@ -658,7 +658,7 @@ export function TaskTable({
                     }
                     className={`sticky top-0 px-5 py-4 text-table-head whitespace-nowrap max-md:px-3 max-md:py-3 ${alignClass(col)} ${hide ? "max-md:hidden" : ""} ${isActions ? "right-0 z-30" : "z-20"}`}
                     style={{
-                      // Highlighted header bar — a tinted strip with darker
+                      // Highlighted header bar - a tinted strip with darker
                       // label text that sets the column row apart from the
                       // white body rows below.
                       background: "var(--color-surface-track)",
@@ -705,7 +705,7 @@ export function TaskTable({
         <tbody>
           {table.getRowModel().rows.map((row, i, arr) => {
           // Group mode: render a section header whenever the group label
-          // changes from the previous row — and always at the top of a page
+          // changes from the previous row - and always at the top of a page
           // (i === 0) so you can see which group you're in mid-scroll.
           const label = groupBy === "none" ? null : groupValue(row.original, groupBy, resolvedLabels);
           const prev = i > 0 ? arr[i - 1] : undefined;
@@ -801,7 +801,7 @@ export function TaskTable({
 
       {/* Phone card layout (< sm). Same rows as the table above so sort,
           group-by, and pagination apply identically. Shows every desktop
-          field — parity. */}
+          field - parity. */}
       <div className="hidden max-md:flex max-md:flex-col max-md:gap-3">
         {table.getRowModel().rows.map((row, i, arr) => {
           const t = row.original;
@@ -849,7 +849,7 @@ export function TaskTable({
           {totalFiltered === 0
             ? "No tasks"
             : pageCount > 1
-              ? `Page ${pageIndex + 1} of ${pageCount} · showing ${rangeStart}–${rangeEnd} of ${totalFiltered}`
+              ? `Page ${pageIndex + 1} of ${pageCount} · showing ${rangeStart}-${rangeEnd} of ${totalFiltered}`
               : `Showing all ${totalFiltered} ${totalFiltered === 1 ? "task" : "tasks"}`}
         </p>
       </div>
@@ -859,7 +859,7 @@ export function TaskTable({
 
 // Compact numbered pager for the top toolbar: 1 2 3  N · Next · Last. The
 // current page reads red; the always-present "1" doubles as a jump-to-first
-// (so a dedicated First/Prev is unnecessary — the previous page number is
+// (so a dedicated First/Prev is unnecessary - the previous page number is
 // always one tap away in the window). Hidden entirely on a single-page list.
 function CompactPager({
   pages,
@@ -930,7 +930,7 @@ function CompactPager({
 }
 
 // Search box for the task list. Matches the task No. (with or without the
-// leading #) plus title / subject / client / doer / initiator / status —
+// leading #) plus title / subject / client / doer / initiator / status -
 // "search by task no or any other criteria".
 function SearchBox({
   value,
@@ -1019,7 +1019,7 @@ function RowsPerPageSelect({
   );
 }
 
-// "Group by" control — a single compact pill that reflects the current
+// "Group by" control - a single compact pill that reflects the current
 // grouping (red-tinted + "Group: Client" when active), opening a rich menu
 // with a leading icon per field and the active one checked in red. Grouping
 // clusters the rows under that field and shows a count per section; the
@@ -1078,18 +1078,18 @@ function GroupByControl({
   );
 }
 
-// #12 — task title with a hover-to-preview popover. After ~1s of hovering
+// #12 - task title with a hover-to-preview popover. After ~1s of hovering
 // the title, a card shows the full title + description (the cell truncates
 // at 32ch). Uses Radix Tooltip (portals out of the table's overflow,
 // positions + delays for free). Shown whenever there's a description OR the
-// title is long enough to be truncated — so hovering always reveals more
+// title is long enough to be truncated - so hovering always reveals more
 // than the few visible words. A truly short, description-less title (nothing
 // extra to show) skips the popover.
 /**
  * Label shown in the "Task" column. Imported rows frequently store the client
  * name as the title (so Client and Task look identical), while the real task
- * wording lives in `description`. Prefer the description — collapsed to a
- * single line — and fall back to the title only when there's no description.
+ * wording lives in `description`. Prefer the description - collapsed to a
+ * single line - and fall back to the title only when there's no description.
  * The cell itself is capped at 32ch with an ellipsis, so this naturally shows
  * the first several words.
  */
@@ -1159,7 +1159,7 @@ function TaskTitleCell({ row }: { row: TaskListRow }) {
               </p>
             ) : (
               <p style={{ fontSize: 13, color: "var(--color-ink-subtle)" }}>
-                {subject ? `Subject — ${subject}` : "No description added yet."}
+                {subject ? `Subject - ${subject}` : "No description added yet."}
               </p>
             )}
             <Tooltip.Arrow style={{ fill: "var(--color-surface-card)" }} />
@@ -1170,7 +1170,7 @@ function TaskTitleCell({ row }: { row: TaskListRow }) {
   );
 }
 
-// Phone-only sort dropdown — appears below sm breakpoint where the clickable
+// Phone-only sort dropdown - appears below sm breakpoint where the clickable
 // column headers are hidden. Iterates all sortable columns and lets the user
 // toggle asc/desc for each.
 function MobileSortControl({
@@ -1224,7 +1224,7 @@ function MobileSortControl({
   );
 }
 
-// #11 — column show/hide menu. Lists the optional columns (everything
+// #11 - column show/hide menu. Lists the optional columns (everything
 // except the always-on Task + Actions) with a check for visible ones.
 // `onSelect → preventDefault` keeps the menu open for multiple toggles.
 function ColumnsMenu({ table }: { table: TableInstance<TaskListRow> }) {
@@ -1302,7 +1302,7 @@ function TaskCard({
               </span>
             )}
             <span className="text-ink-strong font-semibold truncate" style={{ fontSize: 15 }}>
-              {row.client?.trim() ? row.client : "— No client"}
+              {row.client?.trim() ? row.client : "- No client"}
             </span>
           </div>
         </div>
@@ -1344,7 +1344,7 @@ function TaskCard({
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-ink-muted" style={{ fontSize: 13 }}>
-        <span>{row.subject?.trim() ? row.subject : "—"}</span>
+        <span>{row.subject?.trim() ? row.subject : "-"}</span>
         <span aria-hidden>·</span>
         {p === "imp_urgent" ? <CriticalBadge /> : <span>{PRIORITY_LABELS[p]}</span>}
         <span aria-hidden>·</span>

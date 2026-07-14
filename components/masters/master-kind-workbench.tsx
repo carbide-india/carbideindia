@@ -314,7 +314,7 @@ export function MasterKindWorkbench({
         }}
       />
 
-      {/* Header — title · search · sort · actions (Product-Master style). */}
+      {/* Header - title · search · sort · actions (Product-Master style). */}
       <div className="mst-head mb-5 flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3.5">
           <h1 className="text-[26px] font-black leading-none tracking-tight text-[#3f3f94]">
@@ -355,7 +355,7 @@ export function MasterKindWorkbench({
         </div>
 
         <div className="relative flex items-center gap-2">
-            {/* Export — moved here, beside Advanced Filter. */}
+            {/* Export - moved here, beside Advanced Filter. */}
             <button
               type="button"
               onClick={exportCsv}
@@ -470,7 +470,7 @@ export function MasterKindWorkbench({
                 </div>
               </>
             )}
-          {/* + Add {singular} — opens the add modal. */}
+          {/* + Add {singular} - opens the add modal. */}
           <button
             type="button"
             onClick={() => setAddOpen(true)}
@@ -518,7 +518,7 @@ export function MasterKindWorkbench({
           <div className="px-5 py-14 text-center">
             <p className="text-[14px] font-semibold text-[#8a90a0]">
               {options.length === 0
-                ? `No ${label.toLowerCase()} options yet — add your first one above.`
+                ? `No ${label.toLowerCase()} options yet - add your first one above.`
                 : "No options match your search / filter."}
             </p>
           </div>
@@ -664,7 +664,7 @@ export function MasterKindWorkbench({
         )}
       </div>
 
-      {/* ── Add modal — single add + bulk add ─────────────────────── */}
+      {/* ── Add modal - single add + bulk add ─────────────────────── */}
       {addOpen && (
         <div
           className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/30 p-4 sm:p-10"
@@ -718,7 +718,7 @@ export function MasterKindWorkbench({
                 </button>
               </div>
               <p className="mt-2 text-[12px] font-medium text-[#9aa0ab]">
-                Press Enter to add — the field clears so you can keep adding.
+                Press Enter to add - the field clears so you can keep adding.
               </p>
 
               {/* Bulk add */}
@@ -738,7 +738,7 @@ export function MasterKindWorkbench({
                       className="mb-1.5 block text-[11px] font-bold tracking-[0.14em] text-[#8a90a0]"
                       style={{ fontFamily: MONO }}
                     >
-                      PASTE MANY — ONE PER LINE
+                      PASTE MANY - ONE PER LINE
                     </label>
                     <textarea
                       value={bulkText}

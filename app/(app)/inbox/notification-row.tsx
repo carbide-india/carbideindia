@@ -32,7 +32,7 @@ interface Props {
 }
 
 // Per-kind icon + accent colour for the little badge that sits on the actor's
-// avatar — gives each event type an at-a-glance identity.
+// avatar - gives each event type an at-a-glance identity.
 const KIND_META: Record<NotificationKind, { icon: LucideIcon; tone: string }> = {
   task_assigned: { icon: UserPlus, tone: "blue" },
   task_initiated: { icon: Sparkles, tone: "blue" },
@@ -49,7 +49,7 @@ const KIND_META: Record<NotificationKind, { icon: LucideIcon; tone: string }> = 
 /**
  * Parse the notification `body`. The body is INTERNAL JSON metadata (e.g.
  * `{"fromStatus":"approved","toStatus":"cancelled"}`) used by the outbound
- * channel templates — it must never be shown raw. We extract a status
+ * channel templates - it must never be shown raw. We extract a status
  * transition when present, treat genuine free text (a comment) as text, and
  * otherwise show nothing.
  */

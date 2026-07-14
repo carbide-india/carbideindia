@@ -36,13 +36,13 @@ export async function listDocuments(): Promise<DocumentRow[]> {
 
   // Documents live in private Vercel Blob storage. One read-scoped token
   // issuance (single network call), then every row's download URL is
-  // presigned locally — so 500 docs never become 500 HTTP round-trips.
+  // presigned locally - so 500 docs never become 500 HTTP round-trips.
   // Failure degrades to url:null (the UI hides the download button).
   let urlByPath = new Map<string, string>();
   try {
     urlByPath = await getDocumentDownloadUrls(rows.map((r) => r.storagePath));
   } catch {
-    // presigning unavailable (e.g. missing BLOB_READ_WRITE_TOKEN) — degrade.
+    // presigning unavailable (e.g. missing BLOB_READ_WRITE_TOKEN) - degrade.
   }
   return rows.map((r) => ({
     id: r.id,

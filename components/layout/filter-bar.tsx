@@ -83,7 +83,7 @@ export function FilterBar({
 
   const [start, setStart] = React.useState(initial.start);
   const [end, setEnd] = React.useState(initial.end);
-  // For non-admins in "default" mode, the chip carries the "me" scope —
+  // For non-admins in "default" mode, the chip carries the "me" scope -
   // keep the MultiSelect empty so they can optionally add additional
   // teammates without first clearing themselves.
   const [emp, setEmp] = React.useState<string[]>(
@@ -233,7 +233,7 @@ export function FilterBar({
         </div>
 
         <div className={`flex items-center gap-2 max-sm:w-full max-sm:flex-col max-sm:items-stretch max-sm:gap-3 max-sm:mt-3 ${sheetOpen ? "" : "max-sm:hidden"}`}>
-          {/* Filter chips — one horizontally-scrollable line on desktop; stack
+          {/* Filter chips - one horizontally-scrollable line on desktop; stack
               vertically on mobile. The dropdowns portal out, so the scroll
               container never clips them. */}
           <div className="flex-1 min-w-0 overflow-x-auto nav-scroll max-sm:flex-none max-sm:overflow-visible">
@@ -358,13 +358,13 @@ export function FilterBar({
 
             </div>
           </div>
-          {/* Pinned actions — stay put on the right while the filters scroll. */}
+          {/* Pinned actions - stay put on the right while the filters scroll. */}
           <div className="flex items-center gap-2 shrink-0 max-sm:w-full max-sm:flex-wrap max-sm:mt-1">
-            {/* Import / export — admin-only, on the task list views. Tucked
+            {/* Import / export - admin-only, on the task list views. Tucked
                 into a ⋯ menu (these are occasional actions) so the filter row
                 stays a single line and the table gets the screen space. The
                 CSV export route still exists at /tasks/export but isn't
-                surfaced — XLS + PDF cover every reporting need. */}
+                surfaced - XLS + PDF cover every reporting need. */}
             {(pathname === "/tasks" || pathname === "/archived") &&
               me?.isAdmin &&
               (() => {

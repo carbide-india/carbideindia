@@ -6,7 +6,7 @@ import { updateMyProfile } from "@/app/(app)/profile/actions";
 import { fireToast } from "@/lib/toast";
 
 /**
- * Twelve preset avatars — hand-authored SVGs in `public/avatars/`.
+ * Twelve preset avatars - hand-authored SVGs in `public/avatars/`.
  * Featureless peach faces with distinct hair + colourful business
  * attire, matching the user's reference image. Stored as plain
  * static files so the browser caches aggressively.

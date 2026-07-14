@@ -8,16 +8,16 @@ import { requireAdmin } from "@/lib/auth/current";
  *
  * Streams the current /admin/activity view as a CSV download using the
  * unified `csvResponse` helper from `lib/exports/csv` (T19 pattern).
- * Admin-only — `requireAdmin` throws for non-admins.
+ * Admin-only - `requireAdmin` throws for non-admins.
  *
  * Honours every filter param the page understands (actor, kind, src, from,
- * to) via `parseActivityFilters` — the same parser the page uses — so the
+ * to) via `parseActivityFilters` - the same parser the page uses - so the
  * exported rows match whatever the admin currently sees on screen.  The
  * `before` cursor is intentionally NOT honoured: an export should always
  * start from "now" and walk back, not from an arbitrary pagination point.
  *
  * Hard cap: pulls up to `MAX_EXPORT_ROWS`.  If matching rows exceed the
- * cap we slice at the cap rather than 422 (close enough for M5.2 — the
+ * cap we slice at the cap rather than 422 (close enough for M5.2 - the
  * activity feed grows linearly, so 10k rows is months of history).
  */
 export const runtime = "nodejs";

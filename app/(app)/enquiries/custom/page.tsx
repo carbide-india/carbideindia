@@ -5,7 +5,7 @@ import { CustomListsEditor } from "@/components/custom-lists/custom-lists-editor
 export const dynamic = "force-dynamic";
 
 /**
- * New Enquiry "Custom Dropdown Master" — the enquiry form's editable free-text
+ * New Enquiry "Custom Dropdown Master" - the enquiry form's editable free-text
  * dropdowns (Unit, State, City). The enquiry module shell comes from the
  * enquiries layout, so this page returns content only (no nested shell).
  */

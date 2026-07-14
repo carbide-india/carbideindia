@@ -25,17 +25,17 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  if (!UUID_RE.test(id)) return { title: "Edit Enquiry — Carbide India" };
+  if (!UUID_RE.test(id)) return { title: "Edit Enquiry - Carbide India" };
   const inquiry = await getInquiryById(id);
   return {
     title: inquiry
-      ? `Edit ${inquiry.smNumber} — Carbide India`
-      : "Edit Enquiry — Carbide India",
+      ? `Edit ${inquiry.smNumber} - Carbide India`
+      : "Edit Enquiry - Carbide India",
   };
 }
 
 /**
- * Edit Enquiry — now rendered inside the new Enquiry module shell (Carbide
+ * Edit Enquiry - now rendered inside the new Enquiry module shell (Carbide
  * sidebar + indigo header) instead of the legacy WMS chrome.
  */
 export default async function EditInquiryPage({ params }: PageProps) {

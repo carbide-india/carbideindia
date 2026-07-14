@@ -47,8 +47,8 @@ export default async function TasksPage({ searchParams }: PageProps) {
 
   // Status filter options in canonical workflow order, carrying the
   // admin-overridable human labels. Retired statuses (follow_up_1/2/3,
-  // cancelled, transferred) are dropped from the picker — see sir's changes
-  // #2/#4/#6 — but approved/not_approved stay so the KPI links still filter.
+  // cancelled, transferred) are dropped from the picker - see sir's changes
+  // #2/#4/#6 - but approved/not_approved stay so the KPI links still filter.
   const statusOptions = TASK_STATUSES.filter((s) => !isDeprecatedStatus(s)).map((s) => ({
     value: s,
     label: statusLabels[s] ?? s,

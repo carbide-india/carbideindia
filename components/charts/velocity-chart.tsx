@@ -73,13 +73,13 @@ export function VelocityChart({ data }: Props) {
   const createdArea = areaPath(createdLine, createdPoints, baselineY);
   const completedArea = areaPath(completedLine, completedPoints, baselineY);
 
-  // Y-axis ticks — 3 evenly spaced from 0 to niceMax.
+  // Y-axis ticks - 3 evenly spaced from 0 to niceMax.
   const yTicks = [0, niceMax / 2, niceMax].map((v) => ({
     v,
     y: yAt(v),
   }));
 
-  // X-axis tick density — adapts to viewport. On narrow screens each
+  // X-axis tick density - adapts to viewport. On narrow screens each
   // "MMM d" label needs ~64px to read; we divide width by that to pick
   // a stride that keeps labels from overlapping.
   const maxTicks = Math.max(2, Math.floor(innerW / 70));
@@ -90,7 +90,7 @@ export function VelocityChart({ data }: Props) {
 
   // End-of-line "New" / "Finished" pinned labels need ~70px of right
   // padding (padR). On narrow screens we drop the text and keep just
-  // the dot — the tooltip on tap still shows the channel.
+  // the dot - the tooltip on tap still shows the channel.
   const showEndLabels = width >= 640;
 
   const lastIdx = data.length - 1;
@@ -210,7 +210,7 @@ export function VelocityChart({ data }: Props) {
           strokeLinejoin="round"
         />
 
-        {/* End-of-line labels — color-coded so the legend lives ON the chart.
+        {/* End-of-line labels - color-coded so the legend lives ON the chart.
             Text labels drop out below 640px viewport (mobile); the dot
             stays so the user can still read the latest data point. */}
         {lastCreated && (
@@ -307,7 +307,7 @@ export function VelocityChart({ data }: Props) {
         )}
       </svg>
 
-      {/* Tooltip card — rendered as an HTML overlay so its text scales
+      {/* Tooltip card - rendered as an HTML overlay so its text scales
           like the rest of the dashboard. Positioned by clamping the
           hover X into the visible band so it never clips off-screen. */}
       {hovered && hover !== null && (

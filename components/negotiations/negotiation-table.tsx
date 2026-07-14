@@ -25,9 +25,9 @@ interface Props {
 }
 
 function moneyText(value: string | null): string {
-  if (value == null || value === "") return "—";
+  if (value == null || value === "") return "-";
   const n = Number(value);
-  return Number.isFinite(n) ? formatInr(n) : "—";
+  return Number.isFinite(n) ? formatInr(n) : "-";
 }
 
 function moneyNumber(value: string | null): number {
@@ -42,7 +42,7 @@ function negotiationDate(r: NegotiationListItem): Date {
 }
 
 /**
- * Negotiation register table — a thin config wrapper over the shared
+ * Negotiation register table - a thin config wrapper over the shared
  * RegisterDataTable. The status column sorts by ENUM ORDER (pipeline position),
  * not the label alphabetical, so sorting reflects the negotiation lifecycle.
  */
@@ -72,7 +72,7 @@ export function NegotiationTable({ rows }: Props) {
         exportValue: (r) => r.companyName ?? "",
         cell: (r) => (
           <span className="text-ink-strong font-medium">
-            {r.companyName ?? "—"}
+            {r.companyName ?? "-"}
           </span>
         ),
       },
@@ -83,7 +83,7 @@ export function NegotiationTable({ rows }: Props) {
         sortValue: (r) => r.salesPersonName ?? "",
         exportValue: (r) => r.salesPersonName ?? "",
         cell: (r) => (
-          <span className="text-ink-soft">{r.salesPersonName ?? "—"}</span>
+          <span className="text-ink-soft">{r.salesPersonName ?? "-"}</span>
         ),
       },
       {
@@ -132,8 +132,8 @@ export function NegotiationTable({ rows }: Props) {
         id: "negotiationStatus",
         label: "Status",
         type: "select",
-        // Filter matches the column's string sortValue — which is now the enum
-        // index — so map options to the index string.
+        // Filter matches the column's string sortValue - which is now the enum
+        // index - so map options to the index string.
         options: NEGOTIATION_STATUSES.map((s, i) => ({
           value: String(i),
           label: NEGOTIATION_STATUS_LABELS[s],
@@ -167,7 +167,7 @@ export function NegotiationTable({ rows }: Props) {
         })),
         onApply: (ids, value) => setNegotiationStatusBulk(ids, value),
       }}
-      emptyTitle="No negotiations yet — start the first one."
+      emptyTitle="No negotiations yet - start the first one."
       emptyHint="Price negotiations tracked from a quote to won, lost or abandoned appear here."
     />
   );

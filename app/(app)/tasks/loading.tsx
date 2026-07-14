@@ -2,8 +2,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PageBuffering } from "@/components/ui/spinner";
 
 /**
- * Streamed skeleton for /tasks. Mirrors the real page chrome — header
- * + filter bar + KPI strip + table — so the navigation feels instant.
+ * Streamed skeleton for /tasks. Mirrors the real page chrome - header
+ * + filter bar + KPI strip + table - so the navigation feels instant.
  * Next renders this synchronously while the server component below
  * resolves its DB calls, which is the difference between staring at the
  * old page for 2s and seeing the new one paint in 50ms.
@@ -22,7 +22,7 @@ export default function TasksLoading() {
       </div>
 
       <main className="px-6 max-md:px-4 py-6 max-w-[1600px] mx-auto w-full">
-        {/* KPI strip — 4 cards */}
+        {/* KPI strip - 4 cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-24 w-full rounded-xl" />

@@ -13,7 +13,7 @@ export interface QuotationListItem {
   quotePrice: string | null;
   costingDoneStatus: CostingDoneStatus;
   quoteSent: boolean;
-  /** SM snapshot of the enquiry date; null on legacy rows — date filters fall
+  /** SM snapshot of the enquiry date; null on legacy rows - date filters fall
    *  back to createdAt. */
   enquiryDate: Date | null;
   createdAt: Date;

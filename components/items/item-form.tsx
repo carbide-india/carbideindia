@@ -38,7 +38,7 @@ interface Props {
   shapeProfiles: Record<string, ShapeConfig>;
   /** When set, the form edits this item in place instead of creating a new one. */
   editItemId?: string;
-  /** Prefill values for edit mode — shaped like the form's input fields. */
+  /** Prefill values for edit mode - shaped like the form's input fields. */
   initialValues?: Partial<ItemFormValues>;
   /** Compact page header rendered inline with the live-code preview chip. */
   title?: string;
@@ -55,21 +55,21 @@ const UNIT_OPTIONS = [
   { value: "inch", label: "inch" },
 ];
 
-/** Size-class options — shown alongside the auto-derived value so user can override. */
+/** Size-class options - shown alongside the auto-derived value so user can override. */
 const SIZE_CODE_OPTIONS = [
-  { value: "S", label: "S — Small" },
-  { value: "M", label: "M — Medium" },
-  { value: "L", label: "L — Large" },
-  { value: "SA", label: "SA — Small Assembly" },
-  { value: "MA", label: "MA — Medium Assembly" },
-  { value: "LA", label: "LA — Large Assembly" },
-  { value: "Sp", label: "Sp — Special" },
-  { value: "A", label: "A — Assembly" },
-  { value: "P", label: "P — Powder" },
+  { value: "S", label: "S - Small" },
+  { value: "M", label: "M - Medium" },
+  { value: "L", label: "L - Large" },
+  { value: "SA", label: "SA - Small Assembly" },
+  { value: "MA", label: "MA - Medium Assembly" },
+  { value: "LA", label: "LA - Large Assembly" },
+  { value: "Sp", label: "Sp - Special" },
+  { value: "A", label: "A - Assembly" },
+  { value: "P", label: "P - Powder" },
 ];
 
 /**
- * Item form — live code preview plus all classification + dimension +
+ * Item form - live code preview plus all classification + dimension +
  * part-description fields.
  */
 export function ItemForm({
@@ -143,7 +143,7 @@ export function ItemForm({
       uom: "Nos",
       dimensionUnit: "mm",
       altUom: "",
-      // Edit mode prefill — overrides the empty defaults field-by-field.
+      // Edit mode prefill - overrides the empty defaults field-by-field.
       ...initialValues,
     },
   });
@@ -176,7 +176,7 @@ export function ItemForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedShapeId]);
 
-  // Folding "Google-Forms" sections — fields per section drive per-step
+  // Folding "Google-Forms" sections - fields per section drive per-step
   // validation on Continue. All item fields are optional client-side (the
   // server enforces shape-required dims), so Continue mostly just advances.
   const SECTION_FIELDS: string[][] = [
@@ -204,7 +204,7 @@ export function ItemForm({
 
     return buildItemCode({
       sizeCode,
-      seq: 0, // placeholder — real serial drawn on save
+      seq: 0, // placeholder - real serial drawn on save
       shapeCode: watchedShapeId ? (shapeCodeById.get(watchedShapeId) ?? "?") : "?",
       gradeCode: watchedGradeId ? (gradeCodeById.get(watchedGradeId) ?? "?") : "?",
       conditionCode: watchedConditionId
@@ -269,7 +269,7 @@ export function ItemForm({
 
   const firstFieldError = Object.values(errors)[0]?.message as string | undefined;
 
-  // Live code preview chip — rendered inline in the compact header (or on its
+  // Live code preview chip - rendered inline in the compact header (or on its
   // own when the form is used without a title).
   const previewChip = (
     <div
@@ -292,7 +292,7 @@ export function ItemForm({
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-6" noValidate>
-      {/* ── Compact header — back link + title + live preview on ≤2 rows ── */}
+      {/* ── Compact header - back link + title + live preview on ≤2 rows ── */}
       {hasHeader ? (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           {backHref && (
@@ -320,10 +320,10 @@ export function ItemForm({
         index={0}
         title="Classification"
         fields={SECTION_FIELDS[0]!}
-        hint="These fields drive the internal item code — required for the code to be meaningful."
+        hint="These fields drive the internal item code - required for the code to be meaningful."
         summary={displayCode}
       >
-        {/* Shape + dimensions + unit on one line — Shape spans two columns so
+        {/* Shape + dimensions + unit on one line - Shape spans two columns so
             it stays wide enough; the visible dims + Unit fill the rest. */}
         <div className="grid grid-cols-6 gap-3 max-lg:grid-cols-3 max-sm:grid-cols-2">
           <div className="col-span-2 max-lg:col-span-3 max-sm:col-span-2">
@@ -401,7 +401,7 @@ export function ItemForm({
           />
         </Field>
 
-        {/* Grade · Condition · Tolerance · Size · Costing · customer grades —
+        {/* Grade · Condition · Tolerance · Size · Costing · customer grades -
             all on one line (wraps to 3 / 2 columns on smaller screens).
             items-end keeps the controls bottom-aligned even if a label wraps. */}
         <div className="grid grid-cols-7 items-end gap-3 max-lg:grid-cols-3 max-sm:grid-cols-2">
@@ -475,7 +475,7 @@ export function ItemForm({
                   value={field.value ?? ""}
                   onValueChange={(v) => field.onChange(v || undefined)}
                   placeholder="Auto"
-                  options={[{ value: "", label: "— Auto —" }, ...SIZE_CODE_OPTIONS]}
+                  options={[{ value: "", label: "- Auto -" }, ...SIZE_CODE_OPTIONS]}
                 />
               )}
             />

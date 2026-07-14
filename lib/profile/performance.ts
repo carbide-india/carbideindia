@@ -17,7 +17,7 @@ export interface PerfStats {
 export async function getPerfStats(employeeId: string): Promise<PerfStats> {
   const meCompleted = eq(tasks.status, "done");
 
-  // Helpers — predicates compose cleanly without a CTE.
+  // Helpers - predicates compose cleanly without a CTE.
   const inLastWeek = sql`${tasks.completedAt} >= date_trunc('week', now())`;
   const inLastMonth = sql`${tasks.completedAt} >= date_trunc('month', now())`;
   const completedNotNull = sql`${tasks.completedAt} is not null and ${tasks.dueAt} is not null`;

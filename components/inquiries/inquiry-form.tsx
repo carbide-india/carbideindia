@@ -36,7 +36,7 @@ import type { PickerMasters } from "@/components/erp/product-picker";
 
 /** RHF holds the schema's *input* shape (pre-transform); zodResolver hands
  *  the parsed *output* (with `quantityUom` defaulted, `""` folded to
- *  `undefined`) to the submit handler — which is exactly what createInquiry
+ *  `undefined`) to the submit handler - which is exactly what createInquiry
  *  takes. */
 export type InquiryFormValues = z.input<typeof CreateInquirySchema>;
 type InquiryFormOutput = z.output<typeof CreateInquirySchema>;
@@ -56,11 +56,11 @@ interface Props {
    * needed in create mode (the ProductsSection is hidden on edit).
    */
   pickerMasters?: PickerMasters;
-  /** Enquiry "Custom Dropdown Master" lists — each falls back to a built-in. */
+  /** Enquiry "Custom Dropdown Master" lists - each falls back to a built-in. */
   stateOptions?: string[];
   cityOptions?: string[];
   unitOptions?: string[];
-  /** Current employee — preselected as the assigned sales person. */
+  /** Current employee - preselected as the assigned sales person. */
   defaultSalesPersonId: string;
   /**
    * Edit mode: when set, the form prefills from `initialValues`, hides the
@@ -89,7 +89,7 @@ const YES_NO_OPTIONS = [
 ];
 
 /**
- * New Inquiry form — the inquiry module's centerpiece. Four card sections
+ * New Inquiry form - the inquiry module's centerpiece. Four card sections
  * (Client / Enquiry / Product & Checklist / Assignment); "Old client" mode
  * auto-fetches the client's KYC block as an editable snapshot. The SM number
  * is generated server-side on save.
@@ -194,7 +194,7 @@ export function InquiryForm({
     remove: removeContact,
   } = useFieldArray({ control, name: "extraContacts" });
 
-  // ── Draft auto-save (create mode only — silent, runs in background) ──
+  // ── Draft auto-save (create mode only - silent, runs in background) ──
   const [draftId] = React.useState(() =>
     resumeDraftId ?? (draftsOn ? crypto.randomUUID() : ""),
   );
@@ -212,7 +212,7 @@ export function InquiryForm({
       await saveEnquiryDraft({ id: draftId, payload: values });
       lastSavedRef.current = json;
     } catch {
-      /* silent — retried on the next change */
+      /* silent - retried on the next change */
     }
   }, [draftsOn, draftId, getValues]);
 
@@ -230,7 +230,7 @@ export function InquiryForm({
   }, [watch, draftsOn, persistDraft]);
 
   /** Copy the fetched KYC snapshot into the client block. Values stay fully
-   *  editable — the inquiry stores a snapshot, not a live reference. */
+   *  editable - the inquiry stores a snapshot, not a live reference. */
   function applyAutofill(data: ClientAutofill) {
     setValue("companyName", data.name);
     if (data.export !== null) setValue("export", data.export);
@@ -271,7 +271,7 @@ export function InquiryForm({
     startTransition(async () => {
       if (isEdit) {
         // Products are not edited here (they link to costings/quotes), and the
-        // update schema rejects the `products` key — drop it from the patch.
+        // update schema rejects the `products` key - drop it from the patch.
         const { products: _products, ...rest } = values;
         const res = await updateInquiry(editInquiryId, { ...rest, enquiryDate });
         if (!res.ok) {
@@ -294,13 +294,13 @@ export function InquiryForm({
         message: res.smNumber ? `Enquiry ${res.smNumber} created` : "Enquiry created",
         type: "success",
       });
-      // Enquiry saved — retire the draft so it leaves the Drafts inbox.
+      // Enquiry saved - retire the draft so it leaves the Drafts inbox.
       if (draftsOn && draftId) {
         draftDeletedRef.current = true;
         try {
           await deleteEnquiryDraft(draftId);
         } catch {
-          /* non-fatal — the draft just lingers */
+          /* non-fatal - the draft just lingers */
         }
       }
       // The detail route exists now (typedRoutes verifies the template literal).
@@ -317,7 +317,7 @@ export function InquiryForm({
     <form onSubmit={submit} className="flex flex-col gap-6" noValidate>
       {/* ── 1 · Client ───────────────────────────────────────────────── */}
       <SectionCard>
-        {/* Client Type · (Existing Client, when Old) · Company Name — one line. */}
+        {/* Client Type · (Existing Client, when Old) · Company Name - one line. */}
         <div className="flex flex-wrap items-start gap-4">
           <div className="w-[268px] max-md:w-full">
             <ClientTypeToggle
@@ -512,7 +512,7 @@ export function InquiryForm({
                           onDisabledClick={() => {
                             setCityGateError(true);
                             fireToast({
-                              message: "Select a state first — the city list depends on it.",
+                              message: "Select a state first - the city list depends on it.",
                               type: "error",
                             });
                           }}
@@ -705,7 +705,7 @@ export function InquiryForm({
       />
 
       {/* ── 3 · Products ─────────────────────────────────────────────── */}
-      {/* Products are hidden in edit mode — they link to costings/quotes and
+      {/* Products are hidden in edit mode - they link to costings/quotes and
           are managed from the SM Repo, not re-synced on enquiry edits. */}
       {!isEdit && pickerMasters && (
         <ProductsSection

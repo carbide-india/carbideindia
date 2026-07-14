@@ -20,7 +20,7 @@ export async function getInquiryItemCaption(
 }
 
 /**
- * One row of the /costings register — joins inquiry smNumber/companyName and
+ * One row of the /costings register - joins inquiry smNumber/companyName and
  * the inquiry_item's custProductName so the register is human-readable without
  * extra round-trips.
  */
@@ -42,7 +42,7 @@ export interface CostingListItem {
 /** Full costing row (all inputs + outputs). */
 export type CostingRow = typeof costings.$inferSelect;
 
-/** Chosen costing summary per inquiry_item — used by Task 5 to avoid N+1. */
+/** Chosen costing summary per inquiry_item - used by Task 5 to avoid N+1. */
 export interface ChosenCostingSummary {
   inquiryItemId: string;
   finalCostPerPiece: string | null;
@@ -50,7 +50,7 @@ export interface ChosenCostingSummary {
 }
 
 /**
- * Costing register — all costings, newest first. Joins inquiry smNumber +
+ * Costing register - all costings, newest first. Joins inquiry smNumber +
  * companyName and inquiry_item custProductName for display.
  */
 export async function listCostings(): Promise<CostingListItem[]> {
@@ -90,7 +90,7 @@ export async function getCostingsForInquiry(
 }
 
 /**
- * Single costing by id — used for the costing detail / edit view.
+ * Single costing by id - used for the costing detail / edit view.
  */
 export async function getCostingById(
   id: string,
@@ -104,7 +104,7 @@ export async function getCostingById(
 }
 
 /**
- * The chosen costing for a single inquiry_item — at most one row (saveCosting
+ * The chosen costing for a single inquiry_item - at most one row (saveCosting
  * guarantees exactly-one-chosen per item). Returns the most recently created
  * chosen costing in case of legacy duplicates.
  */
@@ -126,7 +126,7 @@ export async function getChosenCostingForItem(
 }
 
 /**
- * Chosen costing summary for every inquiry_item of an inquiry — avoids N+1
+ * Chosen costing summary for every inquiry_item of an inquiry - avoids N+1
  * on the SM detail costing tab. Returns an array keyed by inquiryItemId with
  * the finalCostPerPiece + costingDoneStatus of the chosen costing (if any).
  */

@@ -12,7 +12,7 @@ type SyncResult =
 interface Props {
   /** How many enquiry products aren't yet on this record. */
   missingCount: number;
-  /** The record's uuid — passed straight to the module's sync action. */
+  /** The record's uuid - passed straight to the module's sync action. */
   recordId: string;
   /** Lower-case noun for the copy, e.g. "quotation" / "negotiation" / "sales order". */
   recordLabel: string;

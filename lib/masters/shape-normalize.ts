@@ -1,5 +1,5 @@
 /**
- * Shape name normalization (ERP redesign — Phase 0).
+ * Shape name normalization (ERP redesign - Phase 0).
  *
  * Maps legacy / free-text enquiry `shape` strings to the canonical
  * `master_options` shape NAMES (kind = 'shape'). The six seeded shapes are:
@@ -16,10 +16,10 @@
  *
  * Returns the canonical name, or `null` when the family is unrecognizable
  * (e.g. "Special", "Assembly", free-text noise) so the caller can flag it for
- * master cleanup. Pure (no db / no server-only) — shared by scripts, actions,
+ * master cleanup. Pure (no db / no server-only) - shared by scripts, actions,
  * and unit tests.
  *
- * NOTE: this does NOT check the DB — it only produces a *candidate* canonical
+ * NOTE: this does NOT check the DB - it only produces a *candidate* canonical
  * name. `scripts/report-unresolvable-shapes.ts` confirms the candidate against
  * the actual active shape masters.
  */

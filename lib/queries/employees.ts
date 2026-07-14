@@ -29,7 +29,7 @@ export interface EmployeeOption {
 }
 
 /**
- * Slim {id,name} projection for pickers — filter-bar, assign-doer,
+ * Slim {id,name} projection for pickers - filter-bar, assign-doer,
  * reassign-doer, etc. The full row from `listEmployees` carries 20+
  * columns including channel-config and timestamps that get serialised
  * into the RSC payload for every page render even though pickers only

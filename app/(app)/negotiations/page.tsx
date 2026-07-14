@@ -12,7 +12,7 @@ import { UserMenuServer } from "@/components/header/user-menu-server";
 export const dynamic = "force-dynamic";
 
 /**
- * Negotiation Register — price negotiation tracked from a quote to won, lost or
+ * Negotiation Register - price negotiation tracked from a quote to won, lost or
  * abandoned, now rendered inside the shared Enquiries module shell (logo sidebar
  * + indigo header). On /negotiations routes the shell's sidebar reads as the
  * register family automatically, so no custom nav is passed. The advanced table

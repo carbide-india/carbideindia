@@ -13,7 +13,7 @@ import { PROFILE_CACHE_TAGS } from "@/lib/cache-tags";
 /**
  * Hero quick-stats for /profile. Three numbers: open tasks (where I'm
  * doer + not done/cancelled/etc), tasks completed this calendar week
- * (Mon-Sun in user's tz — for v1 we approximate using server-side
+ * (Mon-Sun in user's tz - for v1 we approximate using server-side
  * UTC week boundary; revisit when timezone is fully wired through),
  * and current streak (consecutive days with at least one completion).
  *
@@ -25,7 +25,7 @@ export async function getQuickStats(employeeId: string) {
       const now = new Date();
       const weekStart = new Date(now);
       weekStart.setUTCHours(0, 0, 0, 0);
-      // Monday of the current ISO week (server UTC — close enough for v1).
+      // Monday of the current ISO week (server UTC - close enough for v1).
       const day = weekStart.getUTCDay() === 0 ? 6 : weekStart.getUTCDay() - 1;
       weekStart.setUTCDate(weekStart.getUTCDate() - day);
 

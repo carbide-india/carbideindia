@@ -46,7 +46,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       loadDashboardData(filters),
       getStatusDisplayMap(),
       me ? getMyDayCounts(me.id).catch(() => null) : Promise.resolve(null),
-      // Auxiliary (only powers the Subject filter chip) — must NEVER take down
+      // Auxiliary (only powers the Subject filter chip) - must NEVER take down
       // the whole dashboard, so it degrades to an empty list on failure.
       listDistinctSubjects().catch(() => [] as string[]),
     ]);

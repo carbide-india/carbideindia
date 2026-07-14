@@ -74,7 +74,7 @@ export function KpiStrip({ kpis, summary }: { kpis: KpiSet; summary: WmsSummary 
                   <Link
                     href={item.href}
                     className="group/link min-w-0 flex-1 outline-none"
-                    aria-label={`${item.label} — view tasks`}
+                    aria-label={`${item.label} - view tasks`}
                   >
                     <span
                       className="flex items-center gap-1 uppercase font-black tracking-[0.07em] leading-none"
@@ -127,7 +127,7 @@ export function KpiStrip({ kpis, summary }: { kpis: KpiSet; summary: WmsSummary 
         })}
       </div>
 
-      {/* Single per-card detail panel — animates open via the 0fr→1fr grid trick. */}
+      {/* Single per-card detail panel - animates open via the 0fr→1fr grid trick. */}
       <div
         className="grid transition-[grid-template-rows] duration-300 ease-out"
         style={{ gridTemplateRows: active ? "1fr" : "0fr" }}

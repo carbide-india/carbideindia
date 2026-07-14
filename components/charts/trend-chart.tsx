@@ -6,12 +6,12 @@ interface Props {
   values: number[];
   /** Channel color used for the line + dot + area fill */
   color: string;
-  /** Tile variant — drives chart proportions */
+  /** Tile variant - drives chart proportions */
   variant: "hero" | "status";
 }
 
 /**
- * Small labeled trend chart with explicit X and Y axes — purpose-built
+ * Small labeled trend chart with explicit X and Y axes - purpose-built
  * for the KPI tile white space. Unlike a bare sparkline, both axes are
  * labeled so the line means something at a glance: Y shows the value
  * range (min/max), X shows the time window (14d ago → today).
@@ -98,7 +98,7 @@ export function TrendChart({ values, color, variant }: Props) {
         strokeWidth={1}
       />
 
-      {/* Y axis ticks — max at top, min at bottom */}
+      {/* Y axis ticks - max at top, min at bottom */}
       <text
         x={dims.padL - 6}
         y={dims.padT + 4}
@@ -117,7 +117,7 @@ export function TrendChart({ values, color, variant }: Props) {
         {fmt(min)}
       </text>
 
-      {/* X axis ticks — 14d ago · 7d · today */}
+      {/* X axis ticks - 14d ago · 7d · today */}
       <text
         x={dims.padL}
         y={dims.h - 6}
@@ -156,7 +156,7 @@ export function TrendChart({ values, color, variant }: Props) {
         strokeLinejoin="round"
       />
 
-      {/* End-of-line dot — highlights the current value */}
+      {/* End-of-line dot - highlights the current value */}
       <circle
         cx={lastPoint.x}
         cy={lastPoint.y}

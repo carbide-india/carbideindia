@@ -10,7 +10,7 @@ interface Props {
   Icon: LucideIcon;
   active: boolean;
   count?: number;
-  /** Unread/notification badge — small red dot on top-right of the pill. */
+  /** Unread/notification badge - small red dot on top-right of the pill. */
   badge?: number;
   /** Stretch to fill available width on desktop (header spreads pills edge-to-edge). */
   grow?: boolean;
@@ -34,7 +34,7 @@ export function MainNavPill({ href, label, Icon, active, count, badge, grow, var
       }
       aria-label={
         showBadge
-          ? `${label} — ${badge} new ${badge === 1 ? "event" : "events"}`
+          ? `${label} - ${badge} new ${badge === 1 ? "event" : "events"}`
           : label
       }
     >
@@ -49,7 +49,7 @@ export function MainNavPill({ href, label, Icon, active, count, badge, grow, var
         <span
           aria-hidden
           className="nav-pill-badge"
-          // The styles live inline so we don't have to touch globals.css —
+          // The styles live inline so we don't have to touch globals.css -
           // the @utility list there is curated; small pieces stay local.
           style={{
             position: "absolute",

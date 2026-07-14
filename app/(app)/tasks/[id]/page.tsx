@@ -13,7 +13,7 @@ interface PageProps {
 }
 
 /**
- * Task detail — Phase 1.2 streaming shell.
+ * Task detail - Phase 1.2 streaming shell.
  *
  * Header + main container + footer render synchronously so the user sees
  * a chrome'd page in well under 100ms. The actual content lives behind a

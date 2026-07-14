@@ -92,7 +92,7 @@ function MyLog({ days, tz }: { days: DayPunches[]; tz: string }) {
     >
       <h2 className="text-display-2xs text-ink-strong mb-4">My last 14 days</h2>
       {days.length === 0 ? (
-        <p className="text-[15px] text-ink-subtle">No punches yet — your log starts with today&apos;s first check-in.</p>
+        <p className="text-[15px] text-ink-subtle">No punches yet - your log starts with today&apos;s first check-in.</p>
       ) : (
         <table className="w-full text-[14px]">
           <thead>
@@ -114,10 +114,10 @@ function MyLog({ days, tz }: { days: DayPunches[]; tz: string }) {
                   {labelForDate(d.date)}
                 </td>
                 <td className="py-2.5 pr-3 tabular-nums text-ink-soft">
-                  {d.in ? formatTimeInTz(d.in.at, tz) : "—"}
+                  {d.in ? formatTimeInTz(d.in.at, tz) : "-"}
                 </td>
                 <td className="py-2.5 pr-3 tabular-nums text-ink-soft">
-                  {d.out ? formatTimeInTz(d.out.at, tz) : "—"}
+                  {d.out ? formatTimeInTz(d.out.at, tz) : "-"}
                 </td>
                 <td className="py-2.5 text-ink-subtle max-md:hidden">
                   {[d.in?.note, d.out?.note].filter(Boolean).join(" · ") || ""}
@@ -151,7 +151,7 @@ function TeamSection({
     >
       <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
         <div>
-          <h2 className="text-display-2xs text-ink-strong">Team — {labelForDate(date)}</h2>
+          <h2 className="text-display-2xs text-ink-strong">Team - {labelForDate(date)}</h2>
           <p className="text-[14px] text-ink-subtle mt-1">
             {present} of {team.length} checked in
           </p>
@@ -196,7 +196,7 @@ function TeamSection({
                 )}
               </td>
               <td className="py-2.5 pr-3 tabular-nums text-ink-soft">
-                {r.out ? formatTimeInTz(r.out.at, tz) : "—"}
+                {r.out ? formatTimeInTz(r.out.at, tz) : "-"}
               </td>
               <td className="py-2.5 text-ink-subtle max-md:hidden">
                 {[r.in?.note, r.out?.note].filter(Boolean).join(" · ") || ""}

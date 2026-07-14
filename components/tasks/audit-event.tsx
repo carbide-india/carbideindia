@@ -19,7 +19,7 @@ function statusLabel(
   s: string | undefined,
   labels: StatusLabels,
 ): string {
-  if (!s) return "—";
+  if (!s) return "-";
   return labels[s as TaskStatus] ?? s;
 }
 
@@ -37,7 +37,7 @@ interface Props {
   fresh?: boolean;
   /** Admin-overridable status labels. Falls back to STATUS_LABELS_FALLBACK. */
   statusLabels?: StatusLabels;
-  /** Current user — gates the comment edit/delete UI. */
+  /** Current user - gates the comment edit/delete UI. */
   me?: { id: string; isAdmin: boolean };
 }
 
@@ -113,7 +113,7 @@ function Body({
       return (
         <>
           <strong>{who}</strong> created the task
-          {row.note ? <span className="text-ink-subtle"> — {row.note}</span> : null}
+          {row.note ? <span className="text-ink-subtle"> - {row.note}</span> : null}
         </>
       );
 
@@ -125,7 +125,7 @@ function Body({
           <strong>{who}</strong> moved status:{" "}
           <span className="font-medium">{from}</span> →{" "}
           <span className="font-medium">{to}</span>
-          {row.note ? <span className="text-ink-subtle"> — {row.note}</span> : null}
+          {row.note ? <span className="text-ink-subtle"> - {row.note}</span> : null}
         </>
       );
     }
@@ -139,7 +139,7 @@ function Body({
           <strong>{who}</strong> updated <code className="text-[13px]">{field}</code>
           {fromVal !== undefined && toVal !== undefined ? (
             <span className="text-ink-subtle">
-              {" "}({fromVal || "—"} → {toVal || "—"})
+              {" "}({fromVal || "-"} → {toVal || "-"})
             </span>
           ) : null}
         </>
@@ -167,7 +167,7 @@ function Body({
       return (
         <>
           <strong>{who}</strong> transferred the task externally
-          {row.note ? <span className="text-ink-subtle"> — {row.note}</span> : null}
+          {row.note ? <span className="text-ink-subtle"> - {row.note}</span> : null}
         </>
       );
 
@@ -232,7 +232,7 @@ function Body({
  * Pencil + trash appear on hover when the caller is the author within the
  * 15-minute edit window, or an admin (gate computed in the parent). Edit
  * swaps the static body for a textarea + Save / Cancel. Delete pops a
- * single-step `confirm()` — minor friction is preferable to a Radix dialog
+ * single-step `confirm()` - minor friction is preferable to a Radix dialog
  * for a 1-action confirmation.
  */
 function CommentBody({

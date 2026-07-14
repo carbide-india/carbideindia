@@ -1,15 +1,24 @@
 "use client";
 
 /**
- * ModuleTitleBadge — the module name in the app header, rendered as a boxed,
+ * ModuleTitleBadge - the module name in the app header, rendered as a boxed,
  * animated badge so the user always knows which module they're in (Forms /
  * Masters / …). Motion: an entrance pop, a gently pulsing outline glow, a
  * shimmering gradient wordmark, and a breathing status dot. All motion is
  * disabled under prefers-reduced-motion.
  */
-export function ModuleTitleBadge({ title }: { title: string }) {
+export function ModuleTitleBadge({
+  title,
+  align = "center",
+}: {
+  title: string;
+  /** "center" floats it between the left buttons and the search; "start" keeps
+   *  it right next to the buttons (used on the launchpad where there's no
+   *  Back-to-Forms button to fill the gap). */
+  align?: "center" | "start";
+}) {
   return (
-    <div className="mx-auto shrink-0">
+    <div className={align === "start" ? "shrink-0" : "mx-auto shrink-0"}>
       <style
         dangerouslySetInnerHTML={{
           __html: `

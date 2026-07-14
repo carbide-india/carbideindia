@@ -17,7 +17,7 @@ import {
 
 type Tone = StatusColorToken;
 
-/** Tones whose mid colour is light enough that white text would wash out —
+/** Tones whose mid colour is light enough that white text would wash out -
  *  these get dark text for the in-segment % label. */
 const LIGHT_TONES = new Set<string>(["yellow", "amber", "stone"]);
 
@@ -37,7 +37,7 @@ export function StatusDistributionChart({
     TaskStatus,
     Tone
   >;
-  // Drop retired statuses (transferred / cancelled / follow_up_1-3) — those
+  // Drop retired statuses (transferred / cancelled / follow_up_1-3) - those
   // tasks are migrated/archived now and shouldn't get their own tiles.
   const rows = [...data.rows]
     .filter((r) => !isDeprecatedStatus(r.status))
@@ -74,7 +74,7 @@ export function StatusDistributionChart({
     >
       <Header isAdmin={isAdmin} />
 
-      {/* Proportional ribbon — a VISUAL OVERVIEW only (not clickable):
+      {/* Proportional ribbon - a VISUAL OVERVIEW only (not clickable):
           tiny segments can't be both proportional and tappable, so the
           legend cards below are the click-to-filter targets. Each segment
           shows a tooltip on hover with its exact status / count / %. Wide
@@ -103,7 +103,7 @@ export function StatusDistributionChart({
           return (
             <div
               key={r.status}
-              title={`${resolvedLabels[r.status]} — ${r.count} (${pct.toFixed(1)}%)`}
+              title={`${resolvedLabels[r.status]} - ${r.count} (${pct.toFixed(1)}%)`}
               className="dist-segment flex h-full items-center justify-center"
               style={{
                 width: `${widthPct}%`,
@@ -136,7 +136,7 @@ export function StatusDistributionChart({
         })}
       </div>
 
-      {/* Legend grid — one continuous grid of status tiles followed by the
+      {/* Legend grid - one continuous grid of status tiles followed by the
           pending / not-approved / archived summary tiles (same design), so the
           cards flow without odd mid-grid gaps. 3 cols desktop, 2 tablet, 1 mobile. */}
       <ul className="mt-6 grid grid-cols-3 gap-3 max-lg:grid-cols-2 max-sm:grid-cols-1">
@@ -166,7 +166,7 @@ export function StatusDistributionChart({
           index={rows.length + 1}
           href={"/tasks?status=not_approved" as Route}
         />
-        {/* Archived view is admin-only — hide the jump-to-archive tile from doers. */}
+        {/* Archived view is admin-only - hide the jump-to-archive tile from doers. */}
         {isAdmin && (
           <SummaryTile
             label="Archived"
@@ -239,7 +239,7 @@ function SummaryTile({
             className="ml-auto tabular-nums font-semibold text-ink-subtle"
             style={{ fontSize: 14 }}
           >
-            {denom > 0 ? `${pct.toFixed(1)}%` : "—"}
+            {denom > 0 ? `${pct.toFixed(1)}%` : "-"}
           </span>
         </div>
 
@@ -280,11 +280,11 @@ function Header({ isAdmin }: { isAdmin: boolean }) {
         <div className="min-w-0">
           <h2 className="text-display-lg text-ink-strong">Status Distribution</h2>
           <p className="text-body-lg text-ink-subtle mt-0.5">
-            Tasks by current status — hover the bar for detail, click a card to filter
+            Tasks by current status - hover the bar for detail, click a card to filter
           </p>
         </div>
       </div>
-      {/* Kanban is admin-only — doers don't see the jump-to-board link. */}
+      {/* Kanban is admin-only - doers don't see the jump-to-board link. */}
       {isAdmin && (
         <Link
           href={"/tasks/kanban" as Route}
@@ -324,7 +324,7 @@ function StatTile({
         className="dist-tile group flex h-full cursor-pointer flex-col p-4 rounded-chip bg-surface-soft transition-all"
         style={{ border: "1px solid var(--color-hairline)" }}
       >
-        {/* Label row — coloured dot + neutral status name */}
+        {/* Label row - coloured dot + neutral status name */}
         <div className="flex items-center gap-2">
           <span
             aria-hidden
@@ -339,7 +339,7 @@ function StatTile({
           </span>
         </div>
 
-        {/* Count + share — single baseline row, % pinned right */}
+        {/* Count + share - single baseline row, % pinned right */}
         <div className="mt-3 flex items-baseline gap-2">
           <span
             className="tabular-nums font-black leading-none text-ink-strong"
@@ -354,11 +354,11 @@ function StatTile({
             className="ml-auto tabular-nums font-semibold text-ink-subtle"
             style={{ fontSize: 14 }}
           >
-            {denom > 0 ? `${pct.toFixed(1)}%` : "—"}
+            {denom > 0 ? `${pct.toFixed(1)}%` : "-"}
           </span>
         </div>
 
-        {/* Share bar — always-present track for a consistent row rhythm */}
+        {/* Share bar - always-present track for a consistent row rhythm */}
         <div
           aria-hidden
           className="mt-3 h-1.5 w-full overflow-hidden rounded-full"

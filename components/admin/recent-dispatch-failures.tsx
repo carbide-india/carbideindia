@@ -8,18 +8,18 @@ interface Props {
 }
 
 /**
- * Phase 3.5-companion — surfaces what would otherwise be silent: each
+ * Phase 3.5-companion - surfaces what would otherwise be silent: each
  * (notification, channel) attempt that didn't land. Sits below the
  * per-channel Integration cards in /admin/settings.
  *
- * Pull-only — the retry cron handles re-runs on its own 5-minute
+ * Pull-only - the retry cron handles re-runs on its own 5-minute
  * schedule. We show channel + recipient + error + attempt count +
  * next-retry-due for `failed` rows, and a redder badge for `failed_terminal`
  * (gave up after MAX_ATTEMPTS).
  */
 export function RecentDispatchFailures({ rows, totals }: Props) {
   if (totals.sent + totals.skipped + totals.failed + totals.failedTerminal === 0) {
-    // No dispatch attempts yet (fresh DB) — quiet empty state.
+    // No dispatch attempts yet (fresh DB) - quiet empty state.
     return null;
   }
 

@@ -2,14 +2,14 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * StatusPill (ERP redesign — Phase 3).
+ * StatusPill (ERP redesign - Phase 3).
  *
  * ONE chip that unifies the ad-hoc status chips scattered across the app
  * (active/inactive item badges, draft/archived markers, pipeline-stage states,
  * task/enquiry tones). It is purely presentational and tone-driven: the caller
  * passes a `tone` token that resolves to the existing palette CSS variables
  * (`--color-<tone>` / `--color-<tone>-bg` / `--color-<tone>-deep`) declared in
- * `app/globals.css` — so status colors still come from one place and admin-set
+ * `app/globals.css` - so status colors still come from one place and admin-set
  * `status_settings` tones can be passed straight through.
  *
  * Server-safe (no "use client"): renders a <span>, no state.

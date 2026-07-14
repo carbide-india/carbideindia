@@ -46,7 +46,7 @@ const KIND_ICON: Record<MasterKind, typeof Users> = {
 };
 
 // The module top-bar title is always "Masters" (the module name) on every page
-// — the specific page name (Product Master, Customer Type…) is shown by each
+// - the specific page name (Product Master, Customer Type…) is shown by each
 // page's own <h1>, so the two never duplicate.
 function titleFor(): string {
   return "Masters";
@@ -77,7 +77,7 @@ export function MastersModuleShell({
 
       {/* ── Top header bar (full width) ─────────────────────────── */}
       <header className="sticky top-0 z-40 flex h-[60px] shrink-0 items-center gap-4 border-b border-[#e5e7eb] bg-white px-4">
-        {/* Left zone — toggle, then the master's title. */}
+        {/* Left zone - toggle, then the master's title. */}
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <button
             type="button"
@@ -108,10 +108,10 @@ export function MastersModuleShell({
           <ModuleTitleBadge title={pageTitle} />
         </div>
 
-        {/* Middle zone — centered search. */}
+        {/* Middle zone - centered search. */}
         <HubSearch />
 
-        {/* Right zone — actions. */}
+        {/* Right zone - actions. */}
         <div className="flex flex-1 items-center justify-end gap-2.5">
           <Link
             href={"/inbox" as Route}
@@ -121,7 +121,7 @@ export function MastersModuleShell({
             <Bell className="h-[18px] w-[18px]" />
           </Link>
           <span
-            title="Help — coming soon"
+            title="Help - coming soon"
             className="grid h-9 w-9 cursor-default place-items-center rounded-full text-[#9aa0ab]"
           >
             <HelpCircle className="h-[18px] w-[18px]" />
@@ -132,7 +132,7 @@ export function MastersModuleShell({
 
       {/* ── Body: sidebar + main ────────────────────────────────── */}
       <div className="flex flex-1">
-        {/* Sidebar — slides in/out via the header toggle. The inner panel keeps
+        {/* Sidebar - slides in/out via the header toggle. The inner panel keeps
             a fixed width so its contents don't reflow while the width animates. */}
         <aside
           className={cn(

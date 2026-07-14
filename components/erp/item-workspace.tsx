@@ -32,19 +32,19 @@ import { ItemDocuments } from "@/components/items/item-documents";
 import { ItemStatusControl } from "@/components/items/item-status-control";
 
 /**
- * ItemWorkspace (ERP redesign — Phase 3 reference, EXTENDED in Phase 9a).
+ * ItemWorkspace (ERP redesign - Phase 3 reference, EXTENDED in Phase 9a).
  *
  * The Item as a Product-Intelligence DB: AppShell + WorkspaceHeader + lifecycle
  * Stepper + tabs on DetailGrid, now fed by the REAL where-used graph
  * (`getItemWhereUsed`). The Phase-3 "coming in Phase 9" placeholders are
  * replaced with live data:
- *   - Overview   — spec digest + reach chips + a summary rail (cost/quote/reach).
- *   - Commercial — live cost history (costings) + quotation price history.
- *   - Manufacturing — route/part facts + latest production order.
- *   - Related    — every referencing SM / quote / neg / SO / job-card / invoice,
+ *   - Overview   - spec digest + reach chips + a summary rail (cost/quote/reach).
+ *   - Commercial - live cost history (costings) + quotation price history.
+ *   - Manufacturing - route/part facts + latest production order.
+ *   - Related    - every referencing SM / quote / neg / SO / job-card / invoice,
  *                  clickable to its record.
- *   - Where-Used — customers-using fan-out + the same related graph.
- *   - Timeline   — a merged chronology across all referencing records.
+ *   - Where-Used - customers-using fan-out + the same related graph.
+ *   - Timeline   - a merged chronology across all referencing records.
  * Everything clickable + linked; the ContextDrawer peek mirrors the top tabs.
  */
 
@@ -118,7 +118,7 @@ export function ItemWorkspace({
       ? `${item.altUom} (1 = ${item.altUomConversion} ${item.uom ?? "base"})`
       : item.altUom;
 
-  // Money summary — latest chosen cost + latest quote unit price.
+  // Money summary - latest chosen cost + latest quote unit price.
   const latestCost = whereUsed.costHistory.find((c) => c.isChosen) ?? whereUsed.costHistory[0];
   const latestCostValue = latestCost ? inr(latestCost.finalCostPerPiece) : null;
   const latestQuote = whereUsed.quotePrices[0];
@@ -191,7 +191,7 @@ export function ItemWorkspace({
       <div className="flex flex-col gap-8">
         <Section
           title="Cost history"
-          subtitle="Live from costings linked to this item — chosen first"
+          subtitle="Live from costings linked to this item - chosen first"
         >
           <CostHistoryTable rows={whereUsed.costHistory} />
         </Section>
@@ -219,8 +219,8 @@ export function ItemWorkspace({
                 {whereUsed.latestProduction.status}
               </StatusPill>
               <span className="text-[13px] text-ink-muted">
-                Planned {whereUsed.latestProduction.qtyPlanned ?? "—"} · Produced{" "}
-                {whereUsed.latestProduction.qtyProduced ?? "—"}
+                Planned {whereUsed.latestProduction.qtyPlanned ?? "-"} · Produced{" "}
+                {whereUsed.latestProduction.qtyProduced ?? "-"}
               </span>
               <span className="ml-auto text-[12px] text-ink-subtle">
                 {formatDate(whereUsed.latestProduction.updatedAt)}
@@ -347,7 +347,7 @@ export function ItemWorkspace({
           </div>
         </div>
 
-        {/* Item summary rail — identity · money · reach. */}
+        {/* Item summary rail - identity · money · reach. */}
         <SummaryRail
           reach={whereUsed}
           latestCost={latestCostValue}
@@ -356,7 +356,7 @@ export function ItemWorkspace({
         />
       </div>
 
-      {/* Peek drawer — mirrors the top tabs (condensed). */}
+      {/* Peek drawer - mirrors the top tabs (condensed). */}
       <ContextDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
@@ -451,7 +451,7 @@ function WorkspaceHeader({
               <span className="mx-2 text-ink-subtle">·</span>
             </>
           )}
-          {item.shapeName ?? "—"}
+          {item.shapeName ?? "-"}
           {item.gradeName && (
             <>
               <span className="mx-2 text-ink-subtle">·</span>
@@ -514,10 +514,10 @@ function SummaryRail({
         </div>
         <RailStat
           label="Latest cost"
-          value={latestCost ?? "—"}
+          value={latestCost ?? "-"}
           sub={costType ? costType.replace("_", "-") : null}
         />
-        <RailStat label="Latest quote" value={latestQuote ?? "—"} />
+        <RailStat label="Latest quote" value={latestQuote ?? "-"} />
         <div className="border-t border-hairline pt-4">
           <div className="grid grid-cols-3 gap-3 text-center">
             <RailCount n={reach.reach.customerCount} label="Customers" />
@@ -770,14 +770,14 @@ function CostHistoryTable({ rows }: { rows: CostHistoryRow[] }) {
             <tr key={c.id}>
               <td className="py-2 pr-4">
                 <Link href={`/inquiries/${c.inquiryId}` as Route} className="font-mono text-brand hover:underline">
-                  {c.smNumber ?? "—"}
+                  {c.smNumber ?? "-"}
                 </Link>
               </td>
               <td className="py-2 pr-4 text-ink-muted">{c.costingType.replace("_", "-")}</td>
-              <td className="py-2 pr-4 font-mono tabular-nums text-ink-strong">{inr(c.finalCostPerPiece) ?? "—"}</td>
-              <td className="py-2 pr-4 font-mono tabular-nums text-ink-muted">{inr(c.quoteValue) ?? "—"}</td>
+              <td className="py-2 pr-4 font-mono tabular-nums text-ink-strong">{inr(c.finalCostPerPiece) ?? "-"}</td>
+              <td className="py-2 pr-4 font-mono tabular-nums text-ink-muted">{inr(c.quoteValue) ?? "-"}</td>
               <td className="py-2 pr-4">
-                {c.isChosen ? <StatusPill tone="green" size="sm">Chosen</StatusPill> : <span className="text-ink-subtle">—</span>}
+                {c.isChosen ? <StatusPill tone="green" size="sm">Chosen</StatusPill> : <span className="text-ink-subtle">-</span>}
               </td>
               <td className="py-2 text-ink-subtle">{formatDate(c.createdAt)}</td>
             </tr>
@@ -811,9 +811,9 @@ function QuotePriceTable({ rows }: { rows: QuotePriceRow[] }) {
                   {qp.quoteNo}
                 </Link>
               </td>
-              <td className="py-2 pr-4 text-ink-muted">{qp.companyName ?? "—"}</td>
-              <td className="py-2 pr-4 font-mono tabular-nums text-ink-muted">{qp.qty ?? "—"}</td>
-              <td className="py-2 pr-4 font-mono tabular-nums text-ink-strong">{inr(qp.unitPrice) ?? "—"}</td>
+              <td className="py-2 pr-4 text-ink-muted">{qp.companyName ?? "-"}</td>
+              <td className="py-2 pr-4 font-mono tabular-nums text-ink-muted">{qp.qty ?? "-"}</td>
+              <td className="py-2 pr-4 font-mono tabular-nums text-ink-strong">{inr(qp.unitPrice) ?? "-"}</td>
               <td className="py-2 pr-4">
                 {qp.quoteSent ? <StatusPill tone="green" size="sm">Sent</StatusPill> : <StatusPill tone="slate" size="sm">Draft</StatusPill>}
               </td>

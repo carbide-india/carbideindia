@@ -5,7 +5,7 @@ import { Check, ChevronDown, Pencil } from "lucide-react";
 
 /**
  * Progressive "Google-Forms style" multi-section form chrome (forms/masters
- * redesign — Phase C). A form declares N sections; one is open at a time, a
+ * redesign - Phase C). A form declares N sections; one is open at a time, a
  * completed section folds into an inline summary with an Edit affordance, and
  * "Continue" validates just that section's fields before advancing.
  *

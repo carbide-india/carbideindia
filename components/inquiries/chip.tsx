@@ -1,7 +1,7 @@
 import type { InquiryPriority } from "@/db/enums";
 
 /**
- * Read-only status pill on the shared colour-token system — same color-mix
+ * Read-only status pill on the shared colour-token system - same color-mix
  * treatment as the tasks table's InlineStatusCell. `tone` is a status colour
  * token name (globals.css `--color-*`). Shared by the inquiry register table
  * and the inquiry detail page.

@@ -235,7 +235,7 @@ export function SoForm({
         inlineHint
         hint="Pick the SM -- company, sales person and products auto-fetch. Link the quotation to pull its pricing."
       >
-        {/* Enquiry · Linked Quotation · SO No · Quotation Link — one line. */}
+        {/* Enquiry · Linked Quotation · SO No · Quotation Link - one line. */}
         <div className="grid grid-cols-4 gap-4 max-lg:grid-cols-2 max-md:grid-cols-1">
           <Field label="Enquiry (SM)" labelOnly required>
             <Controller
@@ -251,7 +251,7 @@ export function SoForm({
                   ariaLabel="Linked enquiry"
                   options={inquiries.map((o) => ({
                     value: o.id,
-                    label: `${o.smNumber} — ${o.companyName}`,
+                    label: `${o.smNumber} - ${o.companyName}`,
                   }))}
                 />
               )}
@@ -267,7 +267,7 @@ export function SoForm({
               ariaLabel="Linked quotation"
               options={quotations.map((o) => ({
                 value: o.id,
-                label: `${o.quoteNo} — ${o.companyName ?? "—"}`,
+                label: `${o.quoteNo} - ${o.companyName ?? "-"}`,
               }))}
             />
           </Field>
@@ -296,17 +296,17 @@ export function SoForm({
           <div className="flex flex-col gap-3 rounded-xl border border-hairline bg-surface-soft px-4 py-3">
             <div className="flex flex-wrap items-start gap-x-8 gap-y-2">
               <Caption label="Company">
-                {autofetching ? "..." : snapshot?.companyName ?? "—"}
+                {autofetching ? "..." : snapshot?.companyName ?? "-"}
               </Caption>
               <Caption label="Enquiry Date">
                 {autofetching
                   ? "..."
                   : snapshot?.enquiryDate
                     ? formatDate(new Date(snapshot.enquiryDate))
-                    : "—"}
+                    : "-"}
               </Caption>
               <Caption label="Sales Person">
-                {autofetching ? "..." : snapshot?.salesPersonName ?? "—"}
+                {autofetching ? "..." : snapshot?.salesPersonName ?? "-"}
               </Caption>
             </div>
             {!autofetching && snapshot && <SmDetailsRow snapshot={snapshot} />}
@@ -609,12 +609,12 @@ function SmDetailsRow({ snapshot: s }: { snapshot: QuoteAutofill }) {
       {hasShape && <Caption label="Shape">{s.shape}</Caption>}
       {hasDims && (
         <Caption label="Dimensions">
-          {[dimStr, s.dimensionNotes].filter(Boolean).join(" — ") || "—"}
+          {[dimStr, s.dimensionNotes].filter(Boolean).join(" - ") || "-"}
         </Caption>
       )}
       {hasContact && (
         <Caption label="Contact">
-          {[contactName, s.contactNo, s.contactEmail].filter(Boolean).join(" · ") || "—"}
+          {[contactName, s.contactNo, s.contactEmail].filter(Boolean).join(" · ") || "-"}
         </Caption>
       )}
     </div>

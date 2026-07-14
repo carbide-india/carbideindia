@@ -6,10 +6,10 @@ import { deriveShortId, nextShortIdCandidate } from "@/lib/import/short-id";
 import { generateOccurrences, parseRRule, ymd as ymdUTC } from "@/lib/recurrence/rrule";
 
 /**
- * Recurrence materializer — "single actionable instance" model.
+ * Recurrence materializer - "single actionable instance" model.
  *
  * For each active template (holds a `recurrence_rule`, not itself a child) we
- * keep at most ONE occurrence materialized *ahead* of today — the immediate
+ * keep at most ONE occurrence materialized *ahead* of today - the immediate
  * next. When today reaches it, the next cron tick creates the following one.
  * We never pre-generate a window of future rows, so a daily task no longer
  * explodes into 14+ future instances cluttering the lists.
@@ -72,7 +72,7 @@ export async function materializeRecurringTasks(
     stats.templates++;
     const rule = parseRRule(t.recurrenceRule ?? "");
     if (!rule) {
-      // Bad rule string — skip silently, log once. The picker writes
+      // Bad rule string - skip silently, log once. The picker writes
       // well-formed RRULEs so this is mostly defensive.
       stats.skipped++;
       continue;
@@ -81,7 +81,7 @@ export async function materializeRecurringTasks(
     // because that's the date the human chose.
     const anchor = t.dueAt;
 
-    // Existing children — their occurrence dates tell us how far we've gone
+    // Existing children - their occurrence dates tell us how far we've gone
     // and (with the template) how many occurrences have been materialized.
     const kids = await db
       .select({ d: tasks.recurrenceOccurrenceDate })
@@ -129,7 +129,7 @@ export async function materializeRecurringTasks(
       continue;
     }
 
-    // Hour-of-day to clone — pin the new task's dueAt to the same
+    // Hour-of-day to clone - pin the new task's dueAt to the same
     // wall-clock the template uses, just on the occurrence date.
     const hh = anchor.getUTCHours();
     const mm = anchor.getUTCMinutes();
@@ -145,9 +145,9 @@ export async function materializeRecurringTasks(
       try {
         // Single INSERT  ON CONFLICT DO NOTHING (the unique partial
         // index handles dedup). We do NOT clone:
-        //   - `recurrence_rule`        — children aren't rule-holders.
-        //   - `legacy_import_key`      — keep null on synthesised rows.
-        //   - `transferred_from_id`    — irrelevant for synthesised rows.
+        //   - `recurrence_rule`        - children aren't rule-holders.
+        //   - `legacy_import_key`      - keep null on synthesised rows.
+        //   - `transferred_from_id`    - irrelevant for synthesised rows.
         //   - audit-ish state (approval_status, approved_at, etc.)
         const result = await db
           .insert(tasks)
@@ -158,7 +158,7 @@ export async function materializeRecurringTasks(
             doerId: t.doerId,
             initiatorId: t.initiatorId,
             priority: t.priority,
-            // Fresh status — the doer starts each occurrence from scratch.
+            // Fresh status - the doer starts each occurrence from scratch.
             status: "not_started",
             // dueAt is the only field that varies per occurrence.
             dueAt,
@@ -189,13 +189,13 @@ export async function materializeRecurringTasks(
           .returning({ id: tasks.id });
 
         if (result.length === 0) {
-          // Already existed — dedup hit.
+          // Already existed - dedup hit.
           stats.skipped++;
           continue;
         }
         stats.created++;
 
-        // Audit row — pin the actor to the creator so the timeline
+        // Audit row - pin the actor to the creator so the timeline
         // tells a coherent story ("Created by <X> (recurring)").
         await db.insert(taskEvents).values({
           taskId: id,
@@ -204,12 +204,12 @@ export async function materializeRecurringTasks(
           note: `materialized from recurring template ${t.shortId ?? t.id} on ${ymd}`,
           createdAt: new Date(),
         }).catch((err) => {
-          // Audit failure is non-fatal — the task row is the source of truth.
+          // Audit failure is non-fatal - the task row is the source of truth.
           // eslint-disable-next-line no-console
           console.warn("[recurrence] audit insert failed", err);
         });
 
-        // (Best-effort short_id collision retry — same pattern as createTask.)
+        // (Best-effort short_id collision retry - same pattern as createTask.)
         void nextShortIdCandidate; // intentionally referenced so the import doesn't drift to unused
       } catch (err) {
         stats.errors++;

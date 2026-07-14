@@ -27,7 +27,7 @@ interface PageProps {
 
 export default async function KanbanPage({ searchParams }: PageProps) {
   const me = await requireUser();
-  // Kanban is an admin-only board — doers work from the list / My Day. A doer
+  // Kanban is an admin-only board - doers work from the list / My Day. A doer
   // who lands here by typing the URL is sent to their task list.
   if (!me.isAdmin) redirect("/tasks" as Route);
 
@@ -85,7 +85,7 @@ export default async function KanbanPage({ searchParams }: PageProps) {
         }}
       />
       <main className="w-full px-6 max-md:px-4 pt-6 pb-10">
-        {/* Light canvas (sir's changes #1) — full-bleed (no centred max-width
+        {/* Light canvas (sir's changes #1) - full-bleed (no centred max-width
             gutters), clean white surface; status colour lives in the columns. */}
         <section
           className="relative overflow-hidden rounded-section border border-hairline p-5 max-md:p-4"

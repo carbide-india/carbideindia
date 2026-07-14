@@ -7,7 +7,7 @@ import { PROFILE_CACHE_TAGS } from "@/lib/cache-tags";
 
 /**
  * The 9 user-controllable notification kinds in v2's prefs matrix.
- * Excludes `overdue_digest` — that's the digest cron, not a per-event
+ * Excludes `overdue_digest` - that's the digest cron, not a per-event
  * notification a user can opt in/out of separately.
  */
 export const NOTIFICATION_KINDS = [
@@ -30,7 +30,7 @@ export const NOTIFICATION_CHANNELS = [
 export type NotificationChannelKey = (typeof NOTIFICATION_CHANNELS)[number];
 
 /**
- * Lookup map keyed by `${kind}|${channel}` — present in the map only
+ * Lookup map keyed by `${kind}|${channel}` - present in the map only
  * when the user has explicitly set a preference. Absent keys mean
  * "fall back to legacy channel scalars".
  */
@@ -42,7 +42,7 @@ function matrixKey(kind: string, channel: string): string {
 
 /**
  * Read the per-(kind, channel) preference matrix for an employee.
- * Cached aggressively per-user — invalidated by `setNotificationPref`.
+ * Cached aggressively per-user - invalidated by `setNotificationPref`.
  */
 export async function getNotificationPrefs(
   employeeId: string,
@@ -71,7 +71,7 @@ export async function getNotificationPrefs(
 
 /**
  * Set / upsert a single (kind, channel) preference. Returns the new value.
- * Idempotent — calling with the same value is a no-op write.
+ * Idempotent - calling with the same value is a no-op write.
  */
 export async function upsertNotificationPref(
   employeeId: string,

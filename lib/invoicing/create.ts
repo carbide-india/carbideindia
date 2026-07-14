@@ -15,10 +15,10 @@ import { nextDocNumber } from "@/lib/series/next-number";
 import { computeGstDocument, resolveSupplyType, type GstLineInput } from "@/lib/gst/compute";
 
 /**
- * Phase 7 — thin invoice create + issue path (§11.3). Draft invoices read
+ * Phase 7 - thin invoice create + issue path (§11.3). Draft invoices read
  * through live; the ISSUE transition is where statute bites: it (1) allocates
  * the gapless FY-scoped invoice number, (2) computes the CGST/SGST/IGST split
- * per line and the persisted header totals, and (3) freezes the lines — all in
+ * per line and the persisted header totals, and (3) freezes the lines - all in
  * ONE transaction so the number is never consumed without a committed invoice.
  * Full workspace/PDF/template-versioning is Phase 9.
  */
@@ -136,7 +136,7 @@ export async function createDraftInvoice(input: {
 /**
  * Issue a draft invoice: allocate the gapless FY invoice number, compute the
  * CGST/SGST/IGST split + persisted header totals, freeze the lines, and flip to
- * `issued` — atomically. Re-issuing is a no-op error.
+ * `issued` - atomically. Re-issuing is a no-op error.
  */
 export async function issueInvoice(
   invoiceId: string,

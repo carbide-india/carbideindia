@@ -1,5 +1,5 @@
 /**
- * ERP Phase 8 — the SINGLE source of truth for pipeline transitions (§4.6).
+ * ERP Phase 8 - the SINGLE source of truth for pipeline transitions (§4.6).
  *
  * A pure, declarative table: for each stage, the allowed from→to moves, the
  * `actorRole` required to perform them, and the entry/exit GUARDS (pure
@@ -28,10 +28,10 @@ export type ActorRole =
  * caller passes only what the transition needs; a guard that references a
  * missing field treats it as unmet (fails closed). Counts express "≥1 such row
  * exists"; the price/spec fields are the transactional facts a freeze depends
- * on. This is deliberately a thin projection — never the whole ORM row.
+ * on. This is deliberately a thin projection - never the whole ORM row.
  */
 export interface GuardContext {
-  /** Line count with a resolvable unit price (> 0) — for quote→sent. */
+  /** Line count with a resolvable unit price (> 0) - for quote→sent. */
   linesWithPrice?: number;
   /** Total active lines on the entity. */
   lineCount?: number;
@@ -70,7 +70,7 @@ export type Guard = (ctx: GuardContext) => GuardResult;
 
 const PASS: GuardResult = { ok: true, unmet: [] };
 
-/** Compose guards — all must pass; unmet reasons accumulate. */
+/** Compose guards - all must pass; unmet reasons accumulate. */
 function all(...guards: Guard[]): Guard {
   return (ctx) => {
     const unmet: string[] = [];
@@ -140,7 +140,7 @@ export interface StageSpec {
  * THE TABLE. Each stage → its actor, entry guard, and allowed forward edges
  * (§4.1 / §4.2). Terminal-branch edges (order_lost / abandoned, invoice paid →
  * closed) are per-status and handled by the status writers, not modeled as
- * stage edges here — this table governs the forward pipeline spine only.
+ * stage edges here - this table governs the forward pipeline spine only.
  */
 export const STAGE_TRANSITIONS: Record<PipelineStage, StageSpec> = {
   enquiry: {
@@ -210,7 +210,7 @@ export const STAGE_TRANSITIONS: Record<PipelineStage, StageSpec> = {
   invoice: {
     actorRole: "accounts",
     entryGuard: goodsDispatched,
-    edges: [], // terminal — closed_won is a status write, not a stage edge.
+    edges: [], // terminal - closed_won is a status write, not a stage edge.
   },
 };
 
@@ -228,7 +228,7 @@ export function canTransition(from: PipelineStage, to: PipelineStage): boolean {
 
 /**
  * The actor role required for a specific from→to transition (falls back to the
- * source stage's owner role when no such edge is defined — used only for
+ * source stage's owner role when no such edge is defined - used only for
  * rendering; enforcement always goes through a defined edge).
  */
 export function actorRoleFor(from: PipelineStage, to: PipelineStage): ActorRole {
@@ -237,11 +237,11 @@ export function actorRoleFor(from: PipelineStage, to: PipelineStage): ActorRole 
 
 /**
  * The EXIT guard for a from→to transition, evaluated against the resolved
- * context — this is the gate `advanceStage` enforces to LEAVE the source stage
+ * context - this is the gate `advanceStage` enforces to LEAVE the source stage
  * (§4.6). If the transition edge is undefined the result is a hard fail. The
  * target's ENTRY guard is a separate, view-from-the-other-side predicate (used
  * for rendering "is the next stage ready"); see {@link entryGuardFor}. They are
- * NOT composed here — the exit guard already carries the forward-motion
+ * NOT composed here - the exit guard already carries the forward-motion
  * conditions, and the target record does not yet exist at transition time.
  */
 export function guardsFor(

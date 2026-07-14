@@ -8,7 +8,7 @@ import { FORM_DRAFT_META, type FormDraftKind } from "@/lib/drafts/form-drafts";
 /**
  * A single form's Recycle Bin, rendered inside the module shell. Each per-form
  * route (`/clients/recycle-bin`, `/samples/recycle-bin`, …) is a one-line
- * wrapper over this — scoped to that form so the bins never mix.
+ * wrapper over this - scoped to that form so the bins never mix.
  */
 export async function RecycleBinScreen({ kind }: { kind: FormDraftKind }) {
   await requireUser();

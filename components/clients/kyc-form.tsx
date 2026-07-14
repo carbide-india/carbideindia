@@ -38,7 +38,7 @@ import type { ClientDocument } from "@/lib/queries/client-documents";
 
 /** RHF holds the schema's *input* shape (pre-transform); zodResolver hands
  *  the parsed *output* (`""` folded to `undefined`, currency/country
- *  defaulted) to the submit handler — exactly what createClientKyc takes. */
+ *  defaulted) to the submit handler - exactly what createClientKyc takes. */
 export type KycFormValues = z.input<typeof CreateClientKycSchema>;
 type KycFormOutput = z.output<typeof CreateClientKycSchema>;
 
@@ -47,7 +47,7 @@ interface Props {
   industryTypes: MasterOptionItem[];
   productTypes: MasterOptionItem[];
   employees: EmployeeOption[];
-  /** Admin-managed departments — surfaced as the "Department" dropdown. */
+  /** Admin-managed departments - surfaced as the "Department" dropdown. */
   departments?: MasterOptionItem[];
   /** Per-form "Custom" dropdown lists (§2.5). Each falls back to a preset. */
   paymentTermsOptions?: string[];
@@ -62,9 +62,9 @@ interface Props {
   /** When set, the form edits this client in place (admin "Edit client")
    *  instead of onboarding a new one. */
   editClientId?: string;
-  /** Prefill values for edit mode — shaped like the form's input fields. */
+  /** Prefill values for edit mode - shaped like the form's input fields. */
   initialValues?: Partial<KycFormValues>;
-  /** The generated client code (e.g. CL-0001) — shown read-only when editing. */
+  /** The generated client code (e.g. CL-0001) - shown read-only when editing. */
   clientCode?: string;
   /** Pre-presigned documents list for the Documents section (edit mode only). */
   documents?: ClientDocument[];
@@ -116,7 +116,7 @@ const CREDIT_LIMIT_PRESET = ["50000", "100000", "250000", "500000", "1000000"];
 const QTY_DEVIATION_PRESET = ["±5%", "±10%", "±15%", "±20%", "As per PO"];
 
 /**
- * Map a KYC country to its default currency — drives the auto-populate of the
+ * Map a KYC country to its default currency - drives the auto-populate of the
  * Currency field when a Country is picked (Registration & Tax section).
  */
 const COUNTRY_TO_CURRENCY: Partial<
@@ -157,7 +157,7 @@ function uploadCardToBlob(file: File) {
 }
 
 /**
- * Client KYC form — restyled to the New Enquiry visual language (prominent
+ * Client KYC form - restyled to the New Enquiry visual language (prominent
  * chips, one-line dense grids, numbered group headers). Sections: Identity /
  * Registration & Tax / Addresses / Contact Person / Commercial & Credit /
  * Bank Details / Documents.
@@ -287,7 +287,7 @@ export function KycForm({
       additionalContacts: [],
       businessCardOtherUrls: [],
       notes: "",
-      // Edit mode prefill — overrides the empty defaults field-by-field.
+      // Edit mode prefill - overrides the empty defaults field-by-field.
       ...initialValues,
     },
   });
@@ -301,7 +301,7 @@ export function KycForm({
   const { fields: bankFields, append: appendBank, remove: removeBank } =
     useFieldArray({ control, name: "bankAccounts" });
 
-  // ── Draft auto-save (create mode only — silent, runs in background) ──
+  // ── Draft auto-save (create mode only - silent, runs in background) ──
   const { discard } = useFormDraft({
     kind: "kyc",
     enabled: draftsOn,
@@ -355,7 +355,7 @@ export function KycForm({
     });
   }
 
-  // Business-card scans live in form state via the URL fields — uploads run on
+  // Business-card scans live in form state via the URL fields - uploads run on
   // file-pick and never block the save. `front`/`back` track in-flight uploads.
   const cardFront = watch("businessCardFrontUrl");
   const cardBack = watch("businessCardBackUrl");
@@ -387,11 +387,11 @@ export function KycForm({
         blob.url,
       );
     } catch {
-      // Missing BLOB_READ_WRITE_TOKEN (or a Blob outage) lands here — the
+      // Missing BLOB_READ_WRITE_TOKEN (or a Blob outage) lands here - the
       // card is skipped, the form still saves without it.
       fireToast({
         message:
-          "Business card upload unavailable — check storage configuration.",
+          "Business card upload unavailable - check storage configuration.",
         type: "error",
       });
     } finally {
@@ -399,7 +399,7 @@ export function KycForm({
     }
   }
 
-  /** "Other" documents — multi-file, appends every uploaded blob URL. */
+  /** "Other" documents - multi-file, appends every uploaded blob URL. */
   async function onPickOther(files: FileList | null) {
     if (!files || files.length === 0) return;
     setUploading((u) => ({ ...u, other: true }));
@@ -424,7 +424,7 @@ export function KycForm({
           ]);
         } catch {
           fireToast({
-            message: `${file.name}: upload unavailable — check storage configuration.`,
+            message: `${file.name}: upload unavailable - check storage configuration.`,
             type: "error",
           });
         }
@@ -461,7 +461,7 @@ export function KycForm({
         fireToast({ message: res.error, type: "error" });
         return;
       }
-      // Client saved — retire the draft so it leaves the Drafts inbox.
+      // Client saved - retire the draft so it leaves the Drafts inbox.
       if (draftsOn) await discard();
       fireToast({
         message: isEdit
@@ -484,9 +484,9 @@ export function KycForm({
       {/* ── 1 · Identity ─────────────────────────────────────────────── */}
       <SectionCard
         title="Identity"
-        hint="Who the client is — type, industry and the products they buy."
+        hint="Who the client is - type, industry and the products they buy."
       >
-        {/* Client Code — read-only display field, only when editing */}
+        {/* Client Code - read-only display field, only when editing */}
         {isEdit && clientCode && (
           <Field id="kyc-client-code" label="Client Code">
             <input
@@ -501,8 +501,8 @@ export function KycForm({
           </Field>
         )}
 
-        {/* Company Name fills the row; Grade is a compact dropdown. */}
-        <div className="grid grid-cols-[1fr_200px] gap-4 max-md:grid-cols-1">
+        {/* Company Name fills the row; Export (Yes/No) and Grade sit beside it. */}
+        <div className="grid grid-cols-[1fr_160px_200px] gap-4 max-lg:grid-cols-[1fr_160px] max-md:grid-cols-1">
           <Field id="kyc-name" label="Company Name" required>
             <input
               id="kyc-name"
@@ -516,6 +516,25 @@ export function KycForm({
                 {errors.name.message}
               </p>
             )}
+          </Field>
+          <Field label="Export" labelOnly>
+            <Controller
+              control={control}
+              name="export"
+              render={({ field }) => (
+                <Segmented
+                  ariaLabel="Export"
+                  activeTone="brand"
+                  options={YES_NO_SEGMENTED}
+                  value={
+                    field.value === undefined ? undefined : field.value ? "yes" : "no"
+                  }
+                  onChange={(v) =>
+                    field.onChange(v === undefined ? undefined : v === "yes")
+                  }
+                />
+              )}
+            />
           </Field>
           <Field label="Grade" labelOnly>
             <Controller
@@ -536,7 +555,7 @@ export function KycForm({
           </Field>
         </div>
 
-        {/* Customer Type sizes to its chips; Industry Type fills the rest — a
+        {/* Customer Type sizes to its chips; Industry Type fills the rest - a
             small gap between them instead of a wasteful 50/50 split. */}
         <div className="flex flex-wrap items-start gap-x-8 gap-y-4">
           <div className="shrink-0">
@@ -557,7 +576,7 @@ export function KycForm({
           </div>
         </div>
 
-        {/* Product Types — uniform-width checkbox chip grid over the master. */}
+        {/* Product Types - uniform-width checkbox chip grid over the master. */}
         <Field label="Product Types">
           <Controller
             control={control}
@@ -568,7 +587,7 @@ export function KycForm({
                 <>
                   {productTypes.length === 0 ? (
                     <p className="text-[13px] text-ink-subtle">
-                      No product types yet — add them in Admin &#8594; Masters.
+                      No product types yet - add them in Admin &#8594; Masters.
                     </p>
                   ) : (
                     <div className="grid grid-cols-7 gap-2 max-xl:grid-cols-5 max-lg:grid-cols-4 max-md:grid-cols-2">
@@ -718,7 +737,7 @@ export function KycForm({
           </Field>
         </div>
 
-        {/* Non-blocking dedup warning — existing clients sharing this GSTIN/PAN. */}
+        {/* Non-blocking dedup warning - existing clients sharing this GSTIN/PAN. */}
         {(dupPending || dupMatches.length > 0) && (
           <p
             className="text-[12.5px] font-semibold"
@@ -733,7 +752,8 @@ export function KycForm({
           </p>
         )}
 
-        {/* Currency → Country → Export — narrow, aligned to the 5-col row above. */}
+        {/* Currency → Country - narrow, aligned to the 5-col row above (Export
+            now lives beside the Company Name in the Identity row). */}
         <div className="grid grid-cols-5 gap-4 max-lg:grid-cols-3 max-md:grid-cols-1">
           <Field label="Currency" labelOnly>
             <Controller
@@ -765,25 +785,6 @@ export function KycForm({
               )}
             />
           </Field>
-          <Field label="Export" labelOnly>
-            <Controller
-              control={control}
-              name="export"
-              render={({ field }) => (
-                <Segmented
-                  ariaLabel="Export"
-                  activeTone="brand"
-                  options={YES_NO_SEGMENTED}
-                  value={
-                    field.value === undefined ? undefined : field.value ? "yes" : "no"
-                  }
-                  onChange={(v) =>
-                    field.onChange(v === undefined ? undefined : v === "yes")
-                  }
-                />
-              )}
-            />
-          </Field>
         </div>
       </SectionCard>
 
@@ -791,12 +792,14 @@ export function KycForm({
       <SectionCard
         title="Contact Person"
         inlineHint
-        hint="The first contact is saved as the client's primary — auto-fetched on enquiries."
+        hint="The first contact is saved as the client's primary - auto-fetched on enquiries."
       >
         {/* Primary contact */}
         <div className="flex flex-col gap-3">
           <GroupHeader n={1} label="Contact" />
-          <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
+          {/* First Name · Last Name · Contact No · Email · Designation ·
+              Department - all on one line (wraps on smaller screens). */}
+          <div className="grid grid-cols-6 gap-3 max-xl:grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1">
             <Field id="kyc-cfirst" label="First Name">
               <input id="kyc-cfirst" type="text" className="nt-input" {...register("contactFirstName")} />
             </Field>
@@ -809,8 +812,6 @@ export function KycForm({
             <Field id="kyc-cemail" label="Email">
               <input id="kyc-cemail" type="email" className="nt-input" {...register("contactEmail")} />
             </Field>
-          </div>
-          <div className="grid grid-cols-4 gap-4 max-lg:grid-cols-2 max-md:grid-cols-1">
             <Field id="kyc-cdesig" label="Designation">
               <input
                 id="kyc-cdesig"
@@ -838,23 +839,23 @@ export function KycForm({
                 )}
               />
             </Field>
-            <Field id="kyc-cnotes" label="Contact Notes">
-              <Controller
-                control={control}
-                name="contactNotes"
-                render={({ field }) => (
-                  <NotesField
-                    id="kyc-cnotes"
-                    ariaLabel="Contact Notes"
-                    rows={1}
-                    placeholder="Notes about this contact"
-                    value={field.value ?? ""}
-                    onChange={field.onChange}
-                  />
-                )}
-              />
-            </Field>
           </div>
+          <Field id="kyc-cnotes" label="Contact Notes">
+            <Controller
+              control={control}
+              name="contactNotes"
+              render={({ field }) => (
+                <NotesField
+                  id="kyc-cnotes"
+                  ariaLabel="Contact Notes"
+                  rows={1}
+                  placeholder="Notes about this contact"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+          </Field>
         </div>
 
         {/* Additional contacts */}
@@ -942,7 +943,7 @@ export function KycForm({
       <SectionCard
         title="Addresses"
         inlineHint
-        hint="Billing and shipping addresses — copy billing into shipping when they match."
+        hint="Billing and shipping addresses - copy billing into shipping when they match."
       >
         {addressFields.map((field, idx) => {
           const addrLabel =
@@ -1246,7 +1247,7 @@ export function KycForm({
       <SectionCard
         title="Bank Details"
         inlineHint
-        hint="One or more bank accounts for payments — flag one as primary."
+        hint="One or more bank accounts for payments - flag one as primary."
       >
         {bankFields.map((field, idx) => (
           <div key={field.id} className="flex flex-col gap-3">
@@ -1342,7 +1343,7 @@ export function KycForm({
                     checked={Boolean(f.value)}
                     onChange={(e) => f.onChange(e.target.checked)}
                   />
-                  Primary account
+                  Primary Account
                 </label>
               )}
             />
@@ -1366,7 +1367,7 @@ export function KycForm({
           className="inline-flex w-max items-center gap-1.5 rounded-lg border border-dashed border-[#c9c9ea] bg-[#f4f4fd] px-4 py-2.5 text-[13px] font-bold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#eeeefb]"
         >
           <Plus className="h-4 w-4" />
-          Add account
+          Add Account
         </button>
       </SectionCard>
 
@@ -1374,7 +1375,7 @@ export function KycForm({
       <SectionCard
         title="Documents"
         inlineHint
-        hint="Attach any document, image, audio, or video to this client record — plus scans of the contact's business card."
+        hint="Attach any document, image, audio, or video to this client record - plus scans of the contact's business card."
       >
         {editClientId ? (
           <ClientDocuments
@@ -1449,7 +1450,7 @@ export function KycForm({
 }
 
 /**
- * Multi-select master picker rendered as a prominent checkbox chip row — the
+ * Multi-select master picker rendered as a prominent checkbox chip row - the
  * same chip treatment as the enquiry checklist's "Docs Given". Stores an array
  * of selected uuids; the legacy singular column is mirrored to the first
  * selection server-side. Empty master shows the "add in Admin -> Masters"
@@ -1477,7 +1478,7 @@ function MasterChips({
             <>
               {options.length === 0 ? (
                 <p className="text-[13px] text-ink-subtle">
-                  No options — add in Admin &#8594; Masters.
+                  No options - add in Admin &#8594; Masters.
                 </p>
               ) : (
                 <div
@@ -1566,7 +1567,7 @@ function CardUpload({
       />
       {url ? (
         <div className="relative inline-block size-[120px] overflow-hidden rounded-xl border border-hairline bg-surface-soft">
-          {/* Blob URLs are remote + unconfigured for next/image — plain img. */}
+          {/* Blob URLs are remote + unconfigured for next/image - plain img. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={url}
@@ -1622,7 +1623,7 @@ function fileNameFromUrl(url: string): string {
 }
 
 /**
- * "Other" documents tile — a multi-file uploader for the rest of the client's
+ * "Other" documents tile - a multi-file uploader for the rest of the client's
  * scans (images or PDFs). Each uploaded blob shows as a 120px tile (thumbnail
  * for images, a file chip for PDFs) with a remove x, followed by the dashed
  * add tile. Mirrors CardUpload's look so the three sit together.

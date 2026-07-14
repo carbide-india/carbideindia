@@ -46,7 +46,7 @@ let cached: Resend | null = null;
  * Returns the Resend client when `RESEND_API_KEY` is set, else `null`.
  *
  * Notification senders must be safe to call in dev environments without
- * Resend credentials, so we never throw — callers check the `error`/`id`
+ * Resend credentials, so we never throw - callers check the `error`/`id`
  * fields (or just the `void` return for `sendNotificationEmail`) to know
  * whether an email actually went out.
  */
@@ -70,10 +70,10 @@ function clampSubject(s: string): string {
 
 export function digestSubject(pendingCount: number): string {
   if (pendingCount === 0) {
-    return "You're all clear — no pending tasks — Carbide India WMS";
+    return "You're all clear - no pending tasks - Carbide India WMS";
   }
   const noun = pendingCount === 1 ? "task" : "tasks";
-  return `You have ${pendingCount} pending ${noun} — Carbide India WMS`;
+  return `You have ${pendingCount} pending ${noun} - Carbide India WMS`;
 }
 
 function errorMessage(err: unknown): string {
@@ -100,13 +100,13 @@ function parseMeta(body: string | null): NotificationMeta {
     const parsed = JSON.parse(trimmed);
     if (parsed && typeof parsed === "object") return parsed as NotificationMeta;
   } catch {
-    // not JSON — treat the whole body as a note string
+    // not JSON - treat the whole body as a note string
   }
   return { note: trimmed };
 }
 
 /* ------------------------------------------------------------------ */
-/* M2.3 — per-notification email                                        */
+/* M2.3 - per-notification email                                        */
 /* ------------------------------------------------------------------ */
 
 /**
@@ -118,7 +118,7 @@ export type DigestOverdueTask = OverdueDigestTask;
 
 /**
  * The shape `sendNotificationEmail` accepts.  Matches Agent A's call
- * site in `lib/notifications/dispatch.ts` — do not break this contract.
+ * site in `lib/notifications/dispatch.ts` - do not break this contract.
  */
 export interface NotificationEmailInput {
   id: string;
@@ -139,7 +139,7 @@ export interface NotificationEmailInput {
  *
  * Resolution policy:
  *  - Recipient is looked up by `userId`.  If the employee is missing
- *    (defensive — FK should prevent this) we drop the email silently.
+ *    (defensive - FK should prevent this) we drop the email silently.
  *  - Actor name is looked up by reading the most-recent
  *    `notifications.actorId` for this row.  We DON'T re-query because
  *    the dispatcher might already have stashed actor context in the
@@ -148,11 +148,11 @@ export interface NotificationEmailInput {
  *    `tasks.title`) when `taskId` is set.  Missing task → "your task".
  *
  * Behavior:
- *  - Returns `void` — matches Agent A's signature.  The dispatcher
+ *  - Returns `void` - matches Agent A's signature.  The dispatcher
  *    wraps us in a try/catch and swallows errors so a Resend outage
  *    never blocks a Server Action mutation.
  *  - Silently skips when `RESEND_API_KEY` is unset (dev without Resend).
- *  - Silently skips for `overdue_digest` kinds — those are handled by
+ *  - Silently skips for `overdue_digest` kinds - those are handled by
  *    `sendDigestEmail`.
  */
 export async function sendNotificationEmail(
@@ -229,7 +229,7 @@ export async function sendDigestEmail(
 }
 
 /* ------------------------------------------------------------------ */
-/* internal — template selection + DB resolvers                         */
+/* internal - template selection + DB resolvers                         */
 /* ------------------------------------------------------------------ */
 
 interface RenderContext {
@@ -248,7 +248,7 @@ function renderNotificationTemplate(ctx: RenderContext): ReactElement | null {
   const taskId = ctx.notification.taskId ?? "";
 
   // Without a task to link to, none of the per-task templates make
-  // sense.  Drop the email — the in-app inbox still surfaces the row.
+  // sense.  Drop the email - the in-app inbox still surfaces the row.
   if (!taskId) return null;
 
   switch (ctx.notification.kind) {
@@ -392,7 +392,7 @@ async function resolveTaskSubject(taskId: string): Promise<string | null> {
 /**
  * Looks up the actor's display name for a given notification id by
  * joining `notifications.actor_id` against `employees.id`.  Used so the
- * dispatcher doesn't have to pre-resolve the actor — it just writes
+ * dispatcher doesn't have to pre-resolve the actor - it just writes
  * the actor id on the notifications row.
  */
 async function resolveActorNameFor(notificationId: string): Promise<string | null> {

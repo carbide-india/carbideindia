@@ -90,7 +90,7 @@ function accentFor(col: ColId, tones: Record<TaskStatus, StatusColorToken>) {
 /**
  * Status Kanban (Manan #25), rebuilt on dnd-kit for buttery pointer-based
  * drag: drag a card between columns to change its status (or into Archived to
- * archive / out to restore), and — as an admin — drag a column header to
+ * archive / out to restore), and - as an admin - drag a column header to
  * reorder the whole board (persisted globally). A DragOverlay renders the
  * floating preview; dnd-kit handles auto-scroll, keyboard a11y and animation.
  */
@@ -101,7 +101,7 @@ export function KanbanBoard({ tasks, labels, tones, isAdmin, columnOrder }: Prop
   const [visibleByCol, setVisibleByCol] = React.useState<Record<string, number>>({});
   // Column order is local state so an admin's drag-reorder is instant.
   const [columns, setColumns] = React.useState<ColId[]>(columnOrder);
-  // The active drag (card or column) — drives the DragOverlay + drop targeting.
+  // The active drag (card or column) - drives the DragOverlay + drop targeting.
   const [active, setActive] = React.useState<{ id: string; type: "card" | "column" } | null>(null);
   const [overCol, setOverCol] = React.useState<string | null>(null);
 
@@ -183,7 +183,7 @@ export function KanbanBoard({ tasks, labels, tones, isAdmin, columnOrder }: Prop
             : res.error === "invalid"
               ? res.message ?? "That move isn't allowed from here."
               : res.error === "stale"
-                ? "Task changed elsewhere — refreshing."
+                ? "Task changed elsewhere - refreshing."
                 : "Couldn't update the task.",
       });
     } else {
@@ -218,7 +218,7 @@ export function KanbanBoard({ tasks, labels, tones, isAdmin, columnOrder }: Prop
       return;
     }
 
-    // Card drop — `over` resolves to a column droppable.
+    // Card drop - `over` resolves to a column droppable.
     const card = items.find((t) => t.id === a.id);
     if (!card) return;
     if (overId === ARCHIVE_COL) {
@@ -249,7 +249,7 @@ export function KanbanBoard({ tasks, labels, tones, isAdmin, columnOrder }: Prop
         }}
       >
         <div>
-          {/* Running total — filtering lives in the top filter bar now. */}
+          {/* Running total - filtering lives in the top filter bar now. */}
           <div className="mb-5 flex items-center gap-2.5 flex-wrap">
             <span className="text-[15px] font-semibold text-ink-soft">
               <span className="text-ink-strong font-bold tabular-nums">{activeCount}</span>{" "}
@@ -375,7 +375,7 @@ function KanbanColumn({
   isCardOver: boolean;
   children: React.ReactNode;
 }) {
-  // Disable only the column DRAG for non-admins — the column must stay a drop
+  // Disable only the column DRAG for non-admins - the column must stay a drop
   // target so anyone can still drag cards between columns.
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({
     id: col,
@@ -397,7 +397,7 @@ function KanbanColumn({
         touchAction: "manipulation",
       }}
     >
-      {/* Column header — sticky; the grip is the admin reorder handle. */}
+      {/* Column header - sticky; the grip is the admin reorder handle. */}
       <div
         className="sticky top-0 z-20 flex items-center justify-between -mx-3.5 -mt-3.5 mb-3 px-3.5 pt-3.5 pb-2.5"
         style={{
@@ -571,7 +571,7 @@ function Meta({
     <div className="min-w-0">
       <FieldHead icon={icon}>{label}</FieldHead>
       <div className="mt-1 truncate text-ink-strong" style={{ fontSize: 14.5, fontWeight: 600 }}>
-        {value && value.trim() ? value : "—"}
+        {value && value.trim() ? value : "-"}
       </div>
     </div>
   );

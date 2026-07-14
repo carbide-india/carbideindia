@@ -7,7 +7,7 @@ import { deactivateItem, reactivateItem } from "@/app/(app)/items/actions";
 import { fireToast } from "@/lib/toast";
 
 /**
- * Admin-only deactivate/reactivate control for an item (ERP Phase 4 — items are
+ * Admin-only deactivate/reactivate control for an item (ERP Phase 4 - items are
  * never hard-deleted, only deactivated). Rendered on the item detail header.
  */
 export function ItemStatusControl({

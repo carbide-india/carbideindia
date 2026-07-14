@@ -20,22 +20,22 @@ import {
 import { getAuditLog } from "@/lib/queries/audit";
 
 /**
- * Client Workspace read layer (ERP redesign — Phase 9c, §8 "Client Workspace").
+ * Client Workspace read layer (ERP redesign - Phase 9c, §8 "Client Workspace").
  *
  * The per-client cockpit's data contract. EVERYTHING is computed LIVE from the
  * single-source-of-truth by reaching the client only through the real FK spine
  * (`inquiries.clientId` → clients.id), NEVER the stale `companyName` snapshot
- * text. There are ZERO stored aggregate counters — a client rename or a new SO
+ * text. There are ZERO stored aggregate counters - a client rename or a new SO
  * reflects instantly because every number is a read-through aggregate.
  *
  * Money resolves through LINE items (sales_order_items qty × price), never a
  * header snapshot price. "Open" is derived (no descendant reached a terminal
- * SO/negotiation state). FY is Indian (Apr–Mar) via `fiscalYearRange()`.
+ * SO/negotiation state). FY is Indian (Apr-Mar) via `fiscalYearRange()`.
  */
 
 /* ── Indian fiscal year (Apr 1 → Mar 31) ──────────────────────────────────
  * No shared helper exists in the repo (grepped: only lib/series + docs), so a
- * small local one. Returns [start, end) — end is the exclusive next-FY start. */
+ * small local one. Returns [start, end) - end is the exclusive next-FY start. */
 export function fiscalYearRange(ref: Date = new Date()): {
   start: Date;
   end: Date;
@@ -157,7 +157,7 @@ export interface ClientKpis {
 }
 
 /**
- * ALL numeric KPIs in ONE aggregate query — CTEs over the FK spine, zero stored
+ * ALL numeric KPIs in ONE aggregate query - CTEs over the FK spine, zero stored
  * counters. "Open" = no descendant reached a terminal negotiation/SO state.
  * Revenue sums the SO LINE items (qty_ordered/qty × unit_price/quote_price),
  * never a header price. Win rate is lifetime over negotiations.status.
@@ -516,7 +516,7 @@ export interface ClientFinancials {
 }
 
 /**
- * The authoritative commercial record — contacts/addresses/banks from the
+ * The authoritative commercial record - contacts/addresses/banks from the
  * NORMALIZED child tables only, type/industry resolved from the id arrays →
  * master names. No legacy flat mirrors are read for the normalized data.
  */

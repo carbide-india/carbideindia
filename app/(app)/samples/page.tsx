@@ -17,7 +17,7 @@ import { BulkImportModal } from "@/components/import/bulk-import-modal";
 export const dynamic = "force-dynamic";
 
 /**
- * Sample Register — physical sample tracking, now rendered inside the shared
+ * Sample Register - physical sample tracking, now rendered inside the shared
  * Enquiries module shell (logo sidebar + indigo header). On /samples routes the
  * shell sidebar reads as the Sample Register family automatically, so no custom
  * nav is passed. The advanced table owns search / filtering / sorting
@@ -32,7 +32,7 @@ export default async function SamplesPage() {
   ]);
 
   // Admins get the animated Bulk Upload modal (template download → parse → fix
-  // → import), same as the New Sample page — no more legacy import page.
+  // → import), same as the New Sample page - no more legacy import page.
   const importLookups = me?.isAdmin
     ? await loadLookups(specRefKinds(sampleImportSpec.fields))
     : null;

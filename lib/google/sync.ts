@@ -12,7 +12,7 @@ import {
 
 /**
  * Reconcile a task's Google Calendar event to its current state. Idempotent
- * and best-effort — any failure is logged, never thrown, so it can run inside
+ * and best-effort - any failure is logged, never thrown, so it can run inside
  * `after()` without affecting the task save.
  *
  * Handles create, update, reassign (move between doers' calendars), and
@@ -67,10 +67,10 @@ export async function reconcileTaskEvent(taskId: string): Promise<void> {
 }
 
 /**
- * Terminal/closed statuses we don't seed onto the calendar during a backfill —
+ * Terminal/closed statuses we don't seed onto the calendar during a backfill -
  * a freshly-connected calendar shouldn't fill with months of completed work.
  * (Live `reconcileTaskEvent` still keeps a task's event in sync if it later
- * moves into one of these — backfill is only about the initial bulk seed.)
+ * moves into one of these - backfill is only about the initial bulk seed.)
  */
 const BACKFILL_SKIP_STATUSES = [
   "done",
@@ -83,7 +83,7 @@ const BACKFILL_SKIP_STATUSES = [
 /**
  * One-time bulk seed: push all of a doer's active (non-archived, non-terminal)
  * tasks onto their freshly-connected calendar. Reuses `reconcileTaskEvent` per
- * task, so already-synced tasks are updated rather than duplicated — it's safe
+ * task, so already-synced tasks are updated rather than duplicated - it's safe
  * to run repeatedly (the "Sync now" button does exactly that).
  *
  * Returns how many tasks were attempted vs. how many actually carry a calendar
@@ -107,7 +107,7 @@ export async function backfillDoerCalendar(
   // Sequential, not parallel: a backfill is best-effort background work and we
   // don't want to burst Google's rate limit with one request per task.
   for (const { id } of rows) {
-    await reconcileTaskEvent(id); // never throws — logs internally
+    await reconcileTaskEvent(id); // never throws - logs internally
   }
 
   // Count how many of those candidates now actually hold an event id.
@@ -119,7 +119,7 @@ export async function backfillDoerCalendar(
   return { attempted: rows.length, synced: seeded.length };
 }
 
-/** Delete a task's event — call BEFORE hard-deleting the row (which loses the
+/** Delete a task's event - call BEFORE hard-deleting the row (which loses the
  *  pointers). Best-effort. */
 export async function removeTaskEvent(t: {
   googleEventId: string | null;

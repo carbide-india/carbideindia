@@ -2,7 +2,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * DetailGrid (ERP redesign — Phase 3).
+ * DetailGrid (ERP redesign - Phase 3).
  *
  * The single replacement for the repeated `ReadCard` + `InfoGrid` pattern
  * (`components/items/item-detail.tsx`, the quick-views, client detail, ). A
@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
  *   - lays out multi-column responsively,
  *   - supports `mono` (tabular monospace for codes/numbers), `href` (linkable
  *     value) and `snapshot` (renders an "as-recorded" marker so users know a
- *     value is a historical snapshot vs a live FK-resolved field — per §12.3).
+ *     value is a historical snapshot vs a live FK-resolved field - per §12.3).
  *
  * Server-safe (no "use client"). Only the primitive is provided this phase; the
  * Item Workspace is migrated to it as the reference. Other pages migrate later.
@@ -68,7 +68,7 @@ export function DetailGrid({ fields, columns = 2, className }: DetailGridProps) 
               <span
                 className="rounded px-1 py-px text-[9px] font-bold uppercase tracking-wide text-ink-subtle"
                 style={{ background: "rgba(15,23,42,0.05)" }}
-                title="As-recorded snapshot — a historical value, not a live linked field"
+                title="As-recorded snapshot - a historical value, not a live linked field"
               >
                 snapshot
               </span>

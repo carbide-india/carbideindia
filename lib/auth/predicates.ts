@@ -1,6 +1,6 @@
 /**
  * Pure boolean predicates for permission checks.
- * No DB, no I/O — safe to call anywhere.
+ * No DB, no I/O - safe to call anywhere.
  */
 
 export type EmployeeView = {

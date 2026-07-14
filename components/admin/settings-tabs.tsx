@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 
 const TAB_KEYS = [
   "general",
+  "legal",
   "statuses",
   "integrations",
   "notifications",
@@ -14,6 +15,7 @@ type TabKey = (typeof TAB_KEYS)[number];
 
 const TAB_LABEL: Record<TabKey, string> = {
   general: "General",
+  legal: "Company & Legal",
   statuses: "Statuses",
   integrations: "Integrations",
   notifications: "Notifications",
@@ -21,7 +23,7 @@ const TAB_LABEL: Record<TabKey, string> = {
 
 // Slot-based: the Server Component page renders each tab body and passes
 // it in. We mount all four with `forceMount` + `hidden` so switching tabs
-// is instant — settings data is small enough that there's no payload cost
+// is instant - settings data is small enough that there's no payload cost
 // to ship all four bodies on the first paint.
 export function SettingsTabs(props: Record<TabKey, ReactNode>) {
   const [tab, setTab] = useQueryState("tab", {

@@ -27,7 +27,7 @@ export interface RunImportCommitOpts {
   /** Field values injected when a row omits them (e.g. { clientMode: "new" }).
    *  Used for required-but-not-in-sheet fields the create action demands. */
   defaults?: Record<string, unknown>;
-  /** The form's existing create action — reused so business logic (auto
+  /** The form's existing create action - reused so business logic (auto
    *  numbering, upserts, snapshots) stays identical to single-record entry. */
   createRecord: (input: Record<string, unknown>) => Promise<{ ok: boolean; error?: string }>;
 }

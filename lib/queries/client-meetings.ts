@@ -10,7 +10,7 @@ export interface ClientMeetingListItem {
   meetingNo: string;
   meetingDate: Date;
   companyName: string;
-  /** Contact name — first + last, falling back to the legacy combined column. */
+  /** Contact name - first + last, falling back to the legacy combined column. */
   contactPersonName: string;
   /** Captured sales-person name; falls back to the linked employee's name. */
   salesPersonName: string | null;
@@ -28,7 +28,7 @@ export interface ClientMeetingFilters {
  * Client-meeting register list. Filters are URL-driven (nuqs) and per-user, so
  * this is intentionally uncached. `q` matches meeting number OR company OR
  * contact name, case-insensitive substring. Sales-person name comes from a
- * left join on employees (unlinked rows render the "—" fallback).
+ * left join on employees (unlinked rows render the "-" fallback).
  */
 export async function listClientMeetings(
   filters: ClientMeetingFilters = {},

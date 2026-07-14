@@ -18,7 +18,7 @@ import { formatDate, formatInr } from "@/lib/format";
 import { fireToast } from "@/lib/toast";
 import { Field, MiniField, SectionCard, Segmented } from "@/components/inquiries/form-field";
 
-/** Slim link block for the header — resolved server-side from inquiryId. */
+/** Slim link block for the header - resolved server-side from inquiryId. */
 export interface SalesOrderInquiryLink {
   id: string;
   smNumber: string;
@@ -39,9 +39,9 @@ const SO_SENT_OPTIONS = [
 
 /** numeric-string → ₹, em-dash when unset/unparseable. */
 function money(value: string | null): string {
-  if (value == null || value === "") return "—";
+  if (value == null || value === "") return "-";
   const n = Number(value);
-  return Number.isFinite(n) ? formatInr(n) : "—";
+  return Number.isFinite(n) ? formatInr(n) : "-";
 }
 
 /** Money <input> → number | undefined (no NaN); 0 is a valid amount. */
@@ -66,7 +66,7 @@ function dateInputDefault(value: Date | null): string {
   return d.toISOString().slice(0, 10);
 }
 
-/** The editable slice of the sales order — RHF holds these <input>-shaped
+/** The editable slice of the sales order - RHF holds these <input>-shaped
  *  values; the dirty-only patch ships only changed keys. */
 interface SoEditValues {
   custProductName: string;
@@ -88,9 +88,9 @@ interface SoEditValues {
 const NUMERIC_KEYS = new Set<keyof SoEditValues>(["quotePrice", "qty"]);
 
 /**
- * Sales Order detail — breadcrumb + header (soNo, company · enquiry date ·
+ * Sales Order detail - breadcrumb + header (soNo, company · enquiry date ·
  * linked SM chip · SO-sent chip · New Sales Order), sticky sidebar (SO Sent
- * toggle — the SO's only state mutator, sales person, quote price, Created/by,
+ * toggle - the SO's only state mutator, sales person, quote price, Created/by,
  * Open Register), read cards for Quote Summary + Customer PO + SO Docs plus ONE
  * dirty-only edit form (mirrors the quotation/negotiation detail).
  */
@@ -127,7 +127,7 @@ export function SoDetail({ salesOrder, employees, inquiryLink, lines }: Props) {
   } = useForm<SoEditValues>({ defaultValues: defaults });
 
   const onSubmit = handleSubmit(async (values) => {
-    // Dirty-only patch — the action's strip-undefined + no-op short-circuit
+    // Dirty-only patch - the action's strip-undefined + no-op short-circuit
     // handles the rest. Empty text inputs fold to undefined (UpdateSalesOrder's
     // OptionalText keeps them out of the patch).
     const patch = Object.fromEntries(
@@ -193,7 +193,7 @@ export function SoDetail({ salesOrder, employees, inquiryLink, lines }: Props) {
             {salesOrder.soNo}
           </h1>
           <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[14.5px] text-ink-muted">
-            {salesOrder.companyName ?? "—"}
+            {salesOrder.companyName ?? "-"}
             <span aria-hidden className="text-ink-subtle">
               ·
             </span>
@@ -245,19 +245,19 @@ export function SoDetail({ salesOrder, employees, inquiryLink, lines }: Props) {
           <SectionCard title="Quote Summary">
             <div className="grid grid-cols-4 gap-4 max-md:grid-cols-2">
               <ReadStat label="Quote Price" value={money(salesOrder.quotePrice)} emphasis />
-              <ReadStat label="Development Time" value={salesOrder.developmentTime ?? "—"} />
-              <ReadStat label="Delivery Time" value={salesOrder.deliveryTime ?? "—"} />
-              <ReadStat label="Validity" value={salesOrder.validity ?? "—"} />
+              <ReadStat label="Development Time" value={salesOrder.developmentTime ?? "-"} />
+              <ReadStat label="Delivery Time" value={salesOrder.deliveryTime ?? "-"} />
+              <ReadStat label="Validity" value={salesOrder.validity ?? "-"} />
             </div>
           </SectionCard>
 
           {/* Customer PO (read) */}
           <SectionCard title="Customer PO">
             <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-              <ReadStat label="Customer PO No" value={salesOrder.customerPoNo ?? "—"} />
+              <ReadStat label="Customer PO No" value={salesOrder.customerPoNo ?? "-"} />
               <ReadStat
                 label="Customer PO Date"
-                value={salesOrder.customerPoDate ? formatDate(salesOrder.customerPoDate) : "—"}
+                value={salesOrder.customerPoDate ? formatDate(salesOrder.customerPoDate) : "-"}
               />
               <ReadLink label="Customer PO Link" href={salesOrder.customerPoLink} />
             </div>
@@ -276,7 +276,7 @@ export function SoDetail({ salesOrder, employees, inquiryLink, lines }: Props) {
           {lines.length > 0 && (
             <SectionCard
               title="Sales Order Lines"
-              hint="Editing here updates Line 1 — additional lines are read-only."
+              hint="Editing here updates Line 1 - additional lines are read-only."
             >
               <div className="flex flex-col gap-4">
                 {lines.map((line, idx) => (
@@ -290,7 +290,7 @@ export function SoDetail({ salesOrder, employees, inquiryLink, lines }: Props) {
           <form onSubmit={onSubmit} className="flex flex-col gap-6" noValidate>
             <SectionCard
               title="Product"
-              hint="Customer product, quantity and part — only changed fields are saved."
+              hint="Customer product, quantity and part - only changed fields are saved."
             >
               <Field id="sod-product" label="Cust Product Name">
                 <input id="sod-product" type="text" className="nt-input" {...register("custProductName")} />
@@ -316,7 +316,7 @@ export function SoDetail({ salesOrder, employees, inquiryLink, lines }: Props) {
 
             <SectionCard
               title="Quote Summary"
-              hint="Pulled from the linked quotation — only changed fields are saved."
+              hint="Pulled from the linked quotation - only changed fields are saved."
             >
               <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
                 <MiniField label="Quote Price">
@@ -434,7 +434,7 @@ export function SoDetail({ salesOrder, employees, inquiryLink, lines }: Props) {
               />
             </div>
           </div>
-          <SidebarRow label="Sales Person" value={salesPerson ?? "—"} />
+          <SidebarRow label="Sales Person" value={salesPerson ?? "-"} />
           <SidebarRow label="Quote Price" value={money(salesOrder.quotePrice)} />
           {salesOrder.quotationLink && (
             <div className="flex flex-col gap-0.5">
@@ -509,7 +509,7 @@ function ReadLink({ label, href }: { label: string; href: string | null }) {
           <ArrowUpRight size={13} strokeWidth={2.4} />
         </a>
       ) : (
-        <span className="text-[16px] font-semibold text-ink-strong">—</span>
+        <span className="text-[16px] font-semibold text-ink-strong">-</span>
       )}
     </div>
   );
@@ -544,16 +544,16 @@ function SoLineCard({ line, lineNo }: { line: SalesOrderLineWithSpec; lineNo: nu
         )}
       </div>
       <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
-        <LineStat label="Qty" value={line.qty ?? "—"} />
-        <LineStat label="Part No" value={spec.partNo ?? "—"} />
+        <LineStat label="Qty" value={line.qty ?? "-"} />
+        <LineStat label="Part No" value={spec.partNo ?? "-"} />
       </div>
       <div className="grid grid-cols-1 gap-4 border-t border-hairline pt-3 max-md:grid-cols-1">
         <ReadStat label="Quote Price" value={money(line.quotePrice)} emphasis />
       </div>
       <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-        <LineStat label="Development Time" value={line.developmentTime ?? "—"} />
-        <LineStat label="Delivery Time" value={line.deliveryTime ?? "—"} />
-        <LineStat label="Validity" value={line.validity ?? "—"} />
+        <LineStat label="Development Time" value={line.developmentTime ?? "-"} />
+        <LineStat label="Delivery Time" value={line.deliveryTime ?? "-"} />
+        <LineStat label="Validity" value={line.validity ?? "-"} />
       </div>
     </div>
   );

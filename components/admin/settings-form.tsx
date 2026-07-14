@@ -108,7 +108,7 @@ export function SettingsForm({ current }: Props) {
       onSubmit={onSubmit}
       className="grid grid-cols-[minmax(0,1fr)_320px] gap-8 max-lg:grid-cols-1"
     >
-      {/* LEFT — fieldsets */}
+      {/* LEFT - fieldsets */}
       <div className="space-y-5 min-w-0">
         <Section
           title="Identity"
@@ -124,7 +124,7 @@ export function SettingsForm({ current }: Props) {
           </Field>
           <Field
             label="Logo URL"
-            hint="Optional. Absolute URL — shown in email headers and the dashboard."
+            hint="Optional. Absolute URL - shown in email headers and the dashboard."
           >
             <Input
               type="url"
@@ -142,7 +142,7 @@ export function SettingsForm({ current }: Props) {
         >
           <Field
             label="Digest hour (IST)"
-            hint="Hour of day (0–23 IST) when the overdue digest is intended to fire. The Vercel cron schedule lives in vercel.json — change this value here AND there if you want a different time."
+            hint="Hour of day (0-23 IST) when the overdue digest is intended to fire. The Vercel cron schedule lives in vercel.json - change this value here AND there if you want a different time."
           >
             <Input
               type="number"
@@ -155,7 +155,7 @@ export function SettingsForm({ current }: Props) {
           </Field>
           <Field
             label="Auto sign-out after (minutes idle)"
-            hint="Users get a 30-second warning before sign-out. 5–60 minutes."
+            hint="Users get a 30-second warning before sign-out. 5-60 minutes."
           >
             <Input
               type="number"
@@ -269,7 +269,7 @@ export function SettingsForm({ current }: Props) {
         </div>
       </div>
 
-      {/* RIGHT — info panel (sticky) */}
+      {/* RIGHT - info panel (sticky) */}
       <aside className="max-lg:order-first">
         <div className="lg:sticky lg:top-10 flex flex-col gap-4">
           <section

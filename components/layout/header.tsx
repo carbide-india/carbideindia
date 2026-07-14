@@ -8,12 +8,12 @@ import { GlobalSearch } from "@/components/header/global-search";
 import { getCurrentEmployee } from "@/lib/auth/current";
 
 /**
- * Light glassy application header — single row, ~72px tall.
+ * Light glassy application header - single row, ~72px tall.
  *
  * Cyan triangle mark + bold "Carbide India" wordmark on the left, primary
  * nav centered with airy spacing, right cluster carries live indicator +
  * actions + avatar. Frosted-glass white surface with a single hairline
- * bottom border — no decorative washes, no rainbow strip. The nav-pill
+ * bottom border - no decorative washes, no rainbow strip. The nav-pill
  * colors flip to ink-on-light via `.header-light` scope.
  *
  * `generatedAt` is accepted to keep the prop contract stable for callers
@@ -42,7 +42,7 @@ export async function DashboardHeader({
           <NavHistoryButtons />
           <MobileMenuServer isAdmin={isAdmin} />
 
-          {/* LEFT: Carbide India logo. The image is the brand mark — no
+          {/* LEFT: Carbide India logo. The image is the brand mark - no
               accompanying text wordmark, the logo already includes the name. */}
           <a href="/hub" className="flex items-center shrink-0" aria-label="Carbide India hub">
             <img
@@ -53,7 +53,7 @@ export async function DashboardHeader({
             />
           </a>
 
-          {/* CENTER: primary pill nav — visible on every desktop width (and
+          {/* CENTER: primary pill nav - visible on every desktop width (and
               under zoom). It stays centred while it fits; when space gets tight
               it scrolls horizontally FROM THE LEFT (w-max + mx-auto) so pills
               are never clipped, never overlap, and never disappear. Collapses

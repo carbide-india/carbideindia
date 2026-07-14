@@ -64,12 +64,12 @@ export function UserMenu({
       <DropdownMenu.Trigger asChild>
         <button
           aria-label={
-            inboxUnread > 0 ? `User menu — ${inboxUnread} unread` : "User menu"
+            inboxUnread > 0 ? `User menu - ${inboxUnread} unread` : "User menu"
           }
           className="group relative flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-white/40 transition-transform"
           style={{ transition: "transform 200ms ease" }}
         >
-          {/* Unread-inbox dot — the badge that used to sit on the nav's Inbox
+          {/* Unread-inbox dot - the badge that used to sit on the nav's Inbox
               pill, now that Inbox lives inside this menu. */}
           {inboxUnread > 0 && (
             <span
@@ -188,7 +188,7 @@ export function UserMenu({
             </div>
           </div>
 
-          {/* Admin entry — only for admins, with chevron + subtle highlight */}
+          {/* Admin entry - only for admins, with chevron + subtle highlight */}
           {isAdmin && (
             <DropdownMenu.Item asChild>
               <Link
@@ -239,7 +239,7 @@ export function UserMenu({
             </Link>
           </DropdownMenu.Item>
 
-          {/* Section: workspace — Documents / Inbox / Archived moved off the
+          {/* Section: workspace - Documents / Inbox / Archived moved off the
               top nav into here. Inbox + Archived carry their live counts. */}
           <DropdownMenu.Label className="px-3 pt-2 pb-1 text-[11px] uppercase tracking-wide text-[#94A3B8] font-bold">
             Workspace

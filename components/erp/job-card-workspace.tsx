@@ -30,14 +30,14 @@ import { stageIndex } from "@/lib/flow/derive-stage";
 import { cn } from "@/lib/utils";
 
 /**
- * JobCardWorkspace (ERP redesign — Phase 9b, §10 "Job Card Workspace").
+ * JobCardWorkspace (ERP redesign - Phase 9b, §10 "Job Card Workspace").
  *
  * The split record workspace for a production Job Card:
- *   LEFT  · JOB EXECUTION — what the planner/operator does (job card no, OA,
+ *   LEFT  · JOB EXECUTION - what the planner/operator does (job card no, OA,
  *           dates, planned qty, pressing type, dispatch condition, YP + support
- *           sizes, outsource/vendor, process, remarks) — read here, edited via
+ *           sizes, outsource/vendor, process, remarks) - read here, edited via
  *           the existing workbench form (Edit CTA round-trips to the register).
- *   RIGHT · PRODUCT SUMMARY — a LIVE, read-only projection of the linked Item
+ *   RIGHT · PRODUCT SUMMARY - a LIVE, read-only projection of the linked Item
  *           (SSOT via spec-resolve) + the exact Sales-Order line (customer +
  *           ordered qty). Nothing here is typed on the job card.
  *   BELOW · a manufacturing timeline (Stepper pinned at Job Card, plus a simple
@@ -81,14 +81,14 @@ const NAV: ReadonlyArray<RailGroup> = [
 
 /** Numeric-ish string → shown as-is (trimmed) or a dash. */
 function dash(v: string | number | null | undefined): string {
-  if (v === null || v === undefined) return "—";
+  if (v === null || v === undefined) return "-";
   const s = String(v).trim();
-  return s === "" ? "—" : s;
+  return s === "" ? "-" : s;
 }
 
 /** yyyy-mm-dd rendered via the shared IN date formatter, else a dash. */
 function fmt(d: Date | null): string {
-  return d ? formatDate(d) : "—";
+  return d ? formatDate(d) : "-";
 }
 
 /** Compose the item's dimensions into one mono string. */
@@ -141,19 +141,19 @@ export function JobCardWorkspace({
   ];
 
   const outsourceFields: DetailField[] = [
-    { label: "Outsource", value: card.outsource == null ? "—" : card.outsource ? "Yes" : "No" },
+    { label: "Outsource", value: card.outsource == null ? "-" : card.outsource ? "Yes" : "No" },
     { label: "Supplier / Vendor", value: dash(card.supplierVendorName) },
-    { label: "Sample for Sintering", value: card.makeSampleForSintering == null ? "—" : card.makeSampleForSintering ? "Yes" : "No" },
+    { label: "Sample for Sintering", value: card.makeSampleForSintering == null ? "-" : card.makeSampleForSintering ? "Yes" : "No" },
     { label: "Process", value: dash(card.process), full: true },
   ];
 
   // ── RIGHT · live product summary (resolved from Item + SO). ──
   const productFields: DetailField[] = [
-    { label: "Item Code", value: spec?.itemCode ?? "—", mono: true, href: spec?.itemId ? `/items/${spec.itemId}` : undefined },
+    { label: "Item Code", value: spec?.itemCode ?? "-", mono: true, href: spec?.itemId ? `/items/${spec.itemId}` : undefined },
     { label: "Shape", value: dash(spec?.shapeName) },
     { label: "Grade (Internal)", value: dash(spec?.gradeName) },
     { label: "Grade Colour", value: dash(card.gradeColour) },
-    { label: "Dimensions", value: dimensions ?? "—", mono: true },
+    { label: "Dimensions", value: dimensions ?? "-", mono: true },
     { label: "Tolerance", value: dash(spec?.toleranceName ?? data.toleranceName) },
     { label: "Condition", value: dash(spec?.conditionName) },
     { label: "HSN Code", value: dash(spec?.hsnCode), mono: true },
@@ -163,8 +163,8 @@ export function JobCardWorkspace({
 
   const orderFields: DetailField[] = [
     { label: "Customer", value: dash(salesOrder?.clientName ?? data.clientName ?? card.customerName) },
-    { label: "Sales Order", value: salesOrder?.soNo ?? "—", mono: true, href: salesOrder?.salesOrderId ? `/sales-orders/${salesOrder.salesOrderId}` : undefined },
-    { label: "SO Line", value: salesOrder?.sortOrder != null ? `Line ${salesOrder.sortOrder + 1}` : "—" },
+    { label: "Sales Order", value: salesOrder?.soNo ?? "-", mono: true, href: salesOrder?.salesOrderId ? `/sales-orders/${salesOrder.salesOrderId}` : undefined },
+    { label: "SO Line", value: salesOrder?.sortOrder != null ? `Line ${salesOrder.sortOrder + 1}` : "-" },
     { label: "Ordered Qty", value: dash(salesOrder?.qtyOrdered ?? salesOrder?.lineQty), mono: true, snapshot: Boolean(salesOrder?.qtyOrdered) },
     { label: "Dispatch Condition", value: dash(data.dispatchConditionName) },
   ];
@@ -208,7 +208,7 @@ export function JobCardWorkspace({
                     )}
                   </>
                 ) : null}
-                {spec?.shapeName ?? "—"}
+                {spec?.shapeName ?? "-"}
                 {spec?.gradeName && (
                   <>
                     <span className="mx-2 text-ink-subtle">·</span>
@@ -238,10 +238,10 @@ export function JobCardWorkspace({
 
         {/* Split body: LEFT job execution ~55% · RIGHT product summary ~45% */}
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] xl:items-start">
-          {/* LEFT — job execution */}
+          {/* LEFT - job execution */}
           <div className="flex flex-col gap-6">
             <Card>
-              <Section title="Job details" subtitle="What we do — execution facts">
+              <Section title="Job details" subtitle="What we do - execution facts">
                 <DetailGrid fields={jobFields} columns={2} />
               </Section>
             </Card>
@@ -261,12 +261,12 @@ export function JobCardWorkspace({
             )}
           </div>
 
-          {/* RIGHT — live product summary (sticky on wide screens) */}
+          {/* RIGHT - live product summary (sticky on wide screens) */}
           <div className="flex flex-col gap-6 xl:sticky xl:top-6">
             <Card accent>
               <Section
                 title="Product summary"
-                subtitle="Live from the linked Item (SSOT) — read-only"
+                subtitle="Live from the linked Item (SSOT) - read-only"
               >
                 {spec?.itemId ? (
                   <>
@@ -283,7 +283,7 @@ export function JobCardWorkspace({
                   </>
                 ) : (
                   <Placeholder>
-                    This job card is not linked to an Item yet — link a product in
+                    This job card is not linked to an Item yet - link a product in
                     the workbench to resolve a live spec here.
                   </Placeholder>
                 )}
@@ -299,7 +299,7 @@ export function JobCardWorkspace({
             <Card>
               <Section
                 title="Previous job cards for this item"
-                subtitle="Where-used — other work orders on the same spec"
+                subtitle="Where-used - other work orders on the same spec"
               >
                 <SiblingList siblings={siblings} />
               </Section>
@@ -307,7 +307,7 @@ export function JobCardWorkspace({
           </div>
         </div>
 
-        {/* BELOW — manufacturing timeline + QC + notes + attachments */}
+        {/* BELOW - manufacturing timeline + QC + notes + attachments */}
         <Card>
           <Section title="Manufacturing timeline" subtitle="Production stage & activity">
             <div className="rounded-xl border border-hairline bg-surface-soft px-4 py-4">
@@ -332,7 +332,7 @@ export function JobCardWorkspace({
             <Section title="Operator notes" subtitle="Per-job execution log">
               <Placeholder>
                 Append-only operator notes (deviations, machine, shift) attach here
-                once the Production module lands — spec-level method stays on the
+                once the Production module lands - spec-level method stays on the
                 Item.
               </Placeholder>
             </Section>
@@ -343,7 +343,7 @@ export function JobCardWorkspace({
           <Section title="Attachments" subtitle="Route sheets & job documents">
             <Placeholder>
               Per-job-card documents (route sheet, drawing revision in use) surface
-              here — filed against this job card via the documents library.
+              here - filed against this job card via the documents library.
             </Placeholder>
           </Section>
         </Card>
@@ -408,7 +408,7 @@ function SiblingList({ siblings }: { siblings: JobCardSibling[] }) {
   if (siblings.length === 0) {
     return (
       <Placeholder>
-        No other job cards reference this item yet — this is the first.
+        No other job cards reference this item yet - this is the first.
       </Placeholder>
     );
   }

@@ -24,9 +24,9 @@ interface Props {
 }
 
 function moneyText(value: string | null): string {
-  if (value == null || value === "") return "—";
+  if (value == null || value === "") return "-";
   const n = Number(value);
-  return Number.isFinite(n) ? formatInr(n) : "—";
+  return Number.isFinite(n) ? formatInr(n) : "-";
 }
 
 function moneyNumber(value: string | null): number {
@@ -54,7 +54,7 @@ export function CostingTable({ rows }: Props) {
             className="font-semibold text-ink-strong hover:underline"
             style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}
           >
-            {r.smNumber ?? "—"}
+            {r.smNumber ?? "-"}
           </Link>
         ),
       },
@@ -69,7 +69,7 @@ export function CostingTable({ rows }: Props) {
             className="block max-w-[240px] truncate text-ink-soft"
             title={r.custProductName ?? undefined}
           >
-            {r.custProductName ?? "—"}
+            {r.custProductName ?? "-"}
           </span>
         ),
       },
@@ -80,7 +80,7 @@ export function CostingTable({ rows }: Props) {
         sortValue: (r) => r.companyName ?? "",
         exportValue: (r) => r.companyName ?? "",
         cell: (r) => (
-          <span className="text-ink-soft">{r.companyName ?? "—"}</span>
+          <span className="text-ink-soft">{r.companyName ?? "-"}</span>
         ),
       },
       {

@@ -10,7 +10,7 @@ import * as XLSX from "xlsx";
  * naive `cells.join(",")` would get wrong.
  *
  * `null` cells become empty strings. The caller passes the CURRENTLY visible /
- * filtered / sorted rows — this util has no opinion about which rows; it just
+ * filtered / sorted rows - this util has no opinion about which rows; it just
  * serialises whatever it's given.
  *
  * Returns the CSV string it wrote so it can be unit-tested without a DOM.
@@ -29,7 +29,7 @@ export function buildCsv(
 
 /**
  * Serialise `rows` to CSV and download it as `<filename>.csv` in the browser.
- * No-op (returns the CSV string) when there's no `document` — e.g. under test.
+ * No-op (returns the CSV string) when there's no `document` - e.g. under test.
  */
 export function exportRowsToCsv(
   filename: string,

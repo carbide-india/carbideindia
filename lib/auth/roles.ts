@@ -5,14 +5,14 @@ import { employeeRoles, roles, type Employee } from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
 
 /**
- * Role-based access control (ERP redesign — Phase 1), layered on
+ * Role-based access control (ERP redesign - Phase 1), layered on
  * `lib/auth/current.ts`. ADDITIVE / non-breaking: existing actions still guard
  * with `requireAdmin`; `requireRole` is provided here for the state machine
  * (Phase 8) and any new role-scoped action, but no existing action is
  * retrofitted in this phase.
  *
  * Pre-rollout fallback: an employee with NO rows in `employee_roles` resolves to
- * `["admin"]` when `employee.isAdmin` is true, else `[]` — so the app behaves
+ * `["admin"]` when `employee.isAdmin` is true, else `[]` - so the app behaves
  * exactly as before until the data-fill/grants land.
  *
  * `admin` implies every role (see `hasRole` / `requireRole`).

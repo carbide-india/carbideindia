@@ -4,12 +4,12 @@ import { db } from "@/lib/db";
 import { clients, items } from "@/db/schema";
 
 /**
- * Command-palette record search (ERP redesign — Phase 3, STUB).
+ * Command-palette record search (ERP redesign - Phase 3, STUB).
  *
  * A lightweight federated search feeding the ⌘K palette's "search records"
  * section. This phase covers two spines: Items (by code / customer product name)
  * and Clients (by name / client code). Top 5 each, indexed `ILIKE` on the code
- * columns — no client-side scanning. Phase 9 (§1.4) expands this into the full
+ * columns - no client-side scanning. Phase 9 (§1.4) expands this into the full
  * `command-search` UNION over SM / quotes / orders with trigram ranking.
  */
 
@@ -45,7 +45,7 @@ export async function commandSearch(rawQuery: string): Promise<CommandSearchResu
         id: items.id,
         code: items.itemCode,
         // Display-only provenance label; origin_* is never part of the search
-        // predicate (Canonical Decisions) — items are searched by item_code.
+        // predicate (Canonical Decisions) - items are searched by item_code.
         label: items.originCustProductName,
       })
       .from(items)

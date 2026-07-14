@@ -26,7 +26,7 @@ export interface InquiryFilters {
 
 /**
  * Inquiry register list. Filters are URL-driven (nuqs) and per-user, so this
- * is intentionally uncached — every render hits the DB with the exact filter
+ * is intentionally uncached - every render hits the DB with the exact filter
  * set. `q` matches company name OR SM number, case-insensitive substring.
  */
 export async function listInquiries(
@@ -87,7 +87,7 @@ export interface InquirySearchResult {
 }
 
 /**
- * Command-palette inquiry search — SM number or company, capped small for a
+ * Command-palette inquiry search - SM number or company, capped small for a
  * snappy palette (same contract as searchTasks in lib/queries/task-search.ts).
  */
 export async function searchInquiries(rawQuery: string): Promise<InquirySearchResult[]> {
@@ -117,7 +117,7 @@ export interface InquiryOption {
 
 /**
  * Recent enquiries for the sample form's "Linked Enquiry" picker, rendered
- * as `SM — company`. Intentionally uncached: a sample is typically logged
+ * as `SM - company`. Intentionally uncached: a sample is typically logged
  * minutes after its enquiry, so a cached list would routinely miss the one
  * enquiry the user is looking for. Capped at the 100 most recent.
  */
@@ -150,7 +150,7 @@ export async function getNextSmNumber(): Promise<number> {
 /**
  * Shape a loaded inquiry row into the enquiry form's input fields for edit
  * mode. Covers only the header / client / checklist / meta fields the edit
- * form shows — products (inquiry_items) are NOT edited here (they link to
+ * form shows - products (inquiry_items) are NOT edited here (they link to
  * costings/quotes), so the form hides its ProductsSection in edit mode.
  *
  * Conventions match the form's defaultValues: numeric columns are strings or
@@ -209,7 +209,7 @@ export interface InquiryItemRow {
   id: string;
   inquiryId: string;
   sortOrder: number;
-  // Customer-scoped ASK (single-sourced on inquiry_items — §2.5 KEEP).
+  // Customer-scoped ASK (single-sourced on inquiry_items - §2.5 KEEP).
   custProductName: string | null;
   custDrawingNo: string | null;
   drawingRevisionNo: string | null;
@@ -219,7 +219,7 @@ export interface InquiryItemRow {
   itemId: string;
   createdAt: Date;
   updatedAt: Date;
-  // Product SPEC resolved from the linked Item (+ master names) — read-through.
+  // Product SPEC resolved from the linked Item (+ master names) - read-through.
   itemCode: string | null;
   shapeName: string | null;
   gradeName: string | null;

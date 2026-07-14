@@ -160,7 +160,7 @@ export async function listNodeActions(nodeIds: string[]): Promise<NodeAction[]> 
 
 /**
  * Flat, path-labelled list of active nodes for the task → project picker.
- * Cached under the `projectNodes` tag — re-fetches only when a node is
+ * Cached under the `projectNodes` tag - re-fetches only when a node is
  * created/renamed/archived (writers in `app/(app)/projects/actions.ts`
  * call `updateTag(CACHE_TAGS.projectNodes)`).
  */

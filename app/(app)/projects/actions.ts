@@ -29,7 +29,7 @@ function revalidateProjectSurfaces() {
 }
 
 /**
- * Phase 3.1 — load a project node + assert the caller is allowed to mutate
+ * Phase 3.1 - load a project node + assert the caller is allowed to mutate
  * it (creator or admin). Prevents any authenticated user from renaming or
  * archiving another team-member's project just by guessing the UUID, which
  * the previous `requireUser()`-only check permitted. The `create` path
@@ -150,7 +150,7 @@ export async function renameProjectNode(
 }
 
 /**
- * #13 — permanently delete a project node AND its whole subtree
+ * #13 - permanently delete a project node AND its whole subtree
  * (milestone → result → action → sub-action). `parent_id` has no FK
  * cascade, so we collect the subtree here; linked tasks auto-unlink via
  * tasks.project_node_id ON DELETE SET NULL (the task itself is kept).
@@ -214,7 +214,7 @@ export async function setProjectNodeArchived(
   return { ok: true };
 }
 
-/* ─── #13 — project overhaul: details, owner, team, reorder ──────────── */
+/* ─── #13 - project overhaul: details, owner, team, reorder ──────────── */
 
 const DetailsSchema = z
   .object({

@@ -29,14 +29,14 @@ import {
 import type { WorkflowFlagKey } from "@/db/enums";
 
 /**
- * ERP Phase 8 — `advanceStage`, the SINGLE funnel for every enforced pipeline
+ * ERP Phase 8 - `advanceStage`, the SINGLE funnel for every enforced pipeline
  * transition (§4.6). In ONE transaction it:
  *   1. checks the per-entity feature flag (OFF ⇒ hard no-op, so the deploy is
  *      inert until an admin flips it ON);
- *   2. `requireRole(actorRoleFor(from,to))` — the stage actor is enforced;
+ *   2. `requireRole(actorRoleFor(from,to))` - the stage actor is enforced;
  *   3. validates `canTransition` + runs the exit/entry GUARDS against live,
  *      FK-resolved data (rejects with the unmet reasons otherwise);
- *   4. WRITES the legal snapshot columns (FREEZE) for the transition (§2.4) —
+ *   4. WRITES the legal snapshot columns (FREEZE) for the transition (§2.4) -
  *      e.g. sending a quote freezes unit_price/spec_snapshot/frozen_at/by on its
  *      lines; confirming an SO additionally freezes qty_ordered;
  *   5. IDEMPOTENTLY auto-provisions the next-stage draft BY REFERENCE, only if
@@ -109,7 +109,7 @@ async function advanceQuotationToSent(
     const gr = guardsFor(from, to, ctx);
     if (!gr.ok) return { ok: false as const, error: "Cannot send quote.", unmet: gr.unmet };
 
-    // FREEZE — only lines not already frozen (re-send is a no-op on frozen rows).
+    // FREEZE - only lines not already frozen (re-send is a no-op on frozen rows).
     const now = new Date();
     let frozen = 0;
     for (const l of lines) {
@@ -278,7 +278,7 @@ async function advanceNegotiationToWon(
 /**
  * Confirm a sales order: sales_order → job_card (§2.6). Freezes unit_price,
  * spec_snapshot AND qty_ordered on each line (the order is a contract). Does NOT
- * auto-provision a job card here — JC create/release stay their own path in
+ * auto-provision a job card here - JC create/release stay their own path in
  * Phase 9; this locks the SO as a confirmed contract.
  */
 async function advanceSalesOrderToConfirmed(
@@ -432,13 +432,13 @@ export async function advanceStage(input: {
   const { entity, id } = input;
   if (!isUuid(id)) return { ok: false, error: "Invalid id." };
 
-  // 1. Feature flag — OFF is the default and a hard no-op.
+  // 1. Feature flag - OFF is the default and a hard no-op.
   const flagOn = await isWorkflowFlagOn(FLAG_FOR[entity]);
   if (!flagOn) {
     return {
       ok: false,
       error:
-        "Enforced workflow is off for this entity — use the standard form/status controls.",
+        "Enforced workflow is off for this entity - use the standard form/status controls.",
     };
   }
 

@@ -24,7 +24,7 @@ export default async function NewCostingPage({ searchParams }: PageProps) {
   const inquiryId = typeof sp.inquiryId === "string" ? sp.inquiryId : "";
   const draftParam = typeof sp.draft === "string" ? sp.draft : undefined;
 
-  // Both UUIDs are required — without them we cannot save a costing.
+  // Both UUIDs are required - without them we cannot save a costing.
   if (!UUID_RE.test(inquiryItemId) || !UUID_RE.test(inquiryId)) {
     notFound();
   }

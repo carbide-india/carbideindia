@@ -5,7 +5,7 @@
  * ---------------------------
  * A `SEQUENCE` is fast but NOT gapless: `nextval` is non-transactional, so a
  * rolled-back invoice permanently burns its number. Indian statute requires a
- * *gapless* invoice/DN register per financial year — you may not skip 42. So we
+ * *gapless* invoice/DN register per financial year - you may not skip 42. So we
  * use a per-(series, FY) counter ROW in `doc_number_series` and increment it
  * inside the caller's transaction with a `SELECT  FOR UPDATE`.
  *
@@ -16,7 +16,7 @@
  * concurrent allocations for the same series+FY therefore serialize: the second
  * blocks until the first COMMITs, then reads the just-incremented value. Because
  * the increment and the document INSERT share ONE transaction, a rollback
- * releases the lock AND un-does the increment together — the number is never
+ * releases the lock AND un-does the increment together - the number is never
  * consumed by a document that doesn't exist. Result: strictly monotonic, no
  * gaps, no duplicates, even under load. (If the counter row is missing we INSERT
  * it with `ON CONFLICT DO NOTHING` then re-select FOR UPDATE, so first-use of a
@@ -28,7 +28,7 @@
 import { sql } from "drizzle-orm";
 import type { PgTransaction } from "drizzle-orm/pg-core";
 
-/** Series keys — one gapless register each, per financial year. */
+/** Series keys - one gapless register each, per financial year. */
 export const SERIES_KEYS = ["invoice", "dn", "credit_note"] as const;
 export type SeriesKey = (typeof SERIES_KEYS)[number];
 
@@ -46,7 +46,7 @@ export const SERIES_DEFAULTS: Record<SeriesKey, { prefix: string; padTo: number 
 export function financialYearLabel(date: Date = new Date()): string {
   const y = date.getUTCFullYear();
   const m = date.getUTCMonth(); // 0 = Jan  3 = Apr
-  const startYear = m >= 3 ? y : y - 1; // Jan–Mar belong to the FY that began last April
+  const startYear = m >= 3 ? y : y - 1; // Jan-Mar belong to the FY that began last April
   const endYY = String((startYear + 1) % 100).padStart(2, "0");
   return `${startYear}-${endYY}`;
 }
@@ -74,7 +74,7 @@ export interface NextDocNumber {
   fyLabel: string;
 }
 
-// A permissive tx type — the concrete generics vary by driver; we only issue
+// A permissive tx type - the concrete generics vary by driver; we only issue
 // raw SQL through `.execute`, so this stays decoupled from the schema generics.
 type AnyTx = PgTransaction<any, any, any>;
 

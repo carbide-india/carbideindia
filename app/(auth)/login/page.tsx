@@ -9,12 +9,12 @@ import { AcceptInviteCard } from "@/components/auth/accept-invite-card";
 import { DiamondCascade } from "@/components/auth/diamond-cascade";
 
 /**
- * /login — "drawing sheet DWG-002", exaggerated-minimal drafting style.
+ * /login - "drawing sheet DWG-002", exaggerated-minimal drafting style.
  *
  * Two columns of one engineering drawing sheet: the brand statement (huge
  * Bricolage 800 headline, spec strip, a dimensioned-circle motif) and the
  * sign-in card framed by red registration marks. Mono DWG labels head each
- * column; SCALE / SHEET close the sheet. Custom Clerk form — email +
+ * column; SCALE / SHEET close the sheet. Custom Clerk form - email +
  * password only (disable socials in the Clerk dashboard too).
  */
 interface PageProps {
@@ -118,13 +118,13 @@ export default async function LoginPage({ searchParams }: PageProps) {
 
         {/* ── Sheet body ─────────────────────────────────────────── */}
         <section className="grid min-h-0 grid-cols-[1fr_minmax(380px,440px)] items-center gap-16 py-6 max-lg:grid-cols-1 max-lg:gap-10 max-lg:py-8">
-          {/* Statement column — the headline tucks in just under the diamond
+          {/* Statement column - the headline tucks in just under the diamond
               field, exactly like the reference render. Logo shows here only
               on small screens (it sits above the card on lg+). */}
           <div className="min-w-0 lg:pt-44">
             <Image
               src="/brand/logo.png"
-              alt="Carbide India — Your Tungsten Carbide & Tungsten Copper Partners"
+              alt="Carbide India - Your Tungsten Carbide & Tungsten Copper Partners"
               width={150}
               height={81}
               priority
@@ -152,7 +152,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
               className="login-rise mt-4 max-w-[52ch]"
               style={{ animationDelay: "0.28s", fontSize: 15.5, lineHeight: 1.6, color: "#57534E" }}
             >
-              Enquiries, feasibility, costing and quotations — every SM number,
+              Enquiries, feasibility, costing and quotations - every SM number,
               tracked from first call to sales order. Built for the shop floor,
               engineered like the parts we make.
             </p>
@@ -191,7 +191,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
               ))}
             </div>
 
-            {/* Dimensioned-circle motif — hidden when the viewport is short
+            {/* Dimensioned-circle motif - hidden when the viewport is short
                 so it can never crowd the title block. */}
             <div className="login-rise mt-6 hidden max-w-[540px] [@media(min-width:1024px)_and_(min-height:820px)]:block" style={{ animationDelay: "0.48s" }} aria-hidden>
               <svg viewBox="0 0 560 110" width="100%" height="auto" fill="none">
@@ -216,7 +216,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
             </div>
           </div>
 
-          {/* Sign-in column — logo sits above the card, clearly visible. */}
+          {/* Sign-in column - logo sits above the card, clearly visible. */}
           <div className="login-rise w-full" style={{ animationDelay: "0.25s" }}>
             <div className="mb-5 flex justify-center max-lg:hidden">
               <Image

@@ -215,7 +215,7 @@ export function QuotationForm({
         fireToast({ message: res.error, type: "error" });
         return;
       }
-      // Quotation saved — retire the draft so it leaves the Drafts inbox.
+      // Quotation saved - retire the draft so it leaves the Drafts inbox.
       await discard();
       fireToast({
         message: `Quotation ${res.quoteNo ?? ""} created`.trim(),
@@ -252,7 +252,7 @@ export function QuotationForm({
                   ariaLabel="Linked enquiry"
                   options={inquiries.map((o) => ({
                     value: o.id,
-                    label: `${o.smNumber} — ${o.companyName}`,
+                    label: `${o.smNumber} - ${o.companyName}`,
                   }))}
                 />
               )}
@@ -264,7 +264,7 @@ export function QuotationForm({
               id="qt-no"
               type="text"
               className="nt-input"
-              placeholder="Auto-numbers <SM>-Q01 — leave blank"
+              placeholder="Auto-numbers <SM>-Q01 - leave blank"
               style={{ fontFamily: "var(--font-mono)", fontSize: 13.5 }}
               {...register("quoteNo")}
             />
@@ -275,14 +275,14 @@ export function QuotationForm({
           <div className="rounded-xl border border-hairline bg-surface-soft px-4 py-3">
             <div className="grid grid-cols-6 gap-4 max-lg:grid-cols-3 max-md:grid-cols-2">
               <Caption label="Company">
-                {autofetching ? "—" : snapshot?.companyName ?? "—"}
+                {autofetching ? "-" : snapshot?.companyName ?? "-"}
               </Caption>
               <Caption label="Enquiry Date">
                 {autofetching
-                  ? "—"
+                  ? "-"
                   : snapshot?.enquiryDate
                     ? formatDate(new Date(snapshot.enquiryDate))
-                    : "—"}
+                    : "-"}
               </Caption>
               {snapshot?.salesPersonName && (
                 <Caption label="Sales Person">{snapshot.salesPersonName}</Caption>
@@ -324,7 +324,7 @@ export function QuotationForm({
               }
             />
 
-            {/* Product identity — one dense line; bottom-align so the input
+            {/* Product identity - one dense line; bottom-align so the input
                 boxes line up even when some labels wrap to two lines. */}
             <div className="grid grid-cols-10 items-end gap-2.5 max-xl:grid-cols-5 max-md:grid-cols-2">
               <Field
@@ -665,14 +665,14 @@ function SmDetailFields({ snapshot: s }: { snapshot: QuoteAutofill }) {
       {hasShape && <Caption label="Shape">{s.shape}</Caption>}
       {hasDims && (
         <Caption label="Dimensions">
-          {[dimStr, s.dimensionNotes].filter(Boolean).join(" — ") || "—"}
+          {[dimStr, s.dimensionNotes].filter(Boolean).join(" - ") || "-"}
         </Caption>
       )}
       {hasContact && (
         <Caption label="Contact">
           {[contactName, s.contactNo, s.contactEmail]
             .filter(Boolean)
-            .join(" · ") || "—"}
+            .join(" · ") || "-"}
         </Caption>
       )}
     </>

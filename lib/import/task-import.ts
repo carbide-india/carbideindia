@@ -106,7 +106,7 @@ function coerceDate(value: unknown): string | null {
 
 /**
  * Parse a CSV/XLSX File and validate every row against the task model,
- * resolving Doer/Initiator names (or emails) to employee ids. Pure preview —
+ * resolving Doer/Initiator names (or emails) to employee ids. Pure preview -
  * no DB writes. The same function backs both the preview and the commit so the
  * server never trusts client-side data.
  */
@@ -164,7 +164,7 @@ export async function buildImportPreview(
     const hit = byName.get(norm(v));
     if (!hit) return { id: null, error: `no employee named "${v}"` };
     if (hit === "AMBIGUOUS")
-      return { id: null, error: `more than one employee named "${v}" — use their email` };
+      return { id: null, error: `more than one employee named "${v}" - use their email` };
     return { id: hit };
   }
 

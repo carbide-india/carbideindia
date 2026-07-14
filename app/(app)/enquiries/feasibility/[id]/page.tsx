@@ -28,17 +28,17 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  if (!UUID_RE.test(id)) return { title: "Primary Feasibility — Carbide India" };
+  if (!UUID_RE.test(id)) return { title: "Primary Feasibility - Carbide India" };
   const header = await getInquiryWorkspaceHeader(id);
   return {
     title: header
-      ? `Feasibility · ${header.smNumber} — Carbide India`
-      : "Primary Feasibility — Carbide India",
+      ? `Feasibility · ${header.smNumber} - Carbide India`
+      : "Primary Feasibility - Carbide India",
   };
 }
 
 /**
- * Dedicated Primary Feasibility page — a standalone screen (launched from the
+ * Dedicated Primary Feasibility page - a standalone screen (launched from the
  * sidebar Primary Feasibility queue) that runs the per-product feasibility
  * check for one SM. The enquiry module shell is supplied by the enquiries
  * layout, so this page returns content only (no nested shell).

@@ -9,7 +9,7 @@ import { z } from "zod";
  *  - trim ends.
  *
  * Prevents data like "hetesh      \n  vichare" from ever reaching the
- * employees table again. Does NOT title-case — names like "van der Berg"
+ * employees table again. Does NOT title-case - names like "van der Berg"
  * or "McConnell" need user judgment, not automation.
  */
 export function normalizeName(raw: string): string {
@@ -30,7 +30,7 @@ const departmentIdsField = z.array(z.string().uuid()).default([]);
  *  legacy single-department columns). Null = no primary / no departments. */
 const primaryDepartmentIdField = z.string().uuid().nullable().optional();
 
-/** Job title / role designation — free text, optional. */
+/** Job title / role designation - free text, optional. */
 const designationField = z.string().trim().max(120).optional();
 
 export const InviteEmployeeSchema = z.object({
@@ -50,7 +50,7 @@ export const EmployeeIdSchema = z.string().uuid("Invalid employee id");
 /**
  * Patch-shaped schema for `editEmployee`. Every field is optional and only
  * supplied keys are written. `email` and `clerk_user_id` are intentionally
- * absent — those are immutable identity. Reject empty patches so callers
+ * absent - those are immutable identity. Reject empty patches so callers
  * don't burn a round-trip on a no-op.
  */
 export const EditEmployeeSchema = z
@@ -69,7 +69,7 @@ export const EditEmployeeSchema = z
     primaryDepartmentId:  z.string().uuid().nullable().optional(),
     managerId:  z.string().uuid().nullable().optional(),
     isAdmin:    z.boolean().optional(),
-    // M4 — multi-channel admin controls.
+    // M4 - multi-channel admin controls.
     emailOptIn: z.boolean().optional(),
   })
   .strict()

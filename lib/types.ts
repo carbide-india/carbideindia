@@ -179,7 +179,7 @@ export interface TaskListRow {
   title: string;
   subject: string | null;
   client: string | null;
-  /** Full task body — used by the hover-to-preview popover in the table. */
+  /** Full task body - used by the hover-to-preview popover in the table. */
   description: string | null;
   status: TaskStatus;
   priority: EisenhowerPriority;

@@ -16,7 +16,7 @@ interface Props {
 /**
  * Editorial-document comment composer.  Avatar on the left, autosizing
  * textarea on the right, Post enabled only when there's a body.  Lives
- * at the bottom of the left column, intentionally NOT in a glass card —
+ * at the bottom of the left column, intentionally NOT in a glass card -
  * it's part of the document, not a panel.
  */
 export function CommentInput({ taskId, me }: Props) {

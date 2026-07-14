@@ -67,7 +67,7 @@ export function TopPerformersSection({
         <div>
           <h2 className="text-display-lg text-ink-strong">Top Performers</h2>
           <p className="text-body-lg text-ink-subtle mt-0.5">
-            Ranked by completed tasks — click any card to see their work
+            Ranked by completed tasks - click any card to see their work
           </p>
         </div>
       </header>
@@ -76,7 +76,7 @@ export function TopPerformersSection({
         <EmptyState />
       ) : (
         <>
-          {/* PODIUM — top 3 as featured cards */}
+          {/* PODIUM - top 3 as featured cards */}
           <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
             {top3.map((p, i) => (
               <PodiumCard
@@ -88,7 +88,7 @@ export function TopPerformersSection({
             ))}
           </div>
 
-          {/* LEADERBOARD — ranks 4-10 in compact rows */}
+          {/* LEADERBOARD - ranks 4-10 in compact rows */}
           {rest.length > 0 && (
             <ol className="mt-4 flex flex-col gap-1.5">
               {rest.map((p, i) => (
@@ -126,7 +126,7 @@ function PodiumCard({
         boxShadow: theme.glow,
       }}
     >
-      {/* Top color bar — medal gradient */}
+      {/* Top color bar - medal gradient */}
       <span
         aria-hidden
         className="absolute inset-x-0 top-0"
@@ -177,7 +177,7 @@ function PodiumCard({
           {performer.employeeName}
         </span>
 
-        {/* Done count — huge */}
+        {/* Done count - huge */}
         <span
           className="tabular-nums leading-none text-ink-strong font-black"
           style={{

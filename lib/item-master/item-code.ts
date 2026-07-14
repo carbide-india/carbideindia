@@ -1,19 +1,19 @@
 /**
- * Item / Product Master — internal item-code generator.
+ * Item / Product Master - internal item-code generator.
  *
  * Decoded from Carbide's "Item Master Logic" sheet (+ Manan's 2026-06-17 call):
- *   code = Size – Seq – Shape – InternalGrade – Condition – Tolerance – Dimensions
+ *   code = Size - Seq - Shape - InternalGrade - Condition - Tolerance - Dimensions
  *   e.g. S-10001-C-CIF06-S-XXX-100.00x90.80x89.00x4.50x2.25
  *
- * - Size: S/M/L (+ assemblies) — first char; derived from dimensions.
+ * - Size: S/M/L (+ assemblies) - first char; derived from dimensions.
  * - Seq:  5-digit running number (the unique item serial).
  * - Shape/Grade/Condition: short codes from their masters.
- * - Tolerance: from the tolerance chart — defaults to "XXX" until that chart
+ * - Tolerance: from the tolerance chart - defaults to "XXX" until that chart
  *   lands (Jayshree), matching the sheet's own placeholder.
  * - Dimensions: present values at 2 decimals (mm), joined by "x"
- *   (OD x ID x L x W x T — longest is always length).
+ *   (OD x ID x L x W x T - longest is always length).
  *
- * Pure module — no I/O. NOTE: the exact segment order is our reading of the
+ * Pure module - no I/O. NOTE: the exact segment order is our reading of the
  * sheet's example; it lives in one place so a tweak from Alok is a one-liner.
  */
 

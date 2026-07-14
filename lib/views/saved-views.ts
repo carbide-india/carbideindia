@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { savedViews, type SavedView } from "@/db/schema";
 
 /**
- * Saved views (ERP redesign — Phase 1 backend). The SavedViews bar UI is wired
+ * Saved views (ERP redesign - Phase 1 backend). The SavedViews bar UI is wired
  * in Phase 3; this module is the read side it consumes. A view is a per-employee
  * (optionally shared) named bundle of filters/sort/columns for a register
  * module ("items", "clients", "enquiries", ).

@@ -4,7 +4,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Shared primitives for the New Inquiry form — cloned from the New Task
+ * Shared primitives for the New Inquiry form - cloned from the New Task
  * form's visual language (Field label style, nt-input fields, card sections)
  * so the inquiry module reads as the same app, not a redesign.
  */
@@ -53,7 +53,7 @@ export function Field({
  * Smaller sibling of Field for fields nested inside a titled block (e.g. the
  * Sample Register's stage rows): same label voice at 12px so the hierarchy
  * reads stage title > field label > control. Renders a <span>, never a
- * <label> — the controls carry their own aria-labels.
+ * <label> - the controls carry their own aria-labels.
  */
 export function MiniField({
   label,
@@ -123,7 +123,7 @@ export function GroupHeader({
   );
 }
 
-/** Card section — same surface treatment as the app's other form cards. */
+/** Card section - same surface treatment as the app's other form cards. */
 export function SectionCard({
   title,
   hint,
@@ -174,7 +174,7 @@ interface SegmentedProps<T extends string> {
   ariaLabel?: string;
   /**
    * "lg" renders a full-width box that matches the height, border and indigo
-   * left-accent of `.nt-input` — so it lines up as a proper field alongside
+   * left-accent of `.nt-input` - so it lines up as a proper field alongside
    * the form's other boxes. "sm" (default) is the compact inline pill.
    */
   size?: "sm" | "lg";
@@ -183,7 +183,7 @@ interface SegmentedProps<T extends string> {
 }
 
 /**
- * Compact segmented control — used for the paper checklist's V / x / # marks
+ * Compact segmented control - used for the paper checklist's V / x / # marks
  * (Given / Not Given / Assumed), Yes/No toggles and the New/Old client mode.
  */
 export function Segmented<T extends string>({

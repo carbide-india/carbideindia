@@ -13,11 +13,11 @@ const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_BYTES = 2 * 1024 * 1024; // 2MB
 
 /**
- * Avatar upload — multipart POST. The client uploads the cropped square
+ * Avatar upload - multipart POST. The client uploads the cropped square
  * blob (handled by react-easy-crop). We re-validate server-side: MIME,
  * size, and reject anything else. The blob is stored publicly at
  * `avatars/<employeeId>/avatar-<suffix>.<ext>` on Vercel Blob and the
- * permanent public URL is stored as the employee's avatarUrl — no signed
+ * permanent public URL is stored as the employee's avatarUrl - no signed
  * URL refresh needed.
  *
  * Returns: { ok: true, url } | { ok: false, error }
@@ -100,7 +100,7 @@ export async function POST(req: Request) {
 }
 
 /**
- * DELETE — clears the avatar back to initials. Removes the user's stored
+ * DELETE - clears the avatar back to initials. Removes the user's stored
  * blobs (best-effort) and nulls out avatarUrl.
  */
 export async function DELETE() {
@@ -119,7 +119,7 @@ export async function DELETE() {
   }
 
   // Best-effort cleanup of the user's avatar blobs. Failure here is
-  // non-fatal — the row is already updated.
+  // non-fatal - the row is already updated.
   try {
     await deleteByPrefix(`avatars/${me.id}/`);
   } catch (err) {

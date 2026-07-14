@@ -17,10 +17,10 @@ interface Props {
 }
 
 /**
- * ERP Phase 8 — the flag-gated "Next step" CTA. Rendered ONLY when the entity's
+ * ERP Phase 8 - the flag-gated "Next step" CTA. Rendered ONLY when the entity's
  * enforced-workflow flag is ON (the server page decides). Routes the advance
  * through `advanceStage`, which enforces role + guards, freezes the legal
- * snapshot, and idempotently provisions the next-stage draft — replacing the
+ * snapshot, and idempotently provisions the next-stage draft - replacing the
  * standalone New form for this hop while the flag is on. On success it surfaces
  * what was provisioned and refreshes; on a guard/role failure it shows the exact
  * unmet reasons.
@@ -36,7 +36,7 @@ export function NextStepButton({ entity, id, label }: Props) {
         fireToast({
           message:
             res.provisioned === false
-              ? `${label} — already advanced (no duplicate created).`
+              ? `${label} - already advanced (no duplicate created).`
               : `${label} done. Next stage draft ready.`,
         });
         router.refresh();

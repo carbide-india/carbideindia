@@ -9,7 +9,7 @@ import type { TaskExportRow } from "@/lib/queries/tasks";
  * Both routes display human-readable labels (status, priority, approval)
  * and date-fns-formatted dates rather than raw enum values + ISO strings.
  * The CSV export at /tasks/export keeps its raw enum-based payload so
- * downstream automations (Zapier, scripts) aren't broken — these two
+ * downstream automations (Zapier, scripts) aren't broken - these two
  * formats are designed for humans.
  */
 
@@ -56,7 +56,7 @@ export function toRichRow(t: TaskExportRow): RichRow {
     clientName: t.title,
     subject: t.subject ?? "",
     status: STATUS_LABELS_FALLBACK[t.status] ?? t.status,
-    approvalStatus: t.approvalStatus ? APPROVAL_LABEL[t.approvalStatus] : "—",
+    approvalStatus: t.approvalStatus ? APPROVAL_LABEL[t.approvalStatus] : "-",
     priority: PRIORITY_LABELS[t.priority] ?? t.priority,
     doer: t.doerName ?? "",
     initiator: t.initiatorName ?? "",
@@ -67,7 +67,7 @@ export function toRichRow(t: TaskExportRow): RichRow {
   };
 }
 
-/** Positional array variant — preserves the RICH_EXPORT_HEADERS order. */
+/** Positional array variant - preserves the RICH_EXPORT_HEADERS order. */
 export function toRichRowArray(t: TaskExportRow): string[] {
   const r = toRichRow(t);
   return [

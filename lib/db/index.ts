@@ -34,7 +34,7 @@ if (process.env.NODE_ENV !== "production") {
   globalForDb.__pg = client;
 }
 
-// Phase 0.1 — opt-in slow-query logger. Enable in any environment by
+// Phase 0.1 - opt-in slow-query logger. Enable in any environment by
 // setting SLOW_QUERY_MS (e.g. "300"). Disabled by default so production
 // stays quiet until we deliberately turn it on. NODE_ENV=development
 // auto-enables at 300ms so local clicks immediately surface hotspots.

@@ -21,10 +21,10 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  if (!UUID_RE.test(id)) return { title: "Item — Carbide India" };
+  if (!UUID_RE.test(id)) return { title: "Item - Carbide India" };
   const item = await getItemById(id);
   return {
-    title: item ? `${item.itemCode} — Carbide India` : "Item — Carbide India",
+    title: item ? `${item.itemCode} - Carbide India` : "Item - Carbide India",
   };
 }
 

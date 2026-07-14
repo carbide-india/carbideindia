@@ -17,7 +17,7 @@ import {
 /**
  * Daily Client Meeting Feedback server actions (write path).
  *
- * NOTE on audit logging: there is intentionally none here — same call as the
+ * NOTE on audit logging: there is intentionally none here - same call as the
  * sample/inquiry actions (no app-data audit table exists yet).
  */
 
@@ -33,7 +33,7 @@ function isUuid(v: string): boolean {
 }
 
 /**
- * Drops keys whose value is `undefined` — OptionalText fields fold `""` →
+ * Drops keys whose value is `undefined` - OptionalText fields fold `""` →
  * `undefined`, so a "filled" patch can arrive as `{ field: undefined }`, which
  * passes the nonempty refine but must not reach `.set()`.
  */
@@ -43,7 +43,7 @@ function stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
   ) as Partial<T>;
 }
 
-/** Date fields are free strings in the validator — guard before `new Date`. */
+/** Date fields are free strings in the validator - guard before `new Date`. */
 function isParseableDate(s: string): boolean {
   return !Number.isNaN(new Date(s).getTime());
 }

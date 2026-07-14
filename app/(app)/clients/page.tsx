@@ -14,7 +14,7 @@ import { BulkImportModal } from "@/components/import/bulk-import-modal";
 export const dynamic = "force-dynamic";
 
 /**
- * Client Master register — the KYC/credit/banking list, now rendered inside the
+ * Client Master register - the KYC/credit/banking list, now rendered inside the
  * shared Enquiries module shell (logo sidebar + indigo header). On client routes
  * the shell's sidebar reads as the Client Master family automatically, so no
  * custom nav is passed. KPI cards + the dense frozen-column table live in
@@ -24,7 +24,6 @@ export const dynamic = "force-dynamic";
 export default async function ClientsPage() {
   const me = await requireAdmin();
   const rows = await listClientsForRegister();
-  const activeCount = rows.filter((r) => r.isActive).length;
 
   // Admins get the KYC bulk-import modal (same wiring as /clients/new). Lookups
   // resolve master/employee refs so imported cells validate against real ids.
@@ -57,9 +56,6 @@ export default async function ClientsPage() {
             <h1 className="text-[26px] font-black leading-none tracking-tight text-[#3f3f94]">
               Client Master
             </h1>
-            <p className="mt-1.5 text-[12.5px] font-semibold tabular-nums text-[#6b7280]">
-              {rows.length} total &middot; {activeCount} active
-            </p>
           </div>
           <div className="flex items-center gap-2.5">
             {me.isAdmin && importLookups && (

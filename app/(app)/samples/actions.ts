@@ -15,10 +15,10 @@ import {
 } from "@/lib/validators/sample";
 
 /**
- * Sample Register server actions (Phase 3 — write path).
+ * Sample Register server actions (Phase 3 - write path).
  *
  * NOTE on audit logging: there is intentionally none here. `task_events` is
- * FK'd to tasks and `settings_events` is scoped to admin settings — neither
+ * FK'd to tasks and `settings_events` is scoped to admin settings - neither
  * fits sample (app-data) writes, and inventing a third audit table is a
  * decision deferred to a later phase (same call as the inquiry actions).
  */
@@ -37,7 +37,7 @@ function isUuid(v: string): boolean {
 /**
  * Drops keys whose value is `undefined`. The validators' OptionalText fields
  * fold `""` → `undefined`, so a "filled" form patch can legitimately arrive
- * as `{ field: undefined }` — which passes the nonempty refine but must not
+ * as `{ field: undefined }` - which passes the nonempty refine but must not
  * reach `.set()` (and an all-undefined patch must not reach the db at all).
  */
 function stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
@@ -46,7 +46,7 @@ function stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
   ) as Partial<T>;
 }
 
-/** Date fields are free strings in the validator — guard before `new Date`. */
+/** Date fields are free strings in the validator - guard before `new Date`. */
 function isParseableDate(s: string): boolean {
   return !Number.isNaN(new Date(s).getTime());
 }
@@ -134,7 +134,7 @@ export async function createSample(
 
   // Explicit sampleNo inserts once; a derived one bumps its `-NN` suffix and
   // retries when a concurrent create grabbed the same number (23505 against
-  // samples_sample_no_unique — same retry shape as tasks' short_id).
+  // samples_sample_no_unique - same retry shape as tasks' short_id).
   const tries = v.sampleNo ? 1 : MAX_SAMPLE_NO_TRIES;
   for (let attempt = 1; attempt <= tries; attempt++) {
     const sampleNo =
@@ -161,7 +161,7 @@ export async function createSample(
   }
   return {
     ok: false,
-    error: "Could not allocate a unique sample number — enter one manually.",
+    error: "Could not allocate a unique sample number - enter one manually.",
   };
 }
 

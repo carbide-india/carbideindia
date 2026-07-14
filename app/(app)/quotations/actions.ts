@@ -21,10 +21,10 @@ import {
 import { quoteLineRows, quoteLineInsert } from "@/lib/quotations/line-rows";
 
 /**
- * Quotation (Quote Master) server actions — Phase 4 write path.
+ * Quotation (Quote Master) server actions - Phase 4 write path.
  *
  * NOTE on audit logging: there is intentionally none here, same deferred call
- * as the sample/inquiry actions — `task_events`/`settings_events` don't fit
+ * as the sample/inquiry actions - `task_events`/`settings_events` don't fit
  * app-data writes and a third audit table is a later-phase decision.
  */
 
@@ -45,7 +45,7 @@ function stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
 const MAX_NO_TRIES = 5;
 
 /**
- * Quote-line seeds for the form's per-line editor — one per `inquiry_items`
+ * Quote-line seeds for the form's per-line editor - one per `inquiry_items`
  * row of the picked SM, ordered by sort order. Called client-side on SM select
  * to pre-fill the lines (product/drawing/qty/grade/tolerance/condition);
  * pricing + timeline stay blank for the user to fill.
@@ -92,10 +92,10 @@ export async function createQuotation(
 
   const values: Omit<NewQuotation, "quoteNo"> = {
     inquiryId: v.inquiryId,
-    // snapshot from the SM (header — never per-line)
+    // snapshot from the SM (header - never per-line)
     companyName: auto.companyName,
     enquiryDate: auto.enquiryDate,
-    // per-line legacy mirror — sourced from line #1
+    // per-line legacy mirror - sourced from line #1
     custProductName: line0?.custProductName ?? auto.productDescription ?? undefined,
     custDrawingNo: line0?.custDrawingNo ?? undefined,
     drawingRevisionNo: line0?.drawingRevisionNo ?? undefined,
@@ -129,7 +129,7 @@ export async function createQuotation(
           .returning({ id: quotations.id });
         if (!r) throw new Error("quotations insert returned no row");
         if (lineRows.length) {
-          // Insert only the KEPT line columns — the spec/customer-ask mirrors are
+          // Insert only the KEPT line columns - the spec/customer-ask mirrors are
           // dropped (migration 0036); spec reads through items via item_id.
           await tx
             .insert(quotationItems)
@@ -153,7 +153,7 @@ export async function createQuotation(
   }
   return {
     ok: false,
-    error: "Could not allocate a unique quote number — enter one manually.",
+    error: "Could not allocate a unique quote number - enter one manually.",
   };
 }
 
@@ -165,7 +165,7 @@ type SyncResult =
  * Append products that were added to the linked enquiry AFTER this quotation
  * was created. Quotations snapshot their lines at creation, so a later-added
  * product is otherwise stranded. This inserts ONLY the missing lines (matched
- * by inquiryItemId) and never touches existing ones — a sent quote with edited
+ * by inquiryItemId) and never touches existing ones - a sent quote with edited
  * prices stays intact. User-triggered; never auto-runs.
  */
 export async function syncProductsFromEnquiry(
@@ -204,7 +204,7 @@ export async function syncProductsFromEnquiry(
     if (missing.length === 0) return { ok: true, added: 0 };
 
     const maxSort = existing.reduce((m, r) => Math.max(m, r.sortOrder), -1);
-    // Only the KEPT line columns — spec/customer-ask mirrors are dropped
+    // Only the KEPT line columns - spec/customer-ask mirrors are dropped
     // (migration 0036); they read through items/inquiry_item downstream.
     const rows = missing.map((s, i) => ({
       quotationId: recordId,
@@ -256,7 +256,7 @@ export async function updateQuotation(
   }
 
   // Mirror line-#1 per-line subset into quotation_items (sortOrder = 0). Only
-  // the KEPT transactional columns — the spec/customer-ask mirrors are dropped
+  // the KEPT transactional columns - the spec/customer-ask mirrors are dropped
   // (migration 0036) and now read through items/inquiry_item, so they are no
   // longer synced onto the line.
   const LINE1_KEYS = [

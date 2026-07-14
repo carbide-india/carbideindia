@@ -11,7 +11,7 @@ const isoDateToDate = z
   .datetime({ message: "Must be an ISO-8601 timestamp" })
   .transform((s) => new Date(s));
 
-/** Tier-3 (2026-05-20) — `doerIds` array enables fanout (one submit, N
+/** Tier-3 (2026-05-20) - `doerIds` array enables fanout (one submit, N
  *  tasks). Old callers + tests still pass `doerId` (single); the refine()
  *  rule requires exactly one of the two. `tags` is the new free-form list. */
 export const CreateTaskSchema = z
@@ -37,7 +37,7 @@ export const CreateTaskSchema = z
       .nullable()
       .optional()
       .default(null),
-    // Tier-4 — GCal-style scheduling. All optional; one-off tasks
+    // Tier-4 - GCal-style scheduling. All optional; one-off tasks
     // (the common case) leave them null.
     startsAt: isoDateToDate.nullable().optional().default(null),
     endsAt: isoDateToDate.nullable().optional().default(null),
@@ -62,7 +62,7 @@ export type CreateTaskParsed = z.output<typeof CreateTaskSchema>;
 /**
  * Editable subset (per Permissions matrix, spec line 223):
  * title / description / priority / due / notes / subject.
- * Status / doerId / initiatorId are NOT editable via this path —
+ * Status / doerId / initiatorId are NOT editable via this path -
  * they have dedicated Server Actions (setTaskStatus, reassignDoer).
  */
 export const EditTaskFieldsSchema = z
@@ -78,7 +78,7 @@ export const EditTaskFieldsSchema = z
       .max(20)
       .nullable()
       .optional(),
-    // Tier-4 — scheduling fields, all editable in the same patch.
+    // Tier-4 - scheduling fields, all editable in the same patch.
     startsAt: isoDateToDate.nullable().optional(),
     endsAt: isoDateToDate.nullable().optional(),
     allDay: z.boolean().optional(),
@@ -97,7 +97,7 @@ export const EditTaskFieldsSchema = z
     "End time must be at or after start time",
   );
 
-/** Admin-only — set or clear the verdict on a task. Pair with status edits
+/** Admin-only - set or clear the verdict on a task. Pair with status edits
  *  if needed; the two columns are independent. */
 export const SetApprovalStatusSchema = z.object({
   approvalStatus: z.enum(APPROVAL_STATUSES).nullable(),
@@ -106,7 +106,7 @@ export const SetApprovalStatusSchema = z.object({
 export type SetApprovalStatusInput = z.input<typeof SetApprovalStatusSchema>;
 export type SetApprovalStatusParsed = z.output<typeof SetApprovalStatusSchema>;
 
-/** Admin-only — record a revised target date without losing the original
+/** Admin-only - record a revised target date without losing the original
  *  due_at. Pass null to clear. */
 export const SetRevisedTargetDateSchema = z.object({
   revisedTargetDate: isoDateToDate.nullable(),

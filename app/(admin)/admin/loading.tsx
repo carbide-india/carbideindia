@@ -4,7 +4,7 @@ import { PageBuffering } from "@/components/ui/spinner";
 /**
  * Loading state for every admin page (Employees, Clients, Departments,
  * Subjects, Notifications, Activity, Settings). Admin routes previously had
- * no `loading.tsx`, so a slow admin query left the previous screen frozen —
+ * no `loading.tsx`, so a slow admin query left the previous screen frozen -
  * this paints the chrome + a buffering circle instantly, like the rest of
  * the app.
  */

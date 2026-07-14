@@ -13,7 +13,7 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 // A task's "effective" status spans two columns: the working `status` and the
 // admin `approval_status` verdict. The dashboard counts treat a task as e.g.
 // Not Approved when EITHER column says so (lib/queries/dashboard.ts), so the
-// list filter must match the same way — otherwise the "Not Approved" KPI
+// list filter must match the same way - otherwise the "Not Approved" KPI
 // filtered on `status` alone and showed almost nothing (sir's changes #14).
 const APPROVAL_VERDICTS = new Set<TaskStatus>(["approved", "not_approved"]);
 
@@ -114,12 +114,12 @@ export async function listTasks(filters: TaskListFilters): Promise<TaskListRow[]
   }));
 }
 
-// ─── Phase 4.2 — cursor pagination ────────────────────────────────────────
+// ─── Phase 4.2 - cursor pagination ────────────────────────────────────────
 //
 // `listTasks()` above keeps its existing "flat array up to 1000 rows"
 // contract so we don't break the 9 existing callers (exports, kanban,
 // agenda, archived, etc.) in a single sweep. The new `listTasksPage()`
-// returns `{ rows, nextCursor }` and is the path forward — adopt at each
+// returns `{ rows, nextCursor }` and is the path forward - adopt at each
 // caller incrementally.
 //
 // Cursor shape: base64(`${createdAt-iso}|${id}`). The query orders by
@@ -290,8 +290,8 @@ export interface BoardTask {
 /**
  * Tasks for the Kanban board, lightest possible payload. Optionally filtered by
  * the same `TaskListFilters` the list view uses (so the board can carry the
- * full filter bar). The `archived` flag is deliberately NOT applied — the board
- * renders archived tasks in a dedicated "Archived" column — but every other
+ * full filter bar). The `archived` flag is deliberately NOT applied - the board
+ * renders archived tasks in a dedicated "Archived" column - but every other
  * dimension (date range, status, doer, priority, subject, client, department)
  * narrows the board.
  */
@@ -377,7 +377,7 @@ export async function listAgendaTasks(employeeId: string): Promise<BoardTask[]> 
 }
 
 /**
- * Row shape for CSV export — superset of TaskListRow with `completedAt`,
+ * Row shape for CSV export - superset of TaskListRow with `completedAt`,
  * `approvedAt`, `shortId`, `updatedAt`, and department included. Kept
  * separate from TaskListRow to avoid bloating the UI hot path.
  */
@@ -397,7 +397,7 @@ export interface TaskExportRow {
   approvedAt: Date | null;
   updatedAt: Date;
   archived: boolean;
-  // Tier-3 (2026-05-20) additions — surfaced for XLSX/PDF exports.
+  // Tier-3 (2026-05-20) additions - surfaced for XLSX/PDF exports.
   tags: string[] | null;
   approvalStatus: "approved" | "not_approved" | "cancelled" | "transferred" | null;
   revisedTargetDate: Date | null;
@@ -406,8 +406,8 @@ export interface TaskExportRow {
 /**
  * Same filter semantics as `listTasks` but projects the columns the CSV
  * export needs (including completed_at + approved_at) and accepts a
- * larger row cap. Defaults to 10_000 rows — far above the dashboard's
- * 1k UI ceiling — to keep the response bounded.
+ * larger row cap. Defaults to 10_000 rows - far above the dashboard's
+ * 1k UI ceiling - to keep the response bounded.
  */
 export async function listTasksForExport(
   filters: TaskListFilters,
@@ -493,7 +493,7 @@ export async function listTasksForExport(
 /**
  * Distinct task subjects for the filter-bar dropdown. Backed by a full
  * `SELECT DISTINCT subject FROM tasks`, which grows linearly with the
- * tasks table — wrapping in `unstable_cache` so the hot path on /tasks
+ * tasks table - wrapping in `unstable_cache` so the hot path on /tasks
  * doesn't repeat the scan on every navigation. Invalidated by task
  * create/edit/delete via revalidateTag(CACHE_TAGS.subjects) and by
  * the subjects admin actions.
@@ -554,13 +554,13 @@ export type TaskDetail = {
   tags: string[] | null;
   approvalStatus: "approved" | "not_approved" | "cancelled" | "transferred" | null;
   revisedTargetDate: Date | null;
-  // Tier-4 (2026-05-20) — GCal-style scheduling
+  // Tier-4 (2026-05-20) - GCal-style scheduling
   startsAt: Date | null;
   endsAt: Date | null;
   allDay: boolean;
   recurrence: string | null;
   recurrenceRule: string | null;
-  // Phase 5.2 — set on materialized recurrence children; the UI shows
+  // Phase 5.2 - set on materialized recurrence children; the UI shows
   // a small "↻ recurring" badge with a click-through to the template.
   recurrenceParentId: string | null;
   recurrenceOccurrenceDate: string | null;

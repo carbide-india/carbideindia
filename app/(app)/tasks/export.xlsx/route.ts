@@ -15,7 +15,7 @@ import {
  * Admin-only XLSX export of the current /tasks view. Shares query-param
  * parsing with /tasks/export (CSV) so the FilterBar can fan out to all
  * three formats. Columns are humanized (status labels, priority labels,
- * MMM d, yyyy dates) rather than raw enum/ISO values — see lib/exports/tasks-rich.
+ * MMM d, yyyy dates) rather than raw enum/ISO values - see lib/exports/tasks-rich.
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

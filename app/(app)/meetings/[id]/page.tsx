@@ -18,12 +18,12 @@ export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  if (!UUID_RE.test(id)) return { title: "Meeting — Carbide India" };
+  if (!UUID_RE.test(id)) return { title: "Meeting - Carbide India" };
   const meeting = await getClientMeetingById(id);
   return {
     title: meeting
-      ? `${meeting.meetingNo} · Meeting — Carbide India`
-      : "Meeting — Carbide India",
+      ? `${meeting.meetingNo} · Meeting - Carbide India`
+      : "Meeting - Carbide India",
   };
 }
 

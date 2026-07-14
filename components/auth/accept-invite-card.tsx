@@ -23,13 +23,13 @@ function clerkErrorMessage(err: unknown): string {
 }
 
 /**
- * Invitation acceptance card — the landing for a Clerk email invitation link.
+ * Invitation acceptance card - the landing for a Clerk email invitation link.
  *
  * Clerk redirects the clicked invite to `${siteUrl()}/login?__clerk_ticket=`;
  * the login page hands that ticket here. On mount we consume the ticket
  * (`signUp.ticket`) which attaches the already-verified invite email, then the
  * employee picks a password (`signUp.password`) and `signUp.finalize()` drops
- * them straight into an active session — no second sign-in step.
+ * them straight into an active session - no second sign-in step.
  *
  * Mirrors the future-API shape and drafting-sheet styling of <SignInCard>.
  */
@@ -63,7 +63,7 @@ export function AcceptInviteCard({ ticket }: { ticket: string }) {
           setPhase("fatal");
           return;
         }
-        // A passwordless instance can complete on the ticket alone — if so,
+        // A passwordless instance can complete on the ticket alone - if so,
         // skip straight to an active session.
         if (signUp.status === "complete") {
           await signUp.finalize();
@@ -113,7 +113,7 @@ export function AcceptInviteCard({ ticket }: { ticket: string }) {
 
   return (
     <div className="relative">
-      {/* Registration marks — red crop corners, like a print sheet. */}
+      {/* Registration marks - red crop corners, like a print sheet. */}
       {(
         [
           { top: -1, left: -1, bt: true, bl: true },

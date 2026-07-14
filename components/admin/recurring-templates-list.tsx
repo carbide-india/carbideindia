@@ -9,7 +9,7 @@ interface Props {
 }
 
 /**
- * Phase 5.2 surface — admin oversight of recurring task templates.
+ * Phase 5.2 surface - admin oversight of recurring task templates.
  * For each rule-holder shows: title + subject, the RRULE summary,
  * doer/initiator, child count, and the next scheduled occurrence
  * (if any). Click-through to the template task itself.
@@ -68,12 +68,12 @@ export function RecurringTemplatesList({ rows }: Props) {
                   <td className="px-4 py-3 font-mono text-[12.5px] text-ink-soft">
                     {summariseRule(r.rule)}
                   </td>
-                  <td className="px-4 py-3 text-ink-strong">{r.doerName ?? "—"}</td>
+                  <td className="px-4 py-3 text-ink-strong">{r.doerName ?? "-"}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-ink-soft">
                     {r.childCount}
                   </td>
                   <td className="px-4 py-3 text-ink-subtle tabular-nums">
-                    {r.nextChildDueAt ? format(r.nextChildDueAt, "d MMM, EEE") : "—"}
+                    {r.nextChildDueAt ? format(r.nextChildDueAt, "d MMM, EEE") : "-"}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <Link

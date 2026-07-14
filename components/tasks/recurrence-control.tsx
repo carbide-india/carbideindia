@@ -400,8 +400,8 @@ function CustomDialog({
                     })}
                   </div>
                   <p className="text-[12px] text-ink-subtle mt-2" style={{ lineHeight: 1.5 }}>
-                    Pick one or more — e.g. <strong>7</strong> and <strong>8</strong> repeats every 7th &amp; 8th.
-                    Days 29–31 are skipped in months that don&rsquo;t have them.
+                    Pick one or more - e.g. <strong>7</strong> and <strong>8</strong> repeats every 7th &amp; 8th.
+                    Days 29-31 are skipped in months that don&rsquo;t have them.
                   </p>
                 </div>
               )}

@@ -13,7 +13,7 @@ export {
 import type { ActivityRow, ActivitySource } from "@/lib/transforms/activity";
 
 export interface ListAllActivityOptions {
-  /** Cursor — return rows strictly older than this timestamp. */
+  /** Cursor - return rows strictly older than this timestamp. */
   before?: Date;
   /** Page size; clamped to [1, MAX_PAGE_SIZE]. Default DEFAULT_PAGE_SIZE. */
   limit?: number;
@@ -40,7 +40,7 @@ export const DEFAULT_PAGE_SIZE = 50;
 export const MAX_PAGE_SIZE = 200;
 
 /**
- * Returns admin activity org-wide, newest first — UNION ALL across
+ * Returns admin activity org-wide, newest first - UNION ALL across
  * `task_events`, `employee_events`, and `settings_events` so the admin
  * activity feed surfaces every audited mutation in one stream.  Joins the
  * actor's name + avatar, the task's subject/title/status, and the target
@@ -48,7 +48,7 @@ export const MAX_PAGE_SIZE = 200;
  * pagination via `before`.
  *
  * RLS Phase 1 (read) is satisfied by the `requireAdmin` guard on the
- * `(admin)` layout — only admins reach this query helper.
+ * `(admin)` layout - only admins reach this query helper.
  */
 export async function listAllActivity(
   opts: ListAllActivityOptions = {},

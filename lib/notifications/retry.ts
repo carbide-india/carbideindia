@@ -19,7 +19,7 @@ const RETRYABLE_CHANNELS = ["email", "web_push"] as const;
 interface RetryRow {
   id: string;
   notificationId: string;
-  // Plain text in the DB — legacy rows may carry retired channel names
+  // Plain text in the DB - legacy rows may carry retired channel names
   // (e.g. "slack"/"whatsapp"), so we treat this as an open string and
   // let runChannel's default arm terminal-fail anything unknown.
   channel: string;
@@ -37,7 +37,7 @@ interface NotificationCtx {
 }
 
 /**
- * Phase 2.1 — drain the retry queue. Picks dispatch-log rows where
+ * Phase 2.1 - drain the retry queue. Picks dispatch-log rows where
  *   status = 'failed'
  *   AND next_attempt_at <= now()
  *   AND attempt_count < MAX_ATTEMPTS
@@ -110,7 +110,7 @@ export async function retryFailedDispatches(opts: { limit?: number } = {}): Prom
       notifCache.set(row.notificationId, notif);
     }
     if (!notif) {
-      // The notification was deleted — terminal-fail this log row so
+      // The notification was deleted - terminal-fail this log row so
       // we stop trying.
       await db
         .update(notificationDispatchLog)
@@ -135,7 +135,7 @@ export async function retryFailedDispatches(opts: { limit?: number } = {}): Prom
       prefsCache.set(notif.userId, prefs);
     }
     if (!prefs) {
-      // Recipient deleted — terminal-fail.
+      // Recipient deleted - terminal-fail.
       await db
         .update(notificationDispatchLog)
         .set({

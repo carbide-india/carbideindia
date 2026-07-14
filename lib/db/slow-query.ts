@@ -1,5 +1,5 @@
 /**
- * Slow-query logger — wraps a postgres-js client so every query call is
+ * Slow-query logger - wraps a postgres-js client so every query call is
  * timed and anything over `SLOW_MS` (default 300ms) is logged to the
  * server console with the query text + duration.
  *
@@ -46,15 +46,15 @@ function timeAndLog<T>(label: string, started: number, p: T, slowMs: number): T 
         const ms = Math.round(performance.now() - started);
         if (ms >= slowMs) {
           // eslint-disable-next-line no-console
-          console.warn(`[slow-query] ${ms}ms — ${label}`);
+          console.warn(`[slow-query] ${ms}ms - ${label}`);
         }
       },
       () => {
         const ms = Math.round(performance.now() - started);
-        // Log every failed query, slow or not — failures are always
+        // Log every failed query, slow or not - failures are always
         // interesting. Errors propagate to the caller as normal.
         // eslint-disable-next-line no-console
-        console.warn(`[slow-query] FAILED after ${ms}ms — ${label}`);
+        console.warn(`[slow-query] FAILED after ${ms}ms - ${label}`);
       },
     );
   }

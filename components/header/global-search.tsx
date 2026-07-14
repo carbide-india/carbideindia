@@ -35,7 +35,7 @@ export function GlobalSearch() {
     placeholderData: (prev) => prev,
   });
 
-  // Inquiries group — SM number or company (sales module, Phase 2).
+  // Inquiries group - SM number or company (sales module, Phase 2).
   const { data: inquiryResults = [], isFetching: isFetchingInquiries } = useQuery({
     queryKey: ["inquiry-search", q],
     queryFn: () => searchInquiriesAction(q),

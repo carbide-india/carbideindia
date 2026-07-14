@@ -31,7 +31,7 @@ import { Field, GroupHeader, SectionCard, Segmented } from "./form-field";
 import { Chip } from "./chip";
 import { ProductFeasibilityContext } from "./feasibility-context";
 
-/** Per-product form slice — five verdicts + five notes, all optional. */
+/** Per-product form slice - five verdicts + five notes, all optional. */
 interface ProductForm {
   shapeDimVerdict?: FeasCheckVerdict;
   gradeVerdict?: FeasCheckVerdict;
@@ -71,7 +71,7 @@ const YES_NO = [
   { value: "no" as const, label: "No" },
 ];
 
-/** The five per-product checks — key drives the RHF path, label the UI. */
+/** The five per-product checks - key drives the RHF path, label the UI. */
 const CHECKS: { key: "shapeDim" | "grade" | "tolerance" | "condition" | "quantity"; label: string }[] = [
   { key: "shapeDim", label: "Shape & Dimension" },
   { key: "grade", label: "Grade" },
@@ -141,7 +141,7 @@ function VerdictCell({
 }
 
 /**
- * Primary Feasibility — the second SM stage, per Manan's flow. An SM-level
+ * Primary Feasibility - the second SM stage, per Manan's flow. An SM-level
  * summary (priority / export / who checked / actions) sits above one card per
  * product: the complete read-only enquiry context, then the five technical
  * verdicts. Everything saves in one transaction via `saveFeasibilityFull`.
@@ -192,7 +192,7 @@ export function FeasibilityPanel({
   const { control, register, handleSubmit, watch, formState: { isSubmitting } } =
     useForm<FeasForm>({ defaultValues: defaults });
 
-  // Readiness rollup — a product is feasible when all five verdicts pass.
+  // Readiness rollup - a product is feasible when all five verdicts pass.
   const watchedProducts = watch("products");
   const feasibleCount = products.filter((p) => {
     const v = watchedProducts?.[p.id];
@@ -208,7 +208,7 @@ export function FeasibilityPanel({
     if (values.status === "proceed_to_costing" && feasibleCount < products.length) {
       fireToast({
         type: "error",
-        message: "Some products aren't marked Feasible yet — proceeding anyway.",
+        message: "Some products aren't marked Feasible yet - proceeding anyway.",
       });
     }
     const res = await saveFeasibilityFull(inquiry.id, {
@@ -226,7 +226,7 @@ export function FeasibilityPanel({
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-6" noValidate>
-      {/* ── Product specs first — review each product, then mark its checks. */}
+      {/* ── Product specs first - review each product, then mark its checks. */}
       {products.map((p, i) => (
         <SectionCard key={p.id}>
           <GroupHeader n={i + 1} label={p.custProductName || p.itemCode || "Product"} />

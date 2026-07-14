@@ -19,7 +19,7 @@ const OptionalText = (max = 500) =>
 const MeetingTime = z.string().regex(/^\d{2}:\d{2}$/, "Use HH:MM").optional();
 
 /**
- * One normalized client address (ERP Phase 2 — Customer Master). Mirrors the
+ * One normalized client address (ERP Phase 2 - Customer Master). Mirrors the
  * `client_addresses` child table: a typed address (registered / bill_to /
  * ship_to / consignee), optionally flagged primary, with free-text lines.
  */
@@ -41,7 +41,7 @@ export const ClientAddressSchema = z.object({
 export type ClientAddressInput = z.input<typeof ClientAddressSchema>;
 
 /**
- * One normalized client bank account (ERP Phase 2 — Customer Master). Mirrors
+ * One normalized client bank account (ERP Phase 2 - Customer Master). Mirrors
  * the `client_bank_accounts` child table; each row optionally flagged primary.
  */
 export const ClientBankAccountSchema = z.object({
@@ -57,7 +57,7 @@ export const ClientBankAccountSchema = z.object({
 export type ClientBankAccountInput = z.input<typeof ClientBankAccountSchema>;
 
 /**
- * Base field set shared by Create/Update — same base-object + derive pattern
+ * Base field set shared by Create/Update - same base-object + derive pattern
  * as lib/validators/inquiry.ts (zod v4 has no `.innerType()` to unwrap).
  * Address/contact fields mirror the inquiry form's client block; the
  * customer/industry/product ids point at admin-managed master options.
@@ -98,7 +98,7 @@ const ClientKycFieldsSchema = z.object({
   notes: OptionalText(2000),
   // Primary contact notes.
   contactNotes: OptionalText(2000),
-  // Additional (non-primary) contacts — optional array.
+  // Additional (non-primary) contacts - optional array.
   additionalContacts: z.array(z.object({
     firstName: z.string().trim().max(80),
     lastName: OptionalText(80),
@@ -125,17 +125,17 @@ const ClientKycFieldsSchema = z.object({
   kycSalesPersonId: z.string().uuid().optional(),
   businessCardFrontUrl: OptionalText(2000),
   businessCardBackUrl: OptionalText(2000),
-  // Additional document/scan URLs (the "Other" tile) — already-uploaded blobs.
+  // Additional document/scan URLs (the "Other" tile) - already-uploaded blobs.
   businessCardOtherUrls: z.array(z.string().trim().max(2000)).optional(),
 });
 
 export const CreateClientKycSchema = ClientKycFieldsSchema;
 export type CreateClientKycInput = z.input<typeof CreateClientKycSchema>;
-/** Parsed (post-transform) shape — what `safeParse(...).data` yields. */
+/** Parsed (post-transform) shape - what `safeParse(...).data` yields. */
 export type CreateClientKycParsed = z.output<typeof CreateClientKycSchema>;
 
 /**
- * Patch-shaped schema for edits — every field optional, unknown keys
+ * Patch-shaped schema for edits - every field optional, unknown keys
  * rejected, empty patches rejected. `currency`/`country` are re-declared
  * without their defaults: otherwise `.partial()` would inject INR/India into
  * every patch and an empty `{}` would sail past the nonempty refine.

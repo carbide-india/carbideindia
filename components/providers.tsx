@@ -6,7 +6,7 @@ import { ThemeProvider } from "@ui5/webcomponents-react";
 
 /**
  * App-wide client providers. The TanStack QueryClient lives here so any client
- * component (header search, etc.) can call useQuery — without this an app-wide
+ * component (header search, etc.) can call useQuery - without this an app-wide
  * useQuery throws "No QueryClient set". Created once via useState so it isn't
  * recreated on every render.
  *

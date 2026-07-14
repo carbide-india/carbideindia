@@ -13,7 +13,7 @@ interface Props {
 }
 
 /**
- * Self-serve profile edits — display name + avatar URL. No file upload;
+ * Self-serve profile edits - display name + avatar URL. No file upload;
  * paste a public image URL (Gravatar, ImgBB, any CDN). Empty URL clears
  * the avatar back to initials. Lives inside /profile right above the
  * notification channel preferences card.

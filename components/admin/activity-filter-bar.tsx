@@ -153,7 +153,7 @@ export function ActivityFilterBar({ employees, initial }: Props) {
           )}
         </span>
 
-        {/* Date range — two simple inputs, no popover */}
+        {/* Date range - two simple inputs, no popover */}
         <label className="filter-chip">
           <Calendar size={16} className="text-ink-subtle" strokeWidth={2} />
           <span className="text-[12px] uppercase tracking-wide text-ink-subtle">From</span>
@@ -212,7 +212,7 @@ export function ActivityFilterBar({ employees, initial }: Props) {
 
         <div className="ml-auto flex items-center gap-2.5">
           {/* Export honours the CURRENT URL params, not the in-progress filter
-              state — mirrors T19's pattern on the tasks filter-bar so admins
+              state - mirrors T19's pattern on the tasks filter-bar so admins
               export what they see (not what they're about to apply). */}
           <a
             href={`/admin/activity/export?${searchParams.toString()}`}

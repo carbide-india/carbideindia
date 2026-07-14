@@ -35,8 +35,8 @@ interface Props {
   rows: InquiryListItem[];
   employees: EmployeeOption[];
   /**
-   * "enquiry" (default) is the Enquiry Register — enquiry columns only.
-   * "feasibility" is the Primary Feasibility queue — shows the feasibility
+   * "enquiry" (default) is the Enquiry Register - enquiry columns only.
+   * "feasibility" is the Primary Feasibility queue - shows the feasibility
    * status column, feasibility bulk action, and deep-links rows to the
    * feasibility tab.
    */
@@ -44,7 +44,7 @@ interface Props {
 }
 
 /**
- * Inquiry register table — a thin config wrapper over the shared
+ * Inquiry register table - a thin config wrapper over the shared
  * RegisterDataTable. All sort / search / faceted-filter / export / bulk-status
  * runs client-side over the rows the page loads (the register is a few hundred
  * rows at most). The sales-person filter matches on the joined name, which is
@@ -126,7 +126,7 @@ export function InquiryTable({ rows, employees, variant = "enquiry" }: Props) {
         sortValue: (r) => r.salesPersonName ?? "",
         exportValue: (r) => r.salesPersonName ?? "",
         cell: (r) => (
-          <span className="text-ink-soft">{r.salesPersonName ?? "—"}</span>
+          <span className="text-ink-soft">{r.salesPersonName ?? "-"}</span>
         ),
       },
       // Register shows Enquiry status; the Feasibility queue shows Feasibility.
@@ -241,7 +241,7 @@ export function InquiryTable({ rows, employees, variant = "enquiry" }: Props) {
       emptyTitle={
         variant === "feasibility"
           ? "No enquiries to check yet."
-          : "No enquiries yet — create the first one."
+          : "No enquiries yet - create the first one."
       }
       emptyHint={
         variant === "feasibility"

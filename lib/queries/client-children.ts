@@ -14,7 +14,7 @@ export type ClientAddressRow = ClientAddress;
 export type ClientBankRow = ClientBankAccount;
 
 /**
- * Normalized addresses for a client (ERP Phase 2 — Customer Master). Ordered by
+ * Normalized addresses for a client (ERP Phase 2 - Customer Master). Ordered by
  * address type then sort order so the register/record render deterministically.
  */
 export async function getClientAddresses(
@@ -28,7 +28,7 @@ export async function getClientAddresses(
 }
 
 /**
- * Normalized bank accounts for a client (ERP Phase 2 — Customer Master).
+ * Normalized bank accounts for a client (ERP Phase 2 - Customer Master).
  * Primary account first, then by sort order.
  */
 export async function getClientBankAccounts(

@@ -26,12 +26,12 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  if (!UUID_RE.test(id)) return { title: "Sales Order — Carbide India" };
+  if (!UUID_RE.test(id)) return { title: "Sales Order - Carbide India" };
   const salesOrder = await getSalesOrderById(id);
   return {
     title: salesOrder
-      ? `${salesOrder.soNo} · Sales Order — Carbide India`
-      : "Sales Order — Carbide India",
+      ? `${salesOrder.soNo} · Sales Order - Carbide India`
+      : "Sales Order - Carbide India",
   };
 }
 
@@ -69,7 +69,7 @@ export default async function SalesOrderDetailPage({ params }: PageProps) {
   );
   const missingCount = seeds.filter((s) => !presentIds.has(s.inquiryItemId)).length;
 
-  // Phase 8 — pipeline stepper + flag-gated "Confirm Order" CTA. Confirmed
+  // Phase 8 - pipeline stepper + flag-gated "Confirm Order" CTA. Confirmed
   // (customerSoSent) ⇒ show Job Card stage.
   const salesOrderFlagOn = await isWorkflowFlagOn("sales_order");
   const isConfirmed = salesOrder.customerSoSent === true;

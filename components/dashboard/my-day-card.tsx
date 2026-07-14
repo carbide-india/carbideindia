@@ -11,7 +11,7 @@ interface Props {
 /**
  * Compact per-user "Your day" card on the dashboard top. Mirrors the
  * full agenda banner at /tasks/agenda but condensed to a single row of
- * three stats — due today / overdue / done today — with a CTA to the
+ * three stats - due today / overdue / done today - with a CTA to the
  * full agenda. Hidden via the dashboard's empty-state branch.
  *
  * Renders as a quiet card; not the dashboard's centerpiece.

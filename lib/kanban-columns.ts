@@ -5,7 +5,7 @@ export const ARCHIVE_COL = "__archived__" as const;
 export type ColId = TaskStatus | typeof ARCHIVE_COL;
 
 // Default admin board order (sir's changes #7): the working lane, then the
-// terminal verdicts, then Archived, with On Hold pulled out to the very end —
+// terminal verdicts, then Archived, with On Hold pulled out to the very end -
 // "On Hold has to be placed after Archived". Deprecated statuses
 // (follow_up_1/2/3, cancelled, transferred) are intentionally absent.
 export const DEFAULT_ADMIN_COLUMN_ORDER: ColId[] = [
@@ -34,7 +34,7 @@ export function isValidColumnId(id: string): id is ColId {
 /**
  * Resolve the effective admin column order from a stored order that may be
  * null, stale, or partial. Drops unknown/deprecated ids, de-dupes, and
- * appends any live columns the stored order didn't mention — so a status
+ * appends any live columns the stored order didn't mention - so a status
  * added after the order was saved never silently disappears.
  */
 export function resolveAdminColumnOrder(

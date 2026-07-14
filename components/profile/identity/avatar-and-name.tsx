@@ -12,7 +12,7 @@ interface Props {
 
 export function AvatarAndName({ initialName, initialAvatarUrl }: Props) {
   const router = useRouter();
-  // Display name is assigned by an admin and final — not self-editable here.
+  // Display name is assigned by an admin and final - not self-editable here.
   const name = initialName;
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initialAvatarUrl);
   const [uploading, setUploading] = useState(false);
@@ -175,7 +175,7 @@ export function AvatarAndName({ initialName, initialAvatarUrl }: Props) {
 
         <div style={{ minWidth: 0 }}>
           <label style={fieldLabelStyle}>Display name</label>
-          {/* Read-only — the name is admin-assigned and final. */}
+          {/* Read-only - the name is admin-assigned and final. */}
           <div
             style={{
               width: "100%",

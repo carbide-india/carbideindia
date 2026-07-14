@@ -26,7 +26,7 @@ interface Props {
   employees: EmployeeOption[];
 }
 
-/** Midnight-today, local — a follow-up dated strictly before this reads as
+/** Midnight-today, local - a follow-up dated strictly before this reads as
  *  overdue (the date column carries no wall-clock the user set). */
 function isPastDue(d: Date): boolean {
   const today = new Date();
@@ -35,7 +35,7 @@ function isPastDue(d: Date): boolean {
 }
 
 /**
- * Daily-meeting register table — a thin config wrapper over the shared
+ * Daily-meeting register table - a thin config wrapper over the shared
  * RegisterDataTable. Purpose sorts by ENUM ORDER (stable, not label
  * alphabetical). Next Follow-Up renders in red/semibold when already in the
  * past, an at-a-glance "you owe this client a call" cue.
@@ -93,7 +93,7 @@ export function MeetingTable({ rows, employees }: Props) {
         sortValue: (r) => r.salesPersonName ?? "",
         exportValue: (r) => r.salesPersonName ?? "",
         cell: (r) => (
-          <span className="text-ink-soft">{r.salesPersonName ?? "—"}</span>
+          <span className="text-ink-soft">{r.salesPersonName ?? "-"}</span>
         ),
       },
       {
@@ -117,7 +117,7 @@ export function MeetingTable({ rows, employees }: Props) {
           r.nextFollowUpDate ? formatDate(r.nextFollowUpDate) : "",
         cell: (r) => {
           if (!r.nextFollowUpDate) {
-            return <span className="text-ink-subtle">—</span>;
+            return <span className="text-ink-subtle">-</span>;
           }
           const overdue = isPastDue(r.nextFollowUpDate);
           return (
@@ -141,7 +141,7 @@ export function MeetingTable({ rows, employees }: Props) {
         id: "purpose",
         label: "Purpose",
         type: "select",
-        // Filter matches the column's string sortValue — the enum index — so
+        // Filter matches the column's string sortValue - the enum index - so
         // map options to the index string (same trick negotiations used).
         options: MEETING_PURPOSES.map((p, i) => ({
           value: String(i),
@@ -183,7 +183,7 @@ export function MeetingTable({ rows, employees }: Props) {
         })),
         onApply: (ids, value) => setMeetingPurposeBulk(ids, value),
       }}
-      emptyTitle="No meetings logged yet — record the first client visit."
+      emptyTitle="No meetings logged yet - record the first client visit."
       emptyHint="Daily client-visit log with sales, contact and outcome details appears here."
     />
   );

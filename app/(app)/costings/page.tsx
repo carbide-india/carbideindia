@@ -10,7 +10,7 @@ import { UserMenuServer } from "@/components/header/user-menu-server";
 export const dynamic = "force-dynamic";
 
 /**
- * Costing Register — in-house and bought-out cost sheets, now rendered inside the
+ * Costing Register - in-house and bought-out cost sheets, now rendered inside the
  * shared Enquiries module shell (logo sidebar + indigo header). On /costings the
  * shell's sidebar reads as the Costing family automatically, so no custom nav is
  * passed. The advanced table owns search / filtering / sorting client-side.

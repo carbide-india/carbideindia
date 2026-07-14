@@ -4,7 +4,7 @@ import { PageBuffering } from "@/components/ui/spinner";
 /**
  * Streamed skeleton for /tasks/kanban. This is the slowest route (the board
  * query scans all tasks against the remote DB), so painting the column shell
- * instantly — instead of a blank wait — is the biggest perceived-speed win on
+ * instantly - instead of a blank wait - is the biggest perceived-speed win on
  * the app. Mirrors the real chrome: header + filters + a row of columns.
  */
 export default function KanbanLoading() {

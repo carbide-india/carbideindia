@@ -11,13 +11,13 @@ import type { TaskStatus, TaskPriority, ApprovalStatus } from "@/db/enums";
  * GET /tasks/export.pdf
  *
  * Admin-only landscape A4 PDF export of the current /tasks view. The
- * renderer is intentionally publication-grade — a thin brand-red top
+ * renderer is intentionally publication-grade - a thin brand-red top
  * stripe, an editorial masthead, a four-up KPI band, then a tightly
  * typeset table with status pills, priority dots, and an overdue
  * marker rail down the left edge. Pagination is bottom-anchored with
  * "Page X of Y" + a confidentiality stamp.
  *
- * All visual constants live in the constants block below — tweak there,
+ * All visual constants live in the constants block below - tweak there,
  * the rest of the file composes them.
  */
 export const runtime = "nodejs";
@@ -76,7 +76,7 @@ const COLORS = {
   brandDeep: "#B00500",
 } as const;
 
-// Status display table — pill background + foreground + the printed label.
+// Status display table - pill background + foreground + the printed label.
 // Kept in sync with components/ui status-tone styling so the PDF reads as
 // part of the same product, not a separate export tool.
 const STATUS_PILL: Record<TaskStatus, { bg: string; fg: string; label: string }> = {
@@ -98,7 +98,7 @@ const STATUS_PILL: Record<TaskStatus, { bg: string; fg: string; label: string }>
 };
 
 // Priority compressed to the Eisenhower-quadrant shorthand the dashboard uses
-// internally — much more scannable than the full 4-word label in a cramped
+// internally - much more scannable than the full 4-word label in a cramped
 // table column. The dot colour signals urgency at a glance.
 const PRIORITY_GLYPH: Record<TaskPriority, { code: string; label: string; color: string }> = {
   imp_urgent:         { code: "P0", label: "Critical",  color: COLORS.brand },
@@ -143,7 +143,7 @@ async function renderPdf(
     // breathe without crowding the first table row.
     margin: 40,
     info: {
-      Title: meta.archived ? "Carbide India — Archived Tasks" : "Carbide India — Tasks",
+      Title: meta.archived ? "Carbide India - Archived Tasks" : "Carbide India - Tasks",
       Author: "Carbide India WMS",
       Subject: "Internal Task Report",
     },
@@ -156,7 +156,7 @@ async function renderPdf(
     doc.on("end", () => resolve(Buffer.concat(chunks)));
   });
 
-  // Page geometry — pdfkit reports `page.margins.left/right` after the
+  // Page geometry - pdfkit reports `page.margins.left/right` after the
   // page is created, so derive them once and reuse.
   const pageLeft   = doc.page.margins.left;
   const pageRight  = doc.page.width - doc.page.margins.right;
@@ -267,7 +267,7 @@ function drawMasthead(
   const right = doc.page.width - doc.page.margins.right;
   const top = doc.page.margins.top + 6;
 
-  // Top-left brand wordmark — heavy, tracked.
+  // Top-left brand wordmark - heavy, tracked.
   doc
     .font("Helvetica-Bold")
     .fontSize(20)
@@ -277,7 +277,7 @@ function drawMasthead(
       lineBreak: false,
     });
 
-  // Below the wordmark — small tracked subhead with a brand-red bullet.
+  // Below the wordmark - small tracked subhead with a brand-red bullet.
   const subY = top + 26;
   doc
     .save()
@@ -295,7 +295,7 @@ function drawMasthead(
       { characterSpacing: 1.6, lineBreak: false },
     );
 
-  // Top-right meta column — generated timestamp on top, signature below.
+  // Top-right meta column - generated timestamp on top, signature below.
   const generated = format(new Date(), "EEE, MMM d, yyyy · HH:mm");
   doc
     .font("Helvetica")
@@ -362,7 +362,7 @@ function drawStatBand(
   const bandH = 56;
   const cellW = (right - left) / cells.length;
 
-  // Top + bottom hairline rules wrapping the band — gives it newspaper-stat-block weight.
+  // Top + bottom hairline rules wrapping the band - gives it newspaper-stat-block weight.
   doc
     .save()
     .strokeColor(COLORS.ink)
@@ -386,7 +386,7 @@ function drawStatBand(
         .stroke()
         .restore();
     }
-    // Big number — set in a serif italic for editorial flavour, like
+    // Big number - set in a serif italic for editorial flavour, like
     // the dashboard hero. Times-BoldItalic ships with pdfkit so no
     // font-embed needed.
     doc
@@ -448,7 +448,7 @@ function drawTableHeader(
 ): void {
   const y = doc.y;
   const HEADER_H = 18;
-  // Top + bottom double-rule, no fill — gives the header a refined,
+  // Top + bottom double-rule, no fill - gives the header a refined,
   // editorial feel without the heavy grey block from the previous pass.
   doc
     .save()
@@ -480,7 +480,7 @@ function drawTableHeader(
   doc.y = y + HEADER_H + 4;
 }
 
-/** Tighter continuation banner on follow-on pages — no full masthead. */
+/** Tighter continuation banner on follow-on pages - no full masthead. */
 function drawContinuationHeader(
   doc: PDFKit.PDFDocument,
   left: number,
@@ -513,7 +513,7 @@ function drawFooter(
   meta: { pageNumber: number; pageTotal: number },
 ): void {
   const y = doc.page.height - doc.page.margins.bottom + 8;
-  // Brand red triangle glyph on the far left — mirrors the dashboard's
+  // Brand red triangle glyph on the far left - mirrors the dashboard's
   // header mark and gives the page a recognisable Carbide India stamp.
   doc
     .save()
@@ -547,8 +547,8 @@ function drawFooter(
 
 /**
  * Measures the natural height of a row given the (already-scaled) column
- * widths. Two text fields dominate the wrap behaviour — `client` and
- * `subject` — so we measure those and add padding.
+ * widths. Two text fields dominate the wrap behaviour - `client` and
+ * `subject` - so we measure those and add padding.
  */
 function measureRowHeight(
   doc: PDFKit.PDFDocument,
@@ -565,7 +565,7 @@ function measureRowHeight(
       case "subject":  text = row.subject ?? ""; break;
       case "doer":     text = row.doerName ?? ""; break;
       case "initiator":text = row.initiatorName ?? ""; break;
-      // Status, approval, priority, dates render at fixed heights —
+      // Status, approval, priority, dates render at fixed heights -
       // exclude them from natural-wrap calculation.
       default:         continue;
     }
@@ -598,7 +598,7 @@ function drawRow(
     row.status !== "not_approved" &&
     row.dueAt.getTime() < now;
 
-  // Left-edge accent strip — 2pt wide, brand red — flags overdue rows
+  // Left-edge accent strip - 2pt wide, brand red - flags overdue rows
   // without needing a separate column. Sits just outside the table's
   // text area so the rest of the row remains visually clean.
   if (isOverdue) {
@@ -678,7 +678,7 @@ function drawCell(
         .font("Helvetica")
         .fontSize(9)
         .fillColor(COLORS.inkMuted)
-        .text(row.subject || "—", cellX, cellY, {
+        .text(row.subject || "-", cellX, cellY, {
           width: cellW,
           lineBreak: true,
         });
@@ -698,7 +698,7 @@ function drawCell(
           .font("Helvetica")
           .fontSize(9)
           .fillColor(COLORS.inkSoft)
-          .text("—", cellX, cellY, { width: cellW, lineBreak: false });
+          .text("-", cellX, cellY, { width: cellW, lineBreak: false });
       } else {
         // Approval uses a thinner outline pill so it doesn't compete
         // with the colour-saturated status pill next door.
@@ -713,7 +713,7 @@ function drawCell(
 
     case "priority": {
       const p = PRIORITY_GLYPH[row.priority];
-      // Filled dot + tracked code label — "● P0" with the dot taking
+      // Filled dot + tracked code label - "● P0" with the dot taking
       // the priority colour. Reads at a glance even on a printed page.
       doc
         .save()
@@ -744,7 +744,7 @@ function drawCell(
 
     case "doer":
     case "initiator": {
-      const text = c.key === "doer" ? row.doerName ?? "—" : row.initiatorName ?? "—";
+      const text = c.key === "doer" ? row.doerName ?? "-" : row.initiatorName ?? "-";
       doc
         .font("Helvetica")
         .fontSize(9)
@@ -798,7 +798,7 @@ function drawCell(
 
 /**
  * Filled, rounded "chip" rendered the same way the dashboard's
- * StatusBadge component does on screen — solid tinted background, dark
+ * StatusBadge component does on screen - solid tinted background, dark
  * foreground text, 4pt corner radius, sized to fit its label.
  */
 function drawPill(

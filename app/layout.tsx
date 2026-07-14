@@ -43,7 +43,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Carbide India — Work Management System",
+  title: "Carbide India - Work Management System",
   description: "Work-management system for Carbide India (Yogeshwar Engineering Pvt Ltd)",
   metadataBase: new URL("https://wms.carbideindia.com"),
   manifest: "/manifest.json",
@@ -59,7 +59,7 @@ export const viewport: Viewport = {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  // Profile v2 — stamp density + accent from the user's prefs. Theme is
+  // Profile v2 - stamp density + accent from the user's prefs. Theme is
   // intentionally light-only (no dark mode); the `theme` column on
   // employees is kept but unused.
   const me = await getCurrentEmployee();
@@ -86,7 +86,7 @@ export default async function RootLayout({
           safe and React's normal hydration warnings still apply
           everywhere else. */}
       <body suppressHydrationWarning>
-        {/* Global navigation progress bar — fires on every in-app link click
+        {/* Global navigation progress bar - fires on every in-app link click
             across ALL route groups (app, admin, auth). Wrapped in Suspense
             because it reads useSearchParams. */}
         <Suspense fallback={null}>
@@ -94,14 +94,14 @@ export default async function RootLayout({
         </Suspense>
         {/* NuqsAdapter wires nuqs's useQueryState into the Next App Router
             so URL-as-state hooks (settings tabs, filter bars, etc.) work.
-            Required by nuqs v2+ — without it any client component calling
+            Required by nuqs v2+ - without it any client component calling
             useQueryState throws "nuqs requires an adapter". */}
         <NuqsAdapter>
           <Providers>{children}</Providers>
         </NuqsAdapter>
         <AppToaster />
         <RegisterSW />
-        {/* Phase 0.3 — Vercel Speed Insights. Auto-no-ops outside Vercel
+        {/* Phase 0.3 - Vercel Speed Insights. Auto-no-ops outside Vercel
             (no env vars needed); on Vercel it records real-user Core Web
             Vitals per route, accessible from the project dashboard. */}
         <SpeedInsights />

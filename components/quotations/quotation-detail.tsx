@@ -24,7 +24,7 @@ import { fireToast } from "@/lib/toast";
 import { Field, MiniField, SectionCard, Segmented } from "@/components/inquiries/form-field";
 import { StatusPicker } from "@/components/inquiries/status-picker";
 
-/** Slim link block for the header — resolved server-side from inquiryId. */
+/** Slim link block for the header - resolved server-side from inquiryId. */
 export interface QuotationInquiryLink {
   id: string;
   smNumber: string;
@@ -45,9 +45,9 @@ const QUOTE_SENT_OPTIONS = [
 
 /** numeric-string → ₹, em-dash when unset/unparseable. */
 function money(value: string | null): string {
-  if (value == null || value === "") return "—";
+  if (value == null || value === "") return "-";
   const n = Number(value);
-  return Number.isFinite(n) ? formatInr(n) : "—";
+  return Number.isFinite(n) ? formatInr(n) : "-";
 }
 
 /** Money <input> → number | undefined (no NaN); 0 is a valid amount. */
@@ -57,7 +57,7 @@ function moneyValue(v: unknown): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
-/** The editable slice of the quotation — RHF holds these <input>-shaped
+/** The editable slice of the quotation - RHF holds these <input>-shaped
  *  values; the dirty-only patch ships only changed keys. */
 interface QuotationEditValues {
   custProductName: string;
@@ -92,7 +92,7 @@ const MONEY_KEYS = new Set<keyof QuotationEditValues>([
 ]);
 
 /**
- * Quotation detail — breadcrumb + header (quoteNo, company · enquiry date ·
+ * Quotation detail - breadcrumb + header (quoteNo, company · enquiry date ·
  * linked SM chip · costing-done chip · New Quotation), sticky sidebar (Costing
  * Done StatusPicker, Quote Sent, Created/by, Open Register), and read cards for
  * Pricing + Timeline plus ONE dirty-only edit form (mirrors the sample detail).
@@ -131,7 +131,7 @@ export function QuotationDetail({ quotation, employees, inquiryLink, lines }: Pr
   } = useForm<QuotationEditValues>({ defaultValues: defaults });
 
   const onSubmit = handleSubmit(async (values) => {
-    // Dirty-only patch — the action's strip-undefined + no-op short-circuit
+    // Dirty-only patch - the action's strip-undefined + no-op short-circuit
     // handles the rest. Empty text inputs fold to undefined (UpdateQuotation's
     // OptionalText keeps them out of the patch).
     const patch = Object.fromEntries(
@@ -186,7 +186,7 @@ export function QuotationDetail({ quotation, employees, inquiryLink, lines }: Pr
             {quotation.quoteNo}
           </h1>
           <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[14.5px] text-ink-muted">
-            {quotation.companyName ?? "—"}
+            {quotation.companyName ?? "-"}
             <span aria-hidden className="text-ink-subtle">
               ·
             </span>
@@ -257,16 +257,16 @@ export function QuotationDetail({ quotation, employees, inquiryLink, lines }: Pr
           {/* Timeline (read) */}
           <SectionCard title="Timeline & Validity">
             <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-              <ReadStat label="Development Time" value={quotation.developmentTime ?? "—"} />
-              <ReadStat label="Delivery Time" value={quotation.deliveryTime ?? "—"} />
-              <ReadStat label="Validity" value={quotation.validity ?? "—"} />
+              <ReadStat label="Development Time" value={quotation.developmentTime ?? "-"} />
+              <ReadStat label="Delivery Time" value={quotation.deliveryTime ?? "-"} />
+              <ReadStat label="Validity" value={quotation.validity ?? "-"} />
             </div>
           </SectionCard>
 
           {/* Editable form note */}
           {lines.length > 0 && (
             <p className="text-[13px] text-ink-muted -mt-2">
-              Editing here updates Line 1. Additional lines are shown read-only — full per-line editing is coming soon.
+              Editing here updates Line 1. Additional lines are shown read-only - full per-line editing is coming soon.
             </p>
           )}
 
@@ -274,7 +274,7 @@ export function QuotationDetail({ quotation, employees, inquiryLink, lines }: Pr
           <form onSubmit={onSubmit} className="flex flex-col gap-6" noValidate>
             <SectionCard
               title="Product"
-              hint="Customer-facing product, drawing and grade — only changed fields are saved."
+              hint="Customer-facing product, drawing and grade - only changed fields are saved."
             >
               <Field id="qd-product" label="Customer Product Name">
                 <input id="qd-product" type="text" className="nt-input" {...register("custProductName")} />
@@ -495,12 +495,12 @@ function QuotedLineCard({ line, lineNo }: { line: QuotationLineWithSpec; lineNo:
         )}
       </div>
       <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
-        <LineStat label="Qty" value={line.qty ?? "—"} />
-        <LineStat label="Part No" value={spec.partNo ?? "—"} />
-        <LineStat label="Grade (Cust)" value={spec.gradeCustomer ?? "—"} />
-        <LineStat label="Grade Name" value={spec.gradeNameForCust ?? "—"} />
-        <LineStat label="Tolerance" value={spec.toleranceName ?? "—"} />
-        <LineStat label="Condition" value={spec.conditionName ?? "—"} />
+        <LineStat label="Qty" value={line.qty ?? "-"} />
+        <LineStat label="Part No" value={spec.partNo ?? "-"} />
+        <LineStat label="Grade (Cust)" value={spec.gradeCustomer ?? "-"} />
+        <LineStat label="Grade Name" value={spec.gradeNameForCust ?? "-"} />
+        <LineStat label="Tolerance" value={spec.toleranceName ?? "-"} />
+        <LineStat label="Condition" value={spec.conditionName ?? "-"} />
         {ask.custDrawingNo && (
           <LineStat label="Drawing No" value={ask.custDrawingNo} />
         )}
@@ -514,9 +514,9 @@ function QuotedLineCard({ line, lineNo }: { line: QuotationLineWithSpec; lineNo:
         <ReadStat label="Quote Price" value={money(line.quotePrice)} emphasis />
       </div>
       <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-        <LineStat label="Development Time" value={line.developmentTime ?? "—"} />
-        <LineStat label="Delivery Time" value={line.deliveryTime ?? "—"} />
-        <LineStat label="Validity" value={line.validity ?? "—"} />
+        <LineStat label="Development Time" value={line.developmentTime ?? "-"} />
+        <LineStat label="Delivery Time" value={line.deliveryTime ?? "-"} />
+        <LineStat label="Validity" value={line.validity ?? "-"} />
       </div>
     </div>
   );

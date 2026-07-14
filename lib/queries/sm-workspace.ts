@@ -41,12 +41,12 @@ import { getItemDocuments, type ItemDocument } from "@/lib/queries/item-document
 import { getAuditLog, type AuditEntry } from "@/lib/queries/audit";
 
 /**
- * SM Workspace queries (ERP redesign — Phase 9d, §9 "Enquiry SM Workspace").
+ * SM Workspace queries (ERP redesign - Phase 9d, §9 "Enquiry SM Workspace").
  *
  * The read layer behind the pipeline cockpit. Every field resolves THROUGH FKs
  * (client via `inquiries.clientId → clients.name`, sales via
  * `assignedSalesPersonId`, product spec via `inquiry_items.item_id → items.*`);
- * the pipeline stage is DERIVED server-side by `derive-stage.ts` alone — the SM
+ * the pipeline stage is DERIVED server-side by `derive-stage.ts` alone - the SM
  * stepper is `smRollupStage({ lineStages })` (the MINIMUM per-line furthest
  * stage: a multi-product SM is only as far as its laggard line). No stored
  * counter, snapshot mirror, or free-set status column is read for stage.
@@ -64,7 +64,7 @@ interface LineStage {
  * Each inquiry line's FURTHEST pipeline stage, from cheap per-line COUNTs of the
  * referencing costing / quotation / negotiation / SO / job-card rows fed to
  * `itemFurthestStage`. A draft (incomplete-spec) item clamps its line to Enquiry
- * — so an unfinished product legitimately holds the SM roll-up back. ONE indexed
+ * - so an unfinished product legitimately holds the SM roll-up back. ONE indexed
  * pass (correlated sub-counts on the per-line FK columns), ordered by sort.
  */
 async function perLineStages(inquiryId: string): Promise<LineStage[]> {
@@ -248,9 +248,9 @@ export interface InquiryProductCard {
   itemId: string;
   itemCode: string | null;
   itemStatus: string | null;
-  /** Item spec is incomplete (draft) — a soft "not fully linked" state. */
+  /** Item spec is incomplete (draft) - a soft "not fully linked" state. */
   isDraft: boolean;
-  /** No usable item code yet — the loud amber ⚠ "no-item" badge fires on this. */
+  /** No usable item code yet - the loud amber ⚠ "no-item" badge fires on this. */
   noItem: boolean;
   // Customer-scoped ask (single-sourced on the line).
   custProductName: string | null;
@@ -414,7 +414,7 @@ export interface ProductDrawerData {
 /**
  * Pre-resolve the drawer bundle for every product of the SM, keyed by
  * inquiry_item id (an SM has a handful of lines). Reuses the Item where-used
- * graph, item documents and item audit — no new joins. Distinct itemIds are
+ * graph, item documents and item audit - no new joins. Distinct itemIds are
  * fetched once and mapped back to each referencing line.
  */
 export async function getInquiryProductDrawers(

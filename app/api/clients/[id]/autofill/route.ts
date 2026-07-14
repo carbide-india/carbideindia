@@ -10,7 +10,7 @@ const UUID_RE =
 /**
  * Old-client auto-fetch for the New Inquiry form: returns the client's KYC
  * block + primary contact. The form copies these values into its own fields
- * (a snapshot — the inquiry never references the client row again).
+ * (a snapshot - the inquiry never references the client row again).
  */
 export async function GET(
   _req: Request,

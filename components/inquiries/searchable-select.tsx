@@ -27,13 +27,13 @@ interface Props {
   /** Offer "Use ‹typed›" for values not in the list (city names off the map). */
   allowCustom?: boolean;
   invalid?: boolean;
-  /** Accessible name for the trigger — use instead of a `htmlFor` label
+  /** Accessible name for the trigger - use instead of a `htmlFor` label
    *  association so label-click can't toggle the popover. */
   ariaLabel?: string;
 }
 
 /**
- * Searchable combobox on cmdk + Radix Popover — type to filter, arrow keys +
+ * Searchable combobox on cmdk + Radix Popover - type to filter, arrow keys +
  * Enter to pick, Tab/Escape to leave. Used for the Enquiry form's State and
  * the state-dependent City fields.
  */
@@ -60,7 +60,7 @@ export function SearchableSelect({
   }, [open]);
 
   // Tab commits the highlighted option (cmdk only commits on Enter / click)
-  // and moves on to the next field — same contract as components/ui/select.
+  // and moves on to the next field - same contract as components/ui/select.
   function onCommandKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
     if (e.key !== "Tab") return;
     const active = e.currentTarget.querySelector<HTMLElement>(

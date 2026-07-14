@@ -8,7 +8,7 @@ import { PanelLeftClose, PanelLeft, ChevronRight, type LucideIcon } from "lucide
 import { cn } from "@/lib/utils";
 
 /**
- * AppShell (ERP redesign — Phase 3).
+ * AppShell (ERP redesign - Phase 3).
  *
  * Opt-in workspace chrome: a collapsible left nav rail (icon + label), a top
  * context bar (breadcrumb + "where am I"), a main content area, and an optional

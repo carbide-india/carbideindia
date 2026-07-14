@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { employees } from "@/db/schema";
 
 /**
- * M4 — projection of `employees` columns the dispatcher needs to decide
+ * M4 - projection of `employees` columns the dispatcher needs to decide
  * which channels to fire for a given recipient.  Keeps the payload tiny
  * (no avatar/department/etc.) so we don't ship a full row over every
  * notification.
@@ -14,7 +14,7 @@ export interface RecipientChannelPrefs {
   name: string;
   email: string;
   emailOptIn: boolean;
-  // Profile v2 — used by dispatch matrix gating + mention escalation + OOO.
+  // Profile v2 - used by dispatch matrix gating + mention escalation + OOO.
   mentionEscalation: boolean;
   oooStart: string | null;
   oooEnd: string | null;

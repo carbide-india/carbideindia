@@ -3,11 +3,11 @@
  * imported created_at / due_at reflect IST calendar dates, not UTC.
  *
  * Without this, `new Date("2025-11-04")` parses as UTC midnight, which
- * renders as 2025-11-03 in IST (UTC+5:30) — every date in every view
+ * renders as 2025-11-03 in IST (UTC+5:30) - every date in every view
  * would shift back one calendar day.
  *
  * Falls back to the native `Date` constructor for any other input shape
- * (full ISO strings with explicit offsets, etc.) — the caller is
+ * (full ISO strings with explicit offsets, etc.) - the caller is
  * expected to validate the result with `isNaN(d.getTime())`.
  */
 export function parseLegacyDate(raw: string): Date {

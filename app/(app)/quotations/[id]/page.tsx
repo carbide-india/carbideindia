@@ -26,12 +26,12 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  if (!UUID_RE.test(id)) return { title: "Quotation — Carbide India" };
+  if (!UUID_RE.test(id)) return { title: "Quotation - Carbide India" };
   const quotation = await getQuotationById(id);
   return {
     title: quotation
-      ? `${quotation.quoteNo} · Quotation — Carbide India`
-      : "Quotation — Carbide India",
+      ? `${quotation.quoteNo} · Quotation - Carbide India`
+      : "Quotation - Carbide India",
   };
 }
 
@@ -69,7 +69,7 @@ export default async function QuotationDetailPage({ params }: PageProps) {
   );
   const missingCount = seeds.filter((s) => !presentIds.has(s.inquiryItemId)).length;
 
-  // Phase 8 — read-only pipeline stepper (safe even flag-off) + flag-gated CTA.
+  // Phase 8 - read-only pipeline stepper (safe even flag-off) + flag-gated CTA.
   const quotationFlagOn = await isWorkflowFlagOn("quotation");
   const resolvedStage = quotation.quoteSent
     ? { stage: "negotiation" as const, index: stageIndex("negotiation") }

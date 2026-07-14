@@ -8,7 +8,7 @@ import {
 } from "@/lib/flow/derive-stage";
 
 /**
- * Stepper (ERP redesign — Phase 3).
+ * Stepper (ERP redesign - Phase 3).
  *
  * Presentational horizontal lifecycle stepper for the sales/production pipeline.
  * It renders the stages (Enquiry → Feasibility → Costing → Quotation →
@@ -16,10 +16,10 @@ import {
  * marks each done / current / upcoming / blocked.
  *
  * It is fed exclusively by `lib/flow/derive-stage.ts` (the `current` index comes
- * from `deriveItemStage` / `deriveSmStage`) — no stage logic lives here. The
+ * from `deriveItemStage` / `deriveSmStage`) - no stage logic lives here. The
  * default `steps` is the full pipeline; callers can pass a subset.
  *
- * Server-safe (no "use client") — purely visual. Node click is optional and only
+ * Server-safe (no "use client") - purely visual. Node click is optional and only
  * enabled when `onSelect` is provided (then the caller must render it in a
  * client boundary).
  */
@@ -34,11 +34,11 @@ export interface StepperStep {
 interface StepperProps {
   /** Steps to render, in order. Defaults to the full pipeline. */
   steps?: ReadonlyArray<StepperStep>;
-  /** Index (into `steps`) of the current stage — from derive-stage helpers. */
+  /** Index (into `steps`) of the current stage - from derive-stage helpers. */
   current: number;
   /** Optional set of step keys that are blocked (guard failed). */
   blocked?: ReadonlySet<PipelineStage>;
-  /** Optional click handler — makes nodes interactive (client boundary only). */
+  /** Optional click handler - makes nodes interactive (client boundary only). */
   onSelect?: (key: PipelineStage, index: number) => void;
   className?: string;
 }

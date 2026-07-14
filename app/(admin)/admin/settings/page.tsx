@@ -9,6 +9,7 @@ import { getNextSmNumber } from "@/lib/queries/inquiries";
 import { SmNumberCard } from "@/components/admin/sm-number-card";
 import { SettingsTabs } from "@/components/admin/settings-tabs";
 import { SettingsTabGeneral } from "@/components/admin/settings-tab-general";
+import { SettingsTabLegal } from "@/components/admin/settings-tab-legal";
 import { SettingsTabStatuses } from "@/components/admin/settings-tab-statuses";
 import { SettingsTabIntegrations } from "@/components/admin/settings-tab-integrations";
 import { SettingsTabNotifications } from "@/components/admin/settings-tab-notifications";
@@ -62,6 +63,7 @@ export default async function SettingsPage() {
             <SmNumberCard nextNumber={smNextNumber} />
           </div>
         }
+        legal={<SettingsTabLegal current={settings} />}
         statuses={<SettingsTabStatuses display={statusDisplay} />}
         integrations={
           <SettingsTabIntegrations

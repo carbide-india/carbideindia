@@ -54,7 +54,7 @@ export async function saveFormDraft(input: {
       where: eq(formDrafts.ownerId, me.id),
     });
 
-  // Cap active drafts per form family — recycle the oldest overflow.
+  // Cap active drafts per form family - recycle the oldest overflow.
   const active = await db
     .select({ id: formDrafts.id })
     .from(formDrafts)
@@ -78,7 +78,7 @@ export async function saveFormDraft(input: {
   return { ok: true };
 }
 
-/** Permanently delete a draft — used on final submit + "delete forever". */
+/** Permanently delete a draft - used on final submit + "delete forever". */
 export async function deleteFormDraft(
   kind: FormDraftKind,
   id: string,
@@ -92,7 +92,7 @@ export async function deleteFormDraft(
   return { ok: true };
 }
 
-/** Move a draft to the Recycle Bin (soft delete) — the Drafts list trash. */
+/** Move a draft to the Recycle Bin (soft delete) - the Drafts list trash. */
 export async function recycleFormDraft(
   kind: FormDraftKind,
   id: string,

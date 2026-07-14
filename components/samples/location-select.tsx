@@ -4,7 +4,7 @@ import * as React from "react";
 import { Select } from "@/components/ui/select";
 
 interface Props {
-  /** The stored value — a preset from `options` or free text typed under
+  /** The stored value - a preset from `options` or free text typed under
    *  the "Other(s)" choice. */
   value: string;
   onChange: (value: string) => void;
@@ -19,7 +19,7 @@ interface Props {
 
 /**
  * Location picker for the Sample Register: the preset list from db/enums,
- * plus a specify input that appears when "Other(s)" is chosen — the TYPED
+ * plus a specify input that appears when "Other(s)" is chosen - the TYPED
  * TEXT is what gets stored (the columns are free text), never the literal
  * "Other". Controlled: `value` is the stored string; internal state only
  * tracks which face the user is on.
@@ -63,7 +63,7 @@ export function LocationSelect({
           required
           maxLength={80}
           placeholder={specifyPlaceholder}
-          aria-label={`${ariaLabel} — specify`}
+          aria-label={`${ariaLabel} - specify`}
           value={custom}
           onChange={(e) => {
             setCustom(e.target.value);

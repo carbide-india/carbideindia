@@ -1,5 +1,5 @@
 /**
- * Pure helpers for New-Enquiry drafts — shared by the save action (server),
+ * Pure helpers for New-Enquiry drafts - shared by the save action (server),
  * the drafts query (server), and the auto-save guard (client). No DB / no
  * server-only import so it can run anywhere.
  */
@@ -32,7 +32,7 @@ export function deriveDraftLabel(p: EnquiryDraftPayload): string {
   const firstProduct = (p.products ?? [])
     .map((x) => (typeof x?.custProductName === "string" ? x.custProductName.trim() : ""))
     .find(Boolean);
-  if (company && firstProduct) return `${company} — ${firstProduct}`;
+  if (company && firstProduct) return `${company} - ${firstProduct}`;
   if (company) return company;
   if (firstProduct) return firstProduct;
   return "Untitled enquiry";
@@ -45,7 +45,7 @@ export function draftProductCount(p: EnquiryDraftPayload): number {
   ).length;
 }
 
-/** 0–100 completeness across the key enquiry fields. */
+/** 0-100 completeness across the key enquiry fields. */
 export function draftCompleteness(p: EnquiryDraftPayload): number {
   const products = p.products ?? [];
   const checks: boolean[] = [

@@ -1,10 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import {
-  Search,
   ArrowRight,
   FilePlus2,
   UserCheck,
@@ -17,28 +15,32 @@ import {
 } from "lucide-react";
 
 const MONO = "var(--font-mono-display)";
+const CARD_GRAD = "linear-gradient(135deg,#4a4ab5 0%,#2f2f6f 100%)";
 
-// OUR forms — the real Carbide sales-pipeline forms (replacing the mockup's
-// placeholder names). Each card deep-links to the live form route.
-const FORMS: { key: string; title: string; desc: string; href: Route; Icon: typeof FileText }[] = [
+// OUR forms - the real Carbide sales-pipeline forms. Each card deep-links to the
+// live form route.
+const FORMS: { key: string; title: string; desc: string; tag: string; href: Route; Icon: typeof FileText }[] = [
   {
     key: "kyc",
     title: "Client KYC",
     desc: "Onboard a new client: company profile, contacts, addresses, banking, and documents.",
+    tag: "Onboarding",
     href: "/clients/new" as Route,
     Icon: UserCheck,
   },
   {
     key: "enquiry",
     title: "New Enquiry",
-    desc: "Start a sales enquiry — capture client, products, and specifications to generate an SM number.",
+    desc: "Start a sales enquiry - capture client, products, and specifications to generate an SM number.",
+    tag: "Enquiry",
     href: "/enquiries/new" as Route,
     Icon: FilePlus2,
   },
   {
     key: "sample",
     title: "Sample Register",
-    desc: "Log a physical sample — number, location, responsible person, photos, and status.",
+    desc: "Log a physical sample - number, location, responsible person, photos, and status.",
+    tag: "Feasibility",
     href: "/samples/new" as Route,
     Icon: FlaskConical,
   },
@@ -46,6 +48,7 @@ const FORMS: { key: string; title: string; desc: string; href: Route; Icon: type
     key: "costing",
     title: "Costing Sheet",
     desc: "Build BU/BO and in-house costing to derive the final cost per piece.",
+    tag: "Costing",
     href: "/costings/new" as Route,
     Icon: Calculator,
   },
@@ -53,6 +56,7 @@ const FORMS: { key: string; title: string; desc: string; href: Route; Icon: type
     key: "quotation",
     title: "Quotation",
     desc: "Generate a quotation from costed products for a sales enquiry.",
+    tag: "Quotation",
     href: "/quotations/new" as Route,
     Icon: FileText,
   },
@@ -60,6 +64,7 @@ const FORMS: { key: string; title: string; desc: string; href: Route; Icon: type
     key: "negotiation",
     title: "Negotiation",
     desc: "Record price-negotiation rounds and outcomes against a quotation.",
+    tag: "Negotiation",
     href: "/negotiations/new" as Route,
     Icon: Handshake,
   },
@@ -67,6 +72,7 @@ const FORMS: { key: string; title: string; desc: string; href: Route; Icon: type
     key: "sales-order",
     title: "Sales Order",
     desc: "Convert a won negotiation into a confirmed sales order (PO).",
+    tag: "Sales Order",
     href: "/sales-orders/new" as Route,
     Icon: PackageCheck,
   },
@@ -74,63 +80,110 @@ const FORMS: { key: string; title: string; desc: string; href: Route; Icon: type
     key: "meeting",
     title: "Client Meeting",
     desc: "Log a client meeting with notes, attendees, date, and selfie.",
+    tag: "Anytime",
     href: "/meetings/new" as Route,
     Icon: CalendarCheck,
   },
 ];
 
 export function EnquiryLaunchpad() {
-  const [q, setQ] = useState("");
-  const query = q.trim().toLowerCase();
-  const filtered = query
-    ? FORMS.filter((f) => (f.title + " " + f.desc).toLowerCase().includes(query))
-    : FORMS;
-
   return (
     <div>
-      {/* Header + filter */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-[34px] font-extrabold leading-tight tracking-tight text-[#3f3f94]">
-          Select a Form to Proceed!
-        </h1>
-        <div className="flex h-[42px] w-full max-w-[300px] items-center gap-2 rounded-lg border border-[#dfe1e6] bg-white px-3 focus-within:border-[#3f3f94] focus-within:ring-2 focus-within:ring-[#3f3f94]/20">
-          <Search className="h-4 w-4 shrink-0 text-[#9aa0ab]" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Filter form types..."
-            className="min-w-0 flex-1 bg-transparent text-[13px] text-[#374151] outline-none placeholder:text-[#9aa0ab]"
+      {/* ── Hero - a big logo card on the left, a gap, then a narrower purple
+            banner. The whole group is centred on the page. ── */}
+      <div className="mx-auto flex w-full max-w-[1120px] items-center gap-5 max-md:gap-3">
+        {/* Floating big logo (on the page background, to the left of the bar). */}
+        <div className="relative z-10 hidden shrink-0 rounded-2xl border border-[#e3e5ec] bg-white px-5 py-3 shadow-[0_16px_34px_-10px_rgba(15,23,42,0.4)] sm:block">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/logo.png"
+            alt="Carbide India"
+            className="h-[96px] w-auto max-md:h-[70px]"
+            style={{ display: "block" }}
           />
+        </div>
+
+        {/* Purple banner - shrunk; begins to the right of the logo, separated by a gap. */}
+        <div
+          className="relative flex min-w-0 flex-1 items-center overflow-hidden rounded-2xl px-8 py-4 text-white max-md:px-5"
+          style={{
+            background: "linear-gradient(120deg,#3f3f94 0%,#5148c4 52%,#7b6cf0 100%)",
+            boxShadow: "0 18px 44px -14px rgba(63,63,148,0.55)",
+          }}
+        >
+          {/* Decorative glows. */}
+          <div className="pointer-events-none absolute -right-10 -top-20 h-60 w-60 rounded-full bg-white/10 blur-2xl" />
+          <div className="pointer-events-none absolute -bottom-24 left-1/3 h-52 w-52 rounded-full bg-white/10 blur-2xl" />
+
+          {/* Title starts at the left · legal entity on the right. */}
+          <div className="relative flex w-full items-center justify-between gap-6 max-md:gap-3">
+            <div className="min-w-0 text-left">
+              <div className="text-[11.5px] font-bold uppercase tracking-[0.2em] text-white/70">
+                Carbide India · Sales Forms
+              </div>
+              <h1 className="mt-1 text-[30px] font-black leading-tight tracking-tight max-md:text-[24px]">
+                Select a Form to Proceed!
+              </h1>
+            </div>
+            <div className="hidden shrink-0 text-center md:block">
+              <div className="text-[17px] font-black leading-tight tracking-tight text-white">
+                Yogeshwar
+              </div>
+              <div className="text-[17px] font-black leading-tight tracking-tight text-white">
+                Engineering
+              </div>
+              <div className="mt-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/70">
+                Pvt. Ltd.
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Card grid */}
-      <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {filtered.map((f) => (
-          <Link
-            key={f.key}
-            href={f.href}
-            className="group flex flex-col rounded-xl border border-[#e6e8ec] bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#c7ccf5] hover:shadow-[0_10px_26px_rgba(30,47,102,0.10)]"
-          >
-            <div className="grid h-11 w-11 place-items-center rounded-lg bg-[#eef1fb] transition group-hover:bg-[#e2e8fb]">
-              <f.Icon className="h-[22px] w-[22px] text-[#3f3f94]" strokeWidth={1.9} />
-            </div>
-            <h3 className="mt-4 text-[17px] font-extrabold tracking-tight text-[#3f3f94]">{f.title}</h3>
-            <p className="mt-1.5 min-h-[58px] flex-1 text-[13px] font-medium leading-[1.55] text-[#4b5563]">{f.desc}</p>
-            <span
-              className="mt-3 inline-flex h-[34px] w-max items-center gap-2 rounded-md border border-[#d5d8de] px-3 text-[11px] tracking-[0.1em] text-[#3f3f94] transition group-hover:border-[#3f3f94] group-hover:bg-[#f5f7ff] group-hover:text-[#3f3f94]"
-              style={{ fontFamily: MONO }}
+      {/* ── Card grid - compact, centred, prominently outlined so all 8 fit. ── */}
+      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {FORMS.map((f, i) => {
+          const n = String(i + 1).padStart(2, "0");
+          return (
+            <Link
+              key={f.key}
+              href={f.href}
+              className="group relative flex flex-col items-center overflow-hidden rounded-2xl border-2 border-[#2b303b] bg-white p-4 text-center transition-all duration-200 hover:-translate-y-1 hover:border-[#3f3f94] hover:shadow-[0_18px_36px_-16px_rgba(63,63,148,0.4)]"
             >
-              START FORM
-              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-            </span>
-          </Link>
-        ))}
-      </div>
+              {/* Stage number - corner badge. */}
+              <span
+                className="absolute right-3 top-3 rounded-full bg-[#eef1fb] px-2 py-0.5 text-[10px] font-black tabular-nums text-[#3f3f94]"
+                style={{ fontFamily: MONO }}
+              >
+                {n}
+              </span>
 
-      {filtered.length === 0 && (
-        <p className="mt-10 text-[14px] text-[#9aa0ab]">No forms match &ldquo;{q}&rdquo;.</p>
-      )}
+              <div
+                className="grid size-12 place-items-center rounded-xl text-white transition-transform duration-200 group-hover:scale-105"
+                style={{ background: CARD_GRAD, boxShadow: "0 8px 18px -6px rgba(63,63,148,0.45)" }}
+              >
+                <f.Icon className="h-[22px] w-[22px]" strokeWidth={1.9} />
+              </div>
+
+              <h3 className="mt-2.5 text-[16px] font-extrabold tracking-tight text-[#1e2340]">
+                {f.title}
+              </h3>
+
+              <p className="mt-1.5 min-h-[40px] flex-1 text-[12.5px] font-medium leading-snug text-[#5b6070]">
+                {f.desc}
+              </p>
+
+              <span
+                className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-[#eef1fb] px-3 text-[11.5px] font-bold tracking-[0.08em] text-[#3f3f94] transition-all duration-200 group-hover:bg-transparent group-hover:text-white group-hover:[background:linear-gradient(135deg,#4a4ab5,#2f2f6f)] group-hover:shadow-[0_8px_18px_-6px_rgba(63,63,148,0.5)]"
+                style={{ fontFamily: MONO }}
+              >
+                START FORM
+                <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+              </span>
+            </Link>
+          );
+        })}
+      </div>
     </div>
   );
 }

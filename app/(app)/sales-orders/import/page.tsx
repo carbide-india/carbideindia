@@ -17,7 +17,7 @@ export default async function SalesOrderImportPage() {
       <Link href={"/sales-orders/new" as Route} className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink-subtle hover:text-ink-strong">
         <ArrowLeft size={14} /> Back
       </Link>
-      <h1 className="text-display-lg text-ink-strong mt-3">Bulk import — Sales Orders</h1>
+      <h1 className="text-display-lg text-ink-strong mt-3">Bulk import - Sales Orders</h1>
       <p className="text-body-lg text-ink-subtle mt-1 mb-6">
         Download the template, fill it, upload, fix any flagged cells inline, then import.
       </p>

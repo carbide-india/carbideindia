@@ -23,7 +23,7 @@ interface Props {
 }
 
 /**
- * Compact admin KPI tile — matches the public dashboard's KPI strip aesthetic
+ * Compact admin KPI tile - matches the public dashboard's KPI strip aesthetic
  * but slimmer (4-up grid).  Optional `href` makes the tile a link with a
  * subtle color-matched glow on hover.
  */

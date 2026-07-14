@@ -3,7 +3,7 @@ import type { Route } from "next";
 import { ArrowLeft } from "lucide-react";
 
 /**
- * Standard back link — a consistent, accessible "← Label" control used at the
+ * Standard back link - a consistent, accessible "← Label" control used at the
  * top of every detail / sub-page so users always have a clear way back.
  */
 export function BackLink({

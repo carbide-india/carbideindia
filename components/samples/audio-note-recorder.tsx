@@ -84,7 +84,7 @@ export function AudioNoteRecorder({ value, onChange, label = "Voice Note" }: Pro
     } catch {
       // Permission denied, no mic, or a hardware error all land here.
       fireToast({
-        message: "Microphone access was blocked — allow it to record a voice note.",
+        message: "Microphone access was blocked - allow it to record a voice note.",
         type: "error",
       });
       return;
@@ -136,7 +136,7 @@ export function AudioNoteRecorder({ value, onChange, label = "Voice Note" }: Pro
     } catch {
       // Missing BLOB_READ_WRITE_TOKEN (or a Blob outage) lands here.
       fireToast({
-        message: "Voice note upload unavailable — check storage configuration.",
+        message: "Voice note upload unavailable - check storage configuration.",
         type: "error",
       });
     } finally {

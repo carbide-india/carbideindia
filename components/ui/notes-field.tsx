@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { fireToast } from "@/lib/toast";
 
 /**
- * Minimal Web Speech API typing — `SpeechRecognition` isn't in every TS
+ * Minimal Web Speech API typing - `SpeechRecognition` isn't in every TS
  * lib.dom, and Chromium exposes it as `webkitSpeechRecognition`.
  */
 type SpeechRecognitionResultLike = ArrayLike<{ transcript: string }>;
@@ -38,7 +38,7 @@ function getRecognitionCtor(): (new () => SpeechRecognitionLike) | null {
  * A Notes textarea with an in-box microphone that dictates speech straight
  * into the field (browser speech-to-text). Transcribed phrases are appended
  * to whatever is already typed. The mic hides itself when the browser has no
- * SpeechRecognition support. Controlled — drive it via RHF `Controller`.
+ * SpeechRecognition support. Controlled - drive it via RHF `Controller`.
  *
  * This is the app-wide Notes control: any Notes field should use it so voice
  * dictation is available everywhere.
@@ -60,7 +60,7 @@ export function NotesField({
   rows?: number;
   className?: string;
   ariaLabel?: string;
-  /** BCP-47 dictation locale — defaults to Indian English. */
+  /** BCP-47 dictation locale - defaults to Indian English. */
   lang?: string;
 }) {
   const [listening, setListening] = React.useState(false);
@@ -82,7 +82,7 @@ export function NotesField({
     const Ctor = getRecognitionCtor();
     if (!Ctor) {
       fireToast({
-        message: "Voice dictation isn't supported in this browser — try Chrome or Edge.",
+        message: "Voice dictation isn't supported in this browser - try Chrome or Edge.",
         type: "error",
       });
       return;

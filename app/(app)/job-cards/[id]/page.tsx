@@ -16,10 +16,10 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  if (!UUID_RE.test(id)) return { title: "Job Card — Carbide India" };
+  if (!UUID_RE.test(id)) return { title: "Job Card - Carbide India" };
   const data = await getJobCardWorkspace(id);
   return {
-    title: data ? `${data.card.jobCardNo} — Carbide India` : "Job Card — Carbide India",
+    title: data ? `${data.card.jobCardNo} - Carbide India` : "Job Card - Carbide India",
   };
 }
 

@@ -12,7 +12,7 @@ interface Props {
 
 /**
  * Module-scoped primary navigation. The visible pills are ONLY the items of
- * the module the current route belongs to (see {@link modules}) — so WMS shows
+ * the module the current route belongs to (see {@link modules}) - so WMS shows
  * work-management surfaces, Enquiries shows the sales pipeline + Forms, and
  * Masters shows the master registries. Switching modules happens via the Hub
  * launchpad (the logo returns there).

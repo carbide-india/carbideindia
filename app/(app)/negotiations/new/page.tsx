@@ -24,7 +24,7 @@ export default async function NewNegotiationPage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const draftParam = typeof sp.draft === "string" ? sp.draft : undefined;
   const draftPayload = draftParam ? await getFormDraft("negotiation", draftParam) : null;
-  // Phase 8 — when the Quotation flag is ON, sending a quote auto-provisions the
+  // Phase 8 - when the Quotation flag is ON, sending a quote auto-provisions the
   // negotiation via advanceStage; disable this standalone form to avoid a
   // double-provision. Flag OFF (default) ⇒ no-op, form renders as today.
   await enforcedNewGuard("quotation", "/negotiations");

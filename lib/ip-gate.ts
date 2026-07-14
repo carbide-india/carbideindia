@@ -2,7 +2,7 @@
  * IP allowlist gate.
  *
  * TRUST PRECONDITION: the client IP is read from `x-forwarded-for` (first
- * hop). This is ONLY trustworthy behind a proxy that overwrites the header —
+ * hop). This is ONLY trustworthy behind a proxy that overwrites the header -
  * Vercel does. On a bare `next start` deployment a client can spoof
  * X-Forwarded-For, and behind a misconfigured reverse proxy all traffic may
  * appear as 127.0.0.1. If deploying outside Vercel, configure the proxy to
@@ -13,7 +13,7 @@
 const LOCALHOST = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
 
 /**
- * Users who bypass the IP allowlist entirely — they may sign in and use the
+ * Users who bypass the IP allowlist entirely - they may sign in and use the
  * app from ANY IP (e.g. the owners working remotely). Checked by email after
  * Clerk identifies the user (see middleware.ts). Lowercased for comparison.
  */

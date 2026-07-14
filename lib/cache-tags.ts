@@ -1,7 +1,7 @@
 /**
  * Canonical cache-tag names for `unstable_cache` reads and the matching
  * `revalidateTag` calls in server actions. Centralising them so a typo
- * can't desync read-side cache key from write-side invalidation —
+ * can't desync read-side cache key from write-side invalidation -
  * everything imports the same string constants.
  */
 export const CACHE_TAGS = {
@@ -25,7 +25,7 @@ export type CacheTag = (typeof CACHE_TAGS)[keyof typeof CACHE_TAGS];
 
 /**
  * Per-user cache tags for the Profile v2 surface. Functions because each
- * tag is scoped to a specific employee id — a single static string would
+ * tag is scoped to a specific employee id - a single static string would
  * over-invalidate across users.
  */
 export const PROFILE_CACHE_TAGS = {

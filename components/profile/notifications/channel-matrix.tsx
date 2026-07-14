@@ -56,7 +56,7 @@ export function ChannelMatrix({
   }
 
   // When the matrix doesn't have an explicit value for a cell, we render
-  // it as "enabled" (the default state — matches dispatch fallback).
+  // it as "enabled" (the default state - matches dispatch fallback).
   function isOn(kind: Kind, channel: Channel) {
     const k = key(kind, channel);
     if (Object.prototype.hasOwnProperty.call(matrix, k)) return matrix[k]!;
@@ -141,7 +141,7 @@ export function ChannelMatrix({
     >
       <SectionHeader
         title="Notification matrix"
-        description="Tick which kinds of events reach you on which channels. Off cells stay quiet — except when you're @-mentioned (see Mention escalation below)."
+        description="Tick which kinds of events reach you on which channels. Off cells stay quiet - except when you're @-mentioned (see Mention escalation below)."
         savedAt={showSaved ? savedAt : null}
       />
 

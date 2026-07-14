@@ -43,7 +43,7 @@ export function VelocityHero({
   embedded = false,
 }: {
   data: VelocityPoint[];
-  /** Rendered inside the collapsible section — drop the standalone card
+  /** Rendered inside the collapsible section - drop the standalone card
    *  wrapper + the internal "Task Velocity" header (the collapsible bar owns
    *  the title). */
   embedded?: boolean;
@@ -64,15 +64,15 @@ export function VelocityHero({
   if (netPerWeek > 0) {
     insightTone = "amber";
     insightEmoji = netPerWeek >= 10 ? "⚠️" : "📈";
-    insightText = `Backlog growing — about ${netPerWeek} more new tasks than finished each week, on average.`;
+    insightText = `Backlog growing - about ${netPerWeek} more new tasks than finished each week, on average.`;
   } else if (netPerWeek < 0) {
     insightTone = "green";
     insightEmoji = "✅";
-    insightText = `Team is catching up — finishing about ${-netPerWeek} more tasks than coming in each week.`;
+    insightText = `Team is catching up - finishing about ${-netPerWeek} more tasks than coming in each week.`;
   } else {
     insightTone = "blue";
     insightEmoji = "➖";
-    insightText = `Steady pace — about ${avgCompleted} tasks closing per week, matching incoming.`;
+    insightText = `Steady pace - about ${avgCompleted} tasks closing per week, matching incoming.`;
   }
 
   return (

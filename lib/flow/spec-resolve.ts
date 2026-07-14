@@ -4,24 +4,24 @@ import { db } from "@/lib/db";
 import { items, inquiryItems, masterOptions } from "@/db/schema";
 
 /**
- * Read-through spec resolver (ERP redesign — Phase 5, §2.4 "READ-THROUGH BY
+ * Read-through spec resolver (ERP redesign - Phase 5, §2.4 "READ-THROUGH BY
  * DEFAULT").
  *
- * The SINGLE place the app resolves a product's canonical SPEC — shape / grade /
+ * The SINGLE place the app resolves a product's canonical SPEC - shape / grade /
  * tolerance / condition (as master NAMES), dimensions, size + item codes,
- * HSN/UoM and item status — from the `items` row a line points at via `item_id`,
+ * HSN/UoM and item status - from the `items` row a line points at via `item_id`,
  * instead of the denormalized mirror columns copied onto `inquiry_items`,
  * `quotation_items`, `negotiation_items`, `sales_order_items`, `job_cards`.
  *
  * The mirror columns STAY in the DB for rollback safety (dropped in Phase 6);
  * only the READS move here. This module never touches the LEGAL snapshot fields
- * (sent-quote / confirmed-SO price, jsonb spec_snapshot) — those govern
+ * (sent-quote / confirmed-SO price, jsonb spec_snapshot) - those govern
  * sent/confirmed stages and are read from the line as-is (Canonical Decisions).
  *
  * Two shapes:
- *   - `itemSpecColumns(alias, ...)` — the SELECT fragment + JOIN helpers so a
+ *   - `itemSpecColumns(alias, ...)` - the SELECT fragment + JOIN helpers so a
  *     query can resolve spec in ONE join (no per-row N+1) alongside its own row.
- *   - `resolveSpecsByItemId(ids)` — a batched map for callers that already hold
+ *   - `resolveSpecsByItemId(ids)` - a batched map for callers that already hold
  *     `item_id`s and want the resolved spec without re-shaping their query.
  */
 
@@ -79,7 +79,7 @@ export const EMPTY_SPEC: ResolvedSpec = {
 };
 
 /**
- * Four aliased `master_options` tables (shape/grade/condition/tolerance) — the
+ * Four aliased `master_options` tables (shape/grade/condition/tolerance) - the
  * same-row-type aliasing the item queries already use. Fresh instances per call
  * so a caller can hold several joins without alias collisions. Callers that
  * build a spec join inline (rather than using `resolveSpecsByItemId`) use these
@@ -95,7 +95,7 @@ export function specMasterAliases() {
 }
 
 /**
- * Batched resolver — resolve N lines' specs from their `item_id`s without a
+ * Batched resolver - resolve N lines' specs from their `item_id`s without a
  * per-row N+1. One query joins `items` to its four classification masters and
  * returns a `Map<itemId, ResolvedSpec>`. Callers that already hold the ids
  * (e.g. after loading raw lines) look up each line's spec by its `item_id`.
@@ -149,7 +149,7 @@ export async function resolveSpecsByItemId(
 
 /**
  * The customer-scoped ASK fields that legitimately live on `inquiry_items`
- * (§2.5 KEEP) — the one place they are single-sourced. Downstream commercial
+ * (§2.5 KEEP) - the one place they are single-sourced. Downstream commercial
  * lines (quote/neg/SO) must resolve these read-through via their provenance
  * `inquiry_item_id`, never from their own copied mirror columns.
  */
@@ -166,7 +166,7 @@ export const EMPTY_CUSTOMER_ASK: ResolvedCustomerAsk = {
 };
 
 /**
- * Batched resolver for the customer-ask fields — resolve N commercial lines'
+ * Batched resolver for the customer-ask fields - resolve N commercial lines'
  * product name / drawing from their provenance `inquiry_item_id`s in one query
  * (no per-row N+1). Returns a `Map<inquiryItemId, ResolvedCustomerAsk>`.
  */

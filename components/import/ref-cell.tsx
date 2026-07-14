@@ -27,7 +27,7 @@ export function RefCell({ raw, value, options, allowCreate, kind, onChange }: Pr
     : BLANK;
 
   const opts = [
-    { value: BLANK, label: "— leave blank —" },
+    { value: BLANK, label: "- leave blank -" },
     ...options.map((o) => ({ value: o.id, label: o.label })),
     ...(allowCreate && raw ? [{ value: CREATE, label: `+ Create "${raw}"` }] : []),
   ];

@@ -5,7 +5,8 @@ import Link from "next/link";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
-import { ArrowLeft, ArrowUpRight, Check, Loader2, Plus } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Check, Loader2, Plus, FileText } from "lucide-react";
+import { attachmentKind, attachmentName } from "@/lib/samples/attachments";
 import {
   SAMPLE_STATUSES,
   SAMPLE_STATUS_LABELS,
@@ -24,6 +25,7 @@ import { formatDate } from "@/lib/format";
 import { fireToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { LocationSelect } from "@/components/samples/location-select";
+import { Select } from "@/components/ui/select";
 import {
   Field,
   MiniField,
@@ -32,7 +34,7 @@ import {
 } from "@/components/inquiries/form-field";
 import { StatusPicker } from "@/components/inquiries/status-picker";
 
-/** Slim link block for the header — resolved server-side from inquiryId. */
+/** Slim link block for the header - resolved server-side from inquiryId. */
 export interface SampleInquiryLink {
   id: string;
   smNumber: string;
@@ -55,7 +57,7 @@ const SM_FOLDER_OPTIONS = [
   { value: "done" as const, label: "Done" },
 ];
 
-/** The three location-tracked stages — Costing is its own card with no
+/** The three location-tracked stages - Costing is its own card with no
  *  location (it's in-house by definition on Manan's sheet). */
 const TRACKED_STAGES = [
   {
@@ -78,7 +80,7 @@ const TRACKED_STAGES = [
   },
 ] as const;
 
-/** The editable slice of the sample — RHF holds <input>-shaped values
+/** The editable slice of the sample - RHF holds <input>-shaped values
  *  (dates as YYYY-MM-DD strings); the dirty-only patch converts on save. */
 interface SampleEditValues {
   dimensionStatus: StageStatus;
@@ -116,7 +118,7 @@ const DATE_KEYS = new Set<keyof SampleEditValues>([
 ]);
 
 /**
- * Sample detail — the register row in full: header with the SM link, sticky
+ * Sample detail - the register row in full: header with the SM link, sticky
  * status sidebar, photo grid, and one editable form (Stages + Reports) that
  * saves only the dirty fields via updateSample (same patch pattern as the
  * feasibility panel).
@@ -157,9 +159,9 @@ export function SampleDetail({ sample, employees, inquiryLink }: Props) {
 
   const onSubmit = handleSubmit(
     async (values) => {
-      // Dirty-only patch — the action's strip-undefined + no-op short-circuit
+      // Dirty-only patch - the action's strip-undefined + no-op short-circuit
       // handles the rest. Date inputs (YYYY-MM-DD) pin to noon UTC; an emptied
-      // date folds to undefined (dates can't be cleared once set — backend has
+      // date folds to undefined (dates can't be cleared once set - backend has
       // no null path yet).
       const patch = Object.fromEntries(
         Object.keys(dirtyFields).map((key) => {
@@ -185,7 +187,7 @@ export function SampleDetail({ sample, employees, inquiryLink }: Props) {
       }
     },
     (errs) => {
-      // No resolver here — Controller `rules` carry the location-required
+      // No resolver here - Controller `rules` carry the location-required
       // check; surface the first message instead of failing silently.
       const first = Object.values(errs)[0]?.message;
       fireToast({
@@ -257,7 +259,7 @@ export function SampleDetail({ sample, employees, inquiryLink }: Props) {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {/* Read-only status chip — the sidebar StatusPicker is the mutator. */}
+          {/* Read-only status chip - the sidebar StatusPicker is the mutator. */}
           <span
             className="inline-flex items-center px-3 py-1.5 rounded-pill text-[13px] font-bold"
             style={{
@@ -281,31 +283,70 @@ export function SampleDetail({ sample, employees, inquiryLink }: Props) {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr] items-start">
         {/* ── Main column ───────────────────────────────────────────── */}
         <div className="flex flex-col gap-6 min-w-0">
-          {/* Photos (read-only) */}
-          <SectionCard title="Photos">
+          {/* Attachments (read-only) - rendered by file type. */}
+          <SectionCard title="Attachments">
             {sample.photoUrls?.length ? (
-              <div className="flex flex-wrap gap-3">
-                {sample.photoUrls.map((url) => (
-                  <a
-                    key={url}
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block size-[120px] overflow-hidden rounded-xl border border-hairline bg-surface-soft"
-                  >
-                    {/* Blob URLs are remote + unconfigured for next/image — plain img. */}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={url}
-                      alt={`Photo of sample ${sample.sampleNo}`}
-                      className="size-full object-cover"
-                    />
-                  </a>
-                ))}
+              <div className="flex flex-wrap items-start gap-3">
+                {sample.photoUrls.map((url) => {
+                  const kind = attachmentKind(url);
+                  const name = attachmentName(url);
+                  if (kind === "image") {
+                    return (
+                      <a
+                        key={url}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block size-[120px] overflow-hidden rounded-xl border border-hairline bg-surface-soft"
+                      >
+                        {/* Blob URLs are remote + unconfigured for next/image - plain img. */}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt={name} className="size-full object-cover" />
+                      </a>
+                    );
+                  }
+                  if (kind === "video") {
+                    return (
+                      <video
+                        key={url}
+                        src={url}
+                        controls
+                        className="h-[150px] w-[200px] rounded-xl border border-hairline bg-black object-cover"
+                      />
+                    );
+                  }
+                  if (kind === "audio") {
+                    return (
+                      <div
+                        key={url}
+                        className="flex w-[260px] flex-col gap-2 rounded-xl border border-hairline bg-surface-soft p-3"
+                      >
+                        <span className="truncate text-[12px] font-semibold text-ink-soft">
+                          {name}
+                        </span>
+                        <audio src={url} controls className="w-full" />
+                      </div>
+                    );
+                  }
+                  return (
+                    <a
+                      key={url}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex w-[180px] items-center gap-2 rounded-xl border border-hairline bg-surface-soft p-3 transition-colors hover:border-brand"
+                    >
+                      <FileText size={18} className="shrink-0 text-[#3f3f94]" />
+                      <span className="truncate text-[12.5px] font-semibold text-ink-strong">
+                        {name}
+                      </span>
+                    </a>
+                  );
+                })}
               </div>
             ) : (
               <p className="text-[14px] text-ink-subtle">
-                No photos uploaded for this sample.
+                No attachments uploaded for this sample.
               </p>
             )}
           </SectionCard>
@@ -314,34 +355,36 @@ export function SampleDetail({ sample, employees, inquiryLink }: Props) {
           <form onSubmit={onSubmit} className="flex flex-col gap-6" noValidate>
             <SectionCard
               title="Stage Tracking"
-              hint="Status, location and completion per stage — only changed fields are saved."
+              hint="Status, location and completion per stage - only changed fields are saved."
             >
               <div className="flex flex-col gap-3">
                 {TRACKED_STAGES.map((row) => (
                   <div
                     key={row.status}
-                    className="flex flex-col gap-3.5 rounded-xl border border-hairline p-4"
+                    className="rounded-xl border border-hairline p-3"
                   >
-                    <span className="text-[14px] font-bold text-ink-strong">
-                      {row.label}
-                    </span>
-                    <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
+                    {/* Name · Status · Location · Completed On — all on one line. */}
+                    <div className="grid grid-cols-[96px_160px_minmax(140px,1fr)_170px] items-end gap-3 max-lg:grid-cols-2 max-sm:grid-cols-1">
+                      <div className="flex items-end pb-2 text-[14px] font-bold text-ink-strong max-lg:col-span-2 max-sm:col-span-1">
+                        {row.label}
+                      </div>
                       <MiniField label="Status">
                         <Controller
                           control={control}
                           name={row.status}
                           render={({ field }) => (
-                            <Segmented
+                            <Select
                               options={STAGE_STATUS_OPTIONS}
-                              value={field.value}
-                              onChange={field.onChange}
-                              allowClear={false}
+                              value={field.value ?? ""}
+                              onValueChange={(v) =>
+                                field.onChange(v as (typeof STAGE_STATUSES)[number])
+                              }
                               ariaLabel={`${row.label} status`}
                             />
                           )}
                         />
                       </MiniField>
-                      <MiniField label="Location" className="min-w-[220px] flex-1">
+                      <MiniField label="Location">
                         <Controller
                           control={control}
                           name={row.location}
@@ -365,7 +408,7 @@ export function SampleDetail({ sample, employees, inquiryLink }: Props) {
                       <MiniField label="Completed On">
                         <input
                           type="date"
-                          className="nt-input w-[180px]"
+                          className="nt-input w-full"
                           aria-label={`${row.label} completed on`}
                           {...register(row.completed)}
                         />
@@ -378,19 +421,20 @@ export function SampleDetail({ sample, employees, inquiryLink }: Props) {
 
             <SectionCard
               title="Costing"
-              hint="Costing runs in-house, so it tracks status and completion only — no location."
+              hint="Costing runs in-house, so it tracks status and completion only - no location."
             >
-              <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
+              <div className="grid grid-cols-[minmax(160px,1fr)_170px] items-end gap-3 max-sm:grid-cols-1">
                 <MiniField label="Status">
                   <Controller
                     control={control}
                     name="costingStatus"
                     render={({ field }) => (
-                      <Segmented
+                      <Select
                         options={STAGE_STATUS_OPTIONS}
-                        value={field.value}
-                        onChange={field.onChange}
-                        allowClear={false}
+                        value={field.value ?? ""}
+                        onValueChange={(v) =>
+                          field.onChange(v as (typeof STAGE_STATUSES)[number])
+                        }
                         ariaLabel="Costing status"
                       />
                     )}
@@ -399,7 +443,7 @@ export function SampleDetail({ sample, employees, inquiryLink }: Props) {
                 <MiniField label="Completed On">
                   <input
                     type="date"
-                    className="nt-input w-[180px]"
+                    className="nt-input w-full"
                     aria-label="Costing completed on"
                     {...register("costingCompletedOn")}
                   />

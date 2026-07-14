@@ -19,7 +19,7 @@ function sanitizeNext(v: string | string[] | undefined): string {
 }
 
 /**
- * The post-login welcome/celebration screen was removed (2026-06-09) — every
+ * The post-login welcome/celebration screen was removed (2026-06-09) - every
  * sign-in now lands the user straight on their destination. This route is kept
  * only as a transparent redirect so any in-flight invite links that still
  * point at /welcome don't 404: signed-in users go to their `next` (default

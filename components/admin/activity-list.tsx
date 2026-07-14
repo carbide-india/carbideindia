@@ -251,7 +251,7 @@ function TaskRowBody({
       <div className="mt-1">
         {/* Body-only audit-event renderer.  We omit the actor strong-name
            from its prefix by rendering through AuditEvent, which already
-           starts with "<strong>Who</strong> " — the duplicate is
+           starts with "<strong>Who</strong> " - the duplicate is
            intentional and matches the per-task feed pattern. */}
         <div className="audit-inline">
           <AuditEvent row={auditRow} statusLabels={statusLabels} />
@@ -273,7 +273,7 @@ function EmployeeRowBody({ row }: { row: ActivityRow }) {
       <div className="mt-1 text-[14.5px] text-ink" style={{ lineHeight: 1.5 }}>
         {employeeEventCopy(row)}
         {row.note ? (
-          <span className="text-ink-subtle"> — {row.note}</span>
+          <span className="text-ink-subtle"> - {row.note}</span>
         ) : null}
       </div>
     </>
@@ -292,7 +292,7 @@ function SettingsRowBody({ row }: { row: ActivityRow }) {
       <div className="mt-1 text-[14.5px] text-ink" style={{ lineHeight: 1.5 }}>
         {settingsEventCopy(row)}
         {row.note ? (
-          <span className="text-ink-subtle"> — {row.note}</span>
+          <span className="text-ink-subtle"> - {row.note}</span>
         ) : null}
       </div>
     </>

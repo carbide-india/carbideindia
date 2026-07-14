@@ -6,7 +6,7 @@ import { pushSubscriptions } from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
 
 /**
- * M4 Commit 3c — Web Push subscribe / unsubscribe.
+ * M4 Commit 3c - Web Push subscribe / unsubscribe.
  *
  * POST  upserts the (userId, endpoint) pair returned by the browser's
  *       PushManager.subscribe(...) call.  Keyed on `endpoint` because a
@@ -17,7 +17,7 @@ import { requireUser } from "@/lib/auth/current";
  *        by /profile's "turn off" toggle and by the SW when the browser
  *        invalidates a subscription server-side.
  *
- * Auth — both verbs go through `requireUser`, which redirects when no
+ * Auth - both verbs go through `requireUser`, which redirects when no
  * session is present.  The handler is `runtime = "nodejs"` so we have
  * full Drizzle access (the edge runtime can't use pg).
  */

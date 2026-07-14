@@ -4,7 +4,7 @@ import { LegalShell } from "@/components/legal/legal-shell";
 export const metadata: Metadata = {
   title: "Privacy Policy · Carbide India WMS",
   description:
-    "How the Carbide India operations dashboard collects, stores, and shares personal data — written for the staff and contractors who use it daily.",
+    "How the Carbide India operations dashboard collects, stores, and shares personal data - written for the staff and contractors who use it daily.",
 };
 
 export default function PrivacyPage() {
@@ -21,7 +21,7 @@ export default function PrivacyPage() {
         record of the tasks you create, edit, or work on. Data sits in Neon
         Postgres and Clerk (US); uploaded files sit in Vercel Blob storage.
         We send you email notifications via
-        Resend and — if you enable it — Web Push notifications. We do not
+        Resend and - if you enable it - Web Push notifications. We do not
         sell, rent, or share your data
         with anyone outside Carbide India's narrow list of operational
         sub-processors. You can request a copy of your data or have it
@@ -30,7 +30,7 @@ export default function PrivacyPage() {
 
       <h2>2 · Who controls the data</h2>
       <p>
-        <strong>Data controller:</strong> Carbide India — the operational data
+        <strong>Data controller:</strong> Carbide India - the operational data
         (tasks, comments, assignments, statuses) is theirs.
       </p>
       <p>
@@ -48,7 +48,7 @@ export default function PrivacyPage() {
         <li>Whether you're an administrator (boolean flag, admin-toggled)</li>
         <li>Clerk user ID (issued automatically by Clerk, our authentication provider)</li>
         <li>Avatar URL, if you have one (optional)</li>
-        <li>Account state — invited at, joined at, active / deactivated</li>
+        <li>Account state - invited at, joined at, active / deactivated</li>
       </ul>
       <h3>Operational content</h3>
       <ul>
@@ -59,53 +59,53 @@ export default function PrivacyPage() {
       </ul>
       <h3>Channel-specific identifiers (only if enabled)</h3>
       <ul>
-        <li>Web Push browser subscription endpoint + per-device encryption keys — captured when you click "Enable push notifications" on /profile</li>
+        <li>Web Push browser subscription endpoint + per-device encryption keys - captured when you click "Enable push notifications" on /profile</li>
       </ul>
       <h3>Technical metadata</h3>
       <ul>
         <li>Authentication session cookies (set and signed by Clerk)</li>
-        <li>Server logs (request paths, status codes, error stacks) retained for debugging — never enriched with operational content</li>
+        <li>Server logs (request paths, status codes, error stacks) retained for debugging - never enriched with operational content</li>
       </ul>
 
       <h2>4 · Why we collect it</h2>
       <ul>
         <li><strong>To let you sign in.</strong> Email + Clerk user ID; nothing more.</li>
-        <li><strong>To run the operations workflow.</strong> Tasks, assignments, status transitions, approvals — the dashboard's core purpose.</li>
+        <li><strong>To run the operations workflow.</strong> Tasks, assignments, status transitions, approvals - the dashboard's core purpose.</li>
         <li><strong>To notify the right people at the right time.</strong> The fan-out matrix is locked in code; you don't get notifications for events you aren't a participant in.</li>
         <li><strong>To audit who did what, when.</strong> Every task event is logged for Carbide India's internal compliance.</li>
         <li><strong>To deliver on the channels you've consented to.</strong> Email is on by default; Web Push requires your browser permission.</li>
       </ul>
 
-      <h2>5 · Where it sits — sub-processors</h2>
+      <h2>5 · Where it sits - sub-processors</h2>
       <p>
         We use a small, named set of third parties. None of them get more data
         than they need to deliver their narrow function:
       </p>
       <ul>
         <li>
-          <strong>Neon</strong> (Postgres database) — stores all operational
+          <strong>Neon</strong> (Postgres database) - stores all operational
           data. Every read and write is gated in the application layer to the
           signed-in employee or admin.
         </li>
         <li>
-          <strong>Clerk</strong> (US region) — stores your email, password
+          <strong>Clerk</strong> (US region) - stores your email, password
           hash, and session metadata. Note: Clerk data residency is US-based;
           this is a compliance flag we are tracking against India's DPDP Act
           2027 deadline.
         </li>
         <li>
-          <strong>Vercel</strong> — application hosting + edge-runtime
+          <strong>Vercel</strong> - application hosting + edge-runtime
           middleware. Reads only the auth cookie + the request body for each
           page render.
         </li>
         <li>
-          <strong>Resend</strong> — transactional email delivery (invites,
+          <strong>Resend</strong> - transactional email delivery (invites,
           notifications, daily digest). Sees email address + body of each
           message.
         </li>
         <li>
           <strong>Google / Mozilla / Apple Push Services</strong> (if you
-          enable Web Push) — the encrypted notification payload, routed to
+          enable Web Push) - the encrypted notification payload, routed to
           your device via the browser vendor's push service. We never see
           the device-level identifier; we only hold the W3C subscription
           endpoint.
@@ -125,7 +125,7 @@ export default function PrivacyPage() {
         Active accounts: indefinitely, while the engagement is live. Deactivated
         accounts: the row is preserved with{" "}
         <code>is_active = false</code> so historical attributions on tasks
-        remain accurate — Carbide India's audit needs require this. Hard
+        remain accurate - Carbide India's audit needs require this. Hard
         deletion is not exposed in the dashboard; if you want a row purged,
         that becomes a manual ops runbook with Carbide India's legal point of
         contact.
@@ -149,7 +149,7 @@ export default function PrivacyPage() {
         </li>
         <li>
           <strong>The right to correct.</strong> Name, email, role, department,
-          channel preferences — all editable. Either edit them in{" "}
+          channel preferences - all editable. Either edit them in{" "}
           <code>/profile</code> yourself or ask an admin.
         </li>
         <li>
@@ -167,7 +167,7 @@ export default function PrivacyPage() {
       <h2>9 · Cookies</h2>
       <p>
         We set only the authentication cookies Clerk needs to keep you
-        signed in — HTTP-only, signed session cookies that are revoked the
+        signed in - HTTP-only, signed session cookies that are revoked the
         moment an admin deactivates your account. No analytics cookies, no
         advertising cookies, no third-party trackers.
       </p>

@@ -7,7 +7,7 @@ import { VelocityHero } from "./velocity-hero";
 /**
  * Task Velocity as a collapsed-by-default section at the bottom of the
  * dashboard. The chart is heavy, so it's NOT mounted until the user opens it
- * (click the + on the header bar) — the body only renders while `open`, so the
+ * (click the + on the header bar) - the body only renders while `open`, so the
  * VelocityChart never costs anything on a normal dashboard load.
  */
 export function CollapsibleVelocity({ data }: { data: VelocityPoint[] }) {

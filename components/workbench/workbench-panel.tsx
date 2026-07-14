@@ -13,7 +13,7 @@ interface WorkbenchPanelProps {
 }
 
 /**
- * Collapsible card with a brand-tinted header bar — our clean restyle of the
+ * Collapsible card with a brand-tinted header bar - our clean restyle of the
  * legacy ERP "blue section bar". Click the header to collapse/expand. Body is
  * conditionally rendered (no layout cost while closed).
  */

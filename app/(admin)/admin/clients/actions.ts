@@ -35,7 +35,7 @@ import { diffFields } from "@/lib/audit/diff";
 import { findActiveDuplicateClient } from "@/lib/clients/dedup";
 
 // Scalar editable columns tracked by the audit trail.
-// contactFirstName / additionalContacts are stored in client_contacts — not here.
+// contactFirstName / additionalContacts are stored in client_contacts - not here.
 const AUDITED_CLIENT_FIELDS = [
   "name",
   "customerTypeIds",
@@ -83,7 +83,7 @@ function revalidateClientSurfaces() {
   revalidatePath("/");
   // A client rename rewrites `tasks.title` in place (see updateClient),
   // which means cached task-derived data (nav counts, listDistinctSubjects)
-  // is now stale. Invalidate the tasks tag too — `updateTag` only
+  // is now stale. Invalidate the tasks tag too - `updateTag` only
   // works inside server actions, which this helper is exclusively
   // called from.
   updateTag(CACHE_TAGS.tasks);
@@ -155,7 +155,7 @@ export async function createClient(
 }
 
 /**
- * Deactivate a client (ERP Phase 4 governance — deactivate-only). Clients are
+ * Deactivate a client (ERP Phase 4 governance - deactivate-only). Clients are
  * NEVER hard-deleted: a master referenced by past inquiries/quotes/orders must
  * keep its row so those transactions stay intact. This sets is_active=false +
  * deleted_at so the client drops out of the picker but the record survives.
@@ -175,7 +175,7 @@ export async function deleteClient(
     where: eq(clients.id, parsedId.data),
   });
   if (!client) return { ok: false, error: "Client not found" };
-  if (!client.isActive) return { ok: true }; // already deactivated — idempotent
+  if (!client.isActive) return { ok: true }; // already deactivated - idempotent
 
   try {
     await db
@@ -232,7 +232,7 @@ export async function reactivateClient(
     where: eq(clients.id, parsedId.data),
   });
   if (!client) return { ok: false, error: "Client not found" };
-  if (client.isActive) return { ok: true }; // already active — idempotent
+  if (client.isActive) return { ok: true }; // already active - idempotent
 
   try {
     await db
@@ -272,7 +272,7 @@ export async function reactivateClient(
 }
 
 /**
- * Admin "Edit client" full-form save — overwrites every KYC field the form
+ * Admin "Edit client" full-form save - overwrites every KYC field the form
  * shows (Company / types / products / address / contact / meeting / cards),
  * blanking any field the admin cleared. Currency/country/export are NOT
  * touched (the form has no inputs for them). A rename propagates to
@@ -333,7 +333,7 @@ export async function adminUpdateClientKyc(
   const addressRows = normalizeAddressRows(client.id, v.addresses);
   const bankRows = normalizeBankRows(client.id, v.bankAccounts);
 
-  // Full overwrite of the form-managed columns — a cleared field becomes NULL.
+  // Full overwrite of the form-managed columns - a cleared field becomes NULL.
   const patch: Partial<typeof clients.$inferInsert> = {
     ...buildKycClientPatch(v),
     name: v.name,
@@ -363,7 +363,7 @@ export async function adminUpdateClientKyc(
         }
       }
 
-      // A client name IS the task's title — propagate a rename to every task.
+      // A client name IS the task's title - propagate a rename to every task.
       if (v.name !== client.name) {
         await tx
           .update(tasks)
@@ -521,7 +521,7 @@ export async function adminUpdateClientKyc(
     changes,
   });
 
-  // Child rows (addresses / bank accounts) aren't field-diffed — record a
+  // Child rows (addresses / bank accounts) aren't field-diffed - record a
   // single summary entry when either was submitted.
   if (addressRows !== undefined || bankRows !== undefined) {
     await recordAudit({
@@ -645,7 +645,7 @@ export interface DuplicateClientMatch {
  * GSTIN/PAN dedup probe for the KYC form (ERP Phase 2). Returns OTHER clients
  * whose normalized (trim + upper) `gstin` or `pan_no` equals a supplied
  * non-empty value, excluding `excludeId` (the client being edited). The form
- * uses this to warn — it is NON-BLOCKING; an empty payload returns `[]`.
+ * uses this to warn - it is NON-BLOCKING; an empty payload returns `[]`.
  */
 export async function checkClientDuplicate(input: {
   gstin?: string | null;

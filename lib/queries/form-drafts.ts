@@ -43,7 +43,7 @@ export async function listFormDrafts(kind: FormDraftKind): Promise<FormDraftList
   }));
 }
 
-/** A single ACTIVE draft's raw form payload — only if it belongs to the user. */
+/** A single ACTIVE draft's raw form payload - only if it belongs to the user. */
 export async function getFormDraft(
   kind: FormDraftKind,
   id: string,
@@ -89,7 +89,7 @@ export async function listRecycledDrafts(
       and(
         eq(formDrafts.ownerId, me.id),
         isNotNull(formDrafts.deletedAt),
-        // Per-form Recycle Bin — scope to one form kind when given.
+        // Per-form Recycle Bin - scope to one form kind when given.
         ...(kind ? [eq(formDrafts.formKey, kind)] : []),
       ),
     )

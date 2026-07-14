@@ -8,10 +8,10 @@ import { put, del, list, issueSignedToken, presignUrl } from "@vercel/blob";
  * deploys).
  *
  * Access model:
- * - Avatars are PUBLIC — they render in plain <img> tags across the app,
+ * - Avatars are PUBLIC - they render in plain <img> tags across the app,
  *   so the permanent blob URL is stored directly on employees.avatarUrl.
  *   Small (≤2 MB), so they upload through /api/profile/avatar.
- * - Documents are PRIVATE — business files up to 25 MB, which exceeds
+ * - Documents are PRIVATE - business files up to 25 MB, which exceeds
  *   Vercel's ~4.5 MB function body cap, so the FILE goes browser → Blob
  *   directly: the client calls `upload()` (@vercel/blob/client) against the
  *   /api/documents/upload token route, then registers metadata via a server
@@ -47,7 +47,7 @@ export async function deleteBlob(urlOrPathname: string): Promise<void> {
 /**
  * Delete every blob under a prefix (e.g. `avatars/<employeeId>/`), optionally
  * keeping one URL (used after an avatar re-upload to reap the older blobs
- * without touching the one just stored). Best-effort cleanup helper —
+ * without touching the one just stored). Best-effort cleanup helper -
  * callers catch failures.
  */
 export async function deleteByPrefix(

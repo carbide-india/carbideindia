@@ -40,7 +40,7 @@ export async function getShapeProfiles(): Promise<ShapeProfiles> {
 }
 
 /**
- * Active options for one kind — feeds the KYC / inquiry form dropdowns.
+ * Active options for one kind - feeds the KYC / inquiry form dropdowns.
  * Cached under `masters`; writers (`createMasterOption`, `updateMasterOption`)
  * already invalidate that tag. `kind` is part of the cache key (the
  * dashboard-style closure-per-call pattern) so kinds don't collide.
@@ -68,7 +68,7 @@ export interface MasterOptionWithCode {
 }
 
 /**
- * Active options WITH their short code for the item-form — the live code
+ * Active options WITH their short code for the item-form - the live code
  * preview needs the code to assemble a `buildItemCode` result client-side.
  * Same cache + tag as `listMasterOptions`.
  */

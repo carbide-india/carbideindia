@@ -31,7 +31,7 @@ interface Props {
   setApproveOpen: (next: boolean) => void;
   reassignOpen: boolean;
   setReassignOpen: (next: boolean) => void;
-  /** Viewer's relationship to the task — drives the role banner above
+  /** Viewer's relationship to the task - drives the role banner above
    *  the action cards. `null` = neither doer nor initiator. */
   myRole: "doer" | "initiator" | "both" | null;
   /** True when the viewer has admin override (no role on the task but
@@ -223,10 +223,10 @@ export function ActionRail({
         </p>
       )}
 
-      {/* Dialog portals.  These are headless triggers — the visible UI is
+      {/* Dialog portals.  These are headless triggers - the visible UI is
           the cards above; the dialogs themselves stay in their own files. */}
 
-      {/* Decline dialog — owned inline because Approve also lives here. */}
+      {/* Decline dialog - owned inline because Approve also lives here. */}
       <Dialog.Root open={approveOpen} onOpenChange={setApproveOpen}>
         <Dialog.Portal>
           <Dialog.Overlay
@@ -280,7 +280,7 @@ export function ActionRail({
       </Dialog.Root>
 
       {/* Reassign dialog.  Its hidden trigger stays out of the layout via
-          display:none — open-state is fully driven by the card above and the
+          display:none - open-state is fully driven by the card above and the
           hash-open effect in the wrapper. */}
       {canReassignTask && (
         <ReassignDialog
@@ -298,7 +298,7 @@ export function ActionRail({
 }
 
 /**
- * Banner that names the viewer's relationship to the task — "you're the
+ * Banner that names the viewer's relationship to the task - "you're the
  * doer", "you're the initiator", or "admin override".  Sits above the
  * action cards so the user understands *why* certain affordances appear.
  *
@@ -395,7 +395,7 @@ function RoleBanner({
               >
                 You're the {l.label.toLowerCase()}
               </span>
-              <span className="text-ink-soft"> — {l.detail}</span>
+              <span className="text-ink-soft"> - {l.detail}</span>
             </span>
           </div>
         );

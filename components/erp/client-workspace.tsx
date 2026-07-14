@@ -48,7 +48,7 @@ import { ClientDocuments } from "@/components/clients/client-documents";
 import { cn } from "@/lib/utils";
 
 /**
- * ClientWorkspace (ERP redesign — Phase 9c, §8 "Client Workspace").
+ * ClientWorkspace (ERP redesign - Phase 9c, §8 "Client Workspace").
  *
  * The per-client cockpit: a sticky KPI header (7 live SSOT KPIs) over a tabbed
  * body (Overview / Enquiries / Pipeline / Products / Financials / Documents /
@@ -70,7 +70,7 @@ interface ClientWorkspaceProps {
   timeline: ClientTimelineEntry[];
   documents: ClientDocument[];
   isAdmin: boolean;
-  /** When true, render content only (no AppShell) — the page supplies the new
+  /** When true, render content only (no AppShell) - the page supplies the new
    *  module-shell chrome instead of the legacy ERP rail. */
   embedded?: boolean;
 }
@@ -173,7 +173,7 @@ export function ClientWorkspace({
     timeline: (
       <Section
         title="Timeline"
-        subtitle="Merged activity — audit, meetings & pipeline milestones"
+        subtitle="Merged activity - audit, meetings & pipeline milestones"
       >
         <TimelineList entries={timeline} />
       </Section>
@@ -282,14 +282,14 @@ export function ClientWorkspace({
             />
             <KpiTile
               label="Outstanding"
-              value="—"
+              value="-"
               hint="provisional"
               muted
             />
             <KpiTile
               label="Win Rate"
               value={
-                kpis.winRate == null ? "—" : `${Math.round(kpis.winRate * 100)}%`
+                kpis.winRate == null ? "-" : `${Math.round(kpis.winRate * 100)}%`
               }
               hint={
                 kpis.winRate == null
@@ -299,7 +299,7 @@ export function ClientWorkspace({
             />
             <KpiTile
               label="Last Activity"
-              value={kpis.lastActivity ? formatDate(kpis.lastActivity) : "—"}
+              value={kpis.lastActivity ? formatDate(kpis.lastActivity) : "-"}
             />
           </div>
         </div>
@@ -417,7 +417,7 @@ function OverviewTab({
       <EmptyCta
         href={newEnquiryHref}
         title="No activity yet for this client"
-        body="Kick off the sales pipeline — the first enquiry mints an SM number and this cockpit fills in live."
+        body="Kick off the sales pipeline - the first enquiry mints an SM number and this cockpit fills in live."
         cta="Start first enquiry"
       />
     );
@@ -435,7 +435,7 @@ function OverviewTab({
               ))}
             </ul>
           ) : (
-            <Empty>No open enquiries — everything is won or closed.</Empty>
+            <Empty>No open enquiries - everything is won or closed.</Empty>
           )}
         </Section>
 
@@ -705,7 +705,7 @@ function ProductsTab({ products }: { products: ClientProductRow[] }) {
   if (products.length === 0) {
     return (
       <Empty>
-        No products linked to this client yet — products appear once an enquiry
+        No products linked to this client yet - products appear once an enquiry
         carries an item.
       </Empty>
     );
@@ -713,7 +713,7 @@ function ProductsTab({ products }: { products: ClientProductRow[] }) {
   return (
     <Section
       title="Products"
-      subtitle="Client-scoped where-used — ranked by order value"
+      subtitle="Client-scoped where-used - ranked by order value"
     >
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-[13px]">
@@ -738,16 +738,16 @@ function ProductsTab({ products }: { products: ClientProductRow[] }) {
                     {p.itemCode}
                   </Link>
                 </td>
-                <td className="py-2.5 pr-4 text-ink-muted">{p.shapeName ?? "—"}</td>
-                <td className="py-2.5 pr-4 text-ink-muted">{p.gradeName ?? "—"}</td>
+                <td className="py-2.5 pr-4 text-ink-muted">{p.shapeName ?? "-"}</td>
+                <td className="py-2.5 pr-4 text-ink-muted">{p.gradeName ?? "-"}</td>
                 <td className="py-2.5 pr-4 text-right font-mono tabular-nums text-ink-muted">
                   {p.enquiryCount}
                 </td>
                 <td className="py-2.5 pr-4 text-right font-mono tabular-nums text-ink-muted">
-                  {p.orderedQty > 0 ? formatCount(p.orderedQty) : "—"}
+                  {p.orderedQty > 0 ? formatCount(p.orderedQty) : "-"}
                 </td>
                 <td className="py-2.5 text-right font-mono tabular-nums font-semibold text-ink-strong">
-                  {p.revenue > 0 ? formatInr(p.revenue) : "—"}
+                  {p.revenue > 0 ? formatInr(p.revenue) : "-"}
                 </td>
               </tr>
             ))}
@@ -975,7 +975,7 @@ function ProductRow({ p }: { p: ClientProductRow }) {
           {p.itemCode}
         </span>
         <span className="min-w-0 flex-1 truncate text-[13px] text-ink-muted">
-          {[p.shapeName, p.gradeName].filter(Boolean).join(" · ") || "—"}
+          {[p.shapeName, p.gradeName].filter(Boolean).join(" · ") || "-"}
         </span>
         <span className="text-[13px] font-semibold tabular-nums text-ink-strong">
           {p.revenue > 0 ? formatInr(p.revenue) : `${p.enquiryCount} enq`}

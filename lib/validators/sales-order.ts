@@ -30,16 +30,16 @@ export const SoLineSchema = z.object({
 export type SoLineInput = z.input<typeof SoLineSchema>;
 
 /**
- * Base field set shared by Create/Update — base-object + derive pattern
+ * Base field set shared by Create/Update - base-object + derive pattern
  * (zod v4 has no `.innerType()`). inquiryId required; quotationId optional
  * link (autofills price/timeline); soNo is the auto-number fallback. A Sales
- * Order has no status *enum* — its only state toggle is `customerSoSent`.
+ * Order has no status *enum* - its only state toggle is `customerSoSent`.
  */
 const SalesOrderFieldsSchema = z.object({
   inquiryId: z.string().uuid(),
   quotationId: z.string().uuid().optional(),
   soNo: OptionalText(60), // blank → auto-derived `<SM>-SO01`
-  // Product (editable snapshot from the SM — form value wins over autofetch)
+  // Product (editable snapshot from the SM - form value wins over autofetch)
   custProductName: OptionalText(300),
   qty: Qty,
   partNo: OptionalText(120),
@@ -76,5 +76,5 @@ export const UpdateSalesOrderSchema = SalesOrderFieldsSchema
   .refine((v) => Object.keys(v).length > 0, { message: "No changes to save." });
 export type UpdateSalesOrderInput = z.input<typeof UpdateSalesOrderSchema>;
 
-/** The SO has no status enum — the only "status" toggle is SO-sent. */
+/** The SO has no status enum - the only "status" toggle is SO-sent. */
 export const SetSalesOrderSentSchema = z.object({ sent: z.boolean() });

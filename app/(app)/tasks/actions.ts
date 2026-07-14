@@ -56,7 +56,7 @@ import { getStatusDisplayMap } from "@/lib/queries/status-display";
 import { searchTasks, type TaskSearchResult } from "@/lib/queries/task-search";
 
 /**
- * sir's changes #12 — app-wide task search for the header command palette.
+ * sir's changes #12 - app-wide task search for the header command palette.
  * Auth-gated (signed-in users only); returns up to 20 freshest matches.
  */
 export async function searchTasksAction(query: string): Promise<TaskSearchResult[]> {
@@ -79,7 +79,7 @@ function isUuid(v: string): boolean {
  * timestamps into JS Date (millisecond precision, sub-ms truncated) and
  * serializes Date parameters back via `.toISOString()` (also ms). So
  * `eq(tasks.updated_at, expectedDate)` fails for any row whose `updated_at`
- * was written by Postgres `now()` (defaultNow inserts, legacy imports, etc.) —
+ * was written by Postgres `now()` (defaultNow inserts, legacy imports, etc.) -
  * the stored `.123456` never equals the round-tripped `.123000`. Truncating
  * the stored column to milliseconds before comparing closes the gap without
  * needing to migrate every row or alter the column type.
@@ -87,7 +87,7 @@ function isUuid(v: string): boolean {
  * We pass the parameter as an ISO-8601 string with an explicit `::timestamptz`
  * cast because raw `Date` interpolation inside `sql\`\`` would call
  * `.toString()` ("Fri May 15 2026 12:43:38 GMT+0530") which Postgres cannot
- * parse — Drizzle only knows to call `.toISOString()` when the column type
+ * parse - Drizzle only knows to call `.toISOString()` when the column type
  * is in scope, which it isn't inside an arbitrary SQL fragment.
  */
 function optimisticLockMatches(expectedDate: Date) {
@@ -114,7 +114,7 @@ function revalidateTaskRoutes(): void {
   // Drop cached task aggregates (nav-count totals, distinct-subject list).
   // Subject cache is touched too because creating a task with a new free-text
   // subject expands the dropdown's distinct list. `updateTag` is the Next 16
-  // server-action-scoped variant that gives read-your-own-writes — the
+  // server-action-scoped variant that gives read-your-own-writes - the
   // redirect/refresh that follows this action will see fresh data.
   updateTag(CACHE_TAGS.tasks);
   updateTag(CACHE_TAGS.subjects);
@@ -147,7 +147,7 @@ export async function archiveTask(
       });
       return true;
     });
-    if (!found) return { ok: false, error: "Task not found — it may already be gone." };
+    if (!found) return { ok: false, error: "Task not found - it may already be gone." };
   } catch (err) {
     return { ok: false, error: `Could not archive: ${(err as Error).message}` };
   }
@@ -157,7 +157,7 @@ export async function archiveTask(
 }
 
 /**
- * Permanently delete a task. Destructive + irreversible — so it is
+ * Permanently delete a task. Destructive + irreversible - so it is
  * ADMIN-ONLY (everyone else uses Archive or Cancel). FK constraints handle
  * the cleanup: task_events + notifications cascade-delete with the row, and
  * any linked documents are unlinked (task_id → null). For the soft path,
@@ -186,7 +186,7 @@ export async function deleteTask(
       .where(eq(tasks.id, taskId))
       .returning({ id: tasks.id });
     if (deleted.length === 0) {
-      return { ok: false, error: "Task not found — it may already be deleted." };
+      return { ok: false, error: "Task not found - it may already be deleted." };
     }
   } catch (err) {
     return { ok: false, error: `Could not delete: ${(err as Error).message}` };
@@ -231,7 +231,7 @@ export async function unarchiveTask(
       });
       return true;
     });
-    if (!found) return { ok: false, error: "Task not found — it may already be gone." };
+    if (!found) return { ok: false, error: "Task not found - it may already be gone." };
   } catch (err) {
     return { ok: false, error: `Could not restore: ${(err as Error).message}` };
   }
@@ -242,7 +242,7 @@ export async function unarchiveTask(
 
 /**
  * Move the task to a new status.  Honours the transition matrix
- * (lib/auth/status-transitions.ts) — refuses transitions the actor's
+ * (lib/auth/status-transitions.ts) - refuses transitions the actor's
  * role can't perform.  Writes a `status_changed` audit event with the
  * from + to values.  Optimistic-lock: caller passes the expected
  * updated_at so concurrent edits cleanly fail with "stale".
@@ -295,7 +295,7 @@ export async function setTaskStatus(
 
   // Atomic: the task UPDATE and audit-event INSERT must either both
   // commit or both roll back. Without a transaction, a failure on the
-  // task_events insert leaves the row updated with no audit trail —
+  // task_events insert leaves the row updated with no audit trail -
   // silent desync. Notifications stay OUTSIDE the txn so a slow
   // email/push send doesn't hold the row lock.
   const now = new Date();
@@ -325,7 +325,7 @@ export async function setTaskStatus(
   if (stale) return { ok: false, error: "stale" };
 
   // Fan-out: every other participant (creator/initiator/doer minus me).
-  // Tier-3 fix — the notification body MUST be JSON meta so the email
+  // Tier-3 fix - the notification body MUST be JSON meta so the email
   // template can pluck `toStatus` + `fromStatus` and render the
   // real transition (the templates default `toStatus` to "done" which
   // made every status_changed email lie). Also resolve the new-status
@@ -366,7 +366,7 @@ export async function setTaskPriority(
     const outcome = await db.transaction(async (tx) => {
       // SELECT ... FOR UPDATE serialises concurrent edits on the same row:
       // two simultaneous priority changes would otherwise both read the same
-      // `priority`, both pass the idempotency check, and both write — last
+      // `priority`, both pass the idempotency check, and both write - last
       // writer silently wins. The row lock blocks the second txn until the
       // first commits.
       const locked = await tx
@@ -401,7 +401,7 @@ export async function setTaskPriority(
 }
 
 /**
- * #7 — My Day kanban: drag a task onto a day column to reschedule it.
+ * #7 - My Day kanban: drag a task onto a day column to reschedule it.
  * Sets due_at to noon IST of the target calendar day. Returns a typed
  * result so the board can toast on failure instead of crashing.
  */
@@ -448,7 +448,7 @@ export async function reassignDoer(
   if (limited) return limited;
   try {
     const outcome = await db.transaction(async (tx) => {
-      // FOR UPDATE so two concurrent reassigns serialise — see
+      // FOR UPDATE so two concurrent reassigns serialise - see
       // setTaskPriority for the rationale.
       const locked = await tx
         .select({ doerId: tasks.doerId })
@@ -492,7 +492,7 @@ export async function reassignDoer(
 // Permissions mirror the single-task actions: status honours the transition
 // matrix per task (rows the actor can't move are skipped, not failed);
 // priority + reassign are open to any signed-in user; archive + delete are
-// admin-only. Bulk ops intentionally DON'T fan out per-task notifications — a
+// admin-only. Bulk ops intentionally DON'T fan out per-task notifications - a
 // 50-task sweep would flood every participant's inbox (single-task actions
 // still notify).
 
@@ -766,7 +766,7 @@ export async function createTask(input: CreateTaskInput): Promise<
 
   const createdIds: string[] = [];
   // Notifications are collected here and fired AFTER the response (see below),
-  // never inline — the old code awaited every notify() in the loop, chaining
+  // never inline - the old code awaited every notify() in the loop, chaining
   // dozens of email/push network calls on the critical path,
   // which is what intermittently surfaced "we hit a snag" on a 5-6 task batch.
   const notifyIntents: Array<Parameters<typeof notify>[0]> = [];
@@ -776,7 +776,7 @@ export async function createTask(input: CreateTaskInput): Promise<
   });
 
   for (const doerId of doerIds) {
-    // M4 — generate id client-side so short_id can be derived deterministically
+    // M4 - generate id client-side so short_id can be derived deterministically
     // from the same UUID.  UNIQUE constraint on tasks.short_id catches the
     // rare collision; retry with the next 10-char slice of the dashless UUID.
     const taskId = crypto.randomUUID();
@@ -807,7 +807,7 @@ export async function createTask(input: CreateTaskInput): Promise<
             priority: parsed.priority,
             dueAt: parsed.dueAt,
             tags: parsed.tags ?? null,
-            // Tier-4 — GCal-style scheduling fields. All null on a one-off
+            // Tier-4 - GCal-style scheduling fields. All null on a one-off
             // task; the form sends real values when the user opens the
             // Schedule section.
             startsAt: parsed.startsAt ?? null,
@@ -818,7 +818,7 @@ export async function createTask(input: CreateTaskInput): Promise<
             projectNodeId: parsed.projectNodeId ?? null,
             createdById: me.id,
             shortId,
-            // New tasks land in "Not Read" (dont_know) — the doer moves them to
+            // New tasks land in "Not Read" (dont_know) - the doer moves them to
             // "Not Started" once they've actually read the task. archived
             // defaults to false; createdAt + updatedAt default to now().
             status: "dont_know",
@@ -845,7 +845,7 @@ export async function createTask(input: CreateTaskInput): Promise<
       };
     }
 
-    // Audit row — best-effort. The task itself is already committed; a
+    // Audit row - best-effort. The task itself is already committed; a
     // transient failure writing the "created" event must never abort the
     // batch (which would half-create a multi-doer upload) or bubble up as
     // "we hit a snag".
@@ -950,7 +950,7 @@ export async function quickAddClient(
     return { ok: true, name: row.name };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    // Lost a race to a concurrent insert — fetch the winner and return it.
+    // Lost a race to a concurrent insert - fetch the winner and return it.
     if (msg.includes("clients_name_unique")) {
       const [winner] = await db
         .select({ name: clients.name })
@@ -1137,7 +1137,7 @@ export async function editTaskFields(
  *   a `status_changed` task_events row.
  *
  * Note: M2.2 deliberately does NOT permit edits to an approval after the
- * fact (per spec "Edit audit rows (any) — — (no one)").  If the
+ * fact (per spec "Edit audit rows (any) - - (no one)").  If the
  * initiator changes their mind, they decline the existing decision and
  * the doer reworks, producing a second `status_changed` row.
  */
@@ -1192,7 +1192,7 @@ export async function approveTask(
     return { ok: false, error: "invalid", message: "Bad expectedUpdatedAt" };
   }
 
-  // Atomic UPDATE + audit insert — see setTaskStatus for the
+  // Atomic UPDATE + audit insert - see setTaskStatus for the
   // rationale. Notifications dispatched after the txn commits.
   const now = new Date();
   const stale = await db.transaction(async (tx) => {
@@ -1316,12 +1316,12 @@ export async function reassignTask(
   }
 
   const now = new Date();
-  // sir's changes #3 — a reassign resets the task to "Not Read" (dont_know),
+  // sir's changes #3 - a reassign resets the task to "Not Read" (dont_know),
   // not "Not Started", so the new doer has to actually open it first.
   const shouldReset =
     parsed.resetStatus === true && current.status !== "dont_know";
 
-  // Atomic reassign — the UPDATE, the `reassigned` audit row, and the
+  // Atomic reassign - the UPDATE, the `reassigned` audit row, and the
   // optional `status_changed` audit row all commit together or roll
   // back together.
   const stale = await db.transaction(async (tx) => {
@@ -1404,7 +1404,7 @@ export async function reassignTask(
  * - Permission: any task participant (creator/initiator/doer) or admin.
  * - No status change; no optimistic-lock against tasks (comments don't
  *   mutate the task row).  Always writes one `commented` task_events row
- *   with the body in `to_value.body` (jsonb stays flexible — future
+ *   with the body in `to_value.body` (jsonb stays flexible - future
  *   commit may include mention metadata).
  */
 export async function addComment(
@@ -1512,7 +1512,7 @@ export async function setTaskApprovalStatus(
     };
   }
 
-  // Pre-flight no-op check outside the txn — cheap, lets us skip
+  // Pre-flight no-op check outside the txn - cheap, lets us skip
   // touching the row lock when nothing's changing.
   const preview = await db.query.tasks.findFirst({
     where: eq(tasks.id, taskId),
@@ -1564,7 +1564,7 @@ export async function setTaskApprovalStatus(
 
 /**
  * Set or clear `revised_target_date` on a task. Admin-only.
- * The original `due_at` is never modified — admins set the revised
+ * The original `due_at` is never modified - admins set the revised
  * target alongside it so the original commitment stays auditable.
  */
 export async function setTaskRevisedTargetDate(
@@ -1642,11 +1642,11 @@ export async function setTaskRevisedTargetDate(
   return { ok: true };
 }
 
-// ───────────────────────────── Phase 3.2 — comment edit/delete ─────────────
+// ───────────────────────────── Phase 3.2 - comment edit/delete ─────────────
 //
 // Authors can edit/delete their own comments within 15 minutes of posting;
 // admins can edit/delete any. Beyond the 15-minute window non-admins are
-// frozen out — the audit trail is supposed to be ~immutable, the grace
+// frozen out - the audit trail is supposed to be ~immutable, the grace
 // window is just for typo fixes / accidental sends.
 //
 // Edit updates the `task_events.to_value` JSONB in place, adding an

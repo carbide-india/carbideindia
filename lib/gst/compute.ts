@@ -1,5 +1,5 @@
 /**
- * Pure GST computation (Phase 7, §11.3). No DB, no side effects — the single
+ * Pure GST computation (Phase 7, §11.3). No DB, no side effects - the single
  * source of truth for the India CGST/SGST vs IGST split so invoice actions,
  * credit notes and any preview UI all agree to the paisa.
  *
@@ -141,7 +141,7 @@ export interface GstLineInput {
   /** Per-line discount (rupees, subtracted from qty*unitPrice). */
   discount?: number;
   ratePct: number;
-  /** Optional per-line HSN — not used in math, carried for convenience. */
+  /** Optional per-line HSN - not used in math, carried for convenience. */
   hsnCode?: string | null;
 }
 
@@ -166,7 +166,7 @@ export interface GstDocResult {
 
 /**
  * Compute a full document's GST: one split per line + summed persisted header
- * totals (§11.3 — totals are computed but stored). Supply type is resolved once
+ * totals (§11.3 - totals are computed but stored). Supply type is resolved once
  * for the document (place-of-supply vs seller state) and applied to every line.
  */
 export function computeGstDocument(args: {

@@ -27,10 +27,10 @@ export interface SampleFilters {
 
 /**
  * Sample register list. Filters are URL-driven (nuqs) and per-user, so this
- * is intentionally uncached — every render hits the DB with the exact filter
+ * is intentionally uncached - every render hits the DB with the exact filter
  * set. `q` matches sample number OR sample notes, case-insensitive substring.
- * Company name comes from the linked enquiry (left join — unlinked samples
- * render the "—" fallback).
+ * Company name comes from the linked enquiry (left join - unlinked samples
+ * render the "-" fallback).
  */
 export async function listSamples(
   filters: SampleFilters = {},

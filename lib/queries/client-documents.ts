@@ -19,7 +19,7 @@ export interface ClientDocument {
  * All documents attached to a client, newest first, each carrying a fresh
  * presigned download URL. Mirrors `listDocuments` in lib/queries/documents.ts:
  * one read-scoped token issuance (single network call), then every row's URL
- * is presigned locally — so N docs never become N HTTP round-trips. Presign
+ * is presigned locally - so N docs never become N HTTP round-trips. Presign
  * failure degrades to downloadUrl:null (the UI hides the download link).
  */
 export async function getClientDocuments(clientId: string): Promise<ClientDocument[]> {
@@ -43,7 +43,7 @@ export async function getClientDocuments(clientId: string): Promise<ClientDocume
   try {
     urlByPath = await getDocumentDownloadUrls(rows.map((r) => r.storagePath));
   } catch {
-    // presigning unavailable (e.g. missing BLOB_READ_WRITE_TOKEN) — degrade.
+    // presigning unavailable (e.g. missing BLOB_READ_WRITE_TOKEN) - degrade.
   }
 
   return rows.map((r) => ({

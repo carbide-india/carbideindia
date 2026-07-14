@@ -44,7 +44,7 @@ interface NavItem {
   exact?: boolean;
   /**
    * For settings-backed items that share the /admin/settings pathname but
-   * differ by ?tab — active only when the current tab matches. `null` means
+   * differ by ?tab - active only when the current tab matches. `null` means
    * the default (General / no tab param).
    */
   tab?: string | null;
@@ -69,7 +69,7 @@ const GROUPS: NavGroup[] = [
     label: "ORGANIZATION",
     items: [
       { label: "Company & Branding", href: "/admin/settings" as Route, Icon: Palette, tab: null },
-      { label: "Company & Legal", Icon: Scale },
+      { label: "Company & Legal", href: "/admin/settings?tab=legal" as Route, Icon: Scale, tab: "legal" },
     ],
   },
   {
@@ -178,7 +178,7 @@ export function AdminModuleShell({
             <Bell className="h-[18px] w-[18px]" />
           </Link>
           <span
-            title="Help — coming soon"
+            title="Help - coming soon"
             className="grid h-9 w-9 cursor-default place-items-center rounded-full text-[#9aa0ab]"
           >
             <HelpCircle className="h-[18px] w-[18px]" />
@@ -208,7 +208,7 @@ export function AdminModuleShell({
             </span>
           </div>
 
-          {/* Overview — pinned above the categories */}
+          {/* Overview - pinned above the categories */}
           <nav className="mt-5 flex flex-col gap-2">
             <Link
               href={"/admin" as Route}
@@ -279,7 +279,7 @@ export function AdminModuleShell({
             </div>
           ))}
 
-          {/* Footer — Support + Sign out */}
+          {/* Footer - Support + Sign out */}
           <div className="mt-6 flex flex-col gap-1 border-t border-[#eceef2] pt-3">
             <span
               title="Coming soon"

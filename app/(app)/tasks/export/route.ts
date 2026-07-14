@@ -12,12 +12,12 @@ import {
  *
  * Streams the current /tasks (or /archived) view as a CSV download using
  * the unified `csvResponse` helper from `lib/exports/csv`. Query params
- * mirror `parseTaskFilters` exactly — start, end, status, emp, initiator,
- * dept, prio, subj, id — plus an `archived=1` flag for the /archived view.
+ * mirror `parseTaskFilters` exactly - start, end, status, emp, initiator,
+ * dept, prio, subj, id - plus an `archived=1` flag for the /archived view.
  *
  * Auth + scoping: any signed-in employee can hit this endpoint. Non-admins
  * are scoped to "assigned to me" by default via `parseTaskFilters`'s
- * `defaultDoerId` option — the same rule the page applies — so a non-admin
+ * `defaultDoerId` option - the same rule the page applies - so a non-admin
  * exporter only ever sees their own filtered task list.
  *
  * Hard cap: reads up to `MAX_EXPORT_ROWS + 1` so `csvResponse` can detect
@@ -44,7 +44,7 @@ const iso = (d: Date | null | undefined): string =>
   d ? d.toISOString() : "";
 
 export async function GET(request: Request): Promise<Response> {
-  // Admin-only — UI hides the CSV button for non-admins; this guard
+  // Admin-only - UI hides the CSV button for non-admins; this guard
   // prevents direct-URL access. requireAdmin throws if not admin →
   // we re-respond as a clean 403 (matches the XLSX + PDF route shape).
   let me;

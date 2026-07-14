@@ -20,7 +20,7 @@ import {
  * The four workspaces of the Hub launchpad. Navigation is module-scoped: the
  * header shows ONLY the current module's items, derived from the active route
  * via {@link moduleForPath}. This is the source of truth for which section
- * lives in which module — moving an item between modules is a one-line edit.
+ * lives in which module - moving an item between modules is a one-line edit.
  */
 export type ModuleKey = "wms" | "enquiries" | "masters" | "admin";
 

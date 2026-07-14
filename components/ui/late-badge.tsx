@@ -1,6 +1,6 @@
 /**
  * Small amber "Late" chip shown next to a Done status when the task was
- * completed after its due date. Presentational only — callers decide when to
+ * completed after its due date. Presentational only - callers decide when to
  * render it (see lib/task-late.ts → isDoneLate).
  */
 export function LateBadge({ className = "" }: { className?: string }) {

@@ -54,7 +54,7 @@ export function InlineStatusCell({
     : USER_TASK_STATUSES;
 
   // `||` (not `??`) so an empty/blank token also falls back to the
-  // canonical per-status colour — guarantees every status renders coloured.
+  // canonical per-status colour - guarantees every status renders coloured.
   const tone = tones[shown] || STATUS_TONES_FALLBACK[shown];
 
   async function pick(next: TaskStatus) {
@@ -75,7 +75,7 @@ export function InlineStatusCell({
           res.error === "forbidden"
             ? "Not allowed to make that transition."
             : res.error === "stale"
-              ? "This row was changed elsewhere — refreshing."
+              ? "This row was changed elsewhere - refreshing."
               : res.message ?? "Could not update status.";
         fireToast({ message: msg });
         if (res.error === "stale") router.refresh();

@@ -52,7 +52,7 @@ const MEDIA_SLOT_COUNT = 4;
 
 // react-hook-form + zod own the validated core fields. Complex/auxiliary
 // widgets (tags, schedule, media, links) stay in local state and are folded
-// into the payload at submit — same shape createTask has always received.
+// into the payload at submit - same shape createTask has always received.
 const NewTaskSchema = z.object({
   title: z.string().trim().min(1, "Client name is required"),
   initiatorId: z.string().min(1, "Initiator is required"),
@@ -66,7 +66,7 @@ const NewTaskSchema = z.object({
 });
 type NewTaskFormValues = z.infer<typeof NewTaskSchema>;
 
-// Media slots are UI-only for now — files live in component state and
+// Media slots are UI-only for now - files live in component state and
 // aren't uploaded anywhere. The Links section is wired: URLs get
 // appended to the `notes` payload on submit ("Links:\n- ..."), so they
 // survive into the task record without needing a new column.
@@ -105,7 +105,7 @@ export function NewTaskForm({ employees, clients, subjects, projectNodes = [], o
     },
   });
 
-  // Auxiliary widgets — local state, folded into the payload at submit.
+  // Auxiliary widgets - local state, folded into the payload at submit.
   const [tags, setTags] = React.useState<string[]>([]);
   const [tagInput, setTagInput] = React.useState("");
   const [schedule, setSchedule] = React.useState<ScheduleValue>({
@@ -175,7 +175,7 @@ export function NewTaskForm({ employees, clients, subjects, projectNodes = [], o
     // so timezone wrap-arounds don't push the due into the wrong day.
     const dueIso = new Date(`${values.dueAt}T12:00:00.000Z`).toISOString();
 
-    // Stamp link URLs onto the notes payload — they survive into the task
+    // Stamp link URLs onto the notes payload - they survive into the task
     // record so the team can click through later. Media files are UI-only.
     const linksBlock =
       links.length > 0
@@ -191,7 +191,7 @@ export function NewTaskForm({ employees, clients, subjects, projectNodes = [], o
     startTransition(async () => {
       const result = await createTask({
         title: values.title,
-        doerIds: values.doerIds,       // multi-doer fanout — N tasks if N doers
+        doerIds: values.doerIds,       // multi-doer fanout - N tasks if N doers
         initiatorId: values.initiatorId,
         priority: values.priority,
         dueAt: dueIso,
@@ -199,7 +199,7 @@ export function NewTaskForm({ employees, clients, subjects, projectNodes = [], o
         subject: values.subject || null,
         notes: composedNotes,
         tags: finalTags.length > 0 ? finalTags : null,
-        // Tier-4 — GCal-style scheduling. All fields nullable; only ship
+        // Tier-4 - GCal-style scheduling. All fields nullable; only ship
         // values when the user actually filled in the Schedule section.
         startsAt: schedule.startsAt ? schedule.startsAt.toISOString() : null,
         endsAt: schedule.endsAt ? schedule.endsAt.toISOString() : null,
@@ -251,7 +251,7 @@ export function NewTaskForm({ employees, clients, subjects, projectNodes = [], o
       className="flex flex-col gap-6"
       noValidate
     >
-      {/* Client Name — full width hero field (was: Title) */}
+      {/* Client Name - full width hero field (was: Title) */}
       <Field id="nt-title" label="Client Name" required>
         <Controller
           control={control}
@@ -268,7 +268,7 @@ export function NewTaskForm({ employees, clients, subjects, projectNodes = [], o
         />
       </Field>
 
-      {/* Metadata row — Initiator first now, then Doer · Priority · Due Date.
+      {/* Metadata row - Initiator first now, then Doer · Priority · Due Date.
           Tier-3 mobile fix: collapse straight to 1-col at md (768), the
           2-col tablet step was too cramped for the multi-doer chip selector
           and native date pickers. */}
@@ -332,7 +332,7 @@ export function NewTaskForm({ employees, clients, subjects, projectNodes = [], o
         </Field>
       </div>
 
-      {/* Subject · Task Description · Initiator Notes — each full-width
+      {/* Subject · Task Description · Initiator Notes - each full-width
           single column, stacked top-to-bottom per spec. */}
       <Field id="nt-subject" label="Subject" required>
         <Controller
@@ -373,7 +373,7 @@ export function NewTaskForm({ employees, clients, subjects, projectNodes = [], o
         />
       </Field>
 
-      {/* Tags — free-form chips. Type a tag, hit Enter or comma to commit.
+      {/* Tags - free-form chips. Type a tag, hit Enter or comma to commit.
           Stored as text[] on the task; each chip is searchable later. */}
       <Field id="nt-tags" label={`Tags${tagsCount > 0 ? ` · ${tagsCount}` : ""}`}>
         <TagsInput
@@ -386,7 +386,7 @@ export function NewTaskForm({ employees, clients, subjects, projectNodes = [], o
         />
       </Field>
 
-      {/* Project link — optional connection to a Project / Milestone / Result. */}
+      {/* Project link - optional connection to a Project / Milestone / Result. */}
       {projectNodes.length > 0 && (
         <Field id="nt-project" label="Project">
           <Controller
@@ -407,11 +407,11 @@ export function NewTaskForm({ employees, clients, subjects, projectNodes = [], o
         </Field>
       )}
 
-      {/* Schedule — GCal-style start/end + recurrence. Internal metadata
+      {/* Schedule - GCal-style start/end + recurrence. Internal metadata
           only; not synced to any actual calendar API. */}
       <ScheduleSection value={schedule} onChange={setSchedule} />
 
-      {/* Media + Links — side by side on desktop */}
+      {/* Media + Links - side by side on desktop */}
       <div className="grid grid-cols-2 gap-5 max-md:grid-cols-1">
         <MediaSection
           media={media}
@@ -518,7 +518,7 @@ function DoerMultiSelect({
   }, [hi, open]);
 
   // Toggle a doer, clear the query, and keep the input focused so you can
-  // type the next name — fully keyboard-driven, no trackpad needed.
+  // type the next name - fully keyboard-driven, no trackpad needed.
   function commit(id: string | undefined, refocus = true) {
     if (!id) return;
     onToggle(id);
@@ -547,7 +547,7 @@ function DoerMultiSelect({
     } else if (e.key === "Tab") {
       // Tab also confirms the highlighted match (so typing "Mis" + Tab picks
       // "Mishtie Kanani"), then lets focus move on to the next field. Only
-      // when something is typed AND there's a match — an empty field just
+      // when something is typed AND there's a match - an empty field just
       // tabs through.
       if (query.trim() !== "" && filtered.length > 0) {
         commit(filtered[hi]?.id ?? filtered[0]?.id, /* refocus */ false);
@@ -1094,7 +1094,7 @@ function LinksSection({
         </button>
       </div>
 
-      {/* Link chips — wraps as more are added */}
+      {/* Link chips - wraps as more are added */}
       <ul className="mt-3 flex flex-col gap-1.5 flex-1">
         {links.length === 0 ? (
           <li
@@ -1111,7 +1111,7 @@ function LinksSection({
           >
             <span className="inline-flex items-center gap-2">
               <Link2 size={18} strokeWidth={2} />
-              No links yet — paste a URL above.
+              No links yet - paste a URL above.
             </span>
           </li>
         ) : (

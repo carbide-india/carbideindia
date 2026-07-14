@@ -140,7 +140,7 @@ export async function createMasterOptionsBulk(
       .insert(masterOptions)
       .values(rows)
       // onConflictDoNothing with no target lets PG infer any unique violation,
-      // including the (kind, lower(name)) expression index — rows that already
+      // including the (kind, lower(name)) expression index - rows that already
       // exist are silently skipped.
       .onConflictDoNothing()
       .returning({ id: masterOptions.id });
@@ -243,7 +243,7 @@ export async function updateMasterOption(
 }
 
 /**
- * Hard-delete a master option — ONLY when it is referenced nowhere. If any
+ * Hard-delete a master option - ONLY when it is referenced nowhere. If any
  * record in the DB points at this option (scalar FKs or the client array
  * columns), we refuse and tell the admin to deactivate it instead. This keeps
  * the delete safe even though the FKs are `on delete set null` (which would
@@ -283,10 +283,10 @@ export async function deleteMasterOption(masterId: string): Promise<ActionResult
       db.$count(jobCards, eq(jobCards.dispatchConditionId, id)),
       db.$count(jobCards, eq(jobCards.toleranceId, id)),
       db.$count(jobCards, eq(jobCards.pressingTypeId, id)),
-      // clients — scalar FKs
+      // clients - scalar FKs
       db.$count(clients, eq(clients.customerTypeId, id)),
       db.$count(clients, eq(clients.industryTypeId, id)),
-      // clients — array columns (SQL array containment)
+      // clients - array columns (SQL array containment)
       db.$count(clients, sql`${clients.customerTypeIds} @> ARRAY[${id}]::uuid[]`),
       db.$count(clients, sql`${clients.industryTypeIds} @> ARRAY[${id}]::uuid[]`),
       db.$count(clients, sql`${clients.productTypeIds} @> ARRAY[${id}]::uuid[]`),
@@ -300,7 +300,7 @@ export async function deleteMasterOption(masterId: string): Promise<ActionResult
   if (refs > 0) {
     return {
       ok: false,
-      error: `In use by ${refs} record(s) — deactivate it instead.`,
+      error: `In use by ${refs} record(s) - deactivate it instead.`,
     };
   }
 

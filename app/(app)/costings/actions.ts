@@ -19,7 +19,7 @@ type SaveCostingResult =
   | { ok: false; error: string };
 
 /**
- * Persist a new costing row — server-recomputes all outputs via the pure
+ * Persist a new costing row - server-recomputes all outputs via the pure
  * engine (never trusts client-sent computed values). Guarantees exactly one
  * chosen costing per inquiry_item by clearing `is_chosen` on siblings first.
  */
@@ -189,7 +189,7 @@ export async function saveCosting(
       .returning({ id: costings.id });
 
     if (!inserted) {
-      return { ok: false, error: "Insert failed — please try again." };
+      return { ok: false, error: "Insert failed - please try again." };
     }
 
     revalidatePath("/costings");
@@ -200,7 +200,7 @@ export async function saveCosting(
     console.error("[saveCosting]", err);
     return {
       ok: false,
-      error: "Could not save the costing — please try again.",
+      error: "Could not save the costing - please try again.",
     };
   }
 }

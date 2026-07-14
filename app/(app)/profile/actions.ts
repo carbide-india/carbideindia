@@ -14,7 +14,7 @@ import { revokeToken } from "@/lib/google/calendar";
 import { backfillDoerCalendar } from "@/lib/google/sync";
 
 /**
- * Disconnect Google Calendar — revoke the stored refresh token at Google and
+ * Disconnect Google Calendar - revoke the stored refresh token at Google and
  * clear it locally. New tasks for this doer simply stop syncing; existing
  * calendar events stay put (we no longer hold a token to delete them).
  */
@@ -35,7 +35,7 @@ export async function disconnectGoogleCalendar(): Promise<{ ok: boolean }> {
 }
 
 /**
- * "Sync now" — push all of my active tasks onto my connected Google Calendar.
+ * "Sync now" - push all of my active tasks onto my connected Google Calendar.
  * Runs the same backfill that fires automatically on connect, but on demand so
  * you can verify the integration end-to-end and re-seed after any drift.
  */
@@ -64,9 +64,9 @@ export async function syncGoogleCalendarNow(): Promise<
 }
 
 /**
- * M4 — self-serve per-channel opt-in flags.  Only email is mutable here.
+ * M4 - self-serve per-channel opt-in flags.  Only email is mutable here.
  * Web Push opt-in lives on the subscription itself (one row per device)
- * — not on this scalar.
+ * - not on this scalar.
  */
 const PatchSchema = z
   .object({
@@ -98,7 +98,7 @@ export async function updateMyChannels(
 }
 
 /**
- * Self-serve profile edits — avatar URL only. The display NAME is set by an
+ * Self-serve profile edits - avatar URL only. The display NAME is set by an
  * admin and is final: it's intentionally NOT written here (even if a `name`
  * is supplied), so a user can never rename themselves. Email, department and
  * the admin flag are likewise admin-managed. Avatar URL is just a string;
@@ -134,7 +134,7 @@ export async function updateMyProfile(
   try {
     await db
       .update(employees)
-      // Name is admin-managed and final — only the avatar is self-editable.
+      // Name is admin-managed and final - only the avatar is self-editable.
       .set({
         avatarUrl: parsed.data.avatarUrl === "" ? null : parsed.data.avatarUrl,
       })
@@ -150,7 +150,7 @@ export async function updateMyProfile(
 }
 
 /* ──────────────────────────────────────────────────────────────────────── */
-/*  Profile v2 — Identity tab autosave actions                              */
+/*  Profile v2 - Identity tab autosave actions                              */
 /* ──────────────────────────────────────────────────────────────────────── */
 
 /**
@@ -166,7 +166,7 @@ const IdentityPatchSchema = z
       .enum(["available", "focused", "heads_down", "away"])
       .optional(),
     availabilityAutoRevertAt: z.coerce.date().nullable().optional(),
-    // theme intentionally omitted — the dashboard is light-only.
+    // theme intentionally omitted - the dashboard is light-only.
     density: z.enum(["cozy", "compact"]).optional(),
     accent: z
       .string()
@@ -211,7 +211,7 @@ export async function patchIdentity(
 
 /**
  * Create a new audit_data_exports row in `pending` state. Nothing consumes
- * these rows yet — there is no export worker; the table records the request
+ * these rows yet - there is no export worker; the table records the request
  * (and the UI shows "being prepared") until an export pipeline ships.
  *
  * Rate-limited harder than other writes: one request per 5 minutes.
@@ -226,7 +226,7 @@ export async function requestDataExport(): Promise<
   if (limited) return limited;
 
   // Don't queue a new one if there's an in-flight request younger than
-  // the cooldown — that just piles up duplicate pending rows.
+  // the cooldown - that just piles up duplicate pending rows.
   const inflight = await db
     .select({ id: auditDataExports.id, requestedAt: auditDataExports.requestedAt })
     .from(auditDataExports)
@@ -242,7 +242,7 @@ export async function requestDataExport(): Promise<
     if (ageMs < DATA_EXPORT_COOLDOWN_MS) {
       return {
         ok: false,
-        error: "An export is already being prepared — we'll email you.",
+        error: "An export is already being prepared - we'll email you.",
       };
     }
   }
@@ -263,7 +263,7 @@ export async function requestDataExport(): Promise<
 }
 
 /* ──────────────────────────────────────────────────────────────────────── */
-/*  Profile v2 — Notifications tab autosave actions                          */
+/*  Profile v2 - Notifications tab autosave actions                          */
 /* ──────────────────────────────────────────────────────────────────────── */
 
 import {
@@ -329,7 +329,7 @@ const DigestPrefsSchema = z.object({
 });
 
 /* ──────────────────────────────────────────────────────────────────────── */
-/*  Profile v2 — Workflow tab autosave actions                               */
+/*  Profile v2 - Workflow tab autosave actions                               */
 /* ──────────────────────────────────────────────────────────────────────── */
 
 const OooSchema = z

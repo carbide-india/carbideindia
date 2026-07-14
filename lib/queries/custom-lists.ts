@@ -29,14 +29,14 @@ export async function listCustomOptions(
       .orderBy(asc(formCustomOptions.sortOrder), asc(formCustomOptions.label));
     if (rows.length > 0) return rows.map((r) => r.label);
   } catch {
-    // Table not migrated yet — fall through to the registry defaults.
+    // Table not migrated yet - fall through to the registry defaults.
   }
   return def?.defaults ?? [];
 }
 
 /**
  * Every list for a form, resolved to its effective options (DB when present,
- * else registry defaults). Single query — drives the form pages that need all
+ * else registry defaults). Single query - drives the form pages that need all
  * of a form's dropdowns at once.
  */
 export async function listCustomOptionsMap(

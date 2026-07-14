@@ -19,7 +19,7 @@ export const PopoverContent = React.forwardRef<
       collisionPadding={collisionPadding}
       className={cn(
         // z-[200] so popovers/Selects always sit above EVERYTHING that can
-        // contain them — the sticky app header (z-50) AND modal dialogs
+        // contain them - the sticky app header (z-50) AND modal dialogs
         // (which render their content as high as z-[120], e.g. the custom
         // recurrence dialog). At the old z-[100] a Select opened *behind*
         // those dialogs and looked broken. available-height + overflow-y-auto

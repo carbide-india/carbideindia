@@ -21,7 +21,7 @@ import { getNotificationMatrix } from "@/lib/queries/notification-matrix";
 import { resolveChannels } from "@/lib/notifications/resolve-channels";
 
 /**
- * M2.3 -> M4 — server-side fan-out from a Server Action mutation to the
+ * M2.3 -> M4 - server-side fan-out from a Server Action mutation to the
  * in-app notification row + every channel the recipient has opted into.
  *
  * Contract (post-M4):
@@ -34,7 +34,7 @@ import { resolveChannels } from "@/lib/notifications/resolve-channels";
  *     translate fulfilled+"sent" into the channel's name in the
  *     `delivered_channels` text[] on the row.
  *   - Channel failures NEVER bubble to the caller and NEVER roll the
- *     row back.  The row is the source of truth — channels are best
+ *     row back.  The row is the source of truth - channels are best
  *     effort.
  *   - For backwards compatibility with M2.3 readers that check
  *     `email_sent_at`, we also stamp `email_sent_at = now()` when the
@@ -54,21 +54,21 @@ export interface NotifyOpts {
   eventId?: string | null | undefined;
   actorId?: string | null | undefined;
   /**
-   * M5.1 — bypass the admin's notification_matrix and force a specific
+   * M5.1 - bypass the admin's notification_matrix and force a specific
    * channel subset. Used by /admin/settings → Integrations "Send test"
    * buttons so an admin can verify one channel without flipping the
    * org-wide config.
    */
   forceChannels?: ReadonlyArray<"email" | "push">;
   /**
-   * Profile v2 — when true, the recipient's per-(kind,channel) matrix is
+   * Profile v2 - when true, the recipient's per-(kind,channel) matrix is
    * overridden so every enabled-at-the-channel-level arm fires. Set by
    * @-mention call sites; honoured only when the recipient has
    * `mention_escalation = true` (the default).
    */
   isMention?: boolean;
   /**
-   * Profile v2 (internal) — set when this notify() call is the OOO
+   * Profile v2 (internal) - set when this notify() call is the OOO
    * delegate copy. Prevents infinite delegation if a delegate is also OOO
    * with a delegate. Not part of the public API for callers.
    */
@@ -95,7 +95,7 @@ async function safeSend(
 export async function notify(opts: NotifyOpts): Promise<void> {
   // Best-effort: a notification failure (a slow-DB insert timeout, a channel
   // error, a deleted recipient) must NEVER crash the action that triggered
-  // it — that's what surfaced as "we hit a snag" on reassign/transfer. The
+  // it - that's what surfaced as "we hit a snag" on reassign/transfer. The
   // core mutation has already committed by the time we get here; swallow + log.
   try {
     await notifyImpl(opts);
@@ -144,7 +144,7 @@ async function notifyImpl(opts: NotifyOpts): Promise<void> {
     return;
   }
 
-  // M4 Commit 3a — the web_push arm wants the task's human subject +
+  // M4 Commit 3a - the web_push arm wants the task's human subject +
   // short-id so its payload can render `Subject  View task →` with a
   // deep link.  We look the task up once here so both arms (email reuses
   // title/body already) share the same projection.  When `taskId` is
@@ -174,7 +174,7 @@ async function notifyImpl(opts: NotifyOpts): Promise<void> {
     shortId: task?.shortId ?? "",
   };
 
-  // M5.1 — admin-configured per-event channel routing. opts.forceChannels
+  // M5.1 - admin-configured per-event channel routing. opts.forceChannels
   // wins (used by /admin/settings Integrations "send test"); otherwise we
   // resolve via the org_settings.notification_matrix JSONB. Missing entries
   // fall back to all channels (resolveChannels handles that). The matrix
@@ -188,7 +188,7 @@ async function notifyImpl(opts: NotifyOpts): Promise<void> {
   const allowed = (matrixName: "email" | "push") =>
     allowedChannels.has(matrixName);
 
-  // Profile v2 — per-(kind,channel) matrix. Mention escalation: if the
+  // Profile v2 - per-(kind,channel) matrix. Mention escalation: if the
   // notification was flagged isMention AND the recipient hasn't disabled
   // escalation, we treat every channel as enabled by their personal matrix.
   const kindKey =
@@ -201,9 +201,9 @@ async function notifyImpl(opts: NotifyOpts): Promise<void> {
   const recipPrefs = prefs;
   const escalated = !!opts.isMention && recipPrefs.mentionEscalation;
   function personalEnabled(channelKey: "email" | "push"): boolean {
-    if (!kindKey) return true; // unknown kind (e.g. overdue_digest) — no override
+    if (!kindKey) return true; // unknown kind (e.g. overdue_digest) - no override
     if (escalated) return true;
-    // Map legacy scalar by channel. Push has no legacy scalar — default
+    // Map legacy scalar by channel. Push has no legacy scalar - default
     // true; subscription absence is its own skip.
     const legacy = channelKey === "email" ? recipPrefs.emailOptIn : true;
     return effectiveEnabled(personalMatrix, kindKey, channelKey, legacy);
@@ -255,7 +255,7 @@ async function notifyImpl(opts: NotifyOpts): Promise<void> {
 
   const delivered: string[] = [];
   let emailSent = false;
-  // Phase 2.1 — accumulate a row per (channel, outcome) attempt for the
+  // Phase 2.1 - accumulate a row per (channel, outcome) attempt for the
   // dispatch log. We persist these AFTER the channel stamps so a slow
   // INSERT can't hold up the user-facing read of delivered_channels.
   const logRows: Array<{
@@ -314,7 +314,7 @@ async function notifyImpl(opts: NotifyOpts): Promise<void> {
   }
 
   // Stamp delivered_channels + (for soft compatibility) email_sent_at.
-  // Swallow update errors — the row itself is the source of truth and
+  // Swallow update errors - the row itself is the source of truth and
   // a missed audit stamp must not crash the calling action.
   try {
     const patch: { deliveredChannels: string[]; emailSentAt?: Date } = {
@@ -330,7 +330,7 @@ async function notifyImpl(opts: NotifyOpts): Promise<void> {
   }
 
   // Persist the per-channel dispatch log. Same swallow-and-continue
-  // contract — failures here must never crash the calling action.
+  // contract - failures here must never crash the calling action.
   if (logRows.length > 0) {
     try {
       await db.insert(notificationDispatchLog).values(logRows);
@@ -340,10 +340,10 @@ async function notifyImpl(opts: NotifyOpts): Promise<void> {
     }
   }
 
-  // Profile v2 — OOO delegate copy. If the primary recipient is currently
+  // Profile v2 - OOO delegate copy. If the primary recipient is currently
   // out-of-office AND has a delegate set, enqueue ONE additional notify()
   // for the delegate with `_skipOoo: true` so chained delegation stops
-  // at depth 1. Fire-and-forget — failures here are logged but do not
+  // at depth 1. Fire-and-forget - failures here are logged but do not
   // affect the primary notification.
   if (
     !opts._skipOoo &&
@@ -371,7 +371,7 @@ async function notifyImpl(opts: NotifyOpts): Promise<void> {
 }
 
 /**
- * Profile v2 — is `today` (UTC) within the user's OOO window?
+ * Profile v2 - is `today` (UTC) within the user's OOO window?
  * The columns are PostgreSQL `date` (yyyy-mm-dd) so a string compare is
  * correct. Inclusive on both ends.
  */
@@ -407,7 +407,7 @@ export interface TaskRecipientShape {
 }
 
 export interface NotifyManyOpts {
-  /** The actor who triggered the mutation — they're EXCLUDED from the fan-out. */
+  /** The actor who triggered the mutation - they're EXCLUDED from the fan-out. */
   actorId: string;
   kind: NotificationKind;
   /** Shared title for every recipient.  Keep ≤ ~60 chars. */
@@ -468,7 +468,7 @@ async function notifyManyForTaskImpl(
 
   const recipients = dedupeRecipients(candidates, opts.actorId);
 
-  // Fan-out in parallel — each notify() does its own DB insert + email/
+  // Fan-out in parallel - each notify() does its own DB insert + email/
   // push work, none of which depends on the others.
   // Serial awaits made a 5-recipient fan-out cost 5× the latency of a
   // single one; Promise.allSettled here so one bad channel for one
@@ -490,7 +490,7 @@ async function notifyManyForTaskImpl(
 
 /**
  * Remove duplicates, nulls/undefineds, and the actor themselves.  The
- * actor exclusion is mandatory — Manan explicitly does not want users
+ * actor exclusion is mandatory - Manan explicitly does not want users
  * notifying themselves about their own actions.
  */
 export function dedupeRecipients(

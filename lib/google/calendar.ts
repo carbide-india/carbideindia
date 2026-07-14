@@ -1,7 +1,7 @@
 import "server-only";
 
 /**
- * Google Calendar per-user sync — OAuth + Calendar REST, plain fetch (no SDK).
+ * Google Calendar per-user sync - OAuth + Calendar REST, plain fetch (no SDK).
  *
  * Each doer connects their own Google account (personal Gmail or Workspace);
  * we keep their long-lived refresh token and exchange it for short-lived

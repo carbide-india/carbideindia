@@ -7,7 +7,7 @@ import { ContactAddressBook } from "@/components/contacts/contact-address-book";
 export const dynamic = "force-dynamic";
 
 /**
- * Contact Person Address Book — a directory of every contact person captured on
+ * Contact Person Address Book - a directory of every contact person captured on
  * the Client KYC forms, grouped by company, rendered inside the shared module
  * shell.
  */
@@ -35,7 +35,7 @@ export default async function ContactsPage() {
 
         {groups.length === 0 ? (
           <div className="rounded-section border border-dashed border-hairline-strong bg-surface-card px-6 py-14 text-center text-[14px] text-ink-subtle">
-            No contact persons yet — they appear here as you add contacts on the
+            No contact persons yet - they appear here as you add contacts on the
             Client KYC form.
           </div>
         ) : (

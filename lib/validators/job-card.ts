@@ -19,7 +19,7 @@ const OptionalText = (max = 500) =>
 
 const OptionalUuid = z.string().uuid().optional();
 const OptionalNumber = z.coerce.number().optional();
-const OptionalDate = z.string().optional(); // ISO/date string — parsed in the action
+const OptionalDate = z.string().optional(); // ISO/date string - parsed in the action
 
 export const CreateJobCardSchema = z.object({
   // Required work-order number.
@@ -81,7 +81,7 @@ export const CreateJobCardSchema = z.object({
 export type CreateJobCardInput = z.input<typeof CreateJobCardSchema>;
 
 /**
- * Patch-shaped schema for edits — every field optional, unknown keys rejected,
+ * Patch-shaped schema for edits - every field optional, unknown keys rejected,
  * empty patches rejected. `jobCardNo` stays optional (blank patch leaves it).
  */
 export const UpdateJobCardSchema = CreateJobCardSchema.extend({

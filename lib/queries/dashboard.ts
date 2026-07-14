@@ -27,7 +27,7 @@ import { CACHE_TAGS } from "@/lib/cache-tags";
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 // All task columns EXCEPT the large free-text fields (`description`, `notes`)
-// — the dashboard transforms never read them, and shipping them on every row
+// - the dashboard transforms never read them, and shipping them on every row
 // of three full scans bloats the payload over the remote connection. Dropping
 // them keeps the scans lean. (Verified: no transform accesses these fields.)
 const { description: _description, notes: _notes, ...TASK_COLS } =
@@ -36,7 +36,7 @@ const { description: _description, notes: _notes, ...TASK_COLS } =
 /**
  * Cached dashboard aggregate. The three task scans + transforms are
  * expensive against the remote DB (multiple seconds each), and the data
- * only needs to be near-real-time — so we memoise per filter-set for 60s,
+ * only needs to be near-real-time - so we memoise per filter-set for 60s,
  * tagged with CACHE_TAGS.tasks. Every task create/edit/delete already calls
  * updateTag(CACHE_TAGS.tasks), so mutations bust this instantly
  * (read-your-writes); otherwise repeated dashboard views are served from
@@ -111,7 +111,7 @@ async function loadDashboardDataUncached(
       db.select(TASK_COLS).from(tasks).where(gte(tasks.createdAt, ninetyAgo)),
       getEmployeeDepartmentMap(),
     ]);
-  // Cast back to Task[] for the transform signatures — the dropped
+  // Cast back to Task[] for the transform signatures - the dropped
   // description/notes fields are simply absent and never accessed.
   const periodTasks = periodTasksRaw as unknown as Task[];
   const wideTasks = wideTasksRaw as unknown as Task[];
@@ -138,7 +138,7 @@ async function loadDashboardDataUncached(
     );
 
   const isDone = (s: TaskStatus) => s === "done" || s === "approved";
-  // Tier-3 (2026-05-20) — `pending` covers every non-terminal status EXCEPT
+  // Tier-3 (2026-05-20) - `pending` covers every non-terminal status EXCEPT
   // the dedicated `need_info` tile + `not_started` (which has its own tile).
   // That mirrors computeKpiTotals. (need_help retired 2026-06-10 → need_info.)
   const PENDING_SET = new Set<TaskStatus>(PENDING_STATUSES);
@@ -277,7 +277,7 @@ async function loadDashboardDataUncached(
             t.approvalStatus == null &&
             t.status !== "done",
         ).length,
-        // Declined — either the legacy status or the new approval column.
+        // Declined - either the legacy status or the new approval column.
         notApproved: periodTasks.filter(
           (t) =>
             !t.archived &&

@@ -142,7 +142,7 @@ export async function buildActivitySnapshot(
 
 /**
  * Evaluate all achievements for one user. Reads the earned rows so the
- * UI can show earned-at timestamps. Does NOT write earned rows — that's
+ * UI can show earned-at timestamps. Does NOT write earned rows - that's
  * the recompute cron's job (so a profile view doesn't grant a badge).
  */
 export async function evaluateAchievements(

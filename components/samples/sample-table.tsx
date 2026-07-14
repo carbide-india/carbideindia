@@ -38,7 +38,7 @@ const STAGE_DOTS = [
 ] as const;
 
 /**
- * Sample register table — a thin config wrapper over the shared
+ * Sample register table - a thin config wrapper over the shared
  * RegisterDataTable. The non-sortable "Stages" column is Manan's at-a-glance
  * incompleteness view: four colour dots, one per stage. Export collapses the
  * four stages into a single "Dim: · Chem: · Drw: · Cost:" string.
@@ -79,7 +79,7 @@ export function SampleTable({ rows, employees }: Props) {
         exportValue: (r) => r.companyName ?? "",
         cell: (r) => (
           <span className="text-ink-strong font-medium">
-            {r.companyName ?? "—"}
+            {r.companyName ?? "-"}
           </span>
         ),
       },
@@ -97,7 +97,7 @@ export function SampleTable({ rows, employees }: Props) {
         sortValue: (r) => r.responsibleName ?? "",
         exportValue: (r) => r.responsibleName ?? "",
         cell: (r) => (
-          <span className="text-ink-soft">{r.responsibleName ?? "—"}</span>
+          <span className="text-ink-soft">{r.responsibleName ?? "-"}</span>
         ),
       },
       {
@@ -170,7 +170,7 @@ export function SampleTable({ rows, employees }: Props) {
         })),
         onApply: (ids, value) => setSampleStatusBulk(ids, value),
       }}
-      emptyTitle="No samples yet — register the first one."
+      emptyTitle="No samples yet - register the first one."
       emptyHint="Physical samples appear here, tracked through each stage."
     />
   );
@@ -178,7 +178,7 @@ export function SampleTable({ rows, employees }: Props) {
 
 /**
  * Four 8px dots, one per stage (Dim / Chem / Drw / Cost), toned by
- * STAGE_STATUS_COLORS. Hover/title gives "Dimension: In Process" — the
+ * STAGE_STATUS_COLORS. Hover/title gives "Dimension: In Process" - the
  * incomplete stages read as muted dots at a glance.
  */
 function StageDots({ row }: { row: SampleListItem }) {

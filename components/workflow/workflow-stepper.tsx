@@ -13,10 +13,10 @@ interface Props {
 }
 
 /**
- * ERP Phase 8 — the canonical pipeline stepper block for detail pages. The
+ * ERP Phase 8 - the canonical pipeline stepper block for detail pages. The
  * `Stepper` itself is a pure, read-only presentation fed EXCLUSIVELY by
  * derive-stage, so it is a safe addition even when the flag is OFF. The advance
- * CTA (which funnels through `advanceStage`) renders ONLY when `flagOn` — flag
+ * CTA (which funnels through `advanceStage`) renders ONLY when `flagOn` - flag
  * OFF leaves today's forms/dropdowns as the sole write path.
  */
 export function WorkflowStepper({ resolved, advance, flagOn }: Props) {

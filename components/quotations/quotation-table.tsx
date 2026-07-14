@@ -27,9 +27,9 @@ interface Props {
 /** Parse a numeric-string money column to a number for right-aligned ₹ display
  *  and numeric sorting; em-dash when unset or unparseable. */
 function moneyText(value: string | null): string {
-  if (value == null || value === "") return "—";
+  if (value == null || value === "") return "-";
   const n = Number(value);
-  return Number.isFinite(n) ? formatInr(n) : "—";
+  return Number.isFinite(n) ? formatInr(n) : "-";
 }
 
 function moneyNumber(value: string | null): number {
@@ -45,7 +45,7 @@ function quoteDate(r: QuotationListItem): Date {
 }
 
 /**
- * Quotation (Quote Master) register table — a thin config wrapper over the
+ * Quotation (Quote Master) register table - a thin config wrapper over the
  * shared RegisterDataTable. All sort / search / faceted-filter / export /
  * bulk-status runs client-side over the rows the page loads.
  */
@@ -75,7 +75,7 @@ export function QuotationTable({ rows }: Props) {
         exportValue: (r) => r.companyName ?? "",
         cell: (r) => (
           <span className="text-ink-strong font-medium">
-            {r.companyName ?? "—"}
+            {r.companyName ?? "-"}
           </span>
         ),
       },
@@ -90,7 +90,7 @@ export function QuotationTable({ rows }: Props) {
             className="block max-w-[280px] truncate text-ink-soft"
             title={r.custProductName ?? undefined}
           >
-            {r.custProductName ?? "—"}
+            {r.custProductName ?? "-"}
           </span>
         ),
       },
@@ -192,7 +192,7 @@ export function QuotationTable({ rows }: Props) {
         })),
         onApply: (ids, value) => setQuotationStatusBulk(ids, value),
       }}
-      emptyTitle="No quotations yet — build the first one."
+      emptyTitle="No quotations yet - build the first one."
       emptyHint="Priced quotes built from an enquiry appear here, with costing status and validity."
     />
   );

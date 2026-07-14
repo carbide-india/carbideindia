@@ -1,5 +1,5 @@
 /**
- * Pure form-helper utilities — no React dependency so they can be imported by
+ * Pure form-helper utilities - no React dependency so they can be imported by
  * both client components and server-side unit tests without issue.
  */
 

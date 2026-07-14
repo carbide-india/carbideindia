@@ -19,7 +19,7 @@ interface Props {
   clientId: string | undefined;
   onClientChange: (id: string | undefined) => void;
   clients: ClientOption[];
-  /** Receives the fetched KYC snapshot — the parent form owns the RHF
+  /** Receives the fetched KYC snapshot - the parent form owns the RHF
    *  instance and copies the values into its own (still-editable) fields. */
   onAutofill: (data: ClientAutofill) => void;
   /** Validation message for the client picker (Old mode requires a pick). */
@@ -57,7 +57,7 @@ export function ClientTypeToggle({
 /**
  * Searchable existing-client picker (Old mode). Picking one fetches
  * `/api/clients/[id]/autofill` and hands the KYC block to the parent so the
- * client fields prefill. The values are a snapshot — everything stays editable.
+ * client fields prefill. The values are a snapshot - everything stays editable.
  */
 export function ExistingClientPicker({
   clientId,

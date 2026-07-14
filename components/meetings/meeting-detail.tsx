@@ -24,7 +24,7 @@ interface Props {
   employees: EmployeeOption[];
 }
 
-/** The editable slice — RHF holds <input>-shaped values (date as YYYY-MM-DD);
+/** The editable slice - RHF holds <input>-shaped values (date as YYYY-MM-DD);
  *  the dirty-only patch converts on save. */
 interface MeetingEditValues {
   contactFirstName: string;
@@ -47,7 +47,7 @@ function toDateInput(d: Date | null): string {
   return `${d.getFullYear()}-${m}-${day}`;
 }
 
-/** Midnight-today, local — a follow-up dated strictly before now is overdue. */
+/** Midnight-today, local - a follow-up dated strictly before now is overdue. */
 function isPastDue(d: Date): boolean {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -57,7 +57,7 @@ function isPastDue(d: Date): boolean {
 const DATE_KEYS = new Set<keyof MeetingEditValues>(["nextFollowUpDate"]);
 
 /**
- * Daily-meeting detail — breadcrumb + header, a sticky sidebar (sales person,
+ * Daily-meeting detail - breadcrumb + header, a sticky sidebar (sales person,
  * client type, next follow-up, created), a read-only details card, and one
  * dirty-only edit form for the mutable fields. (No proof-of-visit selfie.)
  */
@@ -80,11 +80,11 @@ export function MeetingDetail({ meeting, employees }: Props) {
       .join(" ")
       .trim() || meeting.contactPersonName;
 
-  // Start–end window for the header; falls back to the legacy single time.
+  // Start-end window for the header; falls back to the legacy single time.
   const timeLabel =
     [meeting.meetingStartTime, meeting.meetingEndTime]
       .filter(Boolean)
-      .join(" – ") || meeting.meetingTime || null;
+      .join(" - ") || meeting.meetingTime || null;
 
   const defaults: MeetingEditValues = {
     contactFirstName: meeting.contactFirstName ?? "",
@@ -107,7 +107,7 @@ export function MeetingDetail({ meeting, employees }: Props) {
   } = useForm<MeetingEditValues>({ defaultValues: defaults });
 
   const onSubmit = handleSubmit(async (values) => {
-    // Dirty-only patch — the action's strip-undefined + no-op short-circuit
+    // Dirty-only patch - the action's strip-undefined + no-op short-circuit
     // handles the rest. The date input (YYYY-MM-DD) pins to noon UTC; an
     // emptied date folds to undefined (no null path on the backend yet).
     const patch = Object.fromEntries(
@@ -205,11 +205,11 @@ export function MeetingDetail({ meeting, employees }: Props) {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr] items-start">
         {/* ── Main column ───────────────────────────────────────────── */}
         <div className="flex flex-col gap-6 min-w-0">
-          {/* Editable details — one dirty-only form. */}
+          {/* Editable details - one dirty-only form. */}
           <form onSubmit={onSubmit} className="flex flex-col gap-6" noValidate>
             <SectionCard
               title="Details"
-              hint="Contact, timing, purpose and notes — only changed fields are saved."
+              hint="Contact, timing, purpose and notes - only changed fields are saved."
             >
               <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
                 <Field id="mtgd-cfirst" label="Contact First Name">
@@ -287,7 +287,7 @@ export function MeetingDetail({ meeting, employees }: Props) {
                 </Field>
               </div>
 
-              {/* Purpose (read-only here — set on the form, immutable cue). */}
+              {/* Purpose (read-only here - set on the form, immutable cue). */}
               <div className="flex flex-col gap-1">
                 <span className="text-[14px] font-bold text-ink-strong">
                   Purpose of Meeting
@@ -295,7 +295,7 @@ export function MeetingDetail({ meeting, employees }: Props) {
                 <span className="text-[14px] text-ink-soft">
                   {MEETING_PURPOSE_LABELS[meeting.purpose]}
                   {meeting.purpose === "other" && meeting.purposeOther
-                    ? ` — ${meeting.purposeOther}`
+                    ? ` - ${meeting.purposeOther}`
                     : ""}
                 </span>
               </div>

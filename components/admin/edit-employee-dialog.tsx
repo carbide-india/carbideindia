@@ -68,7 +68,7 @@ export function EditEmployeeDialog({
   const [pending, startTransition] = useTransition();
 
   // Re-sync local state whenever the dialog opens for a (possibly different)
-  // employee — otherwise stale values bleed across rows.
+  // employee - otherwise stale values bleed across rows.
   useEffect(() => {
     if (open) {
       setName(employee.name);
@@ -99,7 +99,7 @@ export function EditEmployeeDialog({
     e.preventDefault();
     setError(null);
 
-    // Build a sparse patch — only changed fields.
+    // Build a sparse patch - only changed fields.
     const patch: {
       name?: string;
       role?: Role;
@@ -187,7 +187,7 @@ export function EditEmployeeDialog({
                 onValueChange={(v) => setManagerId(v || null)}
                 searchable
                 options={[
-                  { value: "", label: "— None —" },
+                  { value: "", label: "- None -" },
                   ...managerOptions
                     .filter((o) => o.value !== employee.id)
                     .map((o) => ({ value: o.value, label: o.label })),

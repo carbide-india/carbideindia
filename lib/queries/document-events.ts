@@ -21,7 +21,7 @@ export interface DocumentEventRow {
 }
 
 /**
- * Phase 3.5 surface — the recent rows in `document_events` joined with
+ * Phase 3.5 surface - the recent rows in `document_events` joined with
  * actor name. Used by the /admin/settings Integrations tab (or wherever
  * admin oversight lives). Read-only.
  */

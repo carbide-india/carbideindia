@@ -60,7 +60,7 @@ import { Chip, PRIORITY_TONES } from "@/components/inquiries/chip";
 import { cn } from "@/lib/utils";
 
 /**
- * SmWorkspace (ERP redesign — Phase 9d, §9 "Enquiry SM Workspace").
+ * SmWorkspace (ERP redesign - Phase 9d, §9 "Enquiry SM Workspace").
  *
  * The pipeline cockpit for one SM number: a sticky "where am I" header (SM +
  * derived next-action pill, priority, client link, sales person, dates, the full
@@ -71,7 +71,7 @@ import { cn } from "@/lib/utils";
  *
  * Everything reads THROUGH FKs (client via clientId, sales via
  * assignedSalesPersonId, spec via item_id); the stage is DERIVED server-side by
- * derive-stage.ts and handed here as an index — this component never computes a
+ * derive-stage.ts and handed here as an index - this component never computes a
  * stage. Stage tabs whose prerequisite is unmet render muted/locked with a
  * blocked-reason panel (never an error).
  */
@@ -291,7 +291,7 @@ export function SmWorkspace({
             </div>
           </div>
 
-          {/* Client / sales / created — labeled, low-text meta. */}
+          {/* Client / sales / created - labeled, low-text meta. */}
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <HeaderMeta label="Client">
               {header.clientId ? (
@@ -405,7 +405,7 @@ export function SmWorkspace({
               />
             )}
             {tab === "feasibility" && (
-              <Section title="Primary Feasibility" subtitle="Per-product feasibility — verify each product before costing">
+              <Section title="Primary Feasibility" subtitle="Per-product feasibility - verify each product before costing">
                 <FeasibilityPanel
                   inquiry={inquiry}
                   products={products}
@@ -600,7 +600,7 @@ function OverviewTab({
             </>
           ) : (
             <div className="mt-2 text-[14px] font-semibold text-ink-strong">
-              In production — sales pipeline complete.
+              In production - sales pipeline complete.
             </div>
           )}
         </div>
@@ -626,7 +626,7 @@ function OverviewTab({
               ))}
             </ul>
           ) : (
-            <p className="mt-2.5 text-[13px] text-ink-muted">No blockers — clear to proceed.</p>
+            <p className="mt-2.5 text-[13px] text-ink-muted">No blockers - clear to proceed.</p>
           )}
         </div>
       </div>
@@ -749,7 +749,7 @@ function ProductsTab({
   if (products.length === 0) {
     return (
       <Section title="Products">
-        <Empty>No products on this enquiry yet — add one from the enquiry form.</Empty>
+        <Empty>No products on this enquiry yet - add one from the enquiry form.</Empty>
       </Section>
     );
   }
@@ -847,7 +847,7 @@ function ProductCard({
           style={{ background: "var(--color-amber-bg)", color: "var(--color-amber-deep)" }}
         >
           <TriangleAlert size={14} strokeWidth={2.4} />
-          {product.isDraft ? "Draft item — spec incomplete" : "Not linked to an Item"}
+          {product.isDraft ? "Draft item - spec incomplete" : "Not linked to an Item"}
         </div>
       )}
 
@@ -864,9 +864,9 @@ function ProductCard({
       </div>
 
       <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[13px]">
-        <Field label="Qty" value={product.quantityNos ? `${product.quantityNos} ${product.quantityUom}` : "—"} mono />
-        <Field label="Drawing" value={product.custDrawingNo ?? "—"} />
-        <Field label="Dimensions" value={dims ?? "—"} mono full />
+        <Field label="Qty" value={product.quantityNos ? `${product.quantityNos} ${product.quantityUom}` : "-"} mono />
+        <Field label="Drawing" value={product.custDrawingNo ?? "-"} />
+        <Field label="Dimensions" value={dims ?? "-"} mono full />
         <Field
           label="Costing"
           value={product.costingFinalCost ? `${inr(product.costingFinalCost)}/pc` : "Not costed"}
@@ -994,10 +994,10 @@ function CostingTab({
                   </button>
                 </td>
                 <td className="py-2.5 pr-4 font-mono text-[12px] text-ink-muted">
-                  {p.itemCode ?? "—"}
+                  {p.itemCode ?? "-"}
                 </td>
                 <td className="py-2.5 pr-4 font-mono tabular-nums text-ink-strong">
-                  {p.costingFinalCost ? `${inr(p.costingFinalCost)}/pc` : "—"}
+                  {p.costingFinalCost ? `${inr(p.costingFinalCost)}/pc` : "-"}
                 </td>
                 <td className="py-2.5 pr-4">
                   {p.costingDoneStatus ? (
@@ -1082,7 +1082,7 @@ function StageLinesTable({ lines }: { lines: StageLine[] }) {
           {lines.map((l) => (
             <tr key={l.id}>
               <td className="py-2.5 pr-4 font-semibold text-ink-strong">
-                {l.ask.custProductName ?? l.spec.shapeName ?? "—"}
+                {l.ask.custProductName ?? l.spec.shapeName ?? "-"}
               </td>
               <td className="py-2.5 pr-4">
                 {l.spec.itemId ? (
@@ -1090,15 +1090,15 @@ function StageLinesTable({ lines }: { lines: StageLine[] }) {
                     href={`/items/${l.spec.itemId}` as Route}
                     className="font-mono text-[12px] text-brand hover:underline"
                   >
-                    {l.spec.itemCode ?? "—"}
+                    {l.spec.itemCode ?? "-"}
                   </Link>
                 ) : (
-                  <span className="font-mono text-[12px] text-ink-subtle">—</span>
+                  <span className="font-mono text-[12px] text-ink-subtle">-</span>
                 )}
               </td>
-              <td className="py-2.5 pr-4 font-mono tabular-nums text-ink-muted">{l.qty ?? "—"}</td>
+              <td className="py-2.5 pr-4 font-mono tabular-nums text-ink-muted">{l.qty ?? "-"}</td>
               <td className="py-2.5 pr-4 font-mono tabular-nums text-ink-strong">
-                {inr(l.unitPrice) ?? "—"}
+                {inr(l.unitPrice) ?? "-"}
               </td>
               <td className="py-2.5">
                 {l.frozen ? (
@@ -1151,7 +1151,7 @@ function QuotationTab({
   if (locked) {
     return (
       <Section title="Quotation">
-        <LockedPanel reason="Cost at least one product before generating a quotation — this stage unlocks once a chosen costing exists." />
+        <LockedPanel reason="Cost at least one product before generating a quotation - this stage unlocks once a chosen costing exists." />
       </Section>
     );
   }
@@ -1159,7 +1159,7 @@ function QuotationTab({
     <Section title="Quotation">
       <BuildForwardPanel
         headline={`${costedCount} of ${productCount} product${productCount === 1 ? "" : "s"} costed & ready to quote`}
-        detail="Generate a quotation from the chosen costings — the spec and prices flow from the Item and costing, so nothing is re-keyed."
+        detail="Generate a quotation from the chosen costings - the spec and prices flow from the Item and costing, so nothing is re-keyed."
         ctaLabel="Generate quotation"
         href={`/quotations/new?inquiryId=${inquiryId}`}
       />
@@ -1200,14 +1200,14 @@ function NegotiationTab({
   if (locked) {
     return (
       <Section title="Negotiation">
-        <LockedPanel reason="Send a quotation first — the negotiation stage opens once a quote has gone to the customer." />
+        <LockedPanel reason="Send a quotation first - the negotiation stage opens once a quote has gone to the customer." />
       </Section>
     );
   }
   return (
     <Section title="Negotiation">
       <BuildForwardPanel
-        headline="Quotation ready — start the negotiation"
+        headline="Quotation ready - start the negotiation"
         detail={
           hasQuotation
             ? "Open a negotiation to track revisions, follow-ups and the verbal yes."
@@ -1250,14 +1250,14 @@ function SalesOrderTab({
   if (locked) {
     return (
       <Section title="Sales Order">
-        <LockedPanel reason="Win the negotiation first — the sales order is raised once the order is marked won." />
+        <LockedPanel reason="Win the negotiation first - the sales order is raised once the order is marked won." />
       </Section>
     );
   }
   return (
     <Section title="Sales Order">
       <BuildForwardPanel
-        headline="Negotiation won — raise the sales order"
+        headline="Negotiation won - raise the sales order"
         detail={
           hasNegotiation
             ? "Convert the won negotiation into a sales order; agreed prices carry straight through."
@@ -1490,7 +1490,7 @@ function ProductDrawer({
                 <li key={c.id} className="flex items-center gap-3 py-2.5 text-[13px]">
                   <span className="text-ink-muted">{c.costingType.replace("_", "-")}</span>
                   <span className="ml-auto font-mono tabular-nums text-ink-strong">
-                    {inr(c.finalCostPerPiece) ?? "—"}
+                    {inr(c.finalCostPerPiece) ?? "-"}
                   </span>
                   {c.isChosen && (
                     <StatusPill tone="green" size="sm">

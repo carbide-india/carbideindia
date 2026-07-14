@@ -2,9 +2,21 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Plus, X, Loader2, ChevronUp, ChevronDown, Search } from "lucide-react";
+import {
+  Plus,
+  X,
+  Loader2,
+  ChevronUp,
+  ChevronDown,
+  Search,
+  ListPlus,
+  Pencil,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
 import {
   addCustomOption,
+  addCustomOptionsBulk,
   renameCustomOption,
   removeCustomOption,
   seedCustomListDefaults,
@@ -18,10 +30,10 @@ import type { CustomListView } from "@/lib/queries/custom-lists";
 type ActionResult = { ok: true } | { ok: false; error: string };
 
 /**
- * The per-form "Custom Dropdown Master" editor. Cards flow in a dense masonry
- * so short lists pack tight and never leave gaps. Each card: search (for long
- * lists), a scrollable option list, reorder up/down, rename, remove, add, and a
- * one-click import of the registry defaults for un-seeded lists.
+ * The per-form "Custom Dropdown Master" editor. Lists are grouped by category
+ * and laid out as cards. Each card supports inline rename (edit), reorder,
+ * remove, add-one, add-many (bulk paste), a one-click import of the registry
+ * defaults, and clear.
  */
 export function CustomListsEditor({
   formKey,
@@ -44,20 +56,20 @@ export function CustomListsEditor({
   ];
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-9">
       {ordered.map((cat) => {
         const items = byCat.get(cat);
         if (!items?.length) return null;
         return (
           <section key={cat}>
-            <h2 className="mb-3 flex items-center gap-3 text-[12px] font-extrabold uppercase tracking-[0.12em] text-[#3f3f94]">
+            <h2 className="mb-4 flex items-center gap-3 text-[12px] font-extrabold uppercase tracking-[0.14em] text-[#3f3f94]">
               {cat}
               <span className="h-px flex-1 bg-[#eceef4]" />
-              <span className="rounded-full bg-[#efeffb] px-2 py-0.5 text-[11px] font-bold tabular-nums text-[#3f3f94]">
-                {items.length}
+              <span className="rounded-full bg-[#efeffb] px-2.5 py-0.5 text-[11px] font-bold tabular-nums text-[#3f3f94]">
+                {items.length} {items.length === 1 ? "list" : "lists"}
               </span>
             </h2>
-            <div className="gap-5 [column-fill:_balance] columns-1 sm:columns-2 xl:columns-3">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
               {items.map((l) => (
                 <ListCard key={l.key} formKey={formKey} list={l} />
               ))}
@@ -74,6 +86,8 @@ function ListCard({ formKey, list }: { formKey: string; list: CustomListView }) 
   const [pending, start] = React.useTransition();
   const [draft, setDraft] = React.useState("");
   const [query, setQuery] = React.useState("");
+  const [bulkOpen, setBulkOpen] = React.useState(false);
+  const [bulkText, setBulkText] = React.useState("");
 
   function run(fn: () => Promise<ActionResult>) {
     start(async () => {
@@ -86,45 +100,114 @@ function ListCard({ formKey, list }: { formKey: string; list: CustomListView }) 
     });
   }
 
+  function runBulk() {
+    const lines = bulkText.split("\n");
+    start(async () => {
+      const res = await addCustomOptionsBulk(formKey, list.key, lines);
+      if (!res.ok) {
+        fireToast({ message: res.error, type: "error" });
+        return;
+      }
+      fireToast({ message: `Added ${res.added} option${res.added === 1 ? "" : "s"}.`, type: "success" });
+      setBulkText("");
+      setBulkOpen(false);
+      router.refresh();
+    });
+  }
+
   const q = query.trim().toLowerCase();
   const shown = q ? list.options.filter((o) => o.label.toLowerCase().includes(q)) : list.options;
   const many = list.options.length > 8;
   const canReorder = list.seeded && !q; // order is meaningless while filtering
+  const bulkCount = bulkText.split("\n").filter((s) => s.trim()).length;
 
   return (
     <section
-      className="mb-5 inline-block w-full break-inside-avoid rounded-section border border-hairline bg-surface-card p-5 align-top"
+      className="flex flex-col rounded-2xl border border-hairline bg-surface-card p-5 transition-shadow duration-200 hover:shadow-[0_10px_28px_-14px_rgba(63,63,148,0.3)]"
       style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}
     >
-      <div className="mb-3 flex items-baseline justify-between gap-2">
-        <h3 className="flex items-center gap-2 text-[14px] font-extrabold text-ink-strong">
+      {/* Header - title + count, and the card-level actions. */}
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <h3 className="flex items-center gap-2 text-[15px] font-extrabold text-ink-strong">
           {list.label}
           <span className="rounded-full bg-[#efeffb] px-2 py-0.5 text-[11px] font-bold tabular-nums text-[#3f3f94]">
             {list.options.length}
           </span>
         </h3>
-        {list.seeded ? (
+        <div className="flex shrink-0 items-center gap-1.5">
           <button
             type="button"
-            disabled={pending}
-            onClick={() => run(() => clearCustomList(formKey, list.key))}
-            className="shrink-0 text-[12px] font-bold text-ink-subtle transition hover:text-[#d32f2f] hover:underline disabled:opacity-50"
+            onClick={() => setBulkOpen((v) => !v)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-hairline bg-surface-card px-2.5 py-1.5 text-[12px] font-bold text-ink-soft transition hover:border-[#c9c9ea] hover:text-[#3f3f94]"
           >
-            Clear list
+            <ListPlus className="h-[14px] w-[14px]" />
+            Bulk add
           </button>
-        ) : (
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => run(() => seedCustomListDefaults(formKey, list.key))}
-            className="shrink-0 text-[12px] font-bold text-[#3f3f94] transition hover:underline disabled:opacity-50"
-          >
-            Use default options
-          </button>
-        )}
+          {list.seeded ? (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => run(() => clearCustomList(formKey, list.key))}
+              title="Clear list (revert to defaults preview)"
+              className="grid size-8 place-items-center rounded-lg border border-hairline text-ink-subtle transition hover:border-[#f0b4b4] hover:bg-[#fdf3f3] hover:text-[#d32f2f] disabled:opacity-50"
+            >
+              <Trash2 className="h-[15px] w-[15px]" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => run(() => seedCustomListDefaults(formKey, list.key))}
+              title="Use default options"
+              className="grid size-8 place-items-center rounded-lg border border-hairline text-[#3f3f94] transition hover:border-[#c9c9ea] hover:bg-[#efeffb] disabled:opacity-50"
+            >
+              <RotateCcw className="h-[15px] w-[15px]" />
+            </button>
+          )}
+        </div>
       </div>
 
-      {list.hint && <p className="mb-2 text-[12px] text-ink-subtle">{list.hint}</p>}
+      {list.hint && <p className="mb-3 text-[12.5px] text-ink-subtle">{list.hint}</p>}
+
+      {/* Bulk add panel. */}
+      {bulkOpen && (
+        <div className="mb-3 rounded-xl border border-[#e6e8ec] bg-[#fafbfc] p-3">
+          <label className="mb-1.5 block text-[10.5px] font-bold uppercase tracking-[0.14em] text-[#8a90a0]">
+            Paste many - one per line
+          </label>
+          <textarea
+            value={bulkText}
+            onChange={(e) => setBulkText(e.target.value)}
+            rows={5}
+            placeholder={"Value one\nValue two\nValue three"}
+            className="w-full resize-y rounded-lg border border-hairline bg-white px-3 py-2 text-[13px] outline-none focus:border-[#3f3f94] focus:ring-2 focus:ring-[#3f3f94]/15"
+          />
+          <div className="mt-2.5 flex items-center gap-2.5">
+            <button
+              type="button"
+              disabled={pending || bulkCount === 0}
+              onClick={runBulk}
+              className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#3f3f94] px-3.5 text-[12.5px] font-bold text-white transition hover:bg-[#2f2f6f] disabled:opacity-50"
+            >
+              <ListPlus className="h-4 w-4" />
+              Add all
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setBulkText("");
+                setBulkOpen(false);
+              }}
+              className="h-9 rounded-lg border border-hairline px-3.5 text-[12.5px] font-semibold text-ink-subtle transition hover:bg-surface-soft"
+            >
+              Cancel
+            </button>
+            <span className="text-[12px] font-medium text-ink-subtle tabular-nums">
+              {bulkCount} value{bulkCount === 1 ? "" : "s"}
+            </span>
+          </div>
+        </div>
+      )}
 
       {many && (
         <div className="mb-2 flex h-9 items-center gap-2 rounded-lg border border-hairline bg-surface-soft px-2.5">
@@ -140,12 +223,13 @@ function ListCard({ formKey, list }: { formKey: string; list: CustomListView }) 
       )}
 
       {!list.seeded && (
-        <p className="mb-2 text-[12px] text-ink-subtle">
-          Suggested defaults (not saved yet — import or start your own):
+        <p className="mb-2 inline-flex items-center gap-1.5 text-[12px] text-ink-subtle">
+          <Pencil className="h-[13px] w-[13px]" />
+          Suggested defaults (not saved yet - use defaults or start your own):
         </p>
       )}
 
-      <div className="flex max-h-[300px] flex-col gap-1.5 overflow-y-auto pr-0.5">
+      <div className="flex max-h-[320px] flex-col gap-1.5 overflow-y-auto pr-0.5">
         {shown.length === 0 ? (
           <p className="py-2 text-[13px] text-ink-subtle">No matches.</p>
         ) : (

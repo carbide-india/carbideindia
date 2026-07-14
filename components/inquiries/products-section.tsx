@@ -38,7 +38,7 @@ interface Props {
   shapeProfiles: Record<string, ShapeConfig>;
   /** Masters for the SAP-style Material Search / create-new mini-form. */
   pickerMasters: PickerMasters;
-  /** Enquiry Custom Dropdown Master — dimension Unit list (falls back to defaults). */
+  /** Enquiry Custom Dropdown Master - dimension Unit list (falls back to defaults). */
   unitOptions?: string[];
 }
 
@@ -66,7 +66,7 @@ const EMPTY_PRODUCT = {
 };
 
 /**
- * Section 3 of the New Inquiry form — Products. A repeatable per-product
+ * Section 3 of the New Inquiry form - Products. A repeatable per-product
  * editor: one card per product, each holding the product's identity, shape +
  * dimensions, admin-managed masters and quantity. At least one product card
  * is always present; product #1 is mirrored into the legacy single-product
@@ -117,7 +117,7 @@ export function ProductsSection({
     <SectionCard
       title="Products"
       inlineHint
-      hint="Search existing materials first — pick to reuse the canonical spec, or create a new one. You can still edit the fields below."
+      hint="Search existing materials first - pick to reuse the canonical spec, or create a new one. You can still edit the fields below."
     >
       {fields.map((field, index) => {
         // Resolve this card's shape config (which dims apply). Shape values
@@ -150,7 +150,7 @@ export function ProductsSection({
             }
           />
 
-          {/* SAP-style Material Search — the primary way to add a product. */}
+          {/* SAP-style Material Search - the primary way to add a product. */}
           <div>
             <span className="mb-1.5 block text-[12px] font-semibold text-ink-soft">
               Material
@@ -203,7 +203,7 @@ export function ProductsSection({
             </Field>
           </div>
 
-          {/* Shape + Unit + dimensions on one line — auto-fit so the visible
+          {/* Shape + Unit + dimensions on one line - auto-fit so the visible
               boxes stretch to fill the row (no wasted space, no truncation)
               however many dimensions the chosen shape shows. */}
           <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3 max-md:grid-cols-2">
@@ -298,7 +298,7 @@ export function ProductsSection({
             />
           </Field>
 
-          {/* Masters + quantity — one row: grade, tolerance, condition, qty, uom */}
+          {/* Masters + quantity - one row: grade, tolerance, condition, qty, uom */}
           <div className="grid grid-cols-5 gap-4 max-lg:grid-cols-3 max-md:grid-cols-1">
             <ProductMasterSelect
               control={control}

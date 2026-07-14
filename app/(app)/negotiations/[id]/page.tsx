@@ -26,12 +26,12 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  if (!UUID_RE.test(id)) return { title: "Negotiation — Carbide India" };
+  if (!UUID_RE.test(id)) return { title: "Negotiation - Carbide India" };
   const negotiation = await getNegotiationById(id);
   return {
     title: negotiation
-      ? `${negotiation.negotiationNo} · Negotiation — Carbide India`
-      : "Negotiation — Carbide India",
+      ? `${negotiation.negotiationNo} · Negotiation - Carbide India`
+      : "Negotiation - Carbide India",
   };
 }
 
@@ -69,7 +69,7 @@ export default async function NegotiationDetailPage({ params }: PageProps) {
   );
   const missingCount = seeds.filter((s) => !presentIds.has(s.inquiryItemId)).length;
 
-  // Phase 8 — pipeline stepper + flag-gated "Mark Won" CTA. Won ⇒ show SO stage.
+  // Phase 8 - pipeline stepper + flag-gated "Mark Won" CTA. Won ⇒ show SO stage.
   const negotiationFlagOn = await isWorkflowFlagOn("negotiation");
   const isWon = negotiation.negotiationStatus === "order_won";
   const negStageKey = isWon ? ("sales_order" as const) : ("negotiation" as const);

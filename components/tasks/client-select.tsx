@@ -23,7 +23,7 @@ interface Props {
 }
 
 /**
- * "Client Name" picker — a fully-styled searchable combobox. The dropdown is a
+ * "Client Name" picker - a fully-styled searchable combobox. The dropdown is a
  * portalled Radix Popover so it floats cleanly above the form (no overlap with
  * the fields below, no clipping inside the dialog's scroll). Type to filter,
  * ↑/↓ + Enter to pick, Tab to confirm + move on, and a "+ Add new client" row
@@ -63,7 +63,7 @@ export function ClientSelect({
   const sorted = React.useMemo(() => {
     const set = new Set(options);
     // A task being edited may carry a legacy free-text client not in the
-    // roster — surface it so the control can show the current value.
+    // roster - surface it so the control can show the current value.
     if (value && !set.has(value)) set.add(value);
     return Array.from(set).sort((a, b) =>
       a.localeCompare(b, undefined, { sensitivity: "base" }),

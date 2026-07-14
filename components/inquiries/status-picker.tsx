@@ -19,7 +19,7 @@ interface Props<T extends string> {
 }
 
 /**
- * Optimistic status chip-picker for the inquiry sidebar + feasibility panel —
+ * Optimistic status chip-picker for the inquiry sidebar + feasibility panel -
  * same interaction grammar as the tasks table's InlineStatusCell (flip
  * immediately, roll back on error, popover via Radix portal).
  */

@@ -62,6 +62,19 @@ export async function updateOrgSettings(
   if (parsed.data.allowSelfRegister !== undefined)
     patch.allowSelfRegister = parsed.data.allowSelfRegister;
 
+  // Company & Legal — text fields; "" clears to NULL.
+  const LEGAL_KEYS = [
+    "legalName", "gstin", "panNo", "cin",
+    "regAddress", "regCity", "regState", "regPincode",
+    "bankName", "bankAccountNo", "bankIfsc", "bankBranch",
+  ] as const;
+  for (const key of LEGAL_KEYS) {
+    const v = parsed.data[key];
+    if (v !== undefined) {
+      (patch as Record<string, unknown>)[key] = v ? v : null;
+    }
+  }
+
   try {
     await db.update(orgSettings).set(patch).where(eq(orgSettings.id, 1));
   } catch (err: unknown) {
@@ -69,7 +82,7 @@ export async function updateOrgSettings(
     return { ok: false, error: `DB: ${msg}` };
   }
 
-  // Audit row — only fields that actually changed. Non-fatal: log + continue
+  // Audit row - only fields that actually changed. Non-fatal: log + continue
   // so an audit-write failure never blocks the user action.
   try {
     const changedKeys = Object.keys(parsed.data) as Array<
@@ -163,7 +176,7 @@ export async function updateStatusSettingAction(
 }
 
 /**
- * sir's changes #8 — persist the kanban column order (admin-only). Accepts the
+ * sir's changes #8 - persist the kanban column order (admin-only). Accepts the
  * full ordered list of column ids; unknown/deprecated ids are rejected so a
  * stale client can't poison the stored order.
  */
@@ -189,7 +202,7 @@ export async function setBoardColumnOrder(order: string[]): Promise<ActionResult
 }
 
 /**
- * ERP Phase 8 — flip a single per-entity enforced-workflow feature flag on the
+ * ERP Phase 8 - flip a single per-entity enforced-workflow feature flag on the
  * org_settings singleton. DEFAULT OFF for every key; this is the ONLY way to
  * turn one ON. Admin-only. Writes an audit row. Merges into the existing map so
  * flipping one flag never clears the others.
@@ -327,7 +340,7 @@ export async function updateNotificationMatrixAction(input: {
 
 /**
  * Re-base the SM number sequence (Sales Module card). `setval(..., n, false)`
- * means n itself is the NEXT number assigned — matches what the card shows.
+ * means n itself is the NEXT number assigned - matches what the card shows.
  */
 export async function setSmNextNumber(next: number): Promise<ActionResult> {
   const me = await requireAdmin();
@@ -343,7 +356,7 @@ export async function setSmNextNumber(next: number): Promise<ActionResult> {
     return { ok: false, error: "Could not update the SM counter." };
   }
 
-  // Audit row — non-fatal, same contract as updateOrgSettings.
+  // Audit row - non-fatal, same contract as updateOrgSettings.
   try {
     await db.insert(settingsEvents).values({
       scope: "org_settings",

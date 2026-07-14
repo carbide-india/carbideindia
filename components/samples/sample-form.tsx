@@ -7,7 +7,14 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
 import { upload } from "@vercel/blob/client";
-import { Check, ImagePlus, Loader2, X } from "lucide-react";
+import { Check, Paperclip, Loader2, X, Film, Music, FileText } from "lucide-react";
+import {
+  SAMPLE_ATTACHMENT_TYPES,
+  SAMPLE_MAX_ATTACHMENT_BYTES,
+  SAMPLE_ATTACHMENT_ACCEPT,
+  attachmentKind,
+  attachmentName,
+} from "@/lib/samples/attachments";
 import {
   SAMPLE_LOCATIONS,
   SAMPLE_STATUSES,
@@ -48,12 +55,18 @@ const SampleFormSchema = CreateSampleSchema.superRefine((v, ctx) => {
 
 /** RHF holds the schema's *input* shape (pre-transform); zodResolver hands
  *  the parsed *output* (defaults applied, `""` folded to `undefined`) to the
- *  submit handler — which is exactly what createSample takes. */
+ *  submit handler - which is exactly what createSample takes. */
 export type SampleFormValues = z.input<typeof SampleFormSchema>;
 type SampleFormOutput = z.output<typeof SampleFormSchema>;
 
 interface Props {
   employees: EmployeeOption[];
+  /** Editable Sample Location options (Custom Dropdown Master). Falls back to
+   *  the built-in SAMPLE_LOCATIONS. */
+  sampleLocationOptions?: string[];
+  /** Editable Stage Location options (Custom Dropdown Master). Falls back to
+   *  the built-in STAGE_LOCATIONS. */
+  stageLocationOptions?: string[];
   /** Prefill values (used to resume a saved draft). */
   initialValues?: Partial<SampleFormValues>;
   /** Enable auto-saving this form as a draft. */
@@ -77,21 +90,17 @@ function toIsoNoon(s: string | undefined): string | undefined {
   return s ? new Date(`${s}T12:00:00.000Z`).toISOString() : undefined;
 }
 
-/* ── Photo upload (browser → Vercel Blob, client-direct) ─────────────── */
+/* ── Attachment upload (browser → Vercel Blob, client-direct) ────────── */
 
-const ALLOWED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
-
-function safePhotoName(name: string): string {
-  return name.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 120) || "photo";
+function safeFileName(name: string): string {
+  return name.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 120) || "file";
 }
 
-/** Mirrors document-library's uploadToBlob, scoped to samples/: public blobs
- *  (rendered via plain <img>), images only, token minted by
+/** Public sample blob (photos/videos/audio/docs), token minted by
  *  /api/samples/upload. */
-function uploadPhotoToBlob(file: File) {
+function uploadAttachmentToBlob(file: File) {
   const contentType = file.type;
-  return upload(`samples/${safePhotoName(file.name)}`, file, {
+  return upload(`samples/${safeFileName(file.name)}`, file, {
     access: "public",
     handleUploadUrl: "/api/samples/upload",
     contentType,
@@ -114,7 +123,7 @@ const SM_FOLDER_OPTIONS = [
   { value: "done" as const, label: "Done" },
 ];
 
-/** The three location-tracked stages — Costing is its own section with no
+/** The three location-tracked stages - Costing is its own section with no
  *  location (it's in-house by definition on Manan's sheet). */
 const TRACKED_STAGES = [
   {
@@ -144,7 +153,7 @@ const TRACKED_STAGES = [
 ] as const;
 
 /**
- * New Sample form — five card sections (Sample / Photos / Stage Tracking /
+ * New Sample form - five card sections (Sample / Photos / Stage Tracking /
  * Costing / Reports & Processing). The Sample No is typed off the physical
  * sample or register (always required here). Every stage field defaults to
  * its first option per Manan's dashboard rule, so untouched stages read as
@@ -152,17 +161,25 @@ const TRACKED_STAGES = [
  */
 export function SampleForm({
   employees,
+  sampleLocationOptions,
+  stageLocationOptions,
   initialValues,
   enableDrafts,
   resumeDraftId,
 }: Props) {
   const draftsOn = Boolean(enableDrafts);
+  // Location option lists - editable via the Custom Dropdown Master, with the
+  // built-in enum arrays as the fallback.
+  const sampleLocations =
+    sampleLocationOptions?.length ? sampleLocationOptions : [...SAMPLE_LOCATIONS];
+  const stageLocations =
+    stageLocationOptions?.length ? stageLocationOptions : [...STAGE_LOCATIONS];
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
   const [serverError, setServerError] = React.useState<string | null>(null);
 
   // Photos live in local state (source of truth) and are merged into the
-  // payload on submit — uploads run on file-pick, the save never waits on or
+  // payload on submit - uploads run on file-pick, the save never waits on or
   // requires them.
   const [photos, setPhotos] = React.useState<string[]>([]);
   const [uploadingCount, setUploadingCount] = React.useState(0);
@@ -222,26 +239,26 @@ export function SampleForm({
     const files = Array.from(e.target.files ?? []);
     e.target.value = ""; // allow re-picking the same file after a remove
     for (const file of files) {
-      if (!ALLOWED_PHOTO_TYPES.has(file.type)) {
+      if (!SAMPLE_ATTACHMENT_TYPES.has(file.type)) {
         fireToast({
-          message: `${file.name}: only JPEG, PNG or WebP images are allowed.`,
+          message: `${file.name}: this file type isn't supported.`,
           type: "error",
         });
         continue;
       }
-      if (file.size > MAX_PHOTO_BYTES) {
-        fireToast({ message: `${file.name} exceeds 10 MB.`, type: "error" });
+      if (file.size > SAMPLE_MAX_ATTACHMENT_BYTES) {
+        fireToast({ message: `${file.name} exceeds 100 MB.`, type: "error" });
         continue;
       }
       setUploadingCount((n) => n + 1);
       try {
-        const blob = await uploadPhotoToBlob(file);
+        const blob = await uploadAttachmentToBlob(file);
         setPhotos((prev) => [...prev, blob.url]);
       } catch {
-        // Missing BLOB_READ_WRITE_TOKEN (or a Blob outage) lands here — the
-        // photo is skipped, the form still saves without it.
+        // Missing BLOB_READ_WRITE_TOKEN (or a Blob outage) lands here - the
+        // file is skipped, the form still saves without it.
         fireToast({
-          message: "Photo upload unavailable — check storage configuration.",
+          message: "Upload unavailable - check storage configuration.",
           type: "error",
         });
       } finally {
@@ -268,7 +285,7 @@ export function SampleForm({
         fireToast({ message: res.error, type: "error" });
         return;
       }
-      // Sample saved — retire the draft so it leaves the Drafts inbox.
+      // Sample saved - retire the draft so it leaves the Drafts inbox.
       await discard();
       fireToast({
         message: res.sampleNo
@@ -321,7 +338,7 @@ export function SampleForm({
                 <LocationSelect
                   value={field.value ?? "AYK Cabin"}
                   onChange={field.onChange}
-                  options={SAMPLE_LOCATIONS}
+                  options={sampleLocations}
                   otherOption="Other"
                   specifyPlaceholder="Specify location"
                   ariaLabel="Sample location"
@@ -382,43 +399,28 @@ export function SampleForm({
         </Field>
       </SectionCard>
 
-      {/* ── 2 · Photos ───────────────────────────────────────────────── */}
+      {/* ── 2 · Attachments ──────────────────────────────────────────── */}
       <SectionCard
-        title="Photos"
-        hint="JPEG, PNG or WebP up to 10 MB each — the sample saves fine without photos."
+        title="Attachments"
+        hint="Photos, videos, audio or documents (PDF / Office) up to 100 MB each - the sample saves fine without any."
         inlineHint
       >
         <input
           ref={fileRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp"
+          accept={SAMPLE_ATTACHMENT_ACCEPT}
           multiple
           className="hidden"
-          aria-label="Add sample photos"
+          aria-label="Add sample attachments"
           onChange={(e) => void onPickFiles(e)}
         />
         <div className="flex flex-wrap items-start gap-3">
           {photos.map((url) => (
-            <div
+            <AttachmentTile
               key={url}
-              className="relative size-[96px] overflow-hidden rounded-xl border border-hairline bg-surface-soft"
-            >
-              {/* Blob URLs are remote + unconfigured for next/image — plain img. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={url}
-                alt="Sample photo"
-                className="size-full object-cover"
-              />
-              <button
-                type="button"
-                aria-label="Remove photo"
-                onClick={() => setPhotos((prev) => prev.filter((u) => u !== url))}
-                className="absolute right-1 top-1 inline-flex size-[22px] items-center justify-center rounded-full bg-white/90 text-ink-strong shadow-sm border border-hairline hover:bg-white transition-colors"
-              >
-                <X size={13} strokeWidth={2.6} />
-              </button>
-            </div>
+              url={url}
+              onRemove={() => setPhotos((prev) => prev.filter((u) => u !== url))}
+            />
           ))}
           <button
             type="button"
@@ -432,10 +434,10 @@ export function SampleForm({
                 style={{ animation: "spinFast 0.8s linear infinite" }}
               />
             ) : (
-              <ImagePlus size={18} />
+              <Paperclip size={18} />
             )}
             <span className="text-[11.5px] font-semibold">
-              {uploadingCount > 0 ? "Uploading" : "Add photos"}
+              {uploadingCount > 0 ? "Uploading" : "Add files"}
             </span>
           </button>
         </div>
@@ -451,13 +453,14 @@ export function SampleForm({
           {TRACKED_STAGES.map((row) => (
             <div
               key={row.status}
-              className="flex items-start gap-4 rounded-xl border border-hairline p-4 max-md:flex-col max-md:gap-3"
+              className="rounded-xl border border-hairline p-3"
             >
-              <span className="w-[132px] shrink-0 pt-1 text-[14px] font-bold text-ink-strong">
-                {row.label}
-              </span>
-              <div className="flex flex-1 flex-wrap items-start gap-x-5 gap-y-3">
-                <MiniField label="Status" className="min-w-[190px]">
+              {/* Everything on one line - name · Status · Location · Completed · Notes. */}
+              <div className="grid grid-cols-[96px_150px_minmax(120px,0.8fr)_170px_minmax(170px,1.3fr)] items-end gap-3 max-xl:grid-cols-2 max-sm:grid-cols-1">
+                <div className="flex items-end pb-2 text-[14px] font-bold text-ink-strong max-xl:col-span-2 max-sm:col-span-1">
+                  {row.label}
+                </div>
+                <MiniField label="Status">
                   <Controller
                     control={control}
                     name={row.status}
@@ -473,7 +476,7 @@ export function SampleForm({
                     )}
                   />
                 </MiniField>
-                <MiniField label="Location" className="min-w-[220px] flex-1">
+                <MiniField label="Location">
                   <Controller
                     control={control}
                     name={row.location}
@@ -481,7 +484,7 @@ export function SampleForm({
                       <LocationSelect
                         value={field.value ?? "Undecided"}
                         onChange={field.onChange}
-                        options={STAGE_LOCATIONS}
+                        options={stageLocations}
                         otherOption="Others"
                         specifyPlaceholder="Specify lab / vendor"
                         ariaLabel={`${row.label} location`}
@@ -492,19 +495,19 @@ export function SampleForm({
                 <MiniField label="Completed On">
                   <input
                     type="date"
-                    className="nt-input w-[180px]"
+                    className="nt-input w-full"
                     aria-label={`${row.label} completed on`}
                     {...register(row.completed)}
                   />
                 </MiniField>
-                <MiniField label="Notes" className="w-full">
+                <MiniField label="Notes">
                   <Controller
                     control={control}
                     name={row.notes}
                     render={({ field }) => (
                       <NotesField
                         ariaLabel={`${row.label} notes`}
-                        rows={2}
+                        rows={1}
                         placeholder={`Notes about the ${row.label.toLowerCase()} stage`}
                         value={(field.value as string | undefined) ?? ""}
                         onChange={field.onChange}
@@ -521,20 +524,21 @@ export function SampleForm({
       {/* ── 4 · Costing ──────────────────────────────────────────────── */}
       <SectionCard
         title="Costing"
-        hint="In-house — status and completion only, no location."
+        hint="In-house - status and completion only, no location."
         inlineHint
       >
         <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
-          <MiniField label="Status">
+          <MiniField label="Status" className="min-w-[200px]">
             <Controller
               control={control}
               name="costingStatus"
               render={({ field }) => (
-                <Segmented
+                <Select
                   options={STAGE_STATUS_OPTIONS}
-                  value={field.value}
-                  onChange={field.onChange}
-                  allowClear={false}
+                  value={field.value ?? "not_started"}
+                  onValueChange={(v) =>
+                    field.onChange(v as (typeof STAGE_STATUSES)[number])
+                  }
                   ariaLabel="Costing status"
                 />
               )}
@@ -674,5 +678,57 @@ export function SampleForm({
         </button>
       </div>
     </form>
+  );
+}
+
+/** One attachment preview - image thumbnail, inline video, audio icon, or a
+ *  generic file chip, each with a remove button. */
+function AttachmentTile({ url, onRemove }: { url: string; onRemove: () => void }) {
+  const kind = attachmentKind(url);
+  const name = attachmentName(url);
+  const removeBtn = (
+    <button
+      type="button"
+      aria-label="Remove attachment"
+      onClick={onRemove}
+      className="absolute right-1 top-1 z-10 inline-flex size-[22px] items-center justify-center rounded-full border border-hairline bg-white/90 text-ink-strong shadow-sm transition-colors hover:bg-white"
+    >
+      <X size={13} strokeWidth={2.6} />
+    </button>
+  );
+
+  if (kind === "image") {
+    return (
+      <div className="relative size-[96px] overflow-hidden rounded-xl border border-hairline bg-surface-soft">
+        {removeBtn}
+        {/* Blob URLs are remote + unconfigured for next/image - plain img. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={url} alt={name} className="size-full object-cover" />
+      </div>
+    );
+  }
+  if (kind === "video") {
+    return (
+      <div className="relative size-[96px] overflow-hidden rounded-xl border border-hairline bg-black">
+        {removeBtn}
+        <video src={url} className="size-full object-cover" muted playsInline />
+        <span className="pointer-events-none absolute inset-0 grid place-items-center text-white/90">
+          <Film size={22} />
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div className="relative flex size-[96px] flex-col items-center justify-center gap-1.5 rounded-xl border border-hairline bg-surface-soft px-2 text-center">
+      {removeBtn}
+      {kind === "audio" ? (
+        <Music size={22} className="text-[#3f3f94]" />
+      ) : (
+        <FileText size={22} className="text-[#3f3f94]" />
+      )}
+      <span className="line-clamp-2 w-full break-all text-[10.5px] font-semibold text-ink-soft">
+        {name}
+      </span>
+    </div>
   );
 }

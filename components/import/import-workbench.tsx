@@ -17,7 +17,7 @@ interface Props {
   isAdmin: boolean;
   commit: (rows: ImportRowPayload[]) => Promise<{ created: number; skipped: number; newMasters: number; errors: { row: number; reason: string }[] }>;
   /** When provided (e.g. inside a modal), called after a successful import
-   *  instead of navigating to the register — lets the caller close/refresh. */
+   *  instead of navigating to the register - lets the caller close/refresh. */
   onDone?: () => void;
 }
 

@@ -12,9 +12,9 @@ import {
 import { db } from "@/lib/db";
 
 /**
- * ERP Phase 8 — idempotent auto-provisioning (§4.6). Each `provision*` helper
+ * ERP Phase 8 - idempotent auto-provisioning (§4.6). Each `provision*` helper
  * creates the NEXT-stage DRAFT for a source record BY REFERENCE (FK edges only,
- * never copying spec/price — downstream resolves read-through), and ONLY IF no
+ * never copying spec/price - downstream resolves read-through), and ONLY IF no
  * descendant already exists. The idempotency guard makes a second call a no-op:
  * it returns the already-existing id and inserts nothing, so double-provisioning
  * (e.g. a retried transition, or the standalone New form + advanceStage racing)
@@ -24,7 +24,7 @@ import { db } from "@/lib/db";
  * provision + audit are one atomic unit.
  */
 
-// A handle compatible with both `db` and a `db.transaction(tx => )` tx — the
+// A handle compatible with both `db` and a `db.transaction(tx => )` tx - the
 // provision helpers only ever `select`/`insert`, so this narrow surface lets a
 // caller pass either without a structural mismatch.
 type DbLike = Pick<typeof db, "select" | "insert">;
@@ -99,7 +99,7 @@ export async function provisionNegotiationFromQuote(
 
 /**
  * Provision a DRAFT sales order from a WON negotiation (negotiation → SO).
- * Idempotent on negotiation_id — closes the negotiation→SO break (§4.6/DoD #9).
+ * Idempotent on negotiation_id - closes the negotiation→SO break (§4.6/DoD #9).
  */
 export async function provisionSalesOrderFromNegotiation(
   tx: DbLike,

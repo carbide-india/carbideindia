@@ -9,7 +9,7 @@ const Trimmed = (max: number) => z.string().trim().max(max);
 /**
  * Location fields are free text (DB columns are `text`): the UI offers the
  * option lists from db/enums plus an "Other(s) → specify" input whose typed
- * value is stored verbatim — so the validator only enforces non-empty + cap.
+ * value is stored verbatim - so the validator only enforces non-empty + cap.
  */
 const LocationText = z.string().trim().min(1, "Location is required.").max(80);
 /**
@@ -20,7 +20,7 @@ const OptionalText = (max = 500) =>
   Trimmed(max).transform((s) => (s === "" ? undefined : s)).optional();
 
 /**
- * Base field set shared by Create/Update — same base-object + derive pattern
+ * Base field set shared by Create/Update - same base-object + derive pattern
  * as lib/validators/inquiry.ts (zod v4 has no `.innerType()` to unwrap).
  * Every enum field defaults to its first option per Manan's dashboard rule:
  * first-option defaults make incomplete stages flaggable at a glance.
@@ -61,7 +61,7 @@ export const CreateSampleSchema = SampleFieldsSchema;
 export type CreateSampleInput = z.input<typeof CreateSampleSchema>;
 
 /**
- * Patch-shaped schema for edits — every field optional, unknown keys
+ * Patch-shaped schema for edits - every field optional, unknown keys
  * rejected, empty patches rejected. Defaulted fields are re-declared without
  * their defaults: otherwise `.partial()` would inject every first-option
  * default into every patch and an empty `{}` would sail past the nonempty

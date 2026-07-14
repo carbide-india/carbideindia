@@ -12,7 +12,7 @@ interface PageProps {
 }
 
 /**
- * Focus mode — full-viewport immersive single-task view for deep work.
+ * Focus mode - full-viewport immersive single-task view for deep work.
  * No dashboard chrome, no audit feed, no action rail. Dark canvas with
  * red-radial drama (mirrors login + projects hero), a Pomodoro timer,
  * quick action sidebar, and large editorial type for the task itself.

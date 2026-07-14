@@ -2,14 +2,14 @@ import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 
 /**
- * Phase 4.5 — actually checks the dependency an external uptime monitor
+ * Phase 4.5 - actually checks the dependency an external uptime monitor
  * cares about. Returns 200 only if Postgres responds within the timeout
  * below; otherwise 503 with a per-check breakdown so the alert that pages
- * you also tells you where to look. (File storage is Vercel Blob — fully
+ * you also tells you where to look. (File storage is Vercel Blob - fully
  * managed, no ping needed; document features degrade cleanly if it's down.)
  *
  * Public (allowed by middleware's PUBLIC_API allowlist). Safe to expose
- * — no DB rows or secrets leak, only liveness booleans + latencies.
+ * - no DB rows or secrets leak, only liveness booleans + latencies.
  */
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

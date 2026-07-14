@@ -34,7 +34,7 @@ interface Props {
 
 /** Yes/No select options used for the boolean process flags. */
 const YES_NO: SelectOption[] = [
-  { value: "", label: "—" },
+  { value: "", label: "-" },
   { value: "yes", label: "Yes" },
   { value: "no", label: "No" },
 ];
@@ -158,21 +158,21 @@ export function JobCardWorkbench({ rows, picker, isAdmin }: Props) {
 
   const dispatchOptions = React.useMemo<SelectOption[]>(
     () => [
-      { value: "", label: "—" },
+      { value: "", label: "-" },
       ...picker.dispatchConditions.map((o) => ({ value: o.id, label: o.name })),
     ],
     [picker.dispatchConditions],
   );
   const pressingOptions = React.useMemo<SelectOption[]>(
     () => [
-      { value: "", label: "—" },
+      { value: "", label: "-" },
       ...picker.pressingTypes.map((o) => ({ value: o.id, label: o.name })),
     ],
     [picker.pressingTypes],
   );
   const toleranceOptions = React.useMemo<SelectOption[]>(
     () => [
-      { value: "", label: "—" },
+      { value: "", label: "-" },
       ...picker.tolerances.map((o) => ({ value: o.id, label: o.name })),
     ],
     [picker.tolerances],
@@ -385,25 +385,25 @@ export function JobCardWorkbench({ rows, picker, isAdmin }: Props) {
       {
         key: "oaNo",
         header: "O.A. No",
-        cell: (r) => r.oaNo ?? "—",
+        cell: (r) => r.oaNo ?? "-",
         filterValue: (r) => r.oaNo ?? "",
       },
       {
         key: "customerName",
         header: "Customer",
-        cell: (r) => r.customerName ?? "—",
+        cell: (r) => r.customerName ?? "-",
         filterValue: (r) => r.customerName ?? "",
       },
       {
         key: "productCode",
         header: "Product Code",
-        cell: (r) => r.productCode ?? "—",
+        cell: (r) => r.productCode ?? "-",
         filterValue: (r) => r.productCode ?? "",
       },
       {
         key: "gradeName",
         header: "Grade",
-        cell: (r) => r.gradeName ?? "—",
+        cell: (r) => r.gradeName ?? "-",
       },
       {
         key: "deliveryDate",
@@ -416,13 +416,13 @@ export function JobCardWorkbench({ rows, picker, isAdmin }: Props) {
         key: "orderQuantity",
         header: "Order Qty",
         align: "right",
-        cell: (r) => r.orderQuantity ?? "—",
+        cell: (r) => r.orderQuantity ?? "-",
         sortValue: (r) => (r.orderQuantity ? Number(r.orderQuantity) : 0),
       },
       {
         key: "dispatchConditionName",
         header: "Dispatch",
-        cell: (r) => r.dispatchConditionName ?? "—",
+        cell: (r) => r.dispatchConditionName ?? "-",
       },
       {
         key: "status",
@@ -453,7 +453,7 @@ export function JobCardWorkbench({ rows, picker, isAdmin }: Props) {
   return (
     <div className="flex flex-col gap-6">
       <WorkbenchPanel
-        title={selectedId ? "Job Card Entry — Editing" : "Job Card Entry"}
+        title={selectedId ? "Job Card Entry - Editing" : "Job Card Entry"}
         icon={<ClipboardList size={17} strokeWidth={2.2} />}
         defaultOpen
       >
@@ -723,7 +723,7 @@ export function JobCardWorkbench({ rows, picker, isAdmin }: Props) {
           columns={columns}
           getRowId={(r) => r.id}
           onRowClick={openWorkspace}
-          emptyText="No job cards yet — fill the form above to create one."
+          emptyText="No job cards yet - fill the form above to create one."
         />
       </WorkbenchPanel>
 
@@ -748,19 +748,19 @@ export function JobCardWorkbench({ rows, picker, isAdmin }: Props) {
           {
             key: "city",
             header: "City",
-            cell: (c) => c.city ?? "—",
+            cell: (c) => c.city ?? "-",
             filterValue: (c) => c.city ?? "",
           },
           {
             key: "state",
             header: "State",
-            cell: (c) => c.state ?? "—",
+            cell: (c) => c.state ?? "-",
             filterValue: (c) => c.state ?? "",
           },
           {
             key: "gstin",
             header: "GSTIN",
-            cell: (c) => c.gstin ?? "—",
+            cell: (c) => c.gstin ?? "-",
             filterValue: (c) => c.gstin ?? "",
           },
         ]}
@@ -789,13 +789,13 @@ export function JobCardWorkbench({ rows, picker, isAdmin }: Props) {
           {
             key: "customerName",
             header: "Customer",
-            cell: (it) => it.customerName ?? "—",
+            cell: (it) => it.customerName ?? "-",
             filterValue: (it) => it.customerName ?? "",
           },
           {
             key: "gradeName",
             header: "Grade",
-            cell: (it) => it.gradeName ?? "—",
+            cell: (it) => it.gradeName ?? "-",
             filterValue: (it) => it.gradeName ?? "",
           },
         ]}
@@ -897,9 +897,9 @@ function StatusChip({ active }: { active: boolean }) {
 }
 
 function fmtDate(d: Date | string | null): string {
-  if (!d) return "—";
+  if (!d) return "-";
   const date = typeof d === "string" ? new Date(d) : d;
-  if (Number.isNaN(date.getTime())) return "—";
+  if (Number.isNaN(date.getTime())) return "-";
   return date.toLocaleDateString("en-IN", {
     day: "2-digit",
     month: "short",

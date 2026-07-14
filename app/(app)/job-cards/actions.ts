@@ -103,7 +103,7 @@ function toColumns(
 
 /**
  * Create a Job Card. jobCardNo is user-entered, so a duplicate is rejected with
- * a friendly message (NO auto-retry — the user owns the number). Other fields
+ * a friendly message (NO auto-retry - the user owns the number). Other fields
  * are optional snapshots. requireUser (sales-floor open like the other forms).
  */
 export async function createJobCard(
@@ -224,7 +224,7 @@ export async function updateJobCard(
 }
 
 /**
- * Deactivate a Job Card (deactivate-only governance — mirrors deactivateItem).
+ * Deactivate a Job Card (deactivate-only governance - mirrors deactivateItem).
  * Job cards are never hard-deleted. Admin-only. Sets is_active=false +
  * deleted_at.
  */

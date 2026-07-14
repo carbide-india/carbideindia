@@ -10,7 +10,7 @@ import { employees, type Employee } from "@/db/schema";
 /**
  * Resolves the signed-in employee row, or null if not signed in.
  * Primary lookup: clerk_user_id. First sign-in after an admin invite:
- * the row exists with email but no clerk_user_id — link it once by
+ * the row exists with email but no clerk_user_id - link it once by
  * verified email and backfill the id.
  */
 export const getCurrentEmployee = cache(async (): Promise<Employee | null> => {
@@ -26,7 +26,7 @@ export const getCurrentEmployee = cache(async (): Promise<Employee | null> => {
   const email = user?.primaryEmailAddress?.emailAddress?.toLowerCase();
   if (!email) return null;
 
-  // Case-insensitive — historical imports may have mixed-case emails even
+  // Case-insensitive - historical imports may have mixed-case emails even
   // though new ones are normalized (same pattern as inviteEmployee's dup check).
   const byEmail = await db.query.employees.findFirst({
     where: sql`lower(${employees.email}) = ${email}`,

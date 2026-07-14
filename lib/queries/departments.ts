@@ -89,8 +89,8 @@ export async function getEmployeeDepartmentMap(): Promise<
 /**
  * Distinct employee IDs who belong to ANY of the given department names
  * (case-insensitive via the canonical `departments.name`).  Used by the
- * task + dashboard department filters so membership — not just the primary
- * department — drives which tasks match.  Returns [] for an empty input.
+ * task + dashboard department filters so membership - not just the primary
+ * department - drives which tasks match.  Returns [] for an empty input.
  */
 export async function employeeIdsInDepartments(
   names: string[],

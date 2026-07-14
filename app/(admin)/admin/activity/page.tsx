@@ -75,7 +75,7 @@ export default async function AdminActivityPage({ searchParams }: PageProps) {
           Activity Log
         </h1>
         <p className="mt-2 max-w-2xl text-[14px] text-[#6b7280]">
-          A live, filterable audit timeline of every action — comments,
+          A live, filterable audit timeline of every action - comments,
           status changes, transfers, and approvals.
         </p>
       </header>

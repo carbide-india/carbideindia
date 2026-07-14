@@ -11,7 +11,7 @@ const UUID_RE =
  * SM auto-fetch for the Quotation / Negotiation / Sales-Order forms: returns
  * the linked enquiry's snapshot block (company, dates, sales person, product,
  * qty, grade/tolerance/condition names). The form copies these into its own
- * editable fields — a snapshot, never re-synced.
+ * editable fields - a snapshot, never re-synced.
  */
 export async function GET(req: Request) {
   await requireUser();

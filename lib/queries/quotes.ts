@@ -24,8 +24,8 @@ import {
 
 /**
  * SM auto-fetch shared by the Quotation / Negotiation / Sales-Order forms.
- * Resolves the inquiry's snapshot block — company, dates, sales person name,
- * product/qty — and the grade/tolerance/condition master ids → their display
+ * Resolves the inquiry's snapshot block - company, dates, sales person name,
+ * product/qty - and the grade/tolerance/condition master ids → their display
  * names via three aliased LEFT JOINs against `master_options` (the same row
  * type, so aliasing is required). `smNumber` is returned too so the create
  * actions can derive the per-SM number (`<SM>-Q01`) without a second query.
@@ -156,7 +156,7 @@ export async function listQuotationOptions(): Promise<QuotationOption[]> {
 }
 
 /**
- * One quote-line seed per `inquiry_items` row of an SM — used to pre-fill the
+ * One quote-line seed per `inquiry_items` row of an SM - used to pre-fill the
  * Quotation form's per-line editor when the SM is picked. Resolves the
  * tolerance/condition master ids → their display names via two aliased LEFT
  * JOINs (same row type as the grade alias, so aliasing is required), ordered by

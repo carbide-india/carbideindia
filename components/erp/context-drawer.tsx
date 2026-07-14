@@ -6,7 +6,7 @@ import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * ContextDrawer (ERP redesign — Phase 3).
+ * ContextDrawer (ERP redesign - Phase 3).
  *
  * The consolidated right-side slide-over (Sheet) that replaces the hand-rolled
  * quick-view popups. Built on Radix Dialog (same pattern as the command palette
@@ -134,7 +134,7 @@ export function ContextDrawer({
             </div>
           )}
 
-          {/* Body — lazy: only the active panel is rendered. */}
+          {/* Body - lazy: only the active panel is rendered. */}
           <div role="tabpanel" className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
             {activePanel?.content}
           </div>

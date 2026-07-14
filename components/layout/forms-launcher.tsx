@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 
 /**
- * FORMS launcher — replaces the Enquiries nav pill (Phase 3, Task 5).
+ * FORMS launcher - replaces the Enquiries nav pill (Phase 3, Task 5).
  *
  * A nav-pill-styled BUTTON (visually identical to MainNavPill) that opens a
  * drafting-sheet modal indexing every form in the sales pipeline: six live
@@ -65,14 +65,14 @@ const ACTIVE_CARDS: ActiveCard[] = [
   {
     name: "Enquiry",
     Icon: FileSearch,
-    desc: "Log a new sales enquiry — SM number auto-assigned.",
+    desc: "Log a new sales enquiry - SM number auto-assigned.",
     href: "/enquiries/new" as Route,
     registerHref: "/inquiries" as Route,
   },
   {
     name: "Client KYC",
     Icon: BadgeCheck,
-    desc: "Onboard a client — types, address, contact, meeting.",
+    desc: "Onboard a client - types, address, contact, meeting.",
     href: "/clients/new" as Route,
     registerHref: "/clients" as Route,
   },
@@ -86,7 +86,7 @@ const ACTIVE_CARDS: ActiveCard[] = [
   {
     name: "Quotation",
     Icon: FileText,
-    desc: "Build a quote from an SM — pricing, timeline, validity.",
+    desc: "Build a quote from an SM - pricing, timeline, validity.",
     href: "/quotations/new" as Route,
     registerHref: "/quotations" as Route,
   },
@@ -107,7 +107,7 @@ const ACTIVE_CARDS: ActiveCard[] = [
   {
     name: "Daily Meeting",
     Icon: UserCheck,
-    desc: "Log a client visit — sales, contact and outcome.",
+    desc: "Log a client visit - sales, contact and outcome.",
     href: "/meetings/new" as Route,
     registerHref: "/meetings" as Route,
   },
@@ -267,7 +267,7 @@ export function FormsLauncher({ variant }: { variant?: "drawer" }) {
             }
           `}</style>
 
-          {/* ── Sheet header — DWG eyebrow, title, subtitle ── */}
+          {/* ── Sheet header - DWG eyebrow, title, subtitle ── */}
           <div className="flex items-center gap-3">
             <span aria-hidden style={{ width: 28, height: 2, background: RED, display: "inline-block" }} />
             <span
@@ -300,7 +300,7 @@ export function FormsLauncher({ variant }: { variant?: "drawer" }) {
             Every entry lands in its register with an SM-linked trail.
           </Dialog.Description>
 
-          {/* ── Card grid — wide, 3 columns ── */}
+          {/* ── Card grid - wide, 3 columns ── */}
           <div className="mt-6 grid grid-cols-3 gap-4 max-lg:grid-cols-2 max-md:grid-cols-1">
             {ACTIVE_CARDS.map(({ name, Icon, desc, href, registerHref }, i) => (
               <div

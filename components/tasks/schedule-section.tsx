@@ -56,7 +56,7 @@ function formatDuration(start: Date | null, end: Date | null): string | null {
 
 /**
  * Google-Calendar-style scheduling block: all-day toggle, start/end, and a
- * faithful recurrence picker (see RecurrenceControl). Self-contained — the
+ * faithful recurrence picker (see RecurrenceControl). Self-contained - the
  * parent only supplies a ScheduleValue + onChange; no DB writes happen here.
  */
 export function ScheduleSection({ value, onChange }: Props) {
@@ -151,7 +151,7 @@ export function ScheduleSection({ value, onChange }: Props) {
         )}
       </div>
 
-      {/* Recurrence — Google-Calendar-faithful presets + Custom dialog. */}
+      {/* Recurrence - Google-Calendar-faithful presets + Custom dialog. */}
       <RecurrenceControl
         anchor={anchor}
         recurrence={value.recurrence}
@@ -160,7 +160,7 @@ export function ScheduleSection({ value, onChange }: Props) {
       />
 
       <p className="mt-4 font-semibold" style={{ fontSize: 13, color: "var(--color-ink-muted)", lineHeight: 1.5 }}>
-        Internal scheduling only — not yet synced to Google Calendar. Use the
+        Internal scheduling only - not yet synced to Google Calendar. Use the
         deadline (<strong>Due Date</strong>) above for the commitment; this block
         describes when the work happens and how it repeats.
       </p>

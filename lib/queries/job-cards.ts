@@ -37,7 +37,7 @@ export interface JobCardListItem {
   pressingTypeName: string | null;
   toleranceName: string | null;
   // Raw editable fields so a row click can re-hydrate the whole form (not just
-  // the snapshot text) — otherwise saving an edit could blank these.
+  // the snapshot text) - otherwise saving an edit could blank these.
   clientId: string | null;
   itemId: string | null;
   dispatchConditionId: string | null;
@@ -63,7 +63,7 @@ export interface JobCardListItem {
 
 /**
  * Job Card register list. `customerName` / `productCode` / `gradeName` are
- * resolved READ-THROUGH from the linked Client + Item (§2.4) — the job_cards
+ * resolved READ-THROUGH from the linked Client + Item (§2.4) - the job_cards
  * mirror columns for those are no longer read for display. The three job-card
  * master FKs (dispatch condition / pressing type / tolerance) resolve to their
  * names as before. `productName`/`gradeColour`/`diaSize`/`proposedSize` remain
@@ -131,7 +131,7 @@ export async function listJobCards(): Promise<JobCardListItem[]> {
     .orderBy(desc(jobCards.createdAt));
 }
 
-/** Full job-card row by id — for the detail/edit page. */
+/** Full job-card row by id - for the detail/edit page. */
 export async function getJobCard(id: string): Promise<JobCard | null> {
   const [row] = await db
     .select()
@@ -142,11 +142,11 @@ export async function getJobCard(id: string): Promise<JobCard | null> {
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
- * Job Card Workspace (ERP redesign — Phase 9b, §10)
+ * Job Card Workspace (ERP redesign - Phase 9b, §10)
  *
  * The split-workspace read model: the LEFT pane's job-execution facts come off
  * the `job_cards` row itself; the RIGHT pane's PRODUCT SUMMARY is resolved
- * LIVE from the linked Item (SSOT, via `resolveSpecsByItemId` — §2.4 read-
+ * LIVE from the linked Item (SSOT, via `resolveSpecsByItemId` - §2.4 read-
  * through) plus the exact Sales-Order line that spawned the job (customer +
  * ordered qty from `sales_order_items → sales_orders → clients`, never the
  * job-card mirror columns). "Previous job cards for this item" is the direct
@@ -180,7 +180,7 @@ export interface JobCardSibling {
 /**
  * Everything the Job Card Workspace renders. `card` is the raw editable row
  * (LEFT pane + edit round-trip); `spec` is the LIVE item-resolved product
- * summary (RIGHT pane) — `null` when the card has no `item_id`. Master NAMES for
+ * summary (RIGHT pane) - `null` when the card has no `item_id`. Master NAMES for
  * the job card's own three FKs (dispatch / pressing / tolerance) resolve here so
  * the LEFT pane shows labels not ids. `salesOrder` carries live customer + qty;
  * `siblings` is the item's other job cards; `itemGradeColour`/`itemShapeName`
@@ -377,7 +377,7 @@ export async function getJobCardPickerData(): Promise<JobCardPickerData> {
         .select({
           id: items.id,
           itemCode: items.itemCode,
-          // Provenance display-only "created-from" customer (origin column) —
+          // Provenance display-only "created-from" customer (origin column) -
           // shown purely as picker context, never queried for search/usage.
           customerName: items.originCustomerName,
           gradeName: grade.name,

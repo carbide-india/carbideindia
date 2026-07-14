@@ -1,7 +1,7 @@
 import type { NotificationKind } from "@/db/schema";
 
 /**
- * M4 Commit 3c — Web Push payload builder.
+ * M4 Commit 3c - Web Push payload builder.
  *
  * Mirrors the "actor + verb + subject" pattern used by the email arm so
  * the two channels stay editorially consistent.  The
@@ -9,7 +9,7 @@ import type { NotificationKind } from "@/db/schema";
  * `webpush.sendNotification`; the Service Worker (public/sw.js) re-parses
  * it and feeds the fields to `showNotification`.
  *
- * Keep the JSON under 4KB — that's the practical web-push payload ceiling
+ * Keep the JSON under 4KB - that's the practical web-push payload ceiling
  * for FCM/APNS gateways.  We don't currently approach it but the test
  * guards against future regressions.
  */
@@ -49,7 +49,7 @@ export function buildPushPayload(
 ): PushPayload {
   return {
     title: TITLES[kind](ctx.actorName),
-    body: ctx.body ? `${ctx.taskSubject} — ${ctx.body}` : ctx.taskSubject,
+    body: ctx.body ? `${ctx.taskSubject} - ${ctx.body}` : ctx.taskSubject,
     url: `/tasks/${ctx.taskId}`,
     tag: `task:${ctx.taskId}`,
     kind,

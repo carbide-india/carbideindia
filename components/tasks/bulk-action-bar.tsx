@@ -44,7 +44,7 @@ type BulkResult =
  * Floating toolbar shown when ≥1 task is selected in the list. Offers the
  * batch actions (status / priority / reassign, plus admin-only archive +
  * delete) over the current selection, then clears it. Permissions mirror the
- * single-task actions — the server re-checks regardless.
+ * single-task actions - the server re-checks regardless.
  */
 export function BulkActionBar({
   selectedIds,
@@ -73,7 +73,7 @@ export function BulkActionBar({
       fireToast({
         message:
           res.skipped > 0
-            ? `${verb} ${res.updated} task${res.updated === 1 ? "" : "s"} — ${res.skipped} skipped (no permission or no change).`
+            ? `${verb} ${res.updated} task${res.updated === 1 ? "" : "s"} - ${res.skipped} skipped (no permission or no change).`
             : `${verb} ${res.updated} task${res.updated === 1 ? "" : "s"}.`,
       });
       onClear();

@@ -21,12 +21,12 @@ export type TaskPermissionInput = {
 };
 
 /**
- * canEditTaskFields — Tier-3 (2026-05-20) widened per Manan's spec
+ * canEditTaskFields - Tier-3 (2026-05-20) widened per Manan's spec
  * ("Edit Task Option has to be given to all users at all levels").
  *
  * Anyone with a relationship to the task (creator / initiator / doer)
  * can edit its content fields while it's still in the pending lane.
- * Admins can edit at any status. Strangers — explicitly excluded —
+ * Admins can edit at any status. Strangers - explicitly excluded -
  * still can't, since they shouldn't even see the task.
  *
  * Admin-only fields (approval_status, revised_target_date) live on
@@ -60,10 +60,10 @@ function actorRoleFor(input: TaskPermissionInput): ActorRole {
 }
 
 /**
- * canApprove — Task 10 approval hierarchy.
+ * canApprove - Task 10 approval hierarchy.
  *
  * Approve (done → approved) is allowed iff the actor is admin, the
- * initiator, OR the doer's *direct* manager (doer.managerId === me.id) —
+ * initiator, OR the doer's *direct* manager (doer.managerId === me.id) -
  * and is NOT the doer themselves. Only valid while status === "done".
  * The direct-manager relationship is resolved by the caller and passed
  * in as `isDoersManager` (this module stays I/O-free).
@@ -82,7 +82,7 @@ export function canApprove(input: ApprovePermissionInput): boolean {
 }
 
 /**
- * canDecline — Task 10. Decline (done → not_approved) is open to any
+ * canDecline - Task 10. Decline (done → not_approved) is open to any
  * participant (creator / initiator / doer) or admin. No manager gate.
  * Only valid while status === "done".
  */
@@ -98,7 +98,7 @@ export function canDecline(input: TaskPermissionInput): boolean {
 }
 
 /**
- * canReassign — doer OR initiator OR admin, only in the pending lane.
+ * canReassign - doer OR initiator OR admin, only in the pending lane.
  * Spec line 229.  Reassignment never affects status by itself; the
  * "reset to not_started" option is a separate flag on the Server
  * Action.  We approximate the "non-terminal + not done" rule via the
@@ -108,7 +108,7 @@ export function canDecline(input: TaskPermissionInput): boolean {
 export function canReassign(input: TaskPermissionInput): boolean {
   const role = actorRoleFor(input);
   if (role === "stranger" || role === "creator") return false;
-  // Tier-3 — sourced from PENDING_STATUSES so new pending values (need_info,
+  // Tier-3 - sourced from PENDING_STATUSES so new pending values (need_info,
   // follow_up_1/2/3) allow reassignment for doer + initiator the same way
   // legacy pending statuses do.
   const isPending = (PENDING_STATUSES as readonly string[]).includes(
@@ -119,7 +119,7 @@ export function canReassign(input: TaskPermissionInput): boolean {
 }
 
 /**
- * canComment — any task participant (creator/initiator/doer) or admin,
+ * canComment - any task participant (creator/initiator/doer) or admin,
  * regardless of status.  Spec line 231 (audit read = task participants).
  * Strangers may not comment; that would leak the task's existence.
  */

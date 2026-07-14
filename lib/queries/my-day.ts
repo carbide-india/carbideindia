@@ -15,7 +15,7 @@ const TZ = "Asia/Kolkata";
 function istBoundaries(now: Date = new Date()): { start: Date; end: Date } {
   // Compute IST midnight + next-IST-midnight as UTC instants.
   const dayLabel = now.toLocaleDateString("en-CA", { timeZone: TZ }); // yyyy-mm-dd
-  // IST is UTC+5:30 with no DST — the literal-IST midnight = `<day>T00:00:00+05:30`.
+  // IST is UTC+5:30 with no DST - the literal-IST midnight = `<day>T00:00:00+05:30`.
   const start = new Date(`${dayLabel}T00:00:00+05:30`);
   const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
   return { start, end };
@@ -26,7 +26,7 @@ function istBoundaries(now: Date = new Date()): { start: Date; end: Date } {
  * the canonical PENDING_STATUSES set; "done today" means status='done'
  * AND completed_at falls within today's IST window.
  *
- * Cheap — three `count(*)` queries that all hit the existing
+ * Cheap - three `count(*)` queries that all hit the existing
  * (doer_id, archived, status) index family. No join.
  */
 export async function getMyDayCounts(userId: string): Promise<MyDayCounts> {

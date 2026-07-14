@@ -5,7 +5,7 @@ import { requireUser } from "@/lib/auth/current";
 export const runtime = "nodejs";
 
 /** Every business-card scan blob lives under this pathname prefix. (Not
- *  exported — route files may only export Next.js route fields; the form
+ *  exported - route files may only export Next.js route fields; the form
  *  hardcodes it.) */
 const BUSINESS_CARDS_PATHNAME_PREFIX = "business-cards/";
 
@@ -20,12 +20,12 @@ const ALLOWED_IMAGE_TYPES = new Set([
   "application/pdf",
 ]);
 
-/** 25 MB — phone-camera shots of a business card, not large document scans. */
+/** 25 MB - phone-camera shots of a business card, not large document scans. */
 const MAX_BUSINESS_CARD_BYTES = 25 * 1024 * 1024;
 
 /**
  * Token endpoint for client-direct business-card uploads (browser → Vercel
- * Blob) — same shape as /api/samples/upload, with a tighter contract:
+ * Blob) - same shape as /api/samples/upload, with a tighter contract:
  *
  *  - pathname must live under `business-cards/` (documents/avatars unreachable),
  *  - images only (jpeg/png/webp/heic), validated via clientPayload and pinned
@@ -60,7 +60,7 @@ export async function POST(request: Request): Promise<NextResponse> {
             const ct = (parsed as { contentType?: unknown } | null)?.contentType;
             if (typeof ct === "string") contentType = ct;
           } catch {
-            // Malformed payload — falls through to the allowlist rejection.
+            // Malformed payload - falls through to the allowlist rejection.
           }
         }
         if (!ALLOWED_IMAGE_TYPES.has(contentType)) {
@@ -75,7 +75,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       },
       onUploadCompleted: async ({ blob }) => {
         // No-op by design: the URL is persisted by createClientKyc /
-        // updateClientKyc. Observability only — never fires on localhost.
+        // updateClientKyc. Observability only - never fires on localhost.
         console.log("[business-cards] blob upload completed", blob.pathname);
       },
     });

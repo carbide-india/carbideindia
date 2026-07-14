@@ -35,7 +35,7 @@ export type ProductItemInput = z.input<typeof ProductItemSchema>;
 
 /**
  * Base field set shared by Create/Update. Kept as a plain `z.object` because
- * zod v4's `.refine()` result has no `.innerType()` — Create adds the
+ * zod v4's `.refine()` result has no `.innerType()` - Create adds the
  * clientMode refinement on top, Update derives a partial patch from here.
  */
 const InquiryFieldsSchema = z.object({
@@ -104,7 +104,7 @@ export const CreateInquirySchema = InquiryFieldsSchema.refine(
 export type CreateInquiryInput = z.infer<typeof CreateInquirySchema>;
 
 /**
- * Patch-shaped schema for edits — every field optional, unknown keys
+ * Patch-shaped schema for edits - every field optional, unknown keys
  * rejected, empty patches rejected. `quantityUom` is re-declared without its
  * default: otherwise `.partial()` would inject `"Nos"` into every patch and
  * an empty `{}` would sail past the nonempty refine.

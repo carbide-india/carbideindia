@@ -6,7 +6,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { Menu, X } from "lucide-react";
 
 /**
- * Tier-3 mobile fix — the public header hides the primary nav at
+ * Tier-3 mobile fix - the public header hides the primary nav at
  * `max-md:hidden` and previously left mobile users with no way to
  * navigate. This component is the missing piece: a cyan hamburger
  * button that opens a slide-in drawer containing the same MainNav
@@ -79,7 +79,7 @@ export function MobileMenu({ children }: { children: React.ReactNode }) {
               </button>
             </Dialog.Close>
           </div>
-          {/* Tapping any link inside fires this — pointerdown closes the
+          {/* Tapping any link inside fires this - pointerdown closes the
               drawer before next-router begins navigation, so the user
               sees a clean transition rather than menu-then-page-flash. */}
           <div

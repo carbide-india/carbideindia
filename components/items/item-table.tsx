@@ -57,7 +57,7 @@ const SORTS: { value: SortKey; label: string }[] = [
 ];
 
 /**
- * Product Master (Item Master) — a card grid. Each product is a self-contained,
+ * Product Master (Item Master) - a card grid. Each product is a self-contained,
  * glanceable card: the internal code as the hero, the decoded spec (shape /
  * grade / tolerance / condition / size) and dimensions on show, then customer &
  * product. A soft per-shape colour accent makes products read as distinct. No
@@ -136,7 +136,7 @@ export function ItemTable({ rows, isAdmin }: Props) {
 
   return (
     <>
-      {/* Page header — title, search (beside the title), and primary actions. */}
+      {/* Page header - title, search (beside the title), and primary actions. */}
       <header className="mb-5 flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-4">
           <h1 className="text-[26px] font-black leading-none tracking-tight text-[#3f3f94]">
@@ -168,7 +168,7 @@ export function ItemTable({ rows, isAdmin }: Props) {
               </button>
             )}
           </label>
-          {/* Sort — sits beside the search bar. */}
+          {/* Sort - sits beside the search bar. */}
           <label className="inline-flex items-center gap-2 text-[13px] text-ink-subtle">
             <ArrowUpDown size={14} strokeWidth={2.2} />
             <span className="font-semibold">Sort</span>
@@ -223,7 +223,7 @@ export function ItemTable({ rows, isAdmin }: Props) {
         >
           <p className="text-[15px] font-semibold text-ink-strong">
             {rows.length === 0
-              ? "No products yet — create the first one."
+              ? "No products yet - create the first one."
               : "No products match your search."}
           </p>
           <p className="mt-1.5 text-[13px] text-ink-subtle">
@@ -306,7 +306,7 @@ function ProductCard({
         {item.itemCode}
       </Link>
 
-      {/* Decoded spec — compact inline tiles: the label sits in front of the
+      {/* Decoded spec - compact inline tiles: the label sits in front of the
           value on a single line, so each attribute takes minimal height. */}
       {shownSpecs.length > 0 && (
         <dl className="mt-3 grid grid-cols-2 gap-1.5">
@@ -333,14 +333,14 @@ function ProductCard({
         </dl>
       )}
 
-      {/* Customer + product — compact inline rows (label in front of value). */}
+      {/* Customer + product - compact inline rows (label in front of value). */}
       <div className="mt-1.5 grid grid-cols-1 gap-1.5">
         <div className="flex items-baseline gap-2 rounded-md border border-hairline bg-surface-card px-2.5 py-1.5">
           <span className="shrink-0 text-[9.5px] font-bold uppercase tracking-[0.04em] text-ink-subtle">
             Customer
           </span>
           <span className="min-w-0 flex-1 text-[12.5px] font-semibold text-ink-strong break-words">
-            {item.customerName ?? "—"}
+            {item.customerName ?? "-"}
           </span>
         </div>
         <div className="flex items-baseline gap-2 rounded-md border border-hairline bg-surface-card px-2.5 py-1.5">
@@ -348,15 +348,15 @@ function ProductCard({
             Product
           </span>
           <span className="min-w-0 flex-1 text-[13px] font-bold text-ink-strong break-words">
-            {item.custProductName ?? "—"}
+            {item.custProductName ?? "-"}
           </span>
         </div>
       </div>
 
       {/* Meta footer. */}
       <div className="mt-4 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11.5px] font-medium text-ink-subtle">
-        <MetaChip>UoM {item.uom ?? "—"}</MetaChip>
-        <MetaChip>HSN {item.hsnCode ?? "—"}</MetaChip>
+        <MetaChip>UoM {item.uom ?? "-"}</MetaChip>
+        <MetaChip>HSN {item.hsnCode ?? "-"}</MetaChip>
         {item.partNo && <MetaChip>Part {item.partNo}</MetaChip>}
         {item.costingType && <MetaChip>{COSTING_TYPE_LABELS[item.costingType]}</MetaChip>}
         <span className="ml-auto tabular-nums">{formatDate(item.createdAt)}</span>

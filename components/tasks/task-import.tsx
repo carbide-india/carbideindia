@@ -38,7 +38,7 @@ const COLUMNS: { name: string; required: boolean }[] = [
 ];
 
 /**
- * Admin CSV/XLSX task importer — premium two-step flow. Upload → the server
+ * Admin CSV/XLSX task importer - premium two-step flow. Upload → the server
  * parses + validates every row (resolving Doer/Initiator by name or email) →
  * review a per-row preview with inline errors → commit. Parsing is server-side
  * so the spreadsheet lib never ships to the browser.
@@ -47,7 +47,7 @@ export function TaskImport({
   embedded = false,
   onSuccess,
 }: {
-  /** Rendered inside a dialog — drop the page chrome (back link, big hero). */
+  /** Rendered inside a dialog - drop the page chrome (back link, big hero). */
   embedded?: boolean;
   /** Called after a successful import instead of navigating to /tasks. */
   onSuccess?: () => void;
@@ -117,7 +117,7 @@ export function TaskImport({
 
   return (
     <div className={embedded ? "w-full" : "mx-auto w-full max-w-[1120px] px-6 max-md:px-4 py-8"}>
-      {/* Breadcrumb / back — page only */}
+      {/* Breadcrumb / back - page only */}
       {!embedded && (
         <button
           type="button"
@@ -129,12 +129,12 @@ export function TaskImport({
         </button>
       )}
 
-      {/* Hero — full hero on the page; in a dialog the dialog title covers it,
+      {/* Hero - full hero on the page; in a dialog the dialog title covers it,
           so we only keep the subtitle + Download template row. */}
       <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
         {embedded ? (
           <p className="text-ink-soft" style={{ fontSize: 14.5, maxWidth: "60ch" }}>
-            Upload a CSV or Excel file — each row becomes one task. Doer &amp;
+            Upload a CSV or Excel file - each row becomes one task. Doer &amp;
             Initiator are matched by employee name or email.
           </p>
         ) : (
@@ -153,7 +153,7 @@ export function TaskImport({
                 Import tasks
               </h1>
               <p className="mt-1.5 text-ink-soft" style={{ fontSize: 15, maxWidth: "60ch" }}>
-                Upload a CSV or Excel file — each row becomes one task. Doer &amp;
+                Upload a CSV or Excel file - each row becomes one task. Doer &amp;
                 Initiator are matched by employee name or email.
               </p>
             </div>
@@ -307,18 +307,18 @@ export function TaskImport({
                       }}
                     >
                       <td className="px-3.5 py-2.5 tabular-nums text-ink-subtle">{r.rowNumber}</td>
-                      <td className="px-3.5 py-2.5 text-ink-strong font-semibold whitespace-nowrap">{r.client || "—"}</td>
-                      <td className="px-3.5 py-2.5 text-ink-muted whitespace-nowrap">{r.subject || "—"}</td>
+                      <td className="px-3.5 py-2.5 text-ink-strong font-semibold whitespace-nowrap">{r.client || "-"}</td>
+                      <td className="px-3.5 py-2.5 text-ink-muted whitespace-nowrap">{r.subject || "-"}</td>
                       <td className="px-3.5 py-2.5 whitespace-nowrap">
                         <span className="inline-flex items-center gap-1.5">
                           <Users size={13} className="text-ink-subtle shrink-0" />
-                          {r.doerName || "—"}
+                          {r.doerName || "-"}
                         </span>
                       </td>
-                      <td className="px-3.5 py-2.5 whitespace-nowrap">{r.initiatorName || "—"}</td>
+                      <td className="px-3.5 py-2.5 whitespace-nowrap">{r.initiatorName || "-"}</td>
                       <td className="px-3.5 py-2.5 whitespace-nowrap">{r.priorityLabel}</td>
                       <td className="px-3.5 py-2.5 tabular-nums whitespace-nowrap">
-                        {r.dueAt ? r.dueAt.slice(0, 10) : r.dueRaw || "—"}
+                        {r.dueAt ? r.dueAt.slice(0, 10) : r.dueRaw || "-"}
                       </td>
                       <td className="px-3.5 py-2.5">
                         {r.ok ? (
@@ -346,7 +346,7 @@ export function TaskImport({
           <div className="mt-5 flex items-center justify-between gap-3 flex-wrap">
             <p className="text-[13px] text-ink-subtle">
               {preview.errorCount > 0
-                ? "Rows with errors are skipped — fix them in your file and re-upload to include them."
+                ? "Rows with errors are skipped - fix them in your file and re-upload to include them."
                 : "All rows look good."}
             </p>
             <div className="flex items-center gap-3 ml-auto">

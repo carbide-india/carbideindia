@@ -18,7 +18,7 @@ export interface ItemDocument {
 /**
  * All drawings/documents attached to an item, newest first, each carrying a
  * fresh presigned download URL. Mirrors `getClientDocuments`: one read-scoped
- * token issuance, then every row's URL is presigned locally — so N docs never
+ * token issuance, then every row's URL is presigned locally - so N docs never
  * become N HTTP round-trips. Presign failure degrades to downloadUrl:null.
  */
 export async function getItemDocuments(itemId: string): Promise<ItemDocument[]> {
@@ -42,7 +42,7 @@ export async function getItemDocuments(itemId: string): Promise<ItemDocument[]> 
   try {
     urlByPath = await getDocumentDownloadUrls(rows.map((r) => r.storagePath));
   } catch {
-    // presigning unavailable (e.g. missing BLOB_READ_WRITE_TOKEN) — degrade.
+    // presigning unavailable (e.g. missing BLOB_READ_WRITE_TOKEN) - degrade.
   }
 
   return rows.map((r) => ({

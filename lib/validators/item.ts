@@ -6,7 +6,7 @@ const OptText = (max: number) =>
 const Num = z.coerce.number().nonnegative().optional();
 
 /**
- * Create-an-Item input. Almost everything is optional — most descriptive
+ * Create-an-Item input. Almost everything is optional - most descriptive
  * fields auto-pull from the source enquiry, and the item code is generated
  * server-side from the classification + dimensions.
  */

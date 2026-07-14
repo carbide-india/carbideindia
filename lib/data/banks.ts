@@ -1,5 +1,5 @@
 /**
- * Bank names for the KYC Bank Details dropdown — Indian PSBs, RRBs, state
+ * Bank names for the KYC Bank Details dropdown - Indian PSBs, RRBs, state
  * cooperative banks, private, payments, small-finance + urban-cooperative
  * banks, foreign banks in India, and major international banks. Compiled via
  * research. India-first ordering. Account types are the standard Indian set.

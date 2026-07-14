@@ -13,7 +13,7 @@ interface Props {
 }
 
 /**
- * Free-form chip tag input — type a tag, press Enter or comma to commit;
+ * Free-form chip tag input - type a tag, press Enter or comma to commit;
  * Backspace on an empty field removes the last chip; blur commits a pending
  * draft. Self-contained (owns its draft state); the parent just holds the
  * `string[]`. Duplicates (case-insensitive) are ignored.

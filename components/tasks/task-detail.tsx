@@ -37,7 +37,7 @@ const PRIORITY_PILL: Record<
  */
 export function TaskDetail({ task }: { task: TaskDetailModel }) {
   const eyebrow = PRIORITY_PILL[task.priority];
-  // sir's changes #11 — the HERO is the task itself (its description = the
+  // sir's changes #11 - the HERO is the task itself (its description = the
   // work to do), not the client name. The form writes Client Name into both
   // `title` and `client`, so the client gets its own clearly-labelled field
   // below the hero instead of dominating as the headline.
@@ -52,7 +52,7 @@ export function TaskDetail({ task }: { task: TaskDetailModel }) {
 
   return (
     <article className="relative">
-      {/* Eyebrow row — overdue/due pill + created-ago text + subject chip.
+      {/* Eyebrow row - overdue/due pill + created-ago text + subject chip.
           Matches the design comp where small meta sits ABOVE the title. */}
       <div className="flex items-center gap-3 mb-5 flex-wrap">
         <DuePill dueAt={task.dueAt} overdue={overdue} />
@@ -84,7 +84,7 @@ export function TaskDetail({ task }: { task: TaskDetailModel }) {
         </span>
       </div>
 
-      {/* HEADLINE — the task itself (its description). The biggest element on
+      {/* HEADLINE - the task itself (its description). The biggest element on
           the page; serif, sized to stay legible whether it's a phrase or a
           paragraph. */}
       <h1
@@ -101,7 +101,7 @@ export function TaskDetail({ task }: { task: TaskDetailModel }) {
         {headline}
       </h1>
 
-      {/* CLIENT — prominent but clearly secondary to the task headline. */}
+      {/* CLIENT - prominent but clearly secondary to the task headline. */}
       {clientName && (
         <div className="mt-4">
           <span className="block text-[12px] uppercase tracking-[0.10em] text-ink-subtle font-bold">
@@ -116,7 +116,7 @@ export function TaskDetail({ task }: { task: TaskDetailModel }) {
         </div>
       )}
 
-      {/* Attribution strip — created-by / initiator → doer avatars */}
+      {/* Attribution strip - created-by / initiator → doer avatars */}
       <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-4">
         {task.creatorName && (
           <PersonChip
@@ -136,7 +136,7 @@ export function TaskDetail({ task }: { task: TaskDetailModel }) {
       {/* The task description is now the hero above (sir's changes #11), so it
           is no longer repeated here as body prose. */}
 
-      {/* Internal notes — boxed sub-card, distinct from the body. The
+      {/* Internal notes - boxed sub-card, distinct from the body. The
           design comp shows it as its own clear region with a labeled
           header inside the main task card. */}
       {task.notes && (
@@ -232,13 +232,13 @@ function RolePair({
 }) {
   return (
     <span className="inline-flex items-center gap-2.5">
-      <Avatar name={fromName ?? "?"} size={28} title={`${fromLabel}: ${fromName ?? "—"}`} />
+      <Avatar name={fromName ?? "?"} size={28} title={`${fromLabel}: ${fromName ?? "-"}`} />
       <span className="leading-tight">
         <span className="block text-[12px] uppercase tracking-[0.10em] text-ink-subtle font-bold">
           {fromLabel}
         </span>
         <span className="block text-ink-strong font-semibold mt-0.5" style={{ fontSize: 15.5 }}>
-          {fromName ?? "—"}
+          {fromName ?? "-"}
         </span>
       </span>
       <ArrowRight
@@ -246,13 +246,13 @@ function RolePair({
         strokeWidth={2.4}
         className="text-ink-subtle mx-1.5"
       />
-      <Avatar name={toName ?? "?"} size={28} title={`${toLabel}: ${toName ?? "—"}`} />
+      <Avatar name={toName ?? "?"} size={28} title={`${toLabel}: ${toName ?? "-"}`} />
       <span className="leading-tight">
         <span className="block text-[12px] uppercase tracking-[0.10em] text-ink-subtle font-bold">
           {toLabel}
         </span>
         <span className="block text-ink-strong font-semibold mt-0.5" style={{ fontSize: 15.5 }}>
-          {toName ?? "—"}
+          {toName ?? "-"}
         </span>
       </span>
     </span>

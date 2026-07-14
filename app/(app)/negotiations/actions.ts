@@ -22,7 +22,7 @@ import {
 } from "@/lib/validators/negotiation";
 
 /**
- * Negotiation server actions — Phase 4 write path. No audit logging (same
+ * Negotiation server actions - Phase 4 write path. No audit logging (same
  * deferred call as the sample/quotation actions).
  */
 
@@ -102,7 +102,7 @@ export async function createNegotiation(
     companyName: auto.companyName,
     enquiryDate: auto.enquiryDate,
     salesPersonId: auto.salesPersonId,
-    // per-line legacy mirror — sourced from line #1
+    // per-line legacy mirror - sourced from line #1
     custProductName: line0?.custProductName ?? v.custProductName ?? auto.productDescription,
     qty: line0?.qty ?? (v.qty != null ? String(v.qty) : auto.quantityNos),
     partNo: line0?.partNo ?? quote?.partNo ?? undefined,
@@ -131,7 +131,7 @@ export async function createNegotiation(
           .returning({ id: negotiations.id });
         if (!r) throw new Error("negotiations insert returned no row");
         if (lineRows.length) {
-          // Only the KEPT line columns — spec/customer-ask mirrors are dropped
+          // Only the KEPT line columns - spec/customer-ask mirrors are dropped
           // (migration 0036); spec reads through items via item_id.
           await tx
             .insert(negotiationItems)
@@ -158,7 +158,7 @@ export async function createNegotiation(
   }
   return {
     ok: false,
-    error: "Could not allocate a unique negotiation number — enter one manually.",
+    error: "Could not allocate a unique negotiation number - enter one manually.",
   };
 }
 
@@ -209,7 +209,7 @@ export async function syncProductsFromEnquiry(
     if (missing.length === 0) return { ok: true, added: 0 };
 
     const maxSort = existing.reduce((m, r) => Math.max(m, r.sortOrder), -1);
-    // Only the KEPT line columns — the spec/customer-ask mirror is dropped
+    // Only the KEPT line columns - the spec/customer-ask mirror is dropped
     // (migration 0036); it reads through items/inquiry_item downstream.
     const rows = missing.map((s, i) => ({
       negotiationId: recordId,
@@ -261,7 +261,7 @@ export async function updateNegotiation(
   }
 
   // Mirror line-#1 per-line subset into negotiation_items (sortOrder = 0). Only
-  // the KEPT transactional columns — the spec/customer-ask mirrors (custProductName,
+  // the KEPT transactional columns - the spec/customer-ask mirrors (custProductName,
   // partNo) are dropped (migration 0036) and read through items/inquiry_item.
   const LINE1_KEYS = [
     "qty",

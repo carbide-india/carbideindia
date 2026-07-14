@@ -32,7 +32,7 @@ export interface ImportField {
 export interface ImportSpec {
   formKey: string;
   title: string;
-  /** Module base path, e.g. "/inquiries" — button + import page live under it. */
+  /** Module base path, e.g. "/inquiries" - button + import page live under it. */
   basePath: string;
   fields: ImportField[];
 }

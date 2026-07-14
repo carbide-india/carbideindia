@@ -26,12 +26,12 @@ import {
 } from "@/lib/clients/kyc-write";
 
 /**
- * Client KYC server actions (Phase 3 — onboarding write path). Unlike the
- * admin roster actions these are open to any authenticated user — KYC is a
+ * Client KYC server actions (Phase 3 - onboarding write path). Unlike the
+ * admin roster actions these are open to any authenticated user - KYC is a
  * sales-floor form, mirroring how createInquiry already upserts clients.
  *
  * NOTE on audit logging: there is intentionally none here (same deferred
- * decision as the inquiry actions — settings_events is admin-scoped).
+ * decision as the inquiry actions - settings_events is admin-scoped).
  */
 
 type ActionResult =
@@ -48,7 +48,7 @@ function isUuid(v: string): boolean {
 /**
  * Drops keys whose value is `undefined`. The validators' OptionalText fields
  * fold `""` → `undefined`, so a "filled" form patch can legitimately arrive
- * as `{ field: undefined }` — which passes the nonempty refine but must not
+ * as `{ field: undefined }` - which passes the nonempty refine but must not
  * reach `.set()` (and an all-undefined patch must not reach the db at all).
  */
 function stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
@@ -57,7 +57,7 @@ function stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
   ) as Partial<T>;
 }
 
-/** `meetingDate` is a free string in the validator — guard before `new Date`. */
+/** `meetingDate` is a free string in the validator - guard before `new Date`. */
 function isParseableDate(s: string): boolean {
   return !Number.isNaN(new Date(s).getTime());
 }
@@ -139,7 +139,7 @@ function toContactColumns(v: {
 
 /**
  * Update-or-insert the client's PRIMARY contact inside the given tx. Insert
- * needs a firstName (NOT NULL) — a stray phone number with no name updates
+ * needs a firstName (NOT NULL) - a stray phone number with no name updates
  * an existing primary but never creates a nameless row.
  */
 async function upsertPrimaryContact(
@@ -178,7 +178,7 @@ export async function createClientKyc(
 
   // Hard dedup (ERP Phase 4): block a new client whose GSTIN/PAN already
   // belongs to another active client. The upsert-by-name path below may still
-  // match the SAME client by name; that's fine — this only guards a distinct
+  // match the SAME client by name; that's fine - this only guards a distinct
   // duplicate. (excludeId left unset: a brand-new client has no id yet.)
   const dup = await findActiveDuplicateClient({ gstin: v.gstin, panNo: v.panNo });
   if (dup && dup.name.toLowerCase() !== v.name.toLowerCase()) {
@@ -198,7 +198,7 @@ export async function createClientKyc(
         .where(sql`lower(${clients.name}) = ${v.name.toLowerCase()}`)
         .limit(1);
 
-      // Full KYC patch — captures the WHOLE onboarding form (addresses, bank,
+      // Full KYC patch - captures the WHOLE onboarding form (addresses, bank,
       // GST, PAN, MSME, credit, ship-to) via the shared writer helper so the
       // sales-floor path persists exactly what the admin Edit path does.
       const patch: Partial<typeof clients.$inferInsert> = {
@@ -207,7 +207,7 @@ export async function createClientKyc(
         updatedAt: new Date(),
       };
       // Onboarding-only columns the admin Edit form has no inputs for (so the
-      // shared writer omits them to avoid blanking them on admin saves) — the
+      // shared writer omits them to avoid blanking them on admin saves) - the
       // new-client KYC form DOES collect these, so persist when provided.
       if (v.export !== undefined) patch.export = v.export;
       if (v.currency !== undefined) patch.currency = v.currency;
@@ -235,7 +235,7 @@ export async function createClientKyc(
         await tx.update(clients).set(patch).where(eq(clients.id, id));
       } else if (addressRows !== undefined || bankRows !== undefined) {
         // For a fresh insert the mirror may have changed legacy columns after
-        // children were normalized — re-apply the patch to capture them.
+        // children were normalized - re-apply the patch to capture them.
         await tx.update(clients).set(patch).where(eq(clients.id, id));
       }
 

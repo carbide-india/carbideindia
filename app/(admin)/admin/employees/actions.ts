@@ -31,7 +31,7 @@ import { siteUrl } from "@/lib/site-url";
  * sign-in getCurrentEmployee() links the Clerk user to the employees
  * row by email and backfills clerk_user_id.
  *
- * `ignoreExisting` keeps re-invites idempotent — Clerk would otherwise
+ * `ignoreExisting` keeps re-invites idempotent - Clerk would otherwise
  * reject a second invitation for the same email while one is pending.
  */
 async function sendClerkInvitation(email: string): Promise<void> {
@@ -47,7 +47,7 @@ async function sendClerkInvitation(email: string): Promise<void> {
 /**
  * Best-effort revoke of any pending Clerk invitations addressed to `email`,
  * so the emailed invite link stops working once the employee is deactivated
- * or deleted before ever signing in. Failures are logged, never fatal —
+ * or deleted before ever signing in. Failures are logged, never fatal -
  * the DB is already the source of truth and an unrevoked invitation can't
  * link to a row that is inactive or gone.
  */
@@ -119,7 +119,7 @@ async function resolveDepartmentSelection(
 
 /**
  * Replace an employee's department memberships with `rows`, flagging
- * `primaryId` as primary.  Wipe-and-reinsert keeps the logic trivial — the
+ * `primaryId` as primary.  Wipe-and-reinsert keeps the logic trivial - the
  * roster is tiny and edits are rare.
  */
 async function writeMemberships(
@@ -153,7 +153,7 @@ export async function inviteEmployee(input: InviteEmployeeInput): Promise<{
 
   const parsed = InviteEmployeeSchema.parse(input);
 
-  // Case-insensitive dup check — historical imports may have mixed-case
+  // Case-insensitive dup check - historical imports may have mixed-case
   // emails even though new ones are normalized by Zod.
   const existing = await db.query.employees.findFirst({
     where: sql`lower(${employees.email}) = ${parsed.email}`,
@@ -172,7 +172,7 @@ export async function inviteEmployee(input: InviteEmployeeInput): Promise<{
   // 1. Insert employees row. clerk_user_id stays NULL until first sign-in:
   // getCurrentEmployee() links the Clerk user to this row by email.
   //
-  // The pre-check above is not race-safe — two admins inviting the same
+  // The pre-check above is not race-safe - two admins inviting the same
   // email at the same time both see "no existing row" and both reach this
   // point. The DB-side UNIQUE constraint on `employees.email` is the real
   // arbiter; we catch the violation here and translate Postgres error
@@ -211,7 +211,7 @@ export async function inviteEmployee(input: InviteEmployeeInput): Promise<{
   }
 
   // 2. Send the Clerk invitation email. We DON'T roll back the row if
-  //    this fails — the admin can re-send from the row's overflow menu.
+  //    this fails - the admin can re-send from the row's overflow menu.
   //    But we DO surface the failure to the caller via `warning`.
   let emailWarning: string | undefined;
   try {
@@ -259,7 +259,7 @@ export async function editEmployee(
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
 
-  // Self-demote guard — an admin can't strip their own admin role here.
+  // Self-demote guard - an admin can't strip their own admin role here.
   // (We don't block other field edits on self; just the role flag.)
   if (
     parsedId.data === me.id &&
@@ -273,7 +273,7 @@ export async function editEmployee(
   });
   if (!emp) return { ok: false, error: "Employee not found" };
 
-  // Build the patch — only include keys that were actually supplied.
+  // Build the patch - only include keys that were actually supplied.
   // (Zod's `.optional()` leaves omitted keys absent, so we can safely spread.)
   const patch: Partial<typeof employees.$inferInsert> = {};
   if (parsed.data.name !== undefined) patch.name = parsed.data.name;
@@ -306,7 +306,7 @@ export async function editEmployee(
     patch.managerId = parsed.data.managerId;
   }
 
-  // M4 — multi-channel fields.
+  // M4 - multi-channel fields.
   if (parsed.data.emailOptIn !== undefined) {
     patch.emailOptIn = parsed.data.emailOptIn;
   }
@@ -334,7 +334,7 @@ export async function editEmployee(
     }
   }
 
-  // NOTE: admin status is derived entirely from the employees row — no
+  // NOTE: admin status is derived entirely from the employees row - no
   // Clerk metadata is written when isAdmin changes.
 
   try {
@@ -514,15 +514,15 @@ export async function reactivateEmployee(
 //
 // Permanently removes the employees row, the Clerk user, and every row
 // that referenced them as doer/initiator/creator/actor. Audit history about
-// those tasks is destroyed by design — this is the GDPR right-to-erasure
+// those tasks is destroyed by design - this is the GDPR right-to-erasure
 // shape, NOT the deactivate flow. The deletion itself is logged to
 // settings_events under the *deleting admin's* actor_id so the act of
 // erasure is preserved even though the erased identity is gone.
 //
 // Order matters because the schema's RESTRICT FKs block several paths:
 //   1. settings_events.actor_id  (RESTRICT)
-//   2. employee_events.actor_id  (RESTRICT — employee_id cascades from step 5)
-//   3. task_events.actor_id      (RESTRICT — task_id cascades from step 4)
+//   2. employee_events.actor_id  (RESTRICT - employee_id cascades from step 5)
+//   3. task_events.actor_id      (RESTRICT - task_id cascades from step 4)
 //   4. tasks owned by them       (RESTRICT chain on doer / initiator / created_by)
 //   5. employees row             (cascades notifications, push_subs, their own
 //                                  lifecycle employee_events)
@@ -532,17 +532,17 @@ export async function reactivateEmployee(
 export interface EmployeeDeletionImpact {
   ok: boolean;
   error?: string;
-  /** Tasks where this employee is doer / initiator / creator — all deleted. */
+  /** Tasks where this employee is doer / initiator / creator - all deleted. */
   tasks: number;
-  /** task_events authored by this employee — deleted. */
+  /** task_events authored by this employee - deleted. */
   taskEventsAsActor: number;
-  /** employee_events lifecycle entries ABOUT them — cascaded. */
+  /** employee_events lifecycle entries ABOUT them - cascaded. */
   employeeEventsAboutThem: number;
-  /** employee_events authored by them — deleted. */
+  /** employee_events authored by them - deleted. */
   employeeEventsAsActor: number;
-  /** settings_events authored by them — deleted. */
+  /** settings_events authored by them - deleted. */
   settingsEventsAsActor: number;
-  /** Their own inbox notifications — cascaded. */
+  /** Their own inbox notifications - cascaded. */
   notifications: number;
 }
 
@@ -616,11 +616,11 @@ export async function getEmployeeDeletionImpact(
 
 /**
  * Hard-delete an employee and every row that depended on them. Requires the
- * admin to pass `confirmationEmail` exactly equal to the target's email —
+ * admin to pass `confirmationEmail` exactly equal to the target's email -
  * client-side belt + server-side suspenders for "I really mean it".
  *
  * Returns the destruction counts on success so the caller can surface a
- * confirmation toast ("Deleted Hetesh — 12 tasks, 47 events").
+ * confirmation toast ("Deleted Hetesh - 12 tasks, 47 events").
  */
 export async function deleteEmployee(
   employeeId: string,
@@ -674,20 +674,20 @@ export async function deleteEmployee(
 
   try {
     counts = await db.transaction(async (tx) => {
-      // 1. settings_events authored by them — RESTRICT, must precede employees.
+      // 1. settings_events authored by them - RESTRICT, must precede employees.
       const seDeleted = await tx
         .delete(settingsEvents)
         .where(eq(settingsEvents.actorId, id))
         .returning({ id: settingsEvents.id });
 
-      // 2. employee_events where they're the actor — RESTRICT. The lifecycle
+      // 2. employee_events where they're the actor - RESTRICT. The lifecycle
       //    entries ABOUT them (employee_id = id) cascade with step 5.
       const eeDeleted = await tx
         .delete(employeeEvents)
         .where(eq(employeeEvents.actorId, id))
         .returning({ id: employeeEvents.id });
 
-      // 3. task_events authored by them — RESTRICT. Events tied to tasks we
+      // 3. task_events authored by them - RESTRICT. Events tied to tasks we
       //    delete in step 4 cascade automatically (task_events.task_id is
       //    ON DELETE CASCADE), so this only catches events on OTHER tasks.
       const teDeleted = await tx
@@ -695,7 +695,7 @@ export async function deleteEmployee(
         .where(eq(taskEvents.actorId, id))
         .returning({ id: taskEvents.id });
 
-      // 4. tasks owned by them (RESTRICT chain) — cascades their remaining
+      // 4. tasks owned by them (RESTRICT chain) - cascades their remaining
       //    task_events and notifications-with-this-task_id.
       const tDeleted = await tx
         .delete(tasks)
@@ -725,10 +725,10 @@ export async function deleteEmployee(
     return { ok: false, error: `DB: ${err?.message ?? err}` };
   }
 
-  // 6. Clerk user. Best-effort — the DB is already consistent, so a
+  // 6. Clerk user. Best-effort - the DB is already consistent, so a
   //    Clerk failure leaves at most an orphan account that can no longer
   //    link to an employees row. Invited-but-never-joined employees have
-  //    no Clerk user yet, only a pending invitation — revoke it instead.
+  //    no Clerk user yet, only a pending invitation - revoke it instead.
   if (emp.joinedAt === null) {
     await revokePendingInvitations(snapshot.email, "deleteEmployee");
   }
@@ -738,7 +738,7 @@ export async function deleteEmployee(
       await client.users.deleteUser(snapshot.clerkUserId);
     } catch (err) {
       console.warn(
-        `[deleteEmployee] Clerk deleteUser(${snapshot.clerkUserId}) failed — clean up manually`,
+        `[deleteEmployee] Clerk deleteUser(${snapshot.clerkUserId}) failed - clean up manually`,
         err,
       );
     }

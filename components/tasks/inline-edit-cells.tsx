@@ -41,9 +41,9 @@ function dueColor(dueAt: Date | null, status: TaskStatus): { color: string; labe
 }
 
 function safeDate(value: Date | null, pattern: string): string {
-  if (!value) return "—";
+  if (!value) return "-";
   const d = value instanceof Date ? value : new Date(value as unknown as string);
-  return Number.isNaN(d.getTime()) ? "—" : format(d, pattern);
+  return Number.isNaN(d.getTime()) ? "-" : format(d, pattern);
 }
 function toYmd(value: Date | null): string {
   if (!value) return "";
@@ -80,7 +80,7 @@ export function InlineDoerCell({
       </span>
     </span>
   ) : (
-    <span className="text-ink-subtle">—</span>
+    <span className="text-ink-subtle">-</span>
   );
 
   if (!editable) return display;

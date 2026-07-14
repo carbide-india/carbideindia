@@ -20,7 +20,7 @@ const TitleSchema = z.string().trim().min(1, "Title is required").max(200, "Titl
 const DescSchema = z.string().trim().max(2000).optional();
 
 /**
- * Phase 3.5 — write an append-only audit row for every document mutation.
+ * Phase 3.5 - write an append-only audit row for every document mutation.
  * Swallow-and-warn so a logging failure never crashes the mutation that
  * already succeeded. `documentTitle` is snapshotted so a delete-event
  * still reads sensibly after the document row is gone.
@@ -50,7 +50,7 @@ async function logDocEvent(input: {
 /**
  * Loads a document and asserts the caller is allowed to mutate it.
  * Permission rule: uploader OR admin. The previous implementation only
- * checked `requireUser()` — any signed-in user could PATCH another
+ * checked `requireUser()` - any signed-in user could PATCH another
  * user's document by guessing the UUID.
  *
  * Returns the doc row on success, a Result-shaped error otherwise so
@@ -77,7 +77,7 @@ async function authorizeDocumentMutation(
  * attacker-controllable, so it gets fully re-validated below.
  */
 interface DocumentFileMeta {
-  /** Blob pathname returned by upload() — must live under `documents/`. */
+  /** Blob pathname returned by upload() - must live under `documents/`. */
   pathname: string;
   contentType: string | null;
   sizeBytes: number;
@@ -86,7 +86,7 @@ interface DocumentFileMeta {
 /**
  * Re-validates client-direct upload metadata. The upload token route already
  * constrained the real upload, but this action can be called with arbitrary
- * arguments — CRITICALLY the pathname must live under `documents/`, otherwise
+ * arguments - CRITICALLY the pathname must live under `documents/`, otherwise
  * a malicious client could register (and later delete, via deleteDocument's
  * blob cleanup) an `avatars/` blob it doesn't own.
  */
@@ -109,7 +109,7 @@ function validateFileMeta(meta: DocumentFileMeta): { ok: true } | { ok: false; e
 
 /**
  * Guards against registering a blob pathname that another document row
- * already points at — otherwise deleting the new row would delete the
+ * already points at - otherwise deleting the new row would delete the
  * other document's file out from under it (storage paths come from the
  * client now, so this is no longer guaranteed by construction).
  */
@@ -123,7 +123,7 @@ async function pathnameAlreadyRegistered(pathname: string): Promise<boolean> {
 /**
  * Registers the metadata row for a document the browser uploaded straight to
  * Vercel Blob (see /api/documents/upload). The file itself never passes
- * through the server — only this metadata does, which keeps us clear of
+ * through the server - only this metadata does, which keeps us clear of
  * Next's 1 MB action body limit and Vercel's ~4.5 MB function body cap.
  */
 export async function createDocumentRecord(input: {
@@ -309,11 +309,11 @@ export async function deleteDocument(id: string): Promise<Result> {
   if (limited) return limited;
   const auth = await authorizeDocumentMutation(id, me);
   // Distinguish "not there" from "forbidden" so the UI can show the
-  // right message — the prior code returned ok:true on missing rows,
+  // right message - the prior code returned ok:true on missing rows,
   // which silently masked permission denials.
   if (!auth.ok) return auth;
 
-  // Best-effort blob cleanup — the DB row is the source of truth.
+  // Best-effort blob cleanup - the DB row is the source of truth.
   await deleteBlob(auth.doc.storagePath).catch((err) => {
     console.warn("[documents] blob cleanup failed", err);
   });

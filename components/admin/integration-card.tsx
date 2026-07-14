@@ -53,7 +53,7 @@ export function IntegrationCard({ status }: { status: IntegrationStatus }) {
       <dl className="mt-4 space-y-1 text-sm">
         <div className="flex justify-between">
           <dt className="text-ink-subtle">Credential</dt>
-          <dd className="font-mono">{status.maskedKey ?? "—"}</dd>
+          <dd className="font-mono">{status.maskedKey ?? "-"}</dd>
         </div>
         <div className="flex justify-between">
           <dt className="text-ink-subtle">Last 24h success</dt>
@@ -64,7 +64,7 @@ export function IntegrationCard({ status }: { status: IntegrationStatus }) {
           <dd className="font-mono">
             {status.lastSuccessAt
               ? new Date(status.lastSuccessAt).toLocaleString()
-              : "—"}
+              : "-"}
           </dd>
         </div>
       </dl>

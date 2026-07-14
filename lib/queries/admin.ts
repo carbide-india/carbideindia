@@ -15,7 +15,7 @@ export interface AdminOverview {
 }
 
 export async function getAdminOverview(): Promise<AdminOverview> {
-  // Tier-3 — count every pending status (incl. new need_info / follow_up_1/2/3)
+  // Tier-3 - count every pending status (incl. new need_info / follow_up_1/2/3)
   // by sourcing from the canonical PENDING_STATUSES export.
   const pendingStatusList = PENDING_STATUSES as readonly TaskStatus[];
   const now = new Date();

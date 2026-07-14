@@ -9,7 +9,7 @@ import { listEmployeeOptions } from "@/lib/queries/employees";
 export const dynamic = "force-dynamic";
 
 /**
- * Enquiry Register — the SM-number register, now rendered inside the Enquiries
+ * Enquiry Register - the SM-number register, now rendered inside the Enquiries
  * module shell (sidebar + header) rather than the standalone WMS layout. The
  * advanced table owns search / filtering / sorting client-side, so the page
  * just loads the full register set and the employee options for the filters.

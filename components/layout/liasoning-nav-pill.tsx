@@ -42,7 +42,7 @@ export function LiasoningNavPill({ links }: Props) {
   const triggerRef = React.useRef<HTMLButtonElement>(null);
   const reduced = useReducedMotion();
 
-  // Mouse-parallax shift — matches MainNavPill's behavior so the new pill
+  // Mouse-parallax shift - matches MainNavPill's behavior so the new pill
   // feels alive next to its siblings.
   const onMove = (e: React.MouseEvent<HTMLButtonElement>) => {
     if (reduced) return;
@@ -153,7 +153,7 @@ function LiasoningCard({
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
-    // Ignore re-clicks while a launch is already in flight — keeps the user
+    // Ignore re-clicks while a launch is already in flight - keeps the user
     // from opening 2+ tabs by accident.
     if (timerRef.current !== null) return;
 
@@ -175,7 +175,7 @@ function LiasoningCard({
 
     timerRef.current = window.setTimeout(() => {
       timerRef.current = null;
-      // The anchor may already be unmounted by the time this fires — guard.
+      // The anchor may already be unmounted by the time this fires - guard.
       const stillMounted = ref.current;
       if (stillMounted) stillMounted.classList.remove("is-launching");
       onLaunched();

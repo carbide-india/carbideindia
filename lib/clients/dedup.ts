@@ -19,7 +19,7 @@ export interface DuplicateClient {
 /**
  * Hard dedup guard (ERP Phase 4 governance). Returns the first OTHER **active**
  * client whose normalized GSTIN or PAN matches a supplied value, or null. Used
- * to BLOCK a create/update — a master must be unique on its statutory id.
+ * to BLOCK a create/update - a master must be unique on its statutory id.
  * Inactive (deactivated) clients are ignored so a reactivation isn't blocked by
  * its own retired twin. Empty input → null (nothing to check).
  */

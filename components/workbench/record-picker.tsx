@@ -13,13 +13,13 @@ interface RecordPickerProps<T> {
   rows: T[];
   columns: WbColumn<T>[];
   getRowId: (row: T) => string;
-  /** Human label for a row — used for the implicit per-row Select button aria. */
+  /** Human label for a row - used for the implicit per-row Select button aria. */
   getRowLabel: (row: T) => string;
 }
 
 /**
- * Modal record picker built on WorkbenchTable. A row click — or its Select
- * button — calls `onSelect(row)` then `onClose()`. Closes on overlay click and
+ * Modal record picker built on WorkbenchTable. A row click - or its Select
+ * button - calls `onSelect(row)` then `onClose()`. Closes on overlay click and
  * Escape. Renders null when not open.
  */
 export function RecordPicker<T>({

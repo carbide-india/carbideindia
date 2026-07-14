@@ -92,7 +92,7 @@ function pluralize(n: number, one: string, many: string = `${one}s`) {
   return `${n} ${n === 1 ? one : many}`;
 }
 
-/** "12 Jun 2026" — compact, locale-stable, IST. */
+/** "12 Jun 2026" - compact, locale-stable, IST. */
 function fmtDate(d: Date | string | null): string {
   if (!d) return "";
   const date = typeof d === "string" ? new Date(d) : d;
@@ -124,7 +124,7 @@ interface Props {
 }
 
 /**
- * Projects workspace — a dramatic dark hero up top (mirrors the login
+ * Projects workspace - a dramatic dark hero up top (mirrors the login
  * page's red-glow drama) followed by a light workspace: sticky rail of
  * projects + a focused detail card with stat strip and editorial tree.
  *
@@ -135,7 +135,7 @@ interface Props {
 export function ProjectsWorkspace({ projects, activeId, employees }: Props) {
   const active = projects.find((p) => p.id === activeId) ?? null;
 
-  // Org-wide rollups for the hero stat-strip. Cheap — these structures are
+  // Org-wide rollups for the hero stat-strip. Cheap - these structures are
   // already in memory; cost is a few hundred function calls at most.
   const totalProjects = projects.length;
   const totalMilestones = projects.reduce(
@@ -267,10 +267,10 @@ function HeroHeader({
             }}
           >
             Project → Milestone → Result → Action → Sub-Action. Hierarchy
-            for ambitious work — link any task to the node it serves.
+            for ambitious work - link any task to the node it serves.
           </p>
 
-          {/* Org-wide stat strip — only meaningful when there's data */}
+          {/* Org-wide stat strip - only meaningful when there's data */}
           {totals.projects > 0 && (
             <div className="mt-7 flex flex-wrap items-center gap-x-7 gap-y-3">
               <HeroStat
@@ -511,7 +511,7 @@ function ProjectDetail({ project }: { project: ProjectTreeNode }) {
         animation: "fadeUp 700ms ease-out 300ms forwards",
       }}
     >
-      {/* Red accent strip across the top — ties the card visually to the
+      {/* Red accent strip across the top - ties the card visually to the
           hero band above. */}
       <div
         aria-hidden
@@ -544,12 +544,12 @@ function ProjectDetail({ project }: { project: ProjectTreeNode }) {
           <NodeMenu node={project} />
         </header>
 
-        {/* Project meta — owner, team, target date & notes, always visible. */}
+        {/* Project meta - owner, team, target date & notes, always visible. */}
         <div className="mb-9">
           <NodeDetailPanel node={project} variant="project" />
         </div>
 
-        {/* Stat strip — KPI-style mini tiles. Cohesive with the hero. */}
+        {/* Stat strip - KPI-style mini tiles. Cohesive with the hero. */}
         <div className="grid grid-cols-4 max-md:grid-cols-2 gap-3 mb-9">
           <StatTile
             icon={<Layers size={14} strokeWidth={2.2} />}
@@ -781,7 +781,7 @@ interface Dnd {
 /**
  * An ordered, drag-to-reorder list of sibling nodes. Reordering a node moves
  * its whole subtree with it (children stay attached), so dragging a milestone
- * down carries its results/actions — the cascade the brief asked for. Order is
+ * down carries its results/actions - the cascade the brief asked for. Order is
  * optimistic; `reorderProjectNodes` persists the new ranks, then a refresh
  * reconciles against the server's `sortOrder`.
  */
@@ -900,7 +900,7 @@ function TreeNode({
       onDragStart={(e) => {
         e.stopPropagation();
         e.dataTransfer.effectAllowed = "move";
-        // A drag image of the whole subtree looks messy — drag the row only.
+        // A drag image of the whole subtree looks messy - drag the row only.
         dnd.onDragStart();
       }}
       onDragEnd={(e) => {
@@ -986,7 +986,7 @@ function NodeRow({
 }) {
   return (
     <div className="group flex items-center gap-2.5 py-2 px-2.5 -mx-2.5 rounded-md transition-colors hover:bg-surface-soft">
-      {/* Drag handle — appears on hover, cursor signals grab. */}
+      {/* Drag handle - appears on hover, cursor signals grab. */}
       <span
         aria-hidden
         className="shrink-0 cursor-grab opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
@@ -996,7 +996,7 @@ function NodeRow({
         <GripVertical size={14} strokeWidth={2} />
       </span>
 
-      {/* Ordinal — the hierarchy number the brief asked for. */}
+      {/* Ordinal - the hierarchy number the brief asked for. */}
       <span
         className="shrink-0 tabular-nums text-right"
         style={{
@@ -1020,7 +1020,7 @@ function NodeRow({
 
       <EditableName node={node} typeStyle={typeStyle} depth={depth} />
 
-      {/* Assign-owner pill — interactive and always shown on every row, so any
+      {/* Assign-owner pill - interactive and always shown on every row, so any
           node (milestone, action, sub-action, ) can be assigned to a person
           directly without opening the details panel. */}
       <span className="shrink-0">
@@ -1061,7 +1061,7 @@ function NodeRow({
         </Link>
       )}
 
-      {/* Details toggle — team / target date / notes editor. Always visible
+      {/* Details toggle - team / target date / notes editor. Always visible
           and big enough to spot, so the extra controls are discoverable on
           every node. */}
       <button
@@ -1305,7 +1305,7 @@ function NodeMenu({
 /**
  * Two-step delete confirmation (#13.2). Step 1 spells out what's about to be
  * removed; step 2 makes the user type the node's name before the destructive
- * button enables — so a project (and its whole subtree) can't be deleted by a
+ * button enables - so a project (and its whole subtree) can't be deleted by a
  * single stray click. Linked tasks are unlinked, never deleted.
  */
 function DeleteNodeDialog({
@@ -1378,8 +1378,8 @@ function DeleteNodeDialog({
               </Dialog.Title>
               <Dialog.Description className="text-[14px] text-ink-subtle mt-1" style={{ lineHeight: 1.5 }}>
                 {step === 1
-                  ? "Step 1 of 2 — review what will be removed."
-                  : "Step 2 of 2 — confirm to finish."}
+                  ? "Step 1 of 2 - review what will be removed."
+                  : "Step 2 of 2 - confirm to finish."}
               </Dialog.Description>
             </div>
           </div>
@@ -1403,7 +1403,7 @@ function DeleteNodeDialog({
                       {descendants > 0 ? ` (${descendants} direct child${descendants === 1 ? "" : "ren"})` : ""}.
                     </li>
                   )}
-                  <li>• Linked tasks are <strong>kept</strong> — just unlinked from this project.</li>
+                  <li>• Linked tasks are <strong>kept</strong> - just unlinked from this project.</li>
                   <li>• This <strong>cannot be undone</strong>. Prefer Archive if unsure.</li>
                 </ul>
               </div>
@@ -1722,7 +1722,7 @@ function MembersPicker({ node }: { node: ProjectTreeNode }) {
               border: "1px solid color-mix(in srgb, var(--color-blue) 28%, transparent)",
             }}
           >
-            {m.name ?? "—"}
+            {m.name ?? "-"}
             <button
               type="button"
               onClick={() => toggle(m.id)}
@@ -2227,7 +2227,7 @@ function EmptyState() {
       </p>
       <p className="text-[14px] text-ink-subtle mt-3 max-w-sm mx-auto leading-relaxed">
         A project is the rough shape of an outcome. Break it down into
-        milestones, results, and concrete actions — then link tasks to any
+        milestones, results, and concrete actions - then link tasks to any
         node from the task's form.
       </p>
       <div className="mt-7 flex justify-center">

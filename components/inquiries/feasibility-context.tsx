@@ -7,7 +7,7 @@ import type { Inquiry } from "@/db/schema";
 import { CHECK_STATE_LABELS, type CheckState } from "@/db/enums";
 
 const dash = (v: string | null | undefined): React.ReactNode =>
-  v == null || v === "" ? <span className="text-ink-subtle">—</span> : v;
+  v == null || v === "" ? <span className="text-ink-subtle">-</span> : v;
 
 const ASSUMED_LABELS: Record<string, string> = {
   quantity: "Quantity",
@@ -18,7 +18,7 @@ const ASSUMED_LABELS: Record<string, string> = {
 };
 
 /**
- * Everything the enquiry captured for one product — rendered as a clean,
+ * Everything the enquiry captured for one product - rendered as a clean,
  * bordered specification table (identity / dimensions / grade-tolerance-
  * condition-quantity) so the feasibility check reads like a proper spec sheet.
  */
@@ -98,7 +98,7 @@ export function ProductFeasibilityContext({
         {docs.length ? (
           docs.map((d) => <Chip key={d} label={d} tone="blue" />)
         ) : (
-          <span className="text-[13px] text-ink-subtle">—</span>
+          <span className="text-[13px] text-ink-subtle">-</span>
         )}
         {assumedChips.length > 0 && (
           <>

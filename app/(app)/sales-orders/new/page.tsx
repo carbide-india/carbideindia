@@ -23,7 +23,7 @@ export default async function NewSalesOrderPage({ searchParams }: PageProps) {
   await requireUser();
   const sp = await searchParams;
   const draftParam = typeof sp.draft === "string" ? sp.draft : undefined;
-  // Phase 8 — when the Negotiation flag is ON, order_won auto-provisions the SO
+  // Phase 8 - when the Negotiation flag is ON, order_won auto-provisions the SO
   // via advanceStage; disable this standalone form to avoid a double-provision.
   // Flag OFF (default) ⇒ no-op, form renders as today.
   await enforcedNewGuard("negotiation", "/sales-orders");

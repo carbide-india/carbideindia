@@ -35,11 +35,11 @@ interface NavDef {
   ready: boolean;
   /** returns true when this item should show active for the given path */
   active?: (path: string) => boolean;
-  /** Section key — a greyed divider is drawn where this changes. */
+  /** Section key - a greyed divider is drawn where this changes. */
   group?: "overview" | "create" | "records" | "config";
 }
 
-// "Create New Form" opens the CURRENT form family's own new page — each form
+// "Create New Form" opens the CURRENT form family's own new page - each form
 // routes to itself (KYC on client routes, Sample on /samples, etc.), falling
 // back to New Enquiry.
 const NEW_FORM_ROUTES: Record<string, string> = {
@@ -52,7 +52,7 @@ const NEW_FORM_ROUTES: Record<string, string> = {
   meetings: "/meetings/new",
 };
 // The Contact Person Address Book lives under /contacts but belongs to the
-// Client (KYC) family — so its sidebar reads Client Master, not New Enquiry.
+// Client (KYC) family - so its sidebar reads Client Master, not New Enquiry.
 function familySeg(pathname: string): string {
   const seg = pathname.split("/")[1] ?? "";
   return seg === "contacts" ? "clients" : seg;
@@ -61,7 +61,7 @@ function newFormRoute(pathname: string): string {
   return NEW_FORM_ROUTES[familySeg(pathname)] ?? "/enquiries/new";
 }
 
-// The register/list page for the current form family — each form has its own.
+// The register/list page for the current form family - each form has its own.
 const REGISTERS: Record<string, { label: string; href: string }> = {
   clients: { label: "Client Master", href: "/clients" },
   samples: { label: "Sample Register", href: "/samples" },
@@ -75,7 +75,7 @@ function registerFor(pathname: string): { label: string; href: string } {
   return REGISTERS[familySeg(pathname)] ?? { label: "Enquiry Register", href: "/enquiries/register" };
 }
 
-// Sidebar nav for the module — context-aware: on client routes it reads as the
+// Sidebar nav for the module - context-aware: on client routes it reads as the
 // Client Master family, otherwise the Enquiry family.
 function navFor(pathname: string): NavDef[] {
   const newForm = newFormRoute(pathname);
@@ -83,7 +83,7 @@ function navFor(pathname: string): NavDef[] {
   // dedicated /enquiries/drafts. /contacts maps to the clients family.
   const draftKind = draftKindForSegment(familySeg(pathname));
   const draftsRoute = draftKind ? FORM_DRAFT_META[draftKind].draftsRoute : "/enquiries/drafts";
-  // Per-form Recycle Bin — only the generic-draft forms have one (enquiry uses
+  // Per-form Recycle Bin - only the generic-draft forms have one (enquiry uses
   // its own draft store without recycling).
   const recycleBinRoute = draftKind ? FORM_DRAFT_META[draftKind].recycleBinRoute : null;
   // "Create New Form" reads as the specific form (e.g. "Create New Enquiry").
@@ -128,7 +128,7 @@ function navFor(pathname: string): NavDef[] {
             !p.startsWith(`${reg.href}/custom`)),
       };
     })(),
-    // Contact Person Address Book — only in the Client KYC (clients) family.
+    // Contact Person Address Book - only in the Client KYC (clients) family.
     ...((familySeg(pathname) === "clients" || familySeg(pathname) === "contacts")
       ? ([
           {
@@ -141,7 +141,7 @@ function navFor(pathname: string): NavDef[] {
           },
         ] as NavDef[])
       : []),
-    // Recycle Bin — per form, next to that form's Drafts.
+    // Recycle Bin - per form, next to that form's Drafts.
     ...(recycleBinRoute
       ? ([
           {
@@ -155,7 +155,7 @@ function navFor(pathname: string): NavDef[] {
         ] as NavDef[])
       : []),
   ];
-  // Primary Feasibility launcher — enquiry family only (pick an SM to verify).
+  // Primary Feasibility launcher - enquiry family only (pick an SM to verify).
   const fam = familySeg(pathname);
   if (fam === "enquiries" || fam === "inquiries") {
     items.push({
@@ -197,7 +197,7 @@ export function EnquiryModuleShell({
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   // The header shows the current form MODULE name (e.g. "Client KYC") on every
-  // one of its sub-pages — Master, Drafts, Contact Book, Recycle Bin, Custom —
+  // one of its sub-pages - Master, Drafts, Contact Book, Recycle Bin, Custom -
   // so the top title never just repeats the page's own <h1> below it.
   const headerSeg = familySeg(pathname);
   const headerKind = draftKindForSegment(headerSeg);
@@ -218,9 +218,16 @@ export function EnquiryModuleShell({
     <div className="flex min-h-screen flex-col bg-[#f4f5f7]">
       {/* ── Top header bar (full width) ─────────────────────────── */}
       <header className="sticky top-0 z-40 flex h-[60px] shrink-0 items-center gap-4 border-b border-[#e5e7eb] bg-white px-4">
-        {/* Left zone — toggle, then the Back-to-Forms shortcut in the gap, then
-            the module title. */}
-        <div className="flex min-w-0 flex-1 items-center gap-3">
+        {/* Left zone - toggle, Back-to-Forms, Hub, then the module title. On
+            form pages it gets extra width + a right buffer so a long title like
+            "CLIENT KYC" never collides with the centred search; on the launchpad
+            (no sidebar) it stays tight so "FORMS" hugs the Hub button. */}
+        <div
+          className={cn(
+            "flex min-w-0 items-center gap-3",
+            showSidebar ? "flex-[1.4] pr-6" : "flex-1",
+          )}
+        >
           {showSidebar && (
             <button
               type="button"
@@ -259,13 +266,13 @@ export function EnquiryModuleShell({
             <LayoutGrid className="h-[19px] w-[19px]" strokeWidth={2.4} />
             Hub
           </Link>
-          <ModuleTitleBadge title={pageTitle} />
+          <ModuleTitleBadge title={pageTitle} align={showSidebar ? "center" : "start"} />
         </div>
 
-        {/* Middle zone — centered search. */}
+        {/* Middle zone - centered search. */}
         <HubSearch />
 
-        {/* Right zone — actions. */}
+        {/* Right zone - actions. */}
         <div className="flex flex-1 items-center justify-end gap-2.5">
           <Link
             href={"/inbox" as Route}
@@ -275,7 +282,7 @@ export function EnquiryModuleShell({
             <Bell className="h-[18px] w-[18px]" />
           </Link>
           <span
-            title="Help — coming soon"
+            title="Help - coming soon"
             className="grid h-9 w-9 cursor-default place-items-center rounded-full text-[#9aa0ab]"
           >
             <HelpCircle className="h-[18px] w-[18px]" />
@@ -286,7 +293,7 @@ export function EnquiryModuleShell({
 
       {/* ── Body: sidebar + main ────────────────────────────────── */}
       <div className="flex flex-1">
-        {/* Sidebar — slides in/out via the header toggle. The inner panel keeps
+        {/* Sidebar - slides in/out via the header toggle. The inner panel keeps
             a fixed width so its contents don't reflow while the width animates. */}
         {showSidebar && (
           <aside
@@ -369,7 +376,9 @@ export function EnquiryModuleShell({
         )}
 
         {/* Main */}
-        <main className="min-w-0 flex-1 px-8 py-8">{children}</main>
+        <main className={cn("min-w-0 flex-1 px-8", showSidebar ? "py-8" : "pb-8 pt-4")}>
+          {children}
+        </main>
       </div>
     </div>
   );

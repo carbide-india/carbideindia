@@ -28,7 +28,7 @@ import type { MasterOptionItem } from "@/lib/queries/masters";
 
 /** RHF holds the schema's *input* shape (pre-transform); zodResolver hands the
  *  parsed *output* (defaults applied, `""` folded to `undefined`) to the submit
- *  handler — which is exactly what createClientMeeting takes. */
+ *  handler - which is exactly what createClientMeeting takes. */
 export type MeetingFormValues = z.input<typeof CreateClientMeetingSchema>;
 type MeetingFormOutput = z.output<typeof CreateClientMeetingSchema>;
 
@@ -71,7 +71,7 @@ const SOURCE_OPTIONS = MEETING_SOURCES.map((s) => ({ value: s, label: s }));
 const OTHER_SOURCE = "Other";
 
 /**
- * New Daily Client Meeting form — four card sections (Sales Person / Meeting /
+ * New Daily Client Meeting form - four card sections (Sales Person / Meeting /
  * Client / Outcome). No selfie: the proof-of-visit gate was dropped, so submit
  * is enabled as soon as the required fields are valid.
  */
@@ -143,7 +143,7 @@ export function MeetingForm({
   const showSpecify = watchedPurpose === "other";
 
   /**
-   * A known client was picked — fetch its KYC snapshot and prefill the
+   * A known client was picked - fetch its KYC snapshot and prefill the
    * editable Client Type / Contact fields. Custom (unknown) companies skip
    * this entirely. A fetchSeq ref drops stale responses from rapid re-picks.
    */
@@ -185,7 +185,7 @@ export function MeetingForm({
         }
       }
     } catch {
-      // Network/fetch failure — leave the fields for manual entry, no toast
+      // Network/fetch failure - leave the fields for manual entry, no toast
       // (the company name is already set; prefill is a convenience).
     }
   }
@@ -209,7 +209,7 @@ export function MeetingForm({
           : "Meeting logged",
         type: "success",
       });
-      // Meeting saved — retire the draft so it leaves the Drafts inbox.
+      // Meeting saved - retire the draft so it leaves the Drafts inbox.
       if (draftsOn) await discard();
       if (res.id) router.push(`/meetings/${res.id}`);
       else router.push("/meetings");
@@ -227,7 +227,7 @@ export function MeetingForm({
       {/* ── 1 · Sales Person ─────────────────────────────────────────── */}
       <SectionCard
         title="Sales Person"
-        hint="Who met the client — prefilled from your profile."
+        hint="Who met the client - prefilled from your profile."
         inlineHint
       >
         <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
@@ -334,7 +334,7 @@ export function MeetingForm({
                       maxLength={80}
                       className="nt-input"
                       placeholder="Specify source"
-                      aria-label="Meeting source — specify"
+                      aria-label="Meeting source - specify"
                       value={field.value ?? ""}
                       onChange={(e) => field.onChange(e.target.value || undefined)}
                     />
@@ -364,10 +364,10 @@ export function MeetingForm({
                   <button
                     type="button"
                     disabled
-                    aria-label="Client type — no options"
+                    aria-label="Client type - no options"
                     className="nt-input flex w-full items-center text-left text-ink-subtle cursor-not-allowed opacity-60"
                   >
-                    No options — add in Admin → Masters
+                    No options - add in Admin → Masters
                   </button>
                 )
               }
@@ -409,7 +409,7 @@ export function MeetingForm({
                 allowCustom
                 placeholder="Select or type a company"
                 searchPlaceholder="Search companies"
-                emptyText="No matching client — type to add a new company."
+                emptyText="No matching client - type to add a new company."
                 ariaLabel="Company name"
                 invalid={Boolean(errors.companyName)}
               />

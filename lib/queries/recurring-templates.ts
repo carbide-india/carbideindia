@@ -17,13 +17,13 @@ export interface RecurringTemplateRow {
   /** Number of materialized children currently in the system (across
    *  the past + future). Surfaces "this template has spawned N tasks". */
   childCount: number;
-  /** Earliest future child due-date, if any — gives admins a sense of
+  /** Earliest future child due-date, if any - gives admins a sense of
    *  what's coming. */
   nextChildDueAt: Date | null;
 }
 
 /**
- * Phase 5.2 surface — list active recurring-template tasks (rule-holders)
+ * Phase 5.2 surface - list active recurring-template tasks (rule-holders)
  * with each one's child count + next scheduled child. Used by /admin/settings
  * Integrations tab so an admin can audit what's spawning.
  */
@@ -31,7 +31,7 @@ export async function listRecurringTemplates(): Promise<RecurringTemplateRow[]> 
   const doerEmp = sql.raw("doer_emp").mapWith(String);
   const initEmp = sql.raw("init_emp").mapWith(String);
   // Two-step approach: pick templates first, then count children +
-  // earliest-future-due in a second join — simpler than a 3-way self-join
+  // earliest-future-due in a second join - simpler than a 3-way self-join
   // in drizzle's builder.
   const templates = await db
     .select({

@@ -1,10 +1,10 @@
 /**
- * Stage derivation (ERP redesign — Phase 3, HARDENED in Phase 8).
+ * Stage derivation (ERP redesign - Phase 3, HARDENED in Phase 8).
  *
  * This module is the SOLE AUTHORITY for pipeline state (Canonical Decisions §):
  * the two distinctly-named public entry points are `itemFurthestStage` (the max
- * stage across an Item's where-used — for the Item lifecycle stepper) and
- * `smRollupStage` (the least-advanced active line — for the SM stepper). Every
+ * stage across an Item's where-used - for the Item lifecycle stepper) and
+ * `smRollupStage` (the least-advanced active line - for the SM stepper). Every
  * screen imports these; NO screen computes its own stage. The lower-level
  * `deriveItemStage` / `deriveSmStage` remain the stable, unit-tested cores these
  * two wrap.
@@ -82,12 +82,12 @@ export interface ItemStageSignals {
  * the highest one with a positive signal. A `draft` item is clamped to Enquiry
  * (index 0) because its spec is not yet complete enough to advance.
  *
- * Returns `0` (Enquiry) as the floor — an item always came from an enquiry.
+ * Returns `0` (Enquiry) as the floor - an item always came from an enquiry.
  */
 export function deriveItemStage(signals: ItemStageSignals): number {
   if (signals.status === "draft") return stageIndex("enquiry");
 
-  // Ordered [stage, reached?] — later entries win when truthy.
+  // Ordered [stage, reached?] - later entries win when truthy.
   const reached: ReadonlyArray<readonly [PipelineStage, boolean]> = [
     ["enquiry", (signals.inquiryCount ?? 0) > 0],
     ["feasibility", (signals.costingCount ?? 0) > 0],
@@ -157,7 +157,7 @@ export function deriveSmStage(signals: SmStageSignals): number {
   return furthest;
 }
 
-// ── Phase 8 — the two SOLE AUTHORITIES (distinctly named per §4.6) ───────────
+// ── Phase 8 - the two SOLE AUTHORITIES (distinctly named per §4.6) ───────────
 
 /** A resolved stage plus its index, the shape every stepper consumes. */
 export interface ResolvedStage {
@@ -172,7 +172,7 @@ function resolve(index: number): ResolvedStage {
 }
 
 /**
- * The FURTHEST stage any line referencing an Item has reached — the Item's
+ * The FURTHEST stage any line referencing an Item has reached - the Item's
  * lifecycle position (fan-out over where-used). Wraps {@link deriveItemStage};
  * this is the ONE function the Item lifecycle stepper reads (§4.6). Returns the
  * resolved stage + its index so callers never re-map.
@@ -182,7 +182,7 @@ export function itemFurthestStage(signals: ItemStageSignals): ResolvedStage {
 }
 
 /**
- * The SM roll-up stage — the least-advanced active line drives the SM stepper.
+ * The SM roll-up stage - the least-advanced active line drives the SM stepper.
  * When per-line signals are available, pass the per-line furthest indices in
  * `lineStages`; the roll-up is their MINIMUM (a multi-product SM is only as far
  * as its laggard line, §4.1). With no per-line detail it falls back to the

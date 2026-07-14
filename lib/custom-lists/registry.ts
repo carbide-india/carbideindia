@@ -1,18 +1,19 @@
 /**
- * Per-form "Custom" dropdown lists — the form-scoped option lists that live
+ * Per-form "Custom" dropdown lists - the form-scoped option lists that live
  * outside the shared Masters module. Each form family that has custom lists
  * declares them here; this registry drives BOTH the "Custom" editor UI and the
  * seed/fallback defaults used until an admin edits a list.
  *
  * Shared / cross-form lists (Customer Type, Industry Type, …) stay in the
- * Masters module — do NOT add those here.
+ * Masters module - do NOT add those here.
  *
- * No DB / server-only import — safe on client + server.
+ * No DB / server-only import - safe on client + server.
  */
 
 import { BANKS, ACCOUNT_TYPES } from "@/lib/data/banks";
 import { INDIAN_STATES } from "@/lib/data/geo";
 import { INDIA_STATES } from "@/lib/data/india-states-cities";
+import { SAMPLE_LOCATIONS, STAGE_LOCATIONS } from "@/db/enums";
 
 /** Convenience default cities for the enquiry City list (the form still merges
  *  these with the built-in per-state cities). */
@@ -136,15 +137,34 @@ export const CUSTOM_LISTS: Record<string, FormCustomListsDef> = {
       {
         key: "city",
         label: "City",
-        hint: "Extra cities — merged on top of the built-in per-state list.",
+        hint: "Extra cities - merged on top of the built-in per-state list.",
         defaults: [...MAJOR_CITIES],
+      },
+    ],
+  },
+  sample: {
+    formKey: "sample",
+    formLabel: "Sample Register",
+    editorRoute: "/samples/custom",
+    lists: [
+      {
+        key: "sample_location",
+        label: "Sample Location",
+        hint: "Where the physical sample is kept.",
+        defaults: [...SAMPLE_LOCATIONS],
+      },
+      {
+        key: "stage_location",
+        label: "Stage Location",
+        hint: "Lab / vendor list used on each tracking stage.",
+        defaults: [...STAGE_LOCATIONS],
       },
     ],
   },
 };
 
 /**
- * Editor grouping — the category each list sits under, and the section order.
+ * Editor grouping - the category each list sits under, and the section order.
  * Keeps the Custom Dropdown Master organised instead of one flat wall of cards.
  */
 export const CUSTOM_LIST_CATEGORIES: Record<
@@ -173,6 +193,13 @@ export const CUSTOM_LIST_CATEGORIES: Record<
       city: "Location",
     },
   },
+  sample: {
+    order: ["Location"],
+    of: {
+      sample_location: "Location",
+      stage_location: "Location",
+    },
+  },
 };
 
 /** The category a list belongs to (falls back to "Other"). */
@@ -197,7 +224,9 @@ export function customEditorForSegment(
       ? "kyc"
       : seg === "enquiries" || seg === "inquiries"
         ? "enquiry"
-        : null;
+        : seg === "samples"
+          ? "sample"
+          : null;
   if (!formKey) return null;
   const def = CUSTOM_LISTS[formKey];
   return def ? { route: def.editorRoute, formKey } : null;

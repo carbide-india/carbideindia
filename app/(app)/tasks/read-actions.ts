@@ -9,7 +9,7 @@ import { CACHE_TAGS } from "@/lib/cache-tags";
 /**
  * Mark a task as read (read-receipt) the first time anyone opens its detail
  * page. Sets first_read_at only when currently NULL, so repeat opens are a
- * cheap no-op. Best-effort: never throws to the caller — the detail page calls
+ * cheap no-op. Best-effort: never throws to the caller - the detail page calls
  * this fire-and-forget and must not be blocked or errored by it.
  *
  * Lives in its own file (not tasks/actions.ts) to stay isolated and avoid

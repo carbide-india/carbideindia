@@ -21,7 +21,7 @@ const PunchSchema = z
 
 /**
  * Record today's check-in or check-out. "Today" is the calendar day in the
- * employee's own timezone. One punch per kind per day — a duplicate returns
+ * employee's own timezone. One punch per kind per day - a duplicate returns
  * a friendly error instead of silently rewriting the log.
  */
 export async function punchAttendance(input: {

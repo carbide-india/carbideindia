@@ -20,7 +20,7 @@ interface PageProps {
 export default async function ArchivedPage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const me = await requireUser();
-  // Archiving is admin-only, so the archive view is too — a doer who types the
+  // Archiving is admin-only, so the archive view is too - a doer who types the
   // URL is sent back to their task list.
   if (!me.isAdmin) redirect("/tasks" as Route);
   // Non-admins default to "assigned to me" when no explicit ?emp= is set.

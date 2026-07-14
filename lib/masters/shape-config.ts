@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * Shape-driven dimension configuration (forms/masters redesign — Phase B).
+ * Shape-driven dimension configuration (forms/masters redesign - Phase B).
  *
  * A Shape master carries a `config` that says, for each of the five item
  * dimensions, whether it is required / optional / hidden. Forms read this to
@@ -36,7 +36,7 @@ export interface ShapeConfig {
   dims: Record<DimField, DimRule>;
 }
 
-/** Every-dimension-optional — the safe default (today's behavior). */
+/** Every-dimension-optional - the safe default (today's behavior). */
 export function defaultShapeConfig(): ShapeConfig {
   return {
     dims: {
@@ -67,7 +67,7 @@ export const ShapeConfigSchema = z.object({
 
 /**
  * Coerce an unknown stored `config` value into a usable ShapeConfig, falling
- * back to all-optional when null / malformed (never throws — masters predate
+ * back to all-optional when null / malformed (never throws - masters predate
  * the column and other kinds may store unrelated config later).
  */
 export function resolveShapeConfig(raw: unknown): ShapeConfig {
@@ -94,7 +94,7 @@ export function requiredDims(config: ShapeConfig): DimField[] {
  * The canonical family presets for Carbide's seeded shapes, matched by name.
  * Returns null for names with no known geometry (e.g. "Special", "Assembly")
  * so they keep the all-optional default. Variant suffix ("- Reg"/"- Spl") is
- * ignored — the geometry family drives the dimensions.
+ * ignored - the geometry family drives the dimensions.
  */
 export function presetForShapeName(name: string): ShapeConfig | null {
   const n = name.trim().toLowerCase();

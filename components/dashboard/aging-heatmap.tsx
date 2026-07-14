@@ -134,7 +134,7 @@ export function AgingHeatmap({
                 <span className="tabular-nums" style={{ color: "var(--color-ink-strong)" }}>
                   {totalAging}
                 </span>{" "}
-                pending {totalAging === 1 ? "task" : "tasks"} aging — click any lane to see them
+                pending {totalAging === 1 ? "task" : "tasks"} aging - click any lane to see them
               </p>
             </div>
             <SortControl value={sortMode} onChange={setSortMode} />
@@ -230,7 +230,7 @@ function AlertBanner({ count }: { count: number }) {
         </span>
         <span className="font-semibold" style={{ color: "var(--color-ink-soft)" }}>
           {" "}
-          {count === 1 ? "task is" : "tasks are"} aging more than 30 days —
+          {count === 1 ? "task is" : "tasks are"} aging more than 30 days -
           escalate or close
         </span>
       </p>
@@ -357,7 +357,7 @@ function Lane({
           router.push(target);
         }
       }}
-      // Tier-3 mobile fix — at 390px the 260+88+1fr+64+28 grid (≈624px min)
+      // Tier-3 mobile fix - at 390px the 260+88+1fr+64+28 grid (≈624px min)
       // overflows the section by ~250px. We collapse to a 2-row stacked
       // layout via `aging-lane-mobile` (set in globals.css) on `max-md`.
       className="aging-lane aging-lane-mobile grid items-center gap-4 px-3 py-3.5 rounded-chip transition-all max-md:gap-2 max-md:px-2 max-md:py-3"
@@ -370,7 +370,7 @@ function Lane({
         cursor: "pointer",
       }}
     >
-      {/* Employee — avatar + name */}
+      {/* Employee - avatar + name */}
       <div className="flex items-center gap-3 min-w-0">
         <EmployeeAvatar name={row.employeeName} size="md" />
         <span
@@ -430,7 +430,7 @@ function Lane({
         {row.total}
       </span>
 
-      {/* Chevron — telegraphs click target */}
+      {/* Chevron - telegraphs click target */}
       <span
         className="aging-lane-chevron inline-flex items-center justify-center"
         aria-hidden
@@ -559,14 +559,14 @@ function Segment({
             boxShadow:
               "0 24px 56px -16px rgba(15, 23, 42, 0.24), 0 8px 24px -8px rgba(15, 23, 42, 0.14)",
             // Fixed, bounded width so a long task title can never stretch the
-            // popover off-screen — titles wrap inside instead. Never exceeds
+            // popover off-screen - titles wrap inside instead. Never exceeds
             // the viewport minus the 12px collision gutter on each side.
             width: "min(420px, calc(100vw - 24px))",
             maxWidth: "calc(100vw - 24px)",
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header — coloured band with the bucket label */}
+          {/* Header - coloured band with the bucket label */}
           <div
             className="px-5 py-4 shrink-0"
             style={{
@@ -596,7 +596,7 @@ function Segment({
             </p>
           </div>
 
-          {/* Task list — each title wraps to 2 lines (with long URLs/emails
+          {/* Task list - each title wraps to 2 lines (with long URLs/emails
               broken) so nothing spills out of the popover. The list scrolls
               when there are many tasks. */}
           <ul className="flex flex-col flex-1 min-h-0 p-2 overflow-y-auto bg-surface-card">

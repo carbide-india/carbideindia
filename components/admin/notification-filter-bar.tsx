@@ -35,7 +35,7 @@ interface Props {
     failuresOnly: boolean;
     /** yyyy-mm-dd */
     from: string;
-    /** yyyy-mm-dd — written to ?dto= so it doesn't collide with the
+    /** yyyy-mm-dd - written to ?dto= so it doesn't collide with the
         `?to=` recipient param. */
     to: string;
   };
@@ -43,8 +43,8 @@ interface Props {
 
 /**
  * Sticky filter bar for /admin/notifications.  Visual + behavioural twin of
- * {@link components/admin/activity-filter-bar.tsx} — same glass header,
- * same chip vocabulary, same Reset / Apply buttons — but wired to the
+ * {@link components/admin/activity-filter-bar.tsx} - same glass header,
+ * same chip vocabulary, same Reset / Apply buttons - but wired to the
  * notification-specific params:
  *  - ?kind=<NotificationKind>,...
  *  - ?to=<userId>,...        (recipient filter; reuses inbox cursor name)
@@ -147,7 +147,7 @@ export function NotificationFilterBar({ employees, initial }: Props) {
           )}
         </span>
 
-        {/* Date range — two simple inputs, no popover */}
+        {/* Date range - two simple inputs, no popover */}
         <label className="filter-chip">
           <Calendar size={16} className="text-ink-subtle" strokeWidth={2} />
           <span className="text-[12px] uppercase tracking-wide text-ink-subtle">
@@ -197,7 +197,7 @@ export function NotificationFilterBar({ employees, initial }: Props) {
           />
         </div>
 
-        {/* Failures-only toggle — styled like a filter-chip so the bar
+        {/* Failures-only toggle - styled like a filter-chip so the bar
             keeps its tactile rhythm.  Click anywhere on the chip flips
             the hidden checkbox; the chip tints red when active. */}
         <label

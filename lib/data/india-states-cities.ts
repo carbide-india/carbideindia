@@ -1,6 +1,6 @@
 /**
  * India: all 28 states + 8 union territories with their major cities and
- * towns (capitals first, then district headquarters + notable towns —
+ * towns (capitals first, then district headquarters + notable towns -
  * ~1,500 entries). Drives the Enquiry form's dependent State → City
  * dropdowns when Country = India.
  *

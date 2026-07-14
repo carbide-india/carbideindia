@@ -16,7 +16,48 @@ function revalidateFor(formKey: string): void {
   if (formKey === "kyc") {
     revalidatePath("/clients/new");
     revalidatePath("/clients");
+  } else if (formKey === "enquiry") {
+    revalidatePath("/enquiries/new");
+  } else if (formKey === "sample") {
+    revalidatePath("/samples/new");
   }
+}
+
+/** Add many options at once (one per line, paste-friendly). Trims, dedupes
+ *  within the input, and skips values that already exist. */
+export async function addCustomOptionsBulk(
+  formKey: string,
+  listKey: string,
+  labelsRaw: string[],
+): Promise<{ ok: true; added: number } | { ok: false; error: string }> {
+  await requireUser();
+  if (!isKnownCustomList(formKey, listKey)) return { ok: false, error: "Unknown list." };
+  const seen = new Set<string>();
+  const labels: string[] = [];
+  for (const raw of labelsRaw) {
+    const label = raw.trim();
+    if (!label || label.length > 200) continue;
+    const key = label.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    labels.push(label);
+  }
+  if (labels.length === 0) return { ok: false, error: "Paste at least one value." };
+  try {
+    const [row] = await db
+      .select({ maxSort: sql<number>`coalesce(max(${formCustomOptions.sortOrder}), 0)` })
+      .from(formCustomOptions)
+      .where(
+        and(eq(formCustomOptions.formKey, formKey), eq(formCustomOptions.listKey, listKey)),
+      );
+    let sort = row?.maxSort ?? 0;
+    const values = labels.map((label) => ({ formKey, listKey, label, sortOrder: ++sort }));
+    await db.insert(formCustomOptions).values(values).onConflictDoNothing();
+  } catch {
+    return { ok: false, error: "Couldn't save - has migration 0047 been applied?" };
+  }
+  revalidateFor(formKey);
+  return { ok: true, added: labels.length };
 }
 
 export async function addCustomOption(
@@ -41,7 +82,7 @@ export async function addCustomOption(
       .values({ formKey, listKey, label, sortOrder: (row?.maxSort ?? 0) + 1 })
       .onConflictDoNothing(); // unique (formKey, listKey, lower(label))
   } catch {
-    return { ok: false, error: "Couldn't save — has migration 0047 been applied?" };
+    return { ok: false, error: "Couldn't save - has migration 0047 been applied?" };
   }
   revalidateFor(formKey);
   return { ok: true };
@@ -161,7 +202,7 @@ export async function seedCustomListDefaults(
       )
       .onConflictDoNothing();
   } catch {
-    return { ok: false, error: "Couldn't import — has migration 0047 been applied?" };
+    return { ok: false, error: "Couldn't import - has migration 0047 been applied?" };
   }
   revalidateFor(formKey);
   return { ok: true };

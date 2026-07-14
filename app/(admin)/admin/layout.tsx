@@ -7,7 +7,7 @@ import { getOrgSettings } from "@/lib/queries/org-settings";
 import { IdleTimerClient } from "@/components/auth/idle-timer-client";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-  // Admin-only gate — kept exactly as before.
+  // Admin-only gate - kept exactly as before.
   await requireAdmin();
   const settings = await getOrgSettings();
   return (

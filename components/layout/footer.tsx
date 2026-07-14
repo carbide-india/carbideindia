@@ -25,7 +25,7 @@ export function DashboardFooter() {
           className="mt-3 text-xs"
           style={{ color: "rgba(255, 255, 255, 0.55)" }}
         >
-          © Carbide India 2025–2035 · All rights reserved
+          © Carbide India 2025-2035 · All rights reserved
         </p>
       </div>
     </footer>

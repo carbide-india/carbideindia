@@ -42,7 +42,7 @@ interface Props {
     tags: string[] | null;
     approvalStatus: ApprovalStatus | null;
     revisedTargetDate: Date | null;
-    // Tier-4 (2026-05-20) — GCal-style scheduling.
+    // Tier-4 (2026-05-20) - GCal-style scheduling.
     startsAt: Date | null;
     endsAt: Date | null;
     allDay: boolean;
@@ -50,7 +50,7 @@ interface Props {
     recurrenceRule: string | null;
     projectNodeId: string | null;
   };
-  /** Used for the optimistic-lock — must be the row's current updated_at. */
+  /** Used for the optimistic-lock - must be the row's current updated_at. */
   expectedUpdatedAt: string;
   /** Admin-only fields (approval status + revised target date) gated on this. */
   isAdmin: boolean;
@@ -160,7 +160,7 @@ export function TaskEditForm({
 
   const [error, setError] = useState<string | null>(null);
 
-  // Focus state per field — drives the underline animation.
+  // Focus state per field - drives the underline animation.
   const [fTitle, setFTitle] = useState(false);
   const [fPrio, setFPrio] = useState(false);
   const [fDue, setFDue] = useState(false);
@@ -211,7 +211,7 @@ export function TaskEditForm({
           priority,
           dueAt: dueIso,
           tags: finalTags.length > 0 ? finalTags : null,
-          // Tier-4 — scheduling fields. Ship the ISO string or null.
+          // Tier-4 - scheduling fields. Ship the ISO string or null.
           startsAt: schedule.startsAt ? schedule.startsAt.toISOString() : null,
           endsAt: schedule.endsAt ? schedule.endsAt.toISOString() : null,
           allDay: schedule.allDay,
@@ -396,7 +396,7 @@ export function TaskEditForm({
         )}
       </FieldShell>
 
-      {/* Tags — comma/Enter to commit a chip; click X to remove. */}
+      {/* Tags - comma/Enter to commit a chip; click X to remove. */}
       <FieldShell
         label={`Tags${tags.length > 0 ? ` · ${tags.length}` : ""}`}
         htmlFor="te-tags"
@@ -471,7 +471,7 @@ export function TaskEditForm({
         )}
       </FieldShell>
 
-      {/* Project link — connect this task to a Project / Milestone / Result. */}
+      {/* Project link - connect this task to a Project / Milestone / Result. */}
       {projectNodes.length > 0 && (
         <FieldShell label="Project" htmlFor="te-project" focused={false} setFocused={() => {}}>
           {(p) => (
@@ -490,7 +490,7 @@ export function TaskEditForm({
         </FieldShell>
       )}
 
-      {/* Schedule — GCal-style start/end + recurrence. Internal only. */}
+      {/* Schedule - GCal-style start/end + recurrence. Internal only. */}
       <ScheduleSection value={schedule} onChange={setSchedule} />
 
       {isAdmin && (

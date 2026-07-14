@@ -3,7 +3,7 @@
 import { Toaster } from "sonner";
 
 /**
- * App-wide toast surface (premium, accessible, stacked) — backed by sonner.
+ * App-wide toast surface (premium, accessible, stacked) - backed by sonner.
  * Replaces the old custom event-bus ToastHost. Brand-styled: bottom-right,
  * rich success/error colours, a close button, and rounded cards that match
  * the app's surfaces.

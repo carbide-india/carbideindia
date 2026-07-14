@@ -25,7 +25,7 @@ import type { MaterialHit } from "@/lib/queries/item-search";
 import type { MasterOptionItem } from "@/lib/queries/masters";
 
 /**
- * Product Picker — SAP-style Material Search (ERP redesign — Phase 9a, §7).
+ * Product Picker - SAP-style Material Search (ERP redesign - Phase 9a, §7).
  *
  * The primary way to add a product to an enquiry line: you never TYPE a product,
  * you FIND the material. Searches existing Items by code / part / dims / grade /
@@ -35,7 +35,7 @@ import type { MasterOptionItem } from "@/lib/queries/masters";
  *
  * If nothing matches, a "Create new material" affordance opens the shape-driven
  * mini-form (required dims computed live from the shape config), runs a live
- * dedup check, and saves via the SHARED createItem path — then auto-selects the
+ * dedup check, and saves via the SHARED createItem path - then auto-selects the
  * returned item and returns control, zero navigation away.
  */
 
@@ -98,7 +98,7 @@ export function ProductPicker({
     setCreating(false);
     setQuery("");
     fireToast({
-      message: `${reused ? "Existing material attached" : "Material created"} — ${prefill.itemCode}`,
+      message: `${reused ? "Existing material attached" : "Material created"} - ${prefill.itemCode}`,
       type: "success",
     });
   }
@@ -376,7 +376,7 @@ function CreateMaterialSheet({
     });
     setSaving(false);
     if (res.ok) onCreated(res.prefill, res.reused);
-    else fireToast({ message: `Could not create material — ${res.error}`, type: "error" });
+    else fireToast({ message: `Could not create material - ${res.error}`, type: "error" });
   }
 
   return (

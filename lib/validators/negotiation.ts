@@ -33,7 +33,7 @@ export const NegotiationLineSchema = z.object({
 export type NegotiationLineInput = z.input<typeof NegotiationLineSchema>;
 
 /**
- * Base field set shared by Create/Update — base-object + derive pattern
+ * Base field set shared by Create/Update - base-object + derive pattern
  * (zod v4 has no `.innerType()`). inquiryId required; quotationId optional
  * link (autofills price/timeline); negotiationNo is the auto-number fallback.
  */
@@ -41,7 +41,7 @@ const NegotiationFieldsSchema = z.object({
   inquiryId: z.string().uuid(),
   quotationId: z.string().uuid().optional(),
   negotiationNo: OptionalText(60), // blank → auto-derived `<SM>-N01`
-  // Product (editable snapshot from the SM — form value wins over autofetch)
+  // Product (editable snapshot from the SM - form value wins over autofetch)
   custProductName: OptionalText(300),
   qty: Qty,
   partNo: OptionalText(120),

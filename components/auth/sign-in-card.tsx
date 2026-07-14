@@ -25,7 +25,7 @@ function clerkErrorMessage(err: unknown): string {
 }
 
 /**
- * Custom sign-in card on Clerk's headless API — drafting-sheet styling the
+ * Custom sign-in card on Clerk's headless API - drafting-sheet styling the
  * prebuilt widget can't do (numbered mono field labels, registration marks).
  * Email + password only; FORGOT? runs Clerk's reset-password-email-code flow
  * in the same card (send code → code + new password).
@@ -60,7 +60,7 @@ export function SignInCard() {
         setError(clerkErrorMessage(pwError));
         return;
       }
-      // password() succeeded — try to activate the session. finalize()
+      // password() succeeded - try to activate the session. finalize()
       // THROWS (not a returned error) when no session exists yet, which is
       // what Client Trust looks like: the password was right but the new
       // browser must be verified by email code first.
@@ -79,7 +79,7 @@ export function SignInCard() {
       try {
         const { error: mfaError } = await signIn.mfa.sendEmailCode();
         if (!mfaError) {
-          setNotice(`New device — we emailed a verification code to ${email.trim()}.`);
+          setNotice(`New device - we emailed a verification code to ${email.trim()}.`);
           setCode("");
           setMode("trust");
           return;
@@ -187,7 +187,7 @@ export function SignInCard() {
 
   return (
     <div className="relative">
-      {/* Registration marks — red crop corners, like a print sheet. */}
+      {/* Registration marks - red crop corners, like a print sheet. */}
       {(
         [
           { top: -1, left: -1, bt: true, bl: true },

@@ -69,7 +69,7 @@ export async function TaskDetailLoader({ taskId, me }: Props) {
 
   // Workflow-gated visibility for Approve/Decline. The matrix lets admins
   // jump from any status to "approved" via override, which surfaces those
-  // cards on a "Not Started" task — misleading. Restrict the CTA to the
+  // cards on a "Not Started" task - misleading. Restrict the CTA to the
   // moment it's meaningful (doer has marked work done). Admins keep the
   // override at the server level if they ever need to force a verdict.
   const isDoersManager = !!task.doerManagerId && task.doerManagerId === me.id;

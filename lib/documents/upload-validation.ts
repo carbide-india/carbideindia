@@ -1,12 +1,12 @@
 /**
  * Shared validation for document-library uploads. Imported from three places:
  *  - the client uploader (fast pre-checks before any network call),
- *  - /api/documents/upload (handleUpload token generation — the security
+ *  - /api/documents/upload (handleUpload token generation - the security
  *    boundary that constrains what the browser may put into Blob storage),
  *  - the documents server actions (re-validation of client-supplied metadata
  *    before the DB row is written).
  *
- * Must stay free of server-only imports — the client bundle includes it.
+ * Must stay free of server-only imports - the client bundle includes it.
  */
 
 /** UI promise: documents up to 25 MB. Enforced in the upload token AND re-checked in the actions. */
@@ -17,7 +17,7 @@ export const DOCUMENTS_PATHNAME_PREFIX = "documents/";
 
 /**
  * Server-side guard against the obvious dangerous uploads. The client
- * passes `file.type` verbatim, which a malicious caller can spoof —
+ * passes `file.type` verbatim, which a malicious caller can spoof -
  * but it's still useful as a coarse first filter, paired with an
  * extension deny-list on the filename (which is harder to lie about
  * without it looking suspicious to a human admin reviewing later).
@@ -46,7 +46,7 @@ export function safeDocumentName(name: string): string {
 
 /**
  * Denylist check shared by the client pre-check, the upload-token route and
- * the metadata actions. `name` may be a bare filename or a blob pathname —
+ * the metadata actions. `name` may be a bare filename or a blob pathname -
  * the extension regex anchors on the end either way.
  */
 export function validateDocumentFileShape(input: {

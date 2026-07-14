@@ -22,7 +22,7 @@ function DepartmentCell({
   memberships: EmployeeDepartmentMembership[];
 }) {
   if (memberships.length === 0) {
-    return <span className="text-ink-subtle">—</span>;
+    return <span className="text-ink-subtle">-</span>;
   }
   const ordered = [...memberships].sort(
     (a, b) => Number(b.isPrimary) - Number(a.isPrimary) || a.name.localeCompare(b.name),
@@ -70,7 +70,7 @@ function RoleChip({ role }: { role: "doer" | "initiator" | "both" }) {
 
 function AdminCell({ isAdmin }: { isAdmin: boolean }) {
   if (!isAdmin) {
-    return <span className="text-ink-subtle" aria-label="Not an admin">—</span>;
+    return <span className="text-ink-subtle" aria-label="Not an admin">-</span>;
   }
   return (
     <span
@@ -186,7 +186,7 @@ export function EmployeeList({
           No employees yet
         </p>
         <p className="text-[14px] text-ink-subtle mt-2 max-w-sm mx-auto" style={{ lineHeight: 1.5 }}>
-          Invite your first teammate with the button above — they'll get a
+          Invite your first teammate with the button above - they'll get a
           signed link to set their password.
         </p>
       </div>
@@ -265,7 +265,7 @@ export function EmployeeList({
                   </td>
                   <td className="px-5 py-4 text-ink-soft max-w-[32ch] truncate" title={e.email}>{e.email}</td>
                   <td className="px-5 py-4 text-ink-soft max-w-[24ch] truncate" title={e.designation ?? undefined}>
-                    {e.designation ?? <span className="text-ink-subtle">—</span>}
+                    {e.designation ?? <span className="text-ink-subtle">-</span>}
                   </td>
                   <td className="px-5 py-4">
                     <RoleChip role={e.role} />

@@ -10,7 +10,7 @@ import type { TaskStatus } from "@/db/enums";
 interface Props {
   events: AuditFeedRow[];
   statusLabels?: Record<TaskStatus, string>;
-  /** Current user — used by AuditEvent to gate the edit/delete buttons on
+  /** Current user - used by AuditEvent to gate the edit/delete buttons on
    *  comment rows (author within 15 minutes, or admin). */
   me?: { id: string; isAdmin: boolean };
 }
@@ -113,7 +113,7 @@ export function AuditFeed({ events, statusLabels, me }: Props) {
           </p>
         ) : (
           <ol className="relative">
-            {/* Vertical timeline rail — sits 7px from the left to align with dots. */}
+            {/* Vertical timeline rail - sits 7px from the left to align with dots. */}
             <span
               aria-hidden
               className="absolute top-1 bottom-1 w-px"

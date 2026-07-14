@@ -21,7 +21,7 @@ import {
 } from "@/lib/validators/sales-order";
 
 /**
- * Sales Order server actions — Phase 4 write path. No audit logging (same
+ * Sales Order server actions - Phase 4 write path. No audit logging (same
  * deferred call as the sample/quotation actions).
  */
 
@@ -105,7 +105,7 @@ export async function createSalesOrder(
     companyName: auto.companyName,
     enquiryDate: auto.enquiryDate,
     salesPersonId: auto.salesPersonId,
-    // per-line legacy mirror — sourced from line #1
+    // per-line legacy mirror - sourced from line #1
     custProductName: line0?.custProductName ?? v.custProductName ?? auto.productDescription,
     qty: line0?.qty ?? (v.qty != null ? String(v.qty) : auto.quantityNos),
     partNo: line0?.partNo ?? quote?.partNo ?? undefined,
@@ -135,7 +135,7 @@ export async function createSalesOrder(
           .returning({ id: salesOrders.id });
         if (!r) throw new Error("salesOrders insert returned no row");
         if (lineRows.length) {
-          // Only the KEPT line columns — spec/customer-ask mirrors are dropped
+          // Only the KEPT line columns - spec/customer-ask mirrors are dropped
           // (migration 0036); spec reads through items via item_id.
           await tx
             .insert(salesOrderItems)
@@ -159,7 +159,7 @@ export async function createSalesOrder(
   }
   return {
     ok: false,
-    error: "Could not allocate a unique SO number — enter one manually.",
+    error: "Could not allocate a unique SO number - enter one manually.",
   };
 }
 
@@ -172,7 +172,7 @@ type SyncResult =
  * was created. Sales orders snapshot their lines at creation, so a later-added
  * product is otherwise stranded. This inserts ONLY the missing lines (matched
  * by inquiryItemId) and never touches existing ones. User-triggered; never
- * auto-runs. (Sales orders carry no finalCost — that seed field is dropped.)
+ * auto-runs. (Sales orders carry no finalCost - that seed field is dropped.)
  */
 export async function syncProductsFromEnquiry(
   recordId: string,
@@ -210,7 +210,7 @@ export async function syncProductsFromEnquiry(
     if (missing.length === 0) return { ok: true, added: 0 };
 
     const maxSort = existing.reduce((m, r) => Math.max(m, r.sortOrder), -1);
-    // Only the KEPT line columns — the spec/customer-ask mirror is dropped
+    // Only the KEPT line columns - the spec/customer-ask mirror is dropped
     // (migration 0036); it reads through items/inquiry_item downstream.
     const rows = missing.map((s, i) => ({
       salesOrderId: recordId,
@@ -265,7 +265,7 @@ export async function updateSalesOrder(
   }
 
   // Mirror line-#1 per-line subset into sales_order_items (sortOrder = 0). Only
-  // the KEPT transactional columns — the spec/customer-ask mirrors (custProductName,
+  // the KEPT transactional columns - the spec/customer-ask mirrors (custProductName,
   // partNo) are dropped (migration 0036) and read through items/inquiry_item.
   const LINE1_KEYS = [
     "qty",

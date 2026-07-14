@@ -79,7 +79,7 @@ const numOrNull = (v: number | undefined): number | null =>
 
 /**
  * Create (or reuse) an Item. If an identical product already exists (same
- * dedup fingerprint) its existing code is returned — no duplicate, no new
+ * dedup fingerprint) its existing code is returned - no duplicate, no new
  * serial. Otherwise a serial is drawn, the internal item code is assembled
  * from the masters' short codes + dimensions, and the row is inserted.
  * Admin/sales-floor open (requireUser) like the other create forms.
@@ -97,7 +97,7 @@ export async function createItem(input: CreateItemInput): Promise<Result> {
     length: numOrNull(v.length), width: numOrNull(v.width), thickness: numOrNull(v.thickness),
   };
 
-  // Enforce the selected shape's required dimensions (forms/masters redesign —
+  // Enforce the selected shape's required dimensions (forms/masters redesign -
   // the shape master's config is the source of truth; trust it server-side).
   if (v.shapeId) {
     const [shapeRow] = await db
@@ -199,7 +199,7 @@ export async function createItem(input: CreateItemInput): Promise<Result> {
       .returning({ id: items.id, itemCode: items.itemCode });
 
     if (!row) {
-      // Lost a race — the identical item now exists; return it.
+      // Lost a race - the identical item now exists; return it.
       const [winner] = await db
         .select({ id: items.id, itemCode: items.itemCode })
         .from(items)
@@ -234,7 +234,7 @@ const UUID_RE =
 
 /**
  * Update an existing Item in place. The classification + dimensions can change,
- * so both the dedup fingerprint and the internal item code are recomputed — but
+ * so both the dedup fingerprint and the internal item code are recomputed - but
  * the serial (`seq`) is REUSED so the code stays stable in its serial slot. If
  * the new fingerprint collides with a DIFFERENT existing item, the edit is
  * rejected (we never merge two serials). Admin/sales-floor open (requireUser).
@@ -390,7 +390,7 @@ export async function updateItem(
 type ToggleResult = { ok: true } | { ok: false; error: string };
 
 /**
- * Deactivate an item (ERP Phase 4 governance — deactivate-only). Items are
+ * Deactivate an item (ERP Phase 4 governance - deactivate-only). Items are
  * NEVER hard-deleted: an item referenced by inquiries/quotes/orders keeps its
  * row. Admin-only. Sets is_active=false + deleted_at.
  */

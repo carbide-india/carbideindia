@@ -29,15 +29,15 @@ interface BaseProps {
   href: Route;
 }
 
-/* Hero tile — Total. Full-width strip across the top of the KPI band.
+/* Hero tile - Total. Full-width strip across the top of the KPI band.
    Number is the editorial centrepiece. No sparkline, no decorative
-   eyebrows — every element on this tile earns its space by being
+   eyebrows - every element on this tile earns its space by being
    readable at a glance. */
 export function KpiHeroTile(props: BaseProps) {
   return <GlassTile {...props} variant="hero" />;
 }
 
-/* Status tile — one of five. Same minimal recipe as the hero, just
+/* Status tile - one of five. Same minimal recipe as the hero, just
    sized down. Big label, huge number, big sublabel, big delta line. */
 export function KpiStatusTile(props: BaseProps) {
   return <GlassTile {...props} variant="status" />;
@@ -78,7 +78,7 @@ function GlassTile({
         } as React.CSSProperties
       }
     >
-      {/* Tinted top border bar — gives each card its channel signature
+      {/* Tinted top border bar - gives each card its channel signature
           without burning surface area on a label dot. */}
       <span
         aria-hidden
@@ -143,7 +143,7 @@ function HeroBody({
   return (
     <div className="relative z-[3] flex items-center justify-between gap-10 p-10 max-md:flex-col max-md:items-start max-md:gap-6 max-md:p-7">
       <div className="flex flex-col gap-4 min-w-0">
-        {/* LABEL — huge, uppercase, channel-deep */}
+        {/* LABEL - huge, uppercase, channel-deep */}
         <span
           className="uppercase font-black tracking-[0.10em] leading-none"
           style={{
@@ -176,13 +176,13 @@ function HeroBody({
         </span>
       </div>
 
-      {/* TREND CHART — fills the middle white space with a labeled line
+      {/* TREND CHART - fills the middle white space with a labeled line
           graph. X-axis: 14d → today. Y-axis: min / max range. */}
       <div className="flex-1 flex justify-center min-w-0 max-md:w-full max-md:order-3">
         <TrendChart values={sparkline} color={`rgb(${neon})`} variant="hero" />
       </div>
 
-      {/* DELTA BLOCK — its own column, big and bold */}
+      {/* DELTA BLOCK - its own column, big and bold */}
       <div className="flex flex-col items-end gap-2 shrink-0 max-md:flex-row max-md:items-baseline max-md:gap-3">
         <span
           className="inline-flex items-baseline gap-2 text-ink-strong"
@@ -233,7 +233,7 @@ function StatusBody({
 }: BodyProps) {
   return (
     <div className="relative z-[3] flex flex-col gap-4 p-7 max-md:p-5">
-      {/* LABEL — large + uppercase + channel-deep so each card is
+      {/* LABEL - large + uppercase + channel-deep so each card is
           immediately identifiable from across the room */}
       <span
         className="uppercase font-black tracking-[0.08em] leading-none"
@@ -266,14 +266,14 @@ function StatusBody({
         {sublabel}
       </span>
 
-      {/* TREND CHART — sits in the empty space between sublabel and
+      {/* TREND CHART - sits in the empty space between sublabel and
           delta line. Labeled X (14d → today) and Y (min / max) axes
           so the line reads as actual data, not decoration. */}
       <div className="mt-1 max-w-full overflow-hidden">
         <TrendChart values={sparkline} color={`rgb(${neon})`} variant="status" />
       </div>
 
-      {/* DELTA — single line, no divider needed */}
+      {/* DELTA - single line, no divider needed */}
       <div className="flex items-baseline gap-2.5 mt-1">
         <span
           className="inline-flex items-baseline gap-1.5 text-ink-strong tabular-nums"

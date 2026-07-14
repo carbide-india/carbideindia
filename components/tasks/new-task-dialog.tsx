@@ -17,7 +17,7 @@ interface Props {
   subjects: string[];
   /** Project tree nodes for the optional Project link. */
   projectNodes?: { id: string; label: string }[];
-  /** Optional defaults — usually pre-fill initiator = current user. */
+  /** Optional defaults - usually pre-fill initiator = current user. */
   defaultInitiatorId?: string;
   /** Admins get the "Import" shortcut in the dialog header. */
   isAdmin?: boolean;
@@ -51,7 +51,7 @@ export function NewTaskDialog({ employees, clients, subjects, projectNodes, defa
         return () => window.clearTimeout(t);
       }
     } catch {
-      // localStorage may be unavailable — silently skip the hint.
+      // localStorage may be unavailable - silently skip the hint.
     }
   }, []);
 
@@ -262,7 +262,7 @@ export function NewTaskDialog({ employees, clients, subjects, projectNodes, defa
           className="fixed left-1/2 top-1/2 z-[70] w-[min(1360px,calc(100vw-48px))] -translate-x-1/2 -translate-y-1/2 rounded-section border border-hairline bg-surface-card shadow-xl overflow-hidden"
           style={{ maxHeight: "calc(100vh - 48px)" }}
         >
-          {/* Header — cyan brand bar + big title */}
+          {/* Header - cyan brand bar + big title */}
           <div
             className="relative px-10 py-7 max-md:px-5 max-md:py-5"
             style={{
@@ -299,9 +299,9 @@ export function NewTaskDialog({ employees, clients, subjects, projectNodes, defa
                 color: "var(--color-ink-muted)",
               }}
             >
-              Capture work, attach context, assign owners — all in one go.
+              Capture work, attach context, assign owners - all in one go.
             </Dialog.Description>
-            {/* Top-right actions — Import shortcut (admin) + Close. */}
+            {/* Top-right actions - Import shortcut (admin) + Close. */}
             <div className="absolute top-6 right-6 flex items-center gap-2.5">
               {isAdmin && (
                 <button
@@ -338,7 +338,7 @@ export function NewTaskDialog({ employees, clients, subjects, projectNodes, defa
             </div>
           </div>
 
-          {/* Scrollable body — fills the rectangle */}
+          {/* Scrollable body - fills the rectangle */}
           <div
             className="px-10 py-8 max-md:px-5 max-md:py-5"
             style={{
@@ -359,7 +359,7 @@ export function NewTaskDialog({ employees, clients, subjects, projectNodes, defa
       </Dialog.Portal>
     </Dialog.Root>
 
-    {/* Import popup (admin) — opens in place instead of navigating to a page. */}
+    {/* Import popup (admin) - opens in place instead of navigating to a page. */}
     {isAdmin && (
       <Dialog.Root open={importOpen} onOpenChange={setImportOpen}>
         <Dialog.Portal>

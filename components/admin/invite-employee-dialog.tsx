@@ -52,7 +52,7 @@ export function InviteEmployeeDialog({
         return;
       }
       // Surface the email-send warning if the account was created but
-      // the invite email failed — the admin needs to know to resend.
+      // the invite email failed - the admin needs to know to resend.
       if (res.warning) {
         fireToast({ message: res.warning });
       } else {

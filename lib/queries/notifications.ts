@@ -22,7 +22,7 @@ import {
 } from "@/db/schema";
 
 // ---------------------------------------------------------------------------
-// Inbox (per-user) feed — kept from M2.3.  The /inbox route renders these
+// Inbox (per-user) feed - kept from M2.3.  The /inbox route renders these
 // rows; the unread badge in the main nav uses `getUnreadCount`.  Marking
 // read/all-read live here too so the inbox actions are a single import.
 // ---------------------------------------------------------------------------
@@ -55,7 +55,7 @@ export type InboxNotificationRow = {
 export interface ListInboxNotificationsArgs {
   userId: string;
   isAdmin: boolean;
-  /** Pagination cursor — return rows strictly older than this. */
+  /** Pagination cursor - return rows strictly older than this. */
   before?: Date | undefined;
   /** Override the default page size (capped at 500). */
   limit?: number | undefined;
@@ -65,13 +65,13 @@ export interface ListInboxNotificationsArgs {
 
 export interface ListInboxNotificationsResult {
   notifications: InboxNotificationRow[];
-  /** ISO string of the oldest row in this page — pass to `?before=`. */
+  /** ISO string of the oldest row in this page - pass to `?before=`. */
   nextCursor: string | null;
   hasMore: boolean;
 }
 
 /**
- * Returns the inbox feed for a user — every notification row addressed to
+ * Returns the inbox feed for a user - every notification row addressed to
  * them, newest first.  Admins always see only their own (notifications
  * are per-recipient by design; the admin scope is the RLS read policy,
  * not the query).
@@ -144,7 +144,7 @@ export async function listInboxNotifications(
 }
 
 /**
- * Single integer — count of unread notifications for the user.  Drives
+ * Single integer - count of unread notifications for the user.  Drives
  * the Inbox-pill badge in the main nav.  Indexed on
  * (user_id, read_at, created_at) so this is a covered index scan.
  */
@@ -162,7 +162,7 @@ export async function getUnreadCount(userId: string): Promise<number> {
  * Marks a single notification as read.  No-op if it's already read or
  * the row doesn't belong to the caller.  Idempotent.
  *
- * RLS pins the row down to the recipient — a user can't mark someone
+ * RLS pins the row down to the recipient - a user can't mark someone
  * else's notification read.  We additionally scope by userId here so a
  * stray bug in the action doesn't accidentally touch a different row.
  */
@@ -196,7 +196,7 @@ export async function markAllRead(userId: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Admin notifications log (M5.2) — paginated, filterable view across every
+// Admin notifications log (M5.2) - paginated, filterable view across every
 // notification row in the org, with per-channel delivery status derived
 // from `notifications.delivered_channels` (what actually delivered) vs
 // `org_settings.notification_matrix[kind]` (what was supposed to be tried).
@@ -261,7 +261,7 @@ function clampLimit(n: number | undefined): number {
  * own `delivered_channels` audit array.
  *
  * `failuresOnly` is applied AFTER channel-status derivation (cheaper to
- * filter in JS than to encode the matrix join in SQL — the matrix lives
+ * filter in JS than to encode the matrix join in SQL - the matrix lives
  * in a single jsonb column anyway).
  */
 export async function listNotifications(
@@ -278,7 +278,7 @@ export async function listNotifications(
     wheres.push(inArray(notifications.userId, opts.recipientIds));
 
   // The matrix lookup and the notifications query have no data
-  // dependency — Promise.all fires them in parallel so the inbox
+  // dependency - Promise.all fires them in parallel so the inbox
   // page pays one RTT instead of two.
   const [settingsRows, rows] = await Promise.all([
     db

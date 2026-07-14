@@ -31,11 +31,11 @@ export interface ContactCompanyGroup {
 }
 
 /**
- * The Contact Person book — every contact person captured across the client
+ * The Contact Person book - every contact person captured across the client
  * KYC forms (stored in `client_contacts`), joined to their client, so the team
  * has one browsable directory of who to talk to at each company.
  *
- * Ordered company-name asc, then primary contact first, then name — the exact
+ * Ordered company-name asc, then primary contact first, then name - the exact
  * order the Address Book table renders in, so grouping in the UI is a single
  * pass with no client-side re-sort.
  */
@@ -68,7 +68,7 @@ export async function listContactPersons(): Promise<ContactPersonRow[]> {
 
 /**
  * Same directory, grouped by company (companies alphabetical, primary contact
- * first within each) — the shape the Address Book table consumes to render one
+ * first within each) - the shape the Address Book table consumes to render one
  * company header per group with its contacts beneath.
  */
 export async function listContactPersonGroups(): Promise<ContactCompanyGroup[]> {

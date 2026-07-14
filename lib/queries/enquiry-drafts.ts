@@ -39,7 +39,7 @@ export async function listEnquiryDrafts(): Promise<EnquiryDraftListItem[]> {
   });
 }
 
-/** A single draft's raw form payload — only if it belongs to the current user. */
+/** A single draft's raw form payload - only if it belongs to the current user. */
 export async function getEnquiryDraft(id: string): Promise<EnquiryDraftPayload | null> {
   const me = await requireUser();
   const rows = await db

@@ -88,7 +88,7 @@ export default function TermsPage() {
       <p>
         Client communications, internal notes, and the operational task data
         captured in the dashboard are confidential business information of
-        Carbide India. You will treat them as such — no screenshots in public
+        Carbide India. You will treat them as such - no screenshots in public
         channels, no forwarding outside the organisation, no public
         commentary on identifiable clients.
       </p>
@@ -101,8 +101,8 @@ export default function TermsPage() {
       <p>
         The dashboard software, its design, brand marks, and all derivative
         analytics are owned by Carbide India. The operational data you
-        generate using the dashboard — tasks, comments, status history,
-        attached notes — belongs to Carbide India.
+        generate using the dashboard - tasks, comments, status history,
+        attached notes - belongs to Carbide India.
       </p>
 
       <h2>7 · Service availability</h2>
@@ -111,7 +111,7 @@ export default function TermsPage() {
         the application layer and file storage, Neon for the database,
         Clerk (US region) for identity, Resend for email, and
         optionally Web Push for notifications.
-        We do not guarantee uninterrupted service — providers occasionally
+        We do not guarantee uninterrupted service - providers occasionally
         have outages, and we may take the dashboard down for maintenance
         with notice in the team channel.
       </p>
@@ -119,7 +119,7 @@ export default function TermsPage() {
       <h2>8 · Termination</h2>
       <p>
         A Carbide India administrator may deactivate your account at any time
-        — immediately on separation from the organisation, or sooner if
+        - immediately on separation from the organisation, or sooner if
         these terms are violated. Deactivation revokes your session
         and prevents further sign-in; your historical task contributions
         remain in the database for audit purposes.

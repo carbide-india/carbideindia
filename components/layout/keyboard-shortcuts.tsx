@@ -34,12 +34,12 @@ function isTypingTarget(el: EventTarget | null): boolean {
  *   ?            → toggle this help overlay
  *   G then D/T/M/P/I → navigate (Dashboard / Tasks / My Day / Projects / Inbox)
  * Coexists with the other context-owned shortcuts (⌘K palette, N new task,
- * J/K/Enter/F task-list nav) — those live with their components.
+ * J/K/Enter/F task-list nav) - those live with their components.
  */
 export function KeyboardShortcuts() {
   const router = useRouter();
   const [helpOpen, setHelpOpen] = React.useState(false);
-  // Timestamp of the last bare `g` press — a ref so the listener stays stable
+  // Timestamp of the last bare `g` press - a ref so the listener stays stable
   // and never reads a stale value.
   const gAt = React.useRef(0);
 

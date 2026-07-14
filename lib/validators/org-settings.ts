@@ -5,8 +5,12 @@ const IANA_TIMEZONE_RE = /^[A-Za-z][A-Za-z0-9+\-_/]{1,63}$/;
 const WorkingDaySchema = z
   .number()
   .int()
-  .min(0, "Day of week is 0–6")
-  .max(6, "Day of week is 0–6");
+  .min(0, "Day of week is 0-6")
+  .max(6, "Day of week is 0-6");
+
+/** Optional free-text legal field — trimmed, capped, "" allowed (clears it). */
+const LegalText = (max: number) =>
+  z.string().trim().max(max).optional().nullable().or(z.literal(""));
 
 /**
  * Patch-shaped schema for `updateOrgSettings`. Every field is optional;
@@ -27,8 +31,8 @@ export const UpdateOrgSettingsSchema = z
     digestHourIst: z
       .number()
       .int()
-      .min(0, "Hour is 0–23")
-      .max(23, "Hour is 0–23")
+      .min(0, "Hour is 0-23")
+      .max(23, "Hour is 0-23")
       .optional(),
     workingDays: z
       .array(WorkingDaySchema)
@@ -48,6 +52,19 @@ export const UpdateOrgSettingsSchema = z
       .max(60, "Idle timeout must be at most 60 minutes")
       .optional(),
     allowSelfRegister: z.boolean().optional(),
+    // Company & Legal — all optional, "" clears the field.
+    legalName: LegalText(200),
+    gstin: LegalText(20),
+    panNo: LegalText(20),
+    cin: LegalText(30),
+    regAddress: LegalText(500),
+    regCity: LegalText(120),
+    regState: LegalText(120),
+    regPincode: LegalText(12),
+    bankName: LegalText(200),
+    bankAccountNo: LegalText(40),
+    bankIfsc: LegalText(20),
+    bankBranch: LegalText(200),
   })
   .strict()
   .refine(

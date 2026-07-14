@@ -3,6 +3,7 @@ import type { SampleFormValues } from "@/components/samples/sample-form";
 import { requireUser, getCurrentEmployee } from "@/lib/auth/current";
 import { getFormDraft } from "@/lib/queries/form-drafts";
 import { listEmployeeOptions } from "@/lib/queries/employees";
+import { listCustomOptionsMap } from "@/lib/queries/custom-lists";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
 import { UserMenuServer } from "@/components/header/user-menu-server";
 import { loadLookups, specRefKinds } from "@/lib/import/lookups";
@@ -20,6 +21,8 @@ export default async function NewSamplePage({ searchParams }: PageProps) {
   await requireUser();
   const me = await getCurrentEmployee();
   const employees = await listEmployeeOptions();
+  // Editable location dropdowns (Custom Dropdown Master → Sample Register).
+  const customLists = await listCustomOptionsMap("sample");
 
   const sp = await searchParams;
   const draftParam = typeof sp.draft === "string" ? sp.draft : undefined;
@@ -48,6 +51,8 @@ export default async function NewSamplePage({ searchParams }: PageProps) {
       <div className="w-full">
         <SampleForm
           employees={employees}
+          sampleLocationOptions={customLists.sample_location}
+          stageLocationOptions={customLists.stage_location}
           enableDrafts
           resumeDraftId={draftPayload ? draftParam : undefined}
           initialValues={draftPayload ? (draftPayload as Partial<SampleFormValues>) : undefined}

@@ -2,8 +2,6 @@
 
 import { Search } from "lucide-react";
 
-const MONO = "var(--font-mono-display)";
-
 /**
  * Hub launchpad search. Looks like the mockup's inline search field but is a
  * real trigger: clicking (or pressing Enter/⌘K within it) opens the app-wide
@@ -29,12 +27,6 @@ export function HubSearch() {
         <Search className="h-[20px] w-[20px] shrink-0 text-[#9aa0ab] transition-colors group-hover:text-[#3f3f94]" />
         <span className="min-w-0 flex-1 truncate text-[15.5px] text-[#98a0ac]">
           Search by Part No., Material, or Keyword
-        </span>
-        <span
-          className="shrink-0 border-l border-[#e6e8ec] pl-3 text-[13px] font-medium tracking-[0.14em] text-[#8a90a0] transition-colors group-hover:text-[#3f3f94]"
-          style={{ fontFamily: MONO }}
-        >
-          FILTERS
         </span>
       </button>
     </div>

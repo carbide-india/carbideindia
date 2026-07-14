@@ -55,7 +55,7 @@ export function TaskRowActions({ row, employees, me }: Props) {
 
   // Result shape every mutating action now returns. `void` is tolerated for
   // any legacy callsite. On failure we toast the reason and skip the success
-  // toast — the user keeps their place instead of hitting an error screen.
+  // toast - the user keeps their place instead of hitting an error screen.
   type ActionResult =
     | { ok: true }
     | { ok: false; error?: string; message?: string }
@@ -67,11 +67,11 @@ export function TaskRowActions({ row, employees, me }: Props) {
       case "forbidden":
         return "You're not allowed to make that change.";
       case "stale":
-        return "This task changed elsewhere — refreshing.";
+        return "This task changed elsewhere - refreshing.";
       case "not-found":
         return "That task no longer exists.";
       default:
-        return res.error ?? "Something went wrong — please try again.";
+        return res.error ?? "Something went wrong - please try again.";
     }
   }
 
@@ -81,7 +81,7 @@ export function TaskRowActions({ row, employees, me }: Props) {
       try {
         res = await fn();
       } catch {
-        fireToast({ message: "Something went wrong — please try again." });
+        fireToast({ message: "Something went wrong - please try again." });
         return;
       }
       if (res && res.ok === false) {
@@ -161,7 +161,7 @@ export function TaskRowActions({ row, employees, me }: Props) {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
-        {/* Archive / Unarchive — admin-only (doers change status instead; a
+        {/* Archive / Unarchive - admin-only (doers change status instead; a
             doer archiving a task effectively hid it from the board). */}
         {me.isAdmin && (
           <>
@@ -266,7 +266,7 @@ export function TaskRowActions({ row, employees, me }: Props) {
           );
         })()}
 
-        {/* Permanent delete — destructive, so admin-only + confirmed. Lives
+        {/* Permanent delete - destructive, so admin-only + confirmed. Lives
             at the very bottom, highlighted red. */}
         {me.isAdmin && (
           <>

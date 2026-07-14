@@ -2,9 +2,9 @@ import { formatCount } from "@/lib/format";
 
 /**
  * Two-card headline above the velocity chart. Each card follows the
- * same reading hierarchy as the KPI tiles below — a top channel-color
+ * same reading hierarchy as the KPI tiles below - a top channel-color
  * bar identifies the metric, then BIG label / HUGE number / BIG
- * sublabel. No gradient text effects, no decoration — readability
+ * sublabel. No gradient text effects, no decoration - readability
  * over polish.
  */
 export function VelocityHeadline({
@@ -62,7 +62,7 @@ function Stat({
         padding: "32px 32px 28px",
       }}
     >
-      {/* Top channel-color bar — same affordance as the KPI cards. */}
+      {/* Top channel-color bar - same affordance as the KPI cards. */}
       <span
         aria-hidden
         className="absolute inset-x-0 top-0 h-1.5"

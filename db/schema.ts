@@ -1880,6 +1880,26 @@ export const orgSettings = pgTable(
       .notNull()
       .$type<Record<string, boolean>>()
       .default({}),
+    // Company & Legal (admin -> Company & Legal). The legal entity + bank used
+    // on quotations, invoices and official documents.
+    legalName: text("legal_name"),
+    gstin: text("gstin"),
+    panNo: text("pan_no"),
+    cin: text("cin"),
+    regAddress: text("reg_address"),
+    regCity: text("reg_city"),
+    regState: text("reg_state"),
+    regPincode: text("reg_pincode"),
+    bankName: text("bank_name"),
+    bankAccountNo: text("bank_account_no"),
+    bankIfsc: text("bank_ifsc"),
+    bankBranch: text("bank_branch"),
+    // Document numbering config (admin -> Document Numbering). Per doc-type
+    // { prefix, next } counters. Absent keys fall back to the built-in scheme.
+    docNumbering: jsonb("doc_numbering")
+      .notNull()
+      .$type<Record<string, { prefix: string; next: number }>>()
+      .default({}),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

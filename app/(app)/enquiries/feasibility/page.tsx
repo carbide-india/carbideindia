@@ -7,7 +7,7 @@ import { listEmployeeOptions } from "@/lib/queries/employees";
 export const dynamic = "force-dynamic";
 
 /**
- * Primary Feasibility queue — the enquiry set focused on the feasibility stage,
+ * Primary Feasibility queue - the enquiry set focused on the feasibility stage,
  * fronted by a pipeline KPI strip. Each row deep-links to its dedicated
  * feasibility page.
  */

@@ -11,7 +11,7 @@ import type { InquiryFormValues } from "@/components/inquiries/inquiry-form";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "New Enquiry — Carbide India",
+  title: "New Enquiry - Carbide India",
 };
 
 interface PageProps {

@@ -13,7 +13,7 @@ export type ActivitySource = "task" | "employee" | "settings";
 /**
  * A single row in the global admin activity feed.  Re-declared here (instead
  * of imported from `lib/queries/activity.ts`) so the transform module stays
- * decoupled from the "server-only" query module — vitest can import these
+ * decoupled from the "server-only" query module - vitest can import these
  * helpers without dragging in a postgres connection.
  */
 export type ActivityRow = {
@@ -104,7 +104,7 @@ export type DayGroup = {
 /**
  * Splits a newest-first event list into per-day buckets, preserving the
  * incoming order within each bucket.  Bucket label is "Today" / "Yesterday"
- * / "May 12, 2026".  Pure transform — no `now` dependency beyond date-fns'
+ * / "May 12, 2026".  Pure transform - no `now` dependency beyond date-fns'
  * built-in today/yesterday helpers.
  */
 export function groupByDay(events: ActivityRow[]): DayGroup[] {
@@ -163,10 +163,10 @@ export function employeeEventCopy(row: ActivityRow): string {
 /**
  * Per-source copy generator for settings_events.  Dispatches on the
  * (scope, event_type) pair since "updated" / "created" are overloaded
- * across scopes — only the tuple disambiguates.
+ * across scopes - only the tuple disambiguates.
  *
  * Real (scope, event_type) tuples emitted today:
- *   - ("org_settings",    "updated") — general settings save OR notification
+ *   - ("org_settings",    "updated") - general settings save OR notification
  *                                       matrix save (disambiguated by peeking
  *                                       at toValue for a `notificationMatrix`
  *                                       key, since both share the same scope).

@@ -1,5 +1,5 @@
 /**
- * Phase 5.2 — RRULE-lite parser + occurrence generator.
+ * Phase 5.2 - RRULE-lite parser + occurrence generator.
  *
  * Supports the subset the in-app ScheduleSection picker emits:
  *   FREQ=DAILY                          → every day
@@ -11,14 +11,14 @@
  *   ...;UNTIL=2026-12-31                → end on (inclusive) the given date
  *
  * Outside the canonical RRULE spec only insofar as UNTIL is yyyy-mm-dd
- * rather than yyyymmddThhmmssZ — the ScheduleSection emits it that way.
+ * rather than yyyymmddThhmmssZ - the ScheduleSection emits it that way.
  *
  * No DST/timezone arithmetic: occurrences are calendar dates (no
  * times), which the materializer pairs with the anchor task's
  * `dueAt` time-of-day. That sidesteps the entire DST mess for
  * a feature that's only really about "what day does this happen".
  *
- * Pure module — no I/O, no DB. Caller passes the anchor (the
+ * Pure module - no I/O, no DB. Caller passes the anchor (the
  * original task's date) + a window and gets back yyyy-mm-dd strings.
  */
 
@@ -132,7 +132,7 @@ export function parseRRule(rule: string): ParsedRule | null {
  * `until` if the rule has one). Returns an array of yyyy-mm-dd
  * strings in ascending order.
  *
- * `anchor` is the original (rule-holder) task's calendar day —
+ * `anchor` is the original (rule-holder) task's calendar day -
  * always treated as a calendar date (no time-of-day arithmetic).
  *
  * Hard caps generation to MAX_OCCURRENCES to keep a runaway rule from
@@ -196,7 +196,7 @@ export function generateOccurrences(
   if (rule.freq === "MONTHLY") {
     // Step through months starting from the anchor's month. Each month can
     // yield SEVERAL dates (e.g. BYMONTHDAY=7,8). Emit each that's STRICTLY
-    // after the anchor and within the window — the anchor itself is
+    // after the anchor and within the window - the anchor itself is
     // occurrence #1 and isn't duplicated, but later dates in the same month
     // (e.g. the 8th when the anchor was the 7th) absolutely qualify.
     let y = start.getUTCFullYear();
@@ -251,7 +251,7 @@ function addDays(d: Date, n: number): Date {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + n));
 }
 
-/** Sunday (UTC) on or before `d` — the start of d's week. */
+/** Sunday (UTC) on or before `d` - the start of d's week. */
 function weekStartUTC(d: Date): Date {
   return new Date(
     Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - d.getUTCDay()),
@@ -276,7 +276,7 @@ function monthlyOccurrences(
   if (rule.monthlyNth !== null && rule.monthlyWeekday) {
     const targetWd = WD_ORDER.indexOf(rule.monthlyWeekday);
     if (rule.monthlyNth === -1) {
-      // Last <weekday> of month — walk back from the last day.
+      // Last <weekday> of month - walk back from the last day.
       const last = new Date(Date.UTC(year, month + 1, 0));
       const diff = (last.getUTCDay() - targetWd + 7) % 7;
       return [new Date(Date.UTC(year, month, last.getUTCDate() - diff))];
@@ -296,7 +296,7 @@ function monthlyOccurrences(
       .map((d) => new Date(Date.UTC(year, month, d)));
   }
 
-  // No anchoring info — fall back to "same day-of-month as anchor".
+  // No anchoring info - fall back to "same day-of-month as anchor".
   const anchorDay = anchor.getUTCDate();
   if (anchorDay > daysInMonth) return [];
   return [new Date(Date.UTC(year, month, anchorDay))];

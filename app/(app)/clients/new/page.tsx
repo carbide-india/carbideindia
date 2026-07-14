@@ -14,7 +14,7 @@ import { BulkImportModal } from "@/components/import/bulk-import-modal";
 export const dynamic = "force-dynamic";
 
 /**
- * Client KYC — the onboarding form, now rendered inside the shared Enquiries
+ * Client KYC - the onboarding form, now rendered inside the shared Enquiries
  * module shell (logo sidebar + indigo header) in the clean enquiry-form style,
  * rather than the old standalone Client-Master chrome. It is one of the forms
  * on the Enquiries launchpad.

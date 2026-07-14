@@ -38,8 +38,8 @@ export interface BuiltNegotiationLine {
 }
 
 /**
- * The subset INSERTED onto `negotiation_items` (ERP Phase 6 — migration 0036).
- * The spec/customer-ask MIRROR columns (custProductName, partNo) are DROPPED —
+ * The subset INSERTED onto `negotiation_items` (ERP Phase 6 - migration 0036).
+ * The spec/customer-ask MIRROR columns (custProductName, partNo) are DROPPED -
  * resolved read-through from items (spec-resolve) + the provenance inquiry_item.
  * Only transactional facts + the FK spine remain on the line.
  */

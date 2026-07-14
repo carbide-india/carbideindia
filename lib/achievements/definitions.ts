@@ -1,8 +1,8 @@
 /**
- * Profile v2 — achievement badge definitions.
+ * Profile v2 - achievement badge definitions.
  *
  * 12 badges across 5 categories. Definitions live in code so admins
- * don't have to seed them via SQL — but earned rows live in
+ * don't have to seed them via SQL - but earned rows live in
  * `achievements_earned` so we can query "who has X".
  *
  * Each definition exposes a pure `evaluate(stats)` predicate that

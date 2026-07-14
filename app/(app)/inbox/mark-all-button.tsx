@@ -10,7 +10,7 @@ interface Props {
 
 /**
  * "Mark all read" button at the top of /inbox.  Disabled when there's
- * nothing to mark.  Pure progressive enhancement — the server action
+ * nothing to mark.  Pure progressive enhancement - the server action
  * does its own auth + scope checks.
  */
 export function MarkAllButton({ hasUnread }: Props) {

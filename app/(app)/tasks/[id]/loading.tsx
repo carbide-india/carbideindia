@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PageBuffering } from "@/components/ui/spinner";
 
 /**
- * Skeleton for the task detail route. Two-column layout on wide screens —
+ * Skeleton for the task detail route. Two-column layout on wide screens -
  * a vertical stack of metadata fields on the left and the comments /
  * activity feed on the right.
  */

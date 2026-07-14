@@ -26,10 +26,10 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  if (!UUID_RE.test(id)) return { title: "Client — Carbide India" };
+  if (!UUID_RE.test(id)) return { title: "Client - Carbide India" };
   const header = await getClientHeader(id);
   return {
-    title: header ? `${header.name} — Carbide India` : "Client — Carbide India",
+    title: header ? `${header.name} - Carbide India` : "Client - Carbide India",
   };
 }
 
@@ -38,7 +38,7 @@ export default async function ClientWorkspacePage({ params }: PageProps) {
   const { id } = await params;
   if (!UUID_RE.test(id)) notFound();
 
-  // Header first — a missing client 404s before we fan out the heavy aggregates.
+  // Header first - a missing client 404s before we fan out the heavy aggregates.
   const header = await getClientHeader(id);
   if (!header) notFound();
 

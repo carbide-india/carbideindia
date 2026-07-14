@@ -47,7 +47,7 @@ import { exportRowsToCsv } from "@/lib/registers/export-rows";
 import { cn } from "@/lib/utils";
 
 /*
- * RegisterDataTable — the shared advanced data-table for all six Carbide sales
+ * RegisterDataTable - the shared advanced data-table for all six Carbide sales
  * registers (Enquiries, Samples, Quotations, Negotiations, Sales Orders,
  * Meetings). Driven entirely by a per-register config (columns + filters +
  * bulk action). The look matches the house register language: a rounded card
@@ -60,7 +60,7 @@ import { cn } from "@/lib/utils";
  * fetch the full filtered set). That's instant for the few-hundred-row
  * registers we have today. For very large registers we'd move filtering +
  * pagination to the server and feed this component a single page of rows plus a
- * total count — the config surface wouldn't need to change.
+ * total count - the config surface wouldn't need to change.
  *
  * Per-register SERVER filters (owned by the page via nuqs URL params) and this
  * component's CLIENT filters are independent: the page narrows what's fetched;
@@ -88,10 +88,10 @@ export interface RegisterColumn<TRow> {
   enableSorting?: boolean;
   align?: "left" | "right";
   /**
-   * Fixed column width (any CSS width — "120px", "22%"). When ANY column
+   * Fixed column width (any CSS width - "120px", "22%"). When ANY column
    * supplies a width the table switches to `table-fixed` + a `<colgroup>` so it
    * fills its container without horizontal scroll. Use "1fr" (or leave unset)
-   * for the one flexible column that should absorb the leftover space — it
+   * for the one flexible column that should absorb the leftover space - it
    * renders with no explicit width so the fixed layout distributes the rest to
    * it. Registers that supply no widths keep the previous auto-layout behavior.
    */
@@ -160,7 +160,7 @@ export interface RegisterDataTableProps<TRow> {
   getOpenHref: (row: TRow) => Route;
   /**
    * When provided, opening a row (row click / open affordance) calls this
-   * instead of navigating to getOpenHref — used by registers that show an
+   * instead of navigating to getOpenHref - used by registers that show an
    * instant quick-view popup (e.g. Item Master). When omitted, behavior is
    * unchanged (navigates via getOpenHref).
    */
@@ -193,7 +193,7 @@ export interface RegisterDataTableProps<TRow> {
   rowMenu?: (row: TRow) => RowMenuItem<TRow>[];
   rowMenuPlacement?: "left" | "right";
   /**
-   * Hide the built-in toolbar search input — used when the page renders its own
+   * Hide the built-in toolbar search input - used when the page renders its own
    * search elsewhere (e.g. beside the page title) and feeds it via `externalQuery`.
    */
   hideToolbarSearch?: boolean;
@@ -203,7 +203,7 @@ export interface RegisterDataTableProps<TRow> {
    * When provided, each row gets a left chevron and can expand in place to show
    * this node (a decoded detail panel). Row-body clicks toggle the expansion
    * instead of opening. Keeps the visible columns few so there's no horizontal
-   * scroll — the rest of the fields live in the expanded panel.
+   * scroll - the rest of the fields live in the expanded panel.
    */
   renderExpanded?: (row: TRow) => React.ReactNode;
   emptyTitle: string;
@@ -708,7 +708,7 @@ export function RegisterDataTable<TRow>({
                 aria-label={`${f.label} from`}
                 className="rounded-lg border border-hairline bg-surface-card px-2 py-1 text-[13px] text-ink-strong outline-none focus:border-brand"
               />
-              <span className="text-ink-subtle text-[13px]">–</span>
+              <span className="text-ink-subtle text-[13px]">-</span>
               <input
                 type="date"
                 value={dateFilters[f.id]?.to ?? ""}
@@ -776,10 +776,10 @@ export function RegisterDataTable<TRow>({
         />
       ) : (
         <div
-          className="overflow-auto rounded-section border border-hairline bg-surface-card max-h-[calc(100vh-260px)]"
-          style={{ boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)" }}
+          className="overflow-auto rounded-section border-2 border-[#2b303b] bg-surface-card max-h-[calc(100vh-260px)]"
+          style={{ boxShadow: "0 8px 24px -10px rgba(15, 23, 42, 0.18)" }}
         >
-          <table className={cn("w-full text-[14px]", hasWidths && "table-fixed")}>
+          <table className={cn("w-full text-[14px] font-medium", hasWidths && "table-fixed")}>
             {hasWidths && (
               <colgroup>
                 {table.getVisibleLeafColumns().map((col) => (
@@ -791,7 +791,7 @@ export function RegisterDataTable<TRow>({
               {table.getHeaderGroups().map((hg) => (
                 <tr
                   key={hg.id}
-                  className="text-left text-[12px] uppercase tracking-[0.08em] text-ink-subtle font-bold border-b border-hairline"
+                  className="text-left text-[12px] uppercase tracking-[0.08em] text-ink-strong font-black border-b-2 border-[#2b303b]"
                 >
                   {hg.headers.map((h) => {
                     const align =
@@ -816,7 +816,7 @@ export function RegisterDataTable<TRow>({
                           align === "right" ? "text-right" : "text-left",
                         )}
                         style={{
-                          background: "var(--color-surface-soft)",
+                          background: "#e9ebf3",
                           ...(pin
                             ? {
                                 left: pin.left,
@@ -870,12 +870,12 @@ export function RegisterDataTable<TRow>({
                   <React.Fragment key={row.id}>
                   <tr
                     className={cn(
-                      "group/row border-b border-hairline transition-colors hover:bg-surface-soft cursor-pointer",
+                      "group/row border-b border-[#dfe2ea] text-ink-strong transition-colors hover:bg-[#f2f2fb] cursor-pointer",
                       expanded ? "border-b-0 bg-surface-soft" : "last:border-b-0",
                     )}
                     style={{
                       background:
-                        !expanded && i % 2 === 1 ? "rgba(15, 23, 42, 0.012)" : undefined,
+                        !expanded && i % 2 === 1 ? "rgba(15, 23, 42, 0.028)" : undefined,
                     }}
                     onClick={(e) => {
                       // Ignore clicks that originate on interactive children
@@ -991,7 +991,7 @@ export function RegisterDataTable<TRow>({
           </div>
 
           <p className="text-[13px] font-semibold text-ink-subtle tabular-nums">
-            Showing {rangeStart}–{rangeEnd} of {totalFiltered}
+            Showing {rangeStart}-{rangeEnd} of {totalFiltered}
           </p>
 
           <div className="inline-flex items-center gap-1.5">
