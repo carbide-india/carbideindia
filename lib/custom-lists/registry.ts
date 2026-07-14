@@ -143,6 +143,43 @@ export const CUSTOM_LISTS: Record<string, FormCustomListsDef> = {
   },
 };
 
+/**
+ * Editor grouping — the category each list sits under, and the section order.
+ * Keeps the Custom Dropdown Master organised instead of one flat wall of cards.
+ */
+export const CUSTOM_LIST_CATEGORIES: Record<
+  string,
+  { order: string[]; of: Record<string, string> }
+> = {
+  kyc: {
+    order: ["Commercial Terms", "Banking", "Logistics", "Location"],
+    of: {
+      payment_terms: "Commercial Terms",
+      freight_charges: "Commercial Terms",
+      credit_days: "Commercial Terms",
+      credit_limit: "Commercial Terms",
+      qty_deviation: "Commercial Terms",
+      account_type: "Banking",
+      bank_name: "Banking",
+      transporter: "Logistics",
+      state: "Location",
+    },
+  },
+  enquiry: {
+    order: ["Dimensions", "Location"],
+    of: {
+      unit: "Dimensions",
+      state: "Location",
+      city: "Location",
+    },
+  },
+};
+
+/** The category a list belongs to (falls back to "Other"). */
+export function categoryFor(formKey: string, listKey: string): string {
+  return CUSTOM_LIST_CATEGORIES[formKey]?.of[listKey] ?? "Other";
+}
+
 /** Is `listKey` a real list for `formKey`? Guards the server actions. */
 export function isKnownCustomList(formKey: string, listKey: string): boolean {
   return Boolean(CUSTOM_LISTS[formKey]?.lists.some((l) => l.key === listKey));

@@ -2,7 +2,7 @@ import "server-only";
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { formCustomOptions } from "@/db/schema";
-import { CUSTOM_LISTS } from "@/lib/custom-lists/registry";
+import { CUSTOM_LISTS, categoryFor } from "@/lib/custom-lists/registry";
 
 /**
  * Active option labels for one (formKey, listKey), ordered. Falls back to the
@@ -72,6 +72,8 @@ export interface CustomListView {
   label: string;
   hint?: string;
   kind: "text" | "number";
+  /** Editor grouping category. */
+  category: string;
   /** Whether these are live DB rows (editable) or the registry defaults. */
   seeded: boolean;
   options: { id: string; label: string; sortOrder: number }[];
@@ -116,6 +118,7 @@ export async function listCustomListsForForm(
       label: l.label,
       hint: l.hint,
       kind: l.kind ?? "text",
+      category: categoryFor(formKey, l.key),
       seeded: dbOpts.length > 0,
       options: dbOpts.length
         ? dbOpts

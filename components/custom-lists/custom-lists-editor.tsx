@@ -12,6 +12,7 @@ import {
   clearCustomList,
 } from "@/app/(app)/_actions/custom-lists";
 import { fireToast } from "@/lib/toast";
+import { CUSTOM_LIST_CATEGORIES } from "@/lib/custom-lists/registry";
 import type { CustomListView } from "@/lib/queries/custom-lists";
 
 type ActionResult = { ok: true } | { ok: false; error: string };
@@ -29,11 +30,41 @@ export function CustomListsEditor({
   formKey: string;
   lists: CustomListView[];
 }) {
+  // Group into categories, in the registry's declared order (extras last).
+  const declared = CUSTOM_LIST_CATEGORIES[formKey]?.order ?? [];
+  const byCat = new Map<string, CustomListView[]>();
+  for (const l of lists) {
+    const arr = byCat.get(l.category) ?? [];
+    arr.push(l);
+    byCat.set(l.category, arr);
+  }
+  const ordered = [
+    ...declared.filter((c) => byCat.has(c)),
+    ...[...byCat.keys()].filter((c) => !declared.includes(c)),
+  ];
+
   return (
-    <div className="gap-5 [column-fill:_balance] columns-1 sm:columns-2 xl:columns-3">
-      {lists.map((l) => (
-        <ListCard key={l.key} formKey={formKey} list={l} />
-      ))}
+    <div className="flex flex-col gap-8">
+      {ordered.map((cat) => {
+        const items = byCat.get(cat);
+        if (!items?.length) return null;
+        return (
+          <section key={cat}>
+            <h2 className="mb-3 flex items-center gap-3 text-[12px] font-extrabold uppercase tracking-[0.12em] text-[#3f3f94]">
+              {cat}
+              <span className="h-px flex-1 bg-[#eceef4]" />
+              <span className="rounded-full bg-[#efeffb] px-2 py-0.5 text-[11px] font-bold tabular-nums text-[#3f3f94]">
+                {items.length}
+              </span>
+            </h2>
+            <div className="gap-5 [column-fill:_balance] columns-1 sm:columns-2 xl:columns-3">
+              {items.map((l) => (
+                <ListCard key={l.key} formKey={formKey} list={l} />
+              ))}
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }
