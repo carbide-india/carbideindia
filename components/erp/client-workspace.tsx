@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import {
   Pencil,
+  Eye,
   Building2,
   Boxes,
   FileText,
@@ -21,6 +22,7 @@ import {
   Landmark,
   UserRound,
 } from "lucide-react";
+import { ClientKycQuickView } from "@/components/clients/client-kyc-quick-view";
 import { formatDate, formatInr, formatCount } from "@/lib/format";
 import {
   ENQUIRY_STATUS_COLORS,
@@ -145,6 +147,7 @@ export function ClientWorkspace({
   embedded,
 }: ClientWorkspaceProps) {
   const [tab, setTab] = React.useState<TabKey>("overview");
+  const [quickView, setQuickView] = React.useState(false);
 
   const newEnquiryHref = "/enquiries/new" as Route;
 
@@ -249,6 +252,14 @@ export function ClientWorkspace({
                 <Plus size={15} strokeWidth={2.4} />
                 New Enquiry
               </Link>
+              <button
+                type="button"
+                onClick={() => setQuickView(true)}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-hairline px-3 text-[13px] font-semibold text-ink-soft transition-colors hover:border-brand hover:text-brand"
+              >
+                <Eye size={15} strokeWidth={2.2} />
+                Quick view
+              </button>
               {isAdmin && (
                 <Link
                   href={`/clients/${header.id}/edit` as Route}
@@ -337,6 +348,16 @@ export function ClientWorkspace({
           </div>
           <div className="p-6 max-md:p-4">{tabBody[tab]}</div>
         </div>
+
+        {quickView && (
+          <ClientKycQuickView
+            clientId={header.id}
+            name={header.name}
+            isActive={header.isActive}
+            isAdmin={isAdmin}
+            onClose={() => setQuickView(false)}
+          />
+        )}
       </div>
   );
 

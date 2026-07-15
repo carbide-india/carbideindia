@@ -124,7 +124,7 @@ export function NotesField({
         rows={rows}
         aria-label={ariaLabel}
         placeholder={placeholder}
-        className={cn("nt-input resize-y pr-11", className)}
+        className={cn("nt-input resize-y", supported ? "pb-11" : undefined, className)}
         style={{ fontWeight: 400 }}
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -133,17 +133,18 @@ export function NotesField({
         <button
           type="button"
           onClick={toggle}
-          aria-label={listening ? "Stop dictation" : "Dictate notes with voice"}
+          aria-label={listening ? "Stop dictation" : "Dictate with Voice"}
           aria-pressed={listening}
-          title={listening ? "Stop dictation" : "Dictate with voice"}
+          title={listening ? "Stop dictation" : "Dictate with Voice"}
           className={cn(
-            "absolute bottom-2 right-2 inline-flex size-8 items-center justify-center rounded-lg border transition",
+            "absolute bottom-2 right-2 inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-[12px] font-semibold transition",
             listening
               ? "animate-pulse border-[#d32f2f] bg-[#fdecec] text-[#d32f2f]"
               : "border-[#dcdce8] bg-white text-[#3f3f94] hover:border-[#3f3f94] hover:bg-[#efeffb]",
           )}
         >
-          <Mic className="h-[16px] w-[16px]" />
+          <Mic className="h-[15px] w-[15px]" />
+          {listening ? "Listening…" : "Dictate with Voice"}
         </button>
       )}
     </div>

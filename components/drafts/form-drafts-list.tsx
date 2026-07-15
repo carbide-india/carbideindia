@@ -60,11 +60,11 @@ export function FormDraftsList({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+    <div className="grid grid-cols-4 gap-3 max-xl:grid-cols-3 max-lg:grid-cols-2 max-md:grid-cols-1">
       {items.map((d) => (
         <div
           key={d.id}
-          className="flex flex-col gap-3 rounded-section border border-hairline bg-surface-card p-4"
+          className="flex flex-col gap-3 rounded-section border border-hairline bg-surface-card p-3.5"
           style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}
         >
           <div className="flex items-start justify-between gap-3">

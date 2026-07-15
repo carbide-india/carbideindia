@@ -50,6 +50,26 @@ export const CUSTOM_LISTS: Record<string, FormCustomListsDef> = {
     editorRoute: "/clients/custom",
     lists: [
       {
+        key: "designation",
+        label: "Designation",
+        hint: "Contact person job titles.",
+        defaults: [
+          "Proprietor",
+          "Director",
+          "Partner",
+          "CEO",
+          "General Manager",
+          "Purchase Manager",
+          "Purchase Executive",
+          "Procurement Head",
+          "Production Manager",
+          "Quality Manager",
+          "Design Engineer",
+          "Accountant",
+          "Store In-charge",
+        ],
+      },
+      {
         key: "payment_terms",
         label: "Payment Terms",
         defaults: [
@@ -172,8 +192,9 @@ export const CUSTOM_LIST_CATEGORIES: Record<
   { order: string[]; of: Record<string, string> }
 > = {
   kyc: {
-    order: ["Commercial Terms", "Banking", "Logistics", "Location"],
+    order: ["People", "Commercial Terms", "Banking", "Logistics", "Location"],
     of: {
+      designation: "People",
       payment_terms: "Commercial Terms",
       freight_charges: "Commercial Terms",
       credit_days: "Commercial Terms",

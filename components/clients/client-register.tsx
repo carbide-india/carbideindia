@@ -13,6 +13,7 @@ import {
   MoreVertical,
   Eye,
   FileText,
+  FileDown,
   Pencil,
   Power,
   Search,
@@ -30,7 +31,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { MultiSelect } from "@/components/ui/multi-select";
-import { ClientQuickView } from "@/components/clients/client-quick-view";
+import { ClientKycQuickView } from "@/components/clients/client-kyc-quick-view";
 import { fireToast } from "@/lib/toast";
 import {
   deleteClient,
@@ -231,6 +232,7 @@ export function ClientRegister({ rows, isAdmin }: Props) {
   const [trade, setTrade] = useQueryState("trade", parseAsString.withDefault(""));
   const [status, setStatus] = useQueryState("status", parseAsString.withDefault(""));
   const [gstin, setGstin] = useQueryState("gstin", parseAsString.withDefault(""));
+  const [stateFilter, setStateFilter] = useQueryState("state", parseAsString.withDefault(""));
   const [tags, setTags] = useQueryState(
     "tags",
     parseAsArrayOf(parseAsString).withDefault([]),
@@ -266,12 +268,14 @@ export function ClientRegister({ rows, isAdmin }: Props) {
     const ctypes = new Set<string>();
     const itypes = new Set<string>();
     const tagSet = new Set<string>();
+    const stateSet = new Set<string>();
     for (const r of rows) {
       if (r.salesPersonId && r.salesPersonName)
         salesPeople.set(r.salesPersonId, r.salesPersonName);
       r.customerTypeNames.forEach((n) => ctypes.add(n));
       r.industryTypeNames.forEach((n) => itypes.add(n));
       r.tags.forEach((t) => tagSet.add(t));
+      if (r.state) stateSet.add(r.state);
     }
     const byName = (a: string, b: string) =>
       a.localeCompare(b, undefined, { sensitivity: "base" });
@@ -282,6 +286,7 @@ export function ClientRegister({ rows, isAdmin }: Props) {
       customerTypes: [...ctypes].sort(byName),
       industryTypes: [...itypes].sort(byName),
       tags: [...tagSet].sort(byName),
+      states: [...stateSet].sort(byName),
     };
   }, [rows]);
 
@@ -315,12 +320,14 @@ export function ClientRegister({ rows, isAdmin }: Props) {
       if (status === "active" && !r.isActive) return false;
       if (status === "inactive" && r.isActive) return false;
       if (gstin === "has" && !r.gstin) return false;
+      if (gstin === "none" && r.gstin) return false;
+      if (stateFilter && r.state !== stateFilter) return false;
       // Tags: match rows carrying ANY of the selected tags.
       if (tags.length > 0 && !tags.some((t) => r.tags.includes(t)))
         return false;
       return true;
     });
-  }, [rows, q, grade, salesPerson, customerType, industryType, trade, status, gstin, tags]);
+  }, [rows, q, grade, salesPerson, customerType, industryType, trade, status, gstin, stateFilter, tags]);
 
   const hasFilters =
     Boolean(q) ||
@@ -331,6 +338,7 @@ export function ClientRegister({ rows, isAdmin }: Props) {
     Boolean(trade) ||
     Boolean(status) ||
     Boolean(gstin) ||
+    Boolean(stateFilter) ||
     tags.length > 0;
 
   function clearFilters() {
@@ -342,6 +350,7 @@ export function ClientRegister({ rows, isAdmin }: Props) {
     setTrade("");
     setStatus("");
     setGstin("");
+    setStateFilter("");
     setTags([]);
   }
 
@@ -478,6 +487,44 @@ export function ClientRegister({ rows, isAdmin }: Props) {
           <option value="export">Export</option>
         </select>
 
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value || "")}
+          aria-label="Status"
+          className={selectClass}
+        >
+          <option value="">All statuses</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+
+        <select
+          value={gstin}
+          onChange={(e) => setGstin(e.target.value || "")}
+          aria-label="GSTIN"
+          className={selectClass}
+        >
+          <option value="">All GSTIN</option>
+          <option value="has">With GSTIN</option>
+          <option value="none">Without GSTIN</option>
+        </select>
+
+        {options.states.length > 0 && (
+          <select
+            value={stateFilter}
+            onChange={(e) => setStateFilter(e.target.value || "")}
+            aria-label="State"
+            className={selectClass}
+          >
+            <option value="">All states</option>
+            {options.states.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        )}
+
         {options.tags.length > 0 && (
           <div className="shrink-0 rounded-chip border border-[#dcdce8] bg-white px-3 py-2">
             <MultiSelect
@@ -528,15 +575,15 @@ export function ClientRegister({ rows, isAdmin }: Props) {
         </div>
       ) : (
         <div
-          className="overflow-auto rounded-2xl border border-[#e5e7eb] bg-white"
-          style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.04)", maxHeight: "calc(100vh - 300px)" }}
+          className="overflow-auto rounded-2xl border-2 border-[#2b303b] bg-white"
+          style={{ boxShadow: "0 2px 10px rgba(15,23,42,0.08)", maxHeight: "calc(100vh - 300px)" }}
         >
           <table
-            className="w-full border-separate text-[13px]"
+            className="w-full border-separate text-[13.5px] font-medium"
             style={{ borderSpacing: 0, minWidth: tableMinWidth }}
           >
             <thead>
-              <tr className="text-left text-[11px] font-bold uppercase tracking-[0.06em] text-[#6b7280]">
+              <tr className="text-left text-[11.5px] font-black uppercase tracking-[0.05em] text-[#2b303b]">
                 <Th sticky left={0} width={W_ACTIONS} corner>
                   <span className="sr-only">Actions</span>
                 </Th>
@@ -606,8 +653,10 @@ export function ClientRegister({ rows, isAdmin }: Props) {
       )}
 
       {quickView && (
-        <ClientQuickView
-          client={quickView}
+        <ClientKycQuickView
+          clientId={quickView.id}
+          name={quickView.name}
+          isActive={quickView.isActive}
           isAdmin={isAdmin}
           onClose={() => setQuickView(null)}
         />
@@ -732,10 +781,15 @@ function Th({
     : { width, minWidth: width };
   return (
     <th
-      className={`sticky top-0 z-[2] whitespace-nowrap px-3 py-2.5 ${
+      className={`sticky top-0 z-[2] whitespace-nowrap px-4 py-3 ${
         align === "right" ? "text-right" : "text-left"
       }`}
-      style={{ background: "#f4f5f9", ...style }}
+      style={{
+        background: "#e6e8f2",
+        borderBottom: "2px solid #2b303b",
+        borderRight: "1px solid #c4c9d6",
+        ...style,
+      }}
     >
       {children}
     </th>
@@ -764,14 +818,14 @@ function Td({
     : { width, minWidth: width };
   return (
     <td
-      className={`break-words border-t border-[#eef0f3] px-3 py-2 ${
+      className={`break-words border-b border-[#c9cede] px-4 py-3 text-[#3a4152] ${
         align === "right" ? "text-right" : "text-left"
       } ${
         sticky
-          ? "bg-white group-hover/row:bg-[#f7f7fb]"
-          : "group-hover/row:bg-[#f7f7fb]"
+          ? "bg-white group-hover/row:bg-[#f2f2fb]"
+          : "group-hover/row:bg-[#f2f2fb]"
       } ${className}`}
-      style={{ whiteSpace: "normal", ...style }}
+      style={{ whiteSpace: "normal", borderRight: "1px solid #e7e9f1", ...style }}
     >
       {children}
     </td>
@@ -840,6 +894,8 @@ function RowMenu({
     label: string;
     icon: React.ReactNode;
     href?: Route;
+    /** Plain-anchor link (file route / new tab) instead of client-side Link. */
+    external?: string;
     onSelect?: () => void;
     danger?: boolean;
   };
@@ -849,6 +905,12 @@ function RowMenu({
       label: "Quick view",
       icon: <Eye size={15} strokeWidth={2.2} />,
       onSelect: onQuickView,
+    },
+    {
+      key: "pdf",
+      label: "View form (PDF)",
+      icon: <FileDown size={15} strokeWidth={2.2} />,
+      external: `/clients/${row.id}/kyc.pdf?view=1`,
     },
     {
       key: "record",
@@ -877,7 +939,19 @@ function RowMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="min-w-[11rem]">
         {items.map((it) =>
-          it.href ? (
+          it.external ? (
+            <DropdownMenuItem key={it.key} asChild className="text-[14px]">
+              <a
+                href={it.external}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2.5"
+              >
+                {it.icon}
+                {it.label}
+              </a>
+            </DropdownMenuItem>
+          ) : it.href ? (
             <DropdownMenuItem key={it.key} asChild className="text-[14px]">
               <Link href={it.href} className="flex items-center gap-2.5">
                 {it.icon}

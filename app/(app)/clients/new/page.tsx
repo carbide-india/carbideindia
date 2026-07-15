@@ -67,6 +67,8 @@ export default async function NewClientKycPage({
           productTypes={productTypes}
           departments={departments}
           employees={employees}
+          isAdmin={Boolean(me?.isAdmin)}
+          designationOptions={kycLists["designation"]}
           paymentTermsOptions={kycLists["payment_terms"]}
           freightOptions={kycLists["freight_charges"]}
           creditDaysOptions={kycLists["credit_days"]}

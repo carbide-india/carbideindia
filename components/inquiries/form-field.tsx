@@ -92,10 +92,13 @@ export function GroupHeader({
   n,
   label,
   action,
+  leftAction,
 }: {
   n: number;
   label: string;
   action?: React.ReactNode;
+  /** Rendered immediately after the label (left side), before the divider. */
+  leftAction?: React.ReactNode;
 }) {
   return (
     <div className="flex items-center gap-3">
@@ -111,6 +114,7 @@ export function GroupHeader({
       <span className="shrink-0 text-[14.5px] font-extrabold tracking-tight text-ink-strong">
         {label}
       </span>
+      {leftAction}
       <span
         className="h-[2px] flex-1 rounded-full"
         style={{

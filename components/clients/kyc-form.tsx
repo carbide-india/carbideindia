@@ -7,9 +7,15 @@ import { useForm, Controller, useFieldArray, type Control } from "react-hook-for
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
 import { upload } from "@vercel/blob/client";
-import { Check, FileText, ImagePlus, Loader2, Plus, X } from "lucide-react";
+import { Check, Copy, Download, FileText, ImagePlus, Loader2, Plus, X } from "lucide-react";
 import { CreateClientKycSchema } from "@/lib/validators/client-kyc";
-import { createClientKyc } from "@/app/(app)/clients/actions";
+import { createClientKyc, fetchGstDetailsAction } from "@/app/(app)/clients/actions";
+import { parseGstin, type GstinParse, GST_STATE_NAMES } from "@/lib/data/gst";
+import { AddMasterOptionModal } from "@/components/masters/add-master-option-modal";
+import { InlineOptionAdd } from "@/components/clients/inline-option-add";
+import { addCustomOption } from "@/app/(app)/_actions/custom-lists";
+import { CUSTOM_LISTS } from "@/lib/custom-lists/registry";
+import { createMasterOption } from "@/app/(admin)/admin/masters/actions";
 import {
   adminUpdateClientKyc,
   checkClientDuplicate,
@@ -26,12 +32,12 @@ import { fireToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { Select } from "@/components/ui/select";
 import { TagsInput } from "@/components/ui/tags-input";
-import { Field, SectionCard, GroupHeader, Segmented } from "@/components/inquiries/form-field";
+import { Field, SectionCard, GroupHeader } from "@/components/inquiries/form-field";
 import { NotesField } from "@/components/ui/notes-field";
 import { useFormDraft } from "@/components/drafts/use-form-draft";
 import type { MasterOptionItem } from "@/lib/queries/masters";
 import type { EmployeeOption } from "@/lib/queries/employees";
-import { COUNTRIES, INDIAN_STATES } from "@/lib/data/geo";
+import { COUNTRIES, INDIAN_STATES, pinToState, toAddressStateName } from "@/lib/data/geo";
 import { BANKS, ACCOUNT_TYPES } from "@/lib/data/banks";
 import { ClientDocuments } from "@/components/clients/client-documents";
 import type { ClientDocument } from "@/lib/queries/client-documents";
@@ -47,8 +53,13 @@ interface Props {
   industryTypes: MasterOptionItem[];
   productTypes: MasterOptionItem[];
   employees: EmployeeOption[];
+  /** Admins get inline "+ Add" buttons on the type groups (add a master option
+   *  without leaving the form). */
+  isAdmin?: boolean;
   /** Admin-managed departments - surfaced as the "Department" dropdown. */
   departments?: MasterOptionItem[];
+  /** Contact-person designations (custom list) - the "Designation" dropdown. */
+  designationOptions?: string[];
   /** Per-form "Custom" dropdown lists (§2.5). Each falls back to a preset. */
   paymentTermsOptions?: string[];
   freightOptions?: string[];
@@ -111,9 +122,31 @@ const PAYMENT_TERMS_PRESET = [
   "As per PO",
 ];
 const FREIGHT_PRESET = ["Paid", "To Pay", "Extra at Actuals", "Included", "Ex-Works"];
+const DESIGNATION_PRESET =
+  CUSTOM_LISTS.kyc?.lists.find((l) => l.key === "designation")?.defaults ?? [];
 const CREDIT_DAYS_PRESET = ["0", "15", "30", "45", "60", "90"];
 const CREDIT_LIMIT_PRESET = ["50000", "100000", "250000", "500000", "1000000"];
 const QTY_DEVIATION_PRESET = ["±5%", "±10%", "±15%", "±20%", "As per PO"];
+
+/** Field label with an optional action (e.g. inline "+ Add") on the right. */
+function AddLabelRow({ label, add }: { label: string; add?: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span
+        className="font-bold"
+        style={{
+          fontFamily: "var(--font-sans), system-ui, sans-serif",
+          fontSize: 14,
+          letterSpacing: "-0.005em",
+          color: "var(--color-ink-strong)",
+        }}
+      >
+        {label}
+      </span>
+      {add}
+    </div>
+  );
+}
 
 /**
  * Map a KYC country to its default currency - drives the auto-populate of the
@@ -133,11 +166,6 @@ const COUNTRY_TO_CURRENCY: Partial<
   Belgium: "EURO",
   Others: "Others",
 };
-
-const YES_NO_SEGMENTED = [
-  { value: "yes", label: "Yes" },
-  { value: "no", label: "No" },
-] as const;
 
 function safeCardName(name: string): string {
   return name.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 120) || "card";
@@ -167,7 +195,9 @@ export function KycForm({
   industryTypes,
   productTypes,
   employees,
+  isAdmin = false,
   departments = [],
+  designationOptions,
   paymentTermsOptions,
   freightOptions,
   creditDaysOptions,
@@ -194,6 +224,42 @@ export function KycForm({
   const bankList = bankOptions?.length ? bankOptions : BANKS;
   const accountTypeList = accountTypeOptions?.length ? accountTypeOptions : ACCOUNT_TYPES;
   const stateList = stateOptions?.length ? stateOptions : INDIAN_STATES;
+
+  // Locally-added Designation / Department options show in their dropdown
+  // instantly (before router.refresh() syncs them back from the server).
+  const [extraDesignations, setExtraDesignations] = React.useState<string[]>(() => {
+    // Seed with any designations the client already has so a previously
+    // free-typed value still renders as the selected dropdown option.
+    const vals: string[] = [];
+    if (initialValues?.contactDesignation) vals.push(initialValues.contactDesignation);
+    (initialValues?.additionalContacts ?? []).forEach((c) => {
+      if (c?.designation) vals.push(c.designation);
+    });
+    return vals;
+  });
+  const [extraDepartments, setExtraDepartments] = React.useState<MasterOptionItem[]>([]);
+  const designationList = React.useMemo(() => {
+    const base = designationOptions?.length ? designationOptions : DESIGNATION_PRESET;
+    return Array.from(
+      new Set([...base, ...extraDesignations].map((s) => s.trim()).filter(Boolean)),
+    );
+  }, [designationOptions, extraDesignations]);
+  const departmentList = React.useMemo(() => {
+    const map = new Map<string, MasterOptionItem>();
+    [...departments, ...extraDepartments].forEach((d) => map.set(d.id, d));
+    return Array.from(map.values());
+  }, [departments, extraDepartments]);
+
+  // Locally-added Commercial & Credit terms (payment terms / freight / credit
+  // days / credit limit / transporter / qty deviation) - each list is a custom
+  // dropdown; the inline "+ Add" writes to it and shows the value immediately.
+  const [extraTerms, setExtraTerms] = React.useState<Record<string, string[]>>({});
+  const withExtra = React.useCallback(
+    (base: readonly string[] | undefined, key: string) =>
+      Array.from(new Set([...(base ?? []), ...(extraTerms[key] ?? [])].filter(Boolean))),
+    [extraTerms],
+  );
+
   const isEdit = Boolean(editClientId);
   const draftsOn = Boolean(enableDrafts) && !isEdit;
   const router = useRouter();
@@ -301,6 +367,25 @@ export function KycForm({
   const { fields: bankFields, append: appendBank, remove: removeBank } =
     useFieldArray({ control, name: "bankAccounts" });
 
+  // Always show one primary bank account expanded (never just the "+ Add
+  // Account" button). Empty accounts are dropped on save, so this seeds no junk.
+  const bankSeeded = React.useRef(false);
+  React.useEffect(() => {
+    if (bankSeeded.current) return;
+    bankSeeded.current = true;
+    if (bankFields.length === 0) {
+      appendBank({
+        isPrimary: true,
+        bankName: "",
+        accountNo: "",
+        ifsc: "",
+        branch: "",
+        accountHolder: "",
+        accountType: "",
+      });
+    }
+  }, [bankFields.length, appendBank]);
+
   // ── Draft auto-save (create mode only - silent, runs in background) ──
   const { discard } = useFormDraft({
     kind: "kyc",
@@ -318,6 +403,21 @@ export function KycForm({
     if (mapped) setValue("currency", mapped);
     const addrs = getValues("addresses") ?? [];
     addrs.forEach((_, i) => setValue(`addresses.${i}.country`, next));
+  }
+
+  /** When a 6-digit PIN is entered, infer the State (postal circle) and default
+   *  the Country to India. Only fills fields the user has left blank so it never
+   *  clobbers a manual choice. */
+  function autofillFromPin(idx: number, pinRaw: string) {
+    const pin = pinRaw.replace(/\D/g, "");
+    if (pin.length < 6) return;
+    const state = pinToState(pin);
+    if (state && !getValues(`addresses.${idx}.state`)) {
+      setValue(`addresses.${idx}.state`, state, { shouldDirty: true });
+    }
+    if (!getValues(`addresses.${idx}.country`)) {
+      setValue(`addresses.${idx}.country`, "India", { shouldDirty: true });
+    }
   }
 
   /** Copy the billing address (index 0) into another address block. */
@@ -353,6 +453,115 @@ export function KycForm({
         setDupMatches([]);
       }
     });
+  }
+
+  // ── GSTIN "master key": normalize as the user types (uppercase, strip
+  //    spaces/hyphens on paste), validate format + checksum live, and silently
+  //    auto-fill PAN, Place of Supply (state) and the registration type. ──
+  const [gstParse, setGstParse] = React.useState<GstinParse>(() =>
+    parseGstin(String(initialValues?.gstin ?? "")),
+  );
+
+  function handleGstinChange(raw: string) {
+    const parse = parseGstin(raw);
+    setGstParse(parse);
+    setValue("gstin", parse.normalized, { shouldDirty: true });
+
+    if (parse.normalized === "") {
+      // Cleared - relax the registration type back to unregistered.
+      const t = watch("gstRegistrationType");
+      if (t === "regular" || !t) setValue("gstRegistrationType", "unregistered", { shouldDirty: true });
+      return;
+    }
+
+    // Step 1 - the first 2 digits (state code) locate the entity: a GSTIN is
+    // always Indian, so fill State (Place of Supply), Country and Currency the
+    // moment the code resolves, without waiting for the rest of the number.
+    // The registration state also flows into the Billing Address so that block
+    // is auto-completed too.
+    if (parse.stateName) {
+      setValue("placeOfSupply", parse.stateName, { shouldDirty: true });
+      applyCountry("India" as (typeof INQUIRY_COUNTRIES)[number]);
+      const addrState = toAddressStateName(parse.stateName);
+      setValue("addresses.0.state", addrState, { shouldDirty: true });
+      const t = watch("gstRegistrationType");
+      if (!t || t === "unregistered") setValue("gstRegistrationType", "regular", { shouldDirty: true });
+    }
+
+    // Step 2 - once chars 3-12 exist, extract and fill the PAN / I-T number.
+    if (parse.pan) setValue("panNo", parse.pan, { shouldDirty: true });
+  }
+
+  // ── GSTIN → business details auto-fetch. A GSTIN is a rich key: one lookup
+  //    (configured KYB provider, lib/kyb/gst-lookup.ts) fills the Company Name,
+  //    registered address, registration type and reports the GSTIN status.
+  //    Only fills fields the user left blank so it never clobbers a manual edit.
+  const [gstPending, startGst] = React.useTransition();
+  function setIfBlank(name: Parameters<typeof setValue>[0], value: string | undefined) {
+    if (!value) return;
+    const current = getValues(name);
+    if (current === undefined || current === null || current === "") {
+      setValue(name, value, { shouldDirty: true });
+    }
+  }
+  function handleFetchGst() {
+    const gstin = (watch("gstin") ?? "").trim();
+    if (gstin.replace(/[^a-zA-Z0-9]/g, "").length !== 15) {
+      fireToast({ message: "Enter a complete 15-character GSTIN first.", type: "error" });
+      return;
+    }
+    startGst(async () => {
+      const res = await fetchGstDetailsAction(gstin);
+      if (!res.ok) {
+        fireToast({ message: res.error ?? "Couldn't fetch GST details.", type: "error" });
+        return;
+      }
+      setIfBlank("name", res.tradeName ?? res.legalName);
+      if (
+        res.registrationType &&
+        (GST_REGISTRATION_TYPES as readonly string[]).includes(res.registrationType)
+      ) {
+        setValue(
+          "gstRegistrationType",
+          res.registrationType as (typeof GST_REGISTRATION_TYPES)[number],
+          { shouldDirty: true },
+        );
+      }
+      const a = res.address;
+      if (a) {
+        setIfBlank("addresses.0.line1", a.line1);
+        setIfBlank("addresses.0.line2", a.line2);
+        setIfBlank("addresses.0.line3", a.line3);
+        setIfBlank("addresses.0.line4", a.line4);
+        setIfBlank("addresses.0.city", a.city);
+        setIfBlank("addresses.0.state", a.state);
+        setIfBlank("addresses.0.pinCode", a.pincode);
+        setIfBlank("addresses.0.country", "India");
+      }
+      const cancelled = (res.status ?? "").toLowerCase().includes("cancel");
+      fireToast({
+        message: `${res.legalName ?? res.tradeName ?? "GST"} fetched${res.status ? ` · ${res.status}` : ""}.`,
+        type: cancelled ? "error" : "success",
+      });
+    });
+  }
+
+  /** Inline "+ Add" for a Commercial & Credit custom dropdown: writes the value
+   *  to the list, shows it instantly, and selects it via `onSelect`. */
+  function termAdd(listKey: string, title: string, onSelect: (v: string) => void) {
+    return (
+      <InlineOptionAdd
+        title={title}
+        add={async (n) => {
+          const r = await addCustomOption("kyc", listKey, n);
+          return r.ok ? { ok: true, value: n } : { ok: false, error: r.error };
+        }}
+        onAdded={(v) => {
+          setExtraTerms((p) => ({ ...p, [listKey]: [...(p[listKey] ?? []), v] }));
+          onSelect(v);
+        }}
+      />
+    );
   }
 
   // Business-card scans live in form state via the URL fields - uploads run on
@@ -501,8 +710,8 @@ export function KycForm({
           </Field>
         )}
 
-        {/* Company Name fills the row; Export (Yes/No) and Grade sit beside it. */}
-        <div className="grid grid-cols-[1fr_160px_200px] gap-4 max-lg:grid-cols-[1fr_160px] max-md:grid-cols-1">
+        {/* Company Name · Assign Sales Person · Export · Grade · Tags — one line. */}
+        <div className="grid grid-cols-[minmax(200px,1.5fr)_minmax(160px,1fr)_120px_100px_minmax(170px,1fr)] gap-3 max-xl:grid-cols-2 max-md:grid-cols-1">
           <Field id="kyc-name" label="Company Name" required>
             <input
               id="kyc-name"
@@ -517,21 +726,42 @@ export function KycForm({
               </p>
             )}
           </Field>
+          <Field label="Assign Sales Person" labelOnly>
+            <Controller
+              control={control}
+              name="kycSalesPersonId"
+              render={({ field }) => (
+                <Select
+                  ariaLabel="Assign Sales Person"
+                  value={field.value ?? ""}
+                  onValueChange={(v) => field.onChange(v || undefined)}
+                  placeholder={
+                    employees.length === 0 ? "No employees yet" : "Select an employee"
+                  }
+                  disabled={employees.length === 0}
+                  searchable
+                  searchPlaceholder="Search employees"
+                  options={employees.map((e) => ({ value: e.id, label: e.name }))}
+                />
+              )}
+            />
+          </Field>
           <Field label="Export" labelOnly>
             <Controller
               control={control}
               name="export"
               render={({ field }) => (
-                <Segmented
+                <Select
                   ariaLabel="Export"
-                  activeTone="brand"
-                  options={YES_NO_SEGMENTED}
-                  value={
-                    field.value === undefined ? undefined : field.value ? "yes" : "no"
+                  value={field.value === undefined ? "" : field.value ? "yes" : "no"}
+                  onValueChange={(v) =>
+                    field.onChange(v === "" ? undefined : v === "yes")
                   }
-                  onChange={(v) =>
-                    field.onChange(v === undefined ? undefined : v === "yes")
-                  }
+                  placeholder="Export?"
+                  options={[
+                    { value: "yes", label: "Yes" },
+                    { value: "no", label: "No" },
+                  ]}
                 />
               )}
             />
@@ -553,31 +783,53 @@ export function KycForm({
               )}
             />
           </Field>
+          <Field label="Tags">
+            <Controller
+              control={control}
+              name="tags"
+              render={({ field }) => (
+                <TagsInput
+                  id="kyc-tags"
+                  value={field.value ?? []}
+                  onChange={field.onChange}
+                  placeholder="e.g. Mining, Defense, Cutting"
+                />
+              )}
+            />
+          </Field>
         </div>
 
-        {/* Customer Type sizes to its chips; Industry Type fills the rest - a
-            small gap between them instead of a wasteful 50/50 split. */}
-        <div className="flex flex-wrap items-start gap-x-8 gap-y-4">
-          <div className="shrink-0">
-            <MasterChips
-              control={control}
-              name="customerTypeIds"
-              label="Customer Type"
-              options={customerTypes}
-            />
-          </div>
-          <div className="min-w-0 flex-1">
-            <MasterChips
-              control={control}
-              name="industryTypeIds"
-              label="Industry Type"
-              options={industryTypes}
-            />
-          </div>
+        {/* Customer Type on its own line; Industry Type stacked below it. */}
+        <div className="flex flex-col gap-4">
+          <MasterChips
+            control={control}
+            name="customerTypeIds"
+            label="Customer Type"
+            options={customerTypes}
+            add={isAdmin ? <AddMasterOptionModal kind="customer_type" label="Customer Type" /> : null}
+          />
+          <MasterChips
+            control={control}
+            name="industryTypeIds"
+            label="Industry Type"
+            options={industryTypes}
+            add={isAdmin ? <AddMasterOptionModal kind="industry_type" label="Industry Type" /> : null}
+          />
         </div>
 
         {/* Product Types - uniform-width checkbox chip grid over the master. */}
-        <Field label="Product Types">
+        <div className="flex flex-col gap-2">
+          <span
+            className="font-bold"
+            style={{
+              fontFamily: "var(--font-sans), system-ui, sans-serif",
+              fontSize: 14,
+              letterSpacing: "-0.005em",
+              color: "var(--color-ink-strong)",
+            }}
+          >
+            Product Types
+          </span>
           <Controller
             control={control}
             name="productTypeIds"
@@ -586,9 +838,12 @@ export function KycForm({
               return (
                 <>
                   {productTypes.length === 0 ? (
-                    <p className="text-[13px] text-ink-subtle">
-                      No product types yet - add them in Admin &#8594; Masters.
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <p className="text-[13px] text-ink-subtle">
+                        No product types yet.
+                      </p>
+                      {isAdmin && <AddMasterOptionModal kind="product_type" label="Product Types" />}
+                    </div>
                   ) : (
                     <div className="grid grid-cols-7 gap-2 max-xl:grid-cols-5 max-lg:grid-cols-4 max-md:grid-cols-2">
                       {productTypes.map((opt) => {
@@ -607,7 +862,7 @@ export function KycForm({
                               )
                             }
                             className={cn(
-                              "flex w-full items-center gap-2 rounded-chip border-[1.75px] px-2.5 py-2 text-[12.5px] font-semibold leading-tight transition-colors",
+                              "flex w-full items-start gap-2 rounded-chip border-[1.75px] px-2.5 py-2 text-left text-[12.5px] font-semibold leading-tight transition-colors",
                               checked
                                 ? "border-brand bg-brand/8 text-ink-strong"
                                 : "border-[#9199b6] bg-surface-card text-ink-strong hover:border-[#6f78a0] hover:bg-[#f3f4f8]",
@@ -615,7 +870,7 @@ export function KycForm({
                           >
                             <span
                               className={cn(
-                                "inline-flex size-[16px] shrink-0 items-center justify-center rounded-[4px] border-[1.75px] transition-colors",
+                                "mt-[1px] inline-flex size-[16px] shrink-0 items-center justify-center rounded-[4px] border-[1.75px] transition-colors",
                                 checked
                                   ? "bg-brand border-brand text-white"
                                   : "border-[#9199b6] bg-white text-transparent",
@@ -623,57 +878,23 @@ export function KycForm({
                             >
                               <Check size={11} strokeWidth={3} />
                             </span>
-                            {opt.name}
+                            <span className="whitespace-normal break-words">{opt.name}</span>
                           </button>
                         );
                       })}
+                      {isAdmin && (
+                        <div className="flex items-center">
+                          <AddMasterOptionModal kind="product_type" label="Product Types" />
+                        </div>
+                      )}
                     </div>
                   )}
                 </>
               );
             }}
           />
-        </Field>
-
-        {/* Assign Sales Person (left) + Tags (right) on one row */}
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-          <Field label="Assign Sales Person" labelOnly>
-            <Controller
-              control={control}
-              name="kycSalesPersonId"
-              render={({ field }) => (
-                <Select
-                  ariaLabel="Assign Sales Person"
-                  value={field.value ?? ""}
-                  onValueChange={(v) => field.onChange(v || undefined)}
-                  placeholder={
-                    employees.length === 0
-                      ? "No employees yet"
-                      : "Select an employee"
-                  }
-                  disabled={employees.length === 0}
-                  searchable
-                  searchPlaceholder="Search employees"
-                  options={employees.map((e) => ({ value: e.id, label: e.name }))}
-                />
-              )}
-            />
-          </Field>
-          <Field label="Tags">
-            <Controller
-              control={control}
-              name="tags"
-              render={({ field }) => (
-                <TagsInput
-                  id="kyc-tags"
-                  value={field.value ?? []}
-                  onChange={field.onChange}
-                  placeholder="e.g. Mining, Defense, Cutting"
-                />
-              )}
-            />
-          </Field>
         </div>
+
       </SectionCard>
 
       {/* ── 2 · Registration & Tax ───────────────────────────────────── */}
@@ -682,21 +903,86 @@ export function KycForm({
         inlineHint
         hint="GST, PAN, MSME / Udyam registration and export / currency details."
       >
-        <div className="grid grid-cols-5 gap-4 max-lg:grid-cols-3 max-md:grid-cols-1">
+        <div className="grid grid-cols-[1.4fr_1fr_1.15fr_0.85fr] gap-4 max-lg:grid-cols-2 max-md:grid-cols-1">
           <Field id="kyc-gstin" label="GSTIN">
-            <input
-              id="kyc-gstin"
-              type="text"
-              className="nt-input"
-              {...register("gstin", { onBlur: runDupCheck })}
-            />
+            <div className="flex items-stretch gap-2">
+              <Controller
+                control={control}
+                name="gstin"
+                render={({ field }) => (
+                  <input
+                    id="kyc-gstin"
+                    type="text"
+                    inputMode="text"
+                    autoCapitalize="characters"
+                    spellCheck={false}
+                    maxLength={15}
+                    placeholder="27ABCDE1234F1Z5"
+                    className="nt-input flex-1 font-mono uppercase tracking-wide"
+                    value={field.value ?? ""}
+                    onChange={(e) => handleGstinChange(e.target.value)}
+                    onBlur={() => {
+                      field.onBlur();
+                      runDupCheck();
+                    }}
+                  />
+                )}
+              />
+              <button
+                type="button"
+                onClick={handleFetchGst}
+                disabled={gstPending}
+                title="Fetch company name, registered address and status from the GSTIN"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border-[1.75px] border-[#3f3f94] bg-[#f4f4fd] px-3 text-[12.5px] font-bold text-[#3f3f94] transition hover:bg-[#3f3f94] hover:text-white disabled:opacity-50"
+              >
+                {gstPending ? (
+                  <Loader2 className="h-[15px] w-[15px] animate-spin" />
+                ) : (
+                  <Download className="h-[15px] w-[15px]" />
+                )}
+                Fetch
+              </button>
+            </div>
+            {gstParse.status === "valid" && (
+              <p className="mt-1 inline-flex items-center gap-1 text-[12px] font-semibold text-[#15803d]">
+                <Check size={13} strokeWidth={3} /> GST Number Verified
+                {gstParse.stateName ? ` · ${gstParse.stateName}` : ""}
+              </p>
+            )}
+            {gstParse.status === "invalid" && (
+              <p className="mt-1 inline-flex items-center gap-1 text-[12px] font-semibold text-[#d32f2f]">
+                <X size={13} strokeWidth={3} /> {gstParse.error ?? "Invalid GST Number"}
+              </p>
+            )}
+            {gstParse.status === "idle" && gstParse.stateName && (
+              <p className="mt-1 text-[12px] font-medium text-[#6b7280]">
+                State: <span className="font-semibold text-ink-strong">{gstParse.stateName}</span>
+                {gstParse.pan ? " · PAN filled" : " · keep typing to fill PAN"}
+              </p>
+            )}
           </Field>
           <Field id="kyc-pan" label="PAN / IT No">
-            <input
-              id="kyc-pan"
-              type="text"
-              className="nt-input"
-              {...register("panNo", { onBlur: runDupCheck })}
+            <Controller
+              control={control}
+              name="panNo"
+              render={({ field }) => (
+                <input
+                  id="kyc-pan"
+                  type="text"
+                  className="nt-input font-mono uppercase tracking-wide"
+                  maxLength={10}
+                  value={field.value ?? ""}
+                  onChange={(e) =>
+                    field.onChange(
+                      e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 10),
+                    )
+                  }
+                  onBlur={() => {
+                    field.onBlur();
+                    runDupCheck();
+                  }}
+                />
+              )}
             />
           </Field>
           <Field id="kyc-msme" label="MSME / Udyam No">
@@ -724,15 +1010,6 @@ export function KycForm({
                   }))}
                 />
               )}
-            />
-          </Field>
-          <Field id="kyc-pos" label="Place of Supply">
-            <input
-              id="kyc-pos"
-              type="text"
-              className="nt-input"
-              placeholder="e.g. Maharashtra"
-              {...register("placeOfSupply")}
             />
           </Field>
         </div>
@@ -785,6 +1062,23 @@ export function KycForm({
               )}
             />
           </Field>
+          {/* State — auto-detected from the GSTIN state code; also editable. */}
+          <Field label="State" labelOnly>
+            <Controller
+              control={control}
+              name="placeOfSupply"
+              render={({ field }) => (
+                <Select
+                  ariaLabel="State"
+                  value={field.value ?? ""}
+                  onValueChange={(v) => field.onChange(v || "")}
+                  placeholder="Select state"
+                  searchable
+                  options={GST_STATE_NAMES.map((s) => ({ value: s, label: s }))}
+                />
+              )}
+            />
+          </Field>
         </div>
       </SectionCard>
 
@@ -812,16 +1106,77 @@ export function KycForm({
             <Field id="kyc-cemail" label="Email">
               <input id="kyc-cemail" type="email" className="nt-input" {...register("contactEmail")} />
             </Field>
-            <Field id="kyc-cdesig" label="Designation">
-              <input
-                id="kyc-cdesig"
-                type="text"
-                className="nt-input"
-                placeholder="e.g. Purchase Manager"
-                {...register("contactDesignation")}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <span
+                  className="font-bold"
+                  style={{
+                    fontFamily: "var(--font-sans), system-ui, sans-serif",
+                    fontSize: 14,
+                    letterSpacing: "-0.005em",
+                    color: "var(--color-ink-strong)",
+                  }}
+                >
+                  Designation
+                </span>
+                <InlineOptionAdd
+                  title="Designation"
+                  placeholder="e.g. Purchase Manager"
+                  add={async (n) => {
+                    const r = await addCustomOption("kyc", "designation", n);
+                    return r.ok ? { ok: true, value: n } : { ok: false, error: r.error };
+                  }}
+                  onAdded={(v) => {
+                    setExtraDesignations((prev) => [...prev, v]);
+                    setValue("contactDesignation", v, { shouldDirty: true });
+                  }}
+                />
+              </div>
+              <Controller
+                control={control}
+                name="contactDesignation"
+                render={({ field }) => (
+                  <Select
+                    ariaLabel="Designation"
+                    value={field.value ?? ""}
+                    onValueChange={(v) => field.onChange(v || undefined)}
+                    placeholder="Select designation"
+                    searchable
+                    searchPlaceholder="Search designations"
+                    options={designationList.map((d) => ({ value: d, label: d }))}
+                  />
+                )}
               />
-            </Field>
-            <Field label="Department" labelOnly>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <span
+                  className="font-bold"
+                  style={{
+                    fontFamily: "var(--font-sans), system-ui, sans-serif",
+                    fontSize: 14,
+                    letterSpacing: "-0.005em",
+                    color: "var(--color-ink-strong)",
+                  }}
+                >
+                  Department
+                </span>
+                {isAdmin && (
+                  <InlineOptionAdd
+                    title="Department"
+                    add={async (n) => {
+                      const r = await createMasterOption({ kind: "department", name: n });
+                      return r.ok
+                        ? { ok: true, value: r.id }
+                        : { ok: false, error: r.error };
+                    }}
+                    onAdded={(id, name) => {
+                      setExtraDepartments((prev) => [...prev, { id, name }]);
+                      setValue("departmentId", id, { shouldDirty: true });
+                    }}
+                  />
+                )}
+              </div>
               <Controller
                 control={control}
                 name="departmentId"
@@ -831,14 +1186,14 @@ export function KycForm({
                     value={field.value ?? ""}
                     onValueChange={(v) => field.onChange(v || undefined)}
                     placeholder={
-                      departments.length === 0 ? "No departments yet" : "Select a department"
+                      departmentList.length === 0 ? "No departments yet" : "Select a department"
                     }
-                    disabled={departments.length === 0}
-                    options={departments.map((d) => ({ value: d.id, label: d.name }))}
+                    disabled={departmentList.length === 0}
+                    options={departmentList.map((d) => ({ value: d.id, label: d.name }))}
                   />
                 )}
               />
-            </Field>
+            </div>
           </div>
           <Field id="kyc-cnotes" label="Contact Notes">
             <Controller
@@ -891,13 +1246,21 @@ export function KycForm({
               </Field>
             </div>
             <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-              <Field id={`kyc-ac${idx}-desig`} label="Designation">
-                <input
-                  id={`kyc-ac${idx}-desig`}
-                  type="text"
-                  className="nt-input"
-                  placeholder="e.g. Purchase Manager"
-                  {...register(`additionalContacts.${idx}.designation`)}
+              <Field label="Designation" labelOnly>
+                <Controller
+                  control={control}
+                  name={`additionalContacts.${idx}.designation`}
+                  render={({ field: df }) => (
+                    <Select
+                      ariaLabel="Designation"
+                      value={df.value ?? ""}
+                      onValueChange={(v) => df.onChange(v || undefined)}
+                      placeholder="Select designation"
+                      searchable
+                      searchPlaceholder="Search designations"
+                      options={designationList.map((d) => ({ value: d, label: d }))}
+                    />
+                  )}
                 />
               </Field>
               <Field id={`kyc-ac${idx}-notes`} label="Notes">
@@ -953,29 +1316,30 @@ export function KycForm({
               <GroupHeader
                 n={idx + 1}
                 label={addrLabel}
+                leftAction={
+                  idx >= 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => copyFromBilling(idx)}
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border-[1.75px] border-[#3f3f94] bg-[#f4f4fd] px-3 py-1.5 text-[12.5px] font-bold text-[#3f3f94] transition hover:bg-[#3f3f94] hover:text-white hover:shadow-[0_6px_16px_rgba(63,63,148,0.28)]"
+                    >
+                      <Copy className="h-[14px] w-[14px]" />
+                      Click here to Copy from Billing Address
+                    </button>
+                  ) : undefined
+                }
                 action={
-                  <div className="flex shrink-0 items-center gap-2">
-                    {idx >= 1 && (
-                      <button
-                        type="button"
-                        onClick={() => copyFromBilling(idx)}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-[#c9c9ea] bg-[#f4f4fd] px-2.5 py-1.5 text-[12px] font-bold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#eeeefb]"
-                      >
-                        Same as Billing Address
-                      </button>
-                    )}
-                    {idx >= 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeAddress(idx)}
-                        aria-label={`Remove ${addrLabel.toLowerCase()}`}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-hairline px-2.5 py-1.5 text-[12px] font-semibold text-ink-subtle transition hover:border-[#f0b4b4] hover:bg-[#fdf3f3] hover:text-[#d32f2f]"
-                      >
-                        <X className="h-[15px] w-[15px]" />
-                        Remove
-                      </button>
-                    )}
-                  </div>
+                  idx >= 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => removeAddress(idx)}
+                      aria-label={`Remove ${addrLabel.toLowerCase()}`}
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-hairline px-2.5 py-1.5 text-[12px] font-semibold text-ink-subtle transition hover:border-[#f0b4b4] hover:bg-[#fdf3f3] hover:text-[#d32f2f]"
+                    >
+                      <X className="h-[15px] w-[15px]" />
+                      Remove
+                    </button>
+                  ) : undefined
                 }
               />
 
@@ -1065,9 +1429,11 @@ export function KycForm({
                     type="text"
                     inputMode="numeric"
                     className="nt-input"
+                    maxLength={6}
                     {...register(`addresses.${idx}.pinCode`, {
                       onChange: (e) => {
                         e.target.value = e.target.value.replace(/[^0-9]/g, "");
+                        autofillFromPin(idx, e.target.value);
                       },
                     })}
                   />
@@ -1107,7 +1473,13 @@ export function KycForm({
         hint="Payment terms, credit limits, freight and logistics details."
       >
         <div className="grid grid-cols-6 gap-3 max-lg:grid-cols-3 max-md:grid-cols-2">
-          <Field label="Payment Terms" labelOnly>
+          <div className="flex flex-col gap-1.5">
+            <AddLabelRow
+              label="Payment Terms"
+              add={termAdd("payment_terms", "Payment Term", (v) =>
+                setValue("paymentTerms", v, { shouldDirty: true }),
+              )}
+            />
             <Controller
               control={control}
               name="paymentTerms"
@@ -1117,12 +1489,18 @@ export function KycForm({
                   value={field.value ?? ""}
                   onValueChange={(v) => field.onChange(v || undefined)}
                   placeholder="Select payment terms"
-                  options={paymentTermsList.map((t) => ({ value: t, label: t }))}
+                  options={withExtra(paymentTermsList, "payment_terms").map((t) => ({ value: t, label: t }))}
                 />
               )}
             />
-          </Field>
-          <Field label="Freight Charges" labelOnly>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <AddLabelRow
+              label="Freight Charges"
+              add={termAdd("freight_charges", "Freight Charge", (v) =>
+                setValue("freightCharges", v, { shouldDirty: true }),
+              )}
+            />
             <Controller
               control={control}
               name="freightCharges"
@@ -1132,12 +1510,18 @@ export function KycForm({
                   value={field.value ?? ""}
                   onValueChange={(v) => field.onChange(v || undefined)}
                   placeholder="Select freight terms"
-                  options={freightList.map((t) => ({ value: t, label: t }))}
+                  options={withExtra(freightList, "freight_charges").map((t) => ({ value: t, label: t }))}
                 />
               )}
             />
-          </Field>
-          <Field label="Credit Days" labelOnly>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <AddLabelRow
+              label="Credit Days"
+              add={termAdd("credit_days", "Credit Days value", (v) =>
+                setValue("creditDays", v as never, { shouldDirty: true }),
+              )}
+            />
             <Controller
               control={control}
               name="creditDays"
@@ -1147,15 +1531,21 @@ export function KycForm({
                   value={field.value != null ? String(field.value) : ""}
                   onValueChange={(v) => field.onChange(v || undefined)}
                   placeholder="Select credit days"
-                  options={creditDaysList.map((d) => ({
+                  options={withExtra(creditDaysList, "credit_days").map((d) => ({
                     value: d,
                     label: /^\d+$/.test(d) ? `${d} days` : d,
                   }))}
                 />
               )}
             />
-          </Field>
-          <Field label="Credit Limit" labelOnly>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <AddLabelRow
+              label="Credit Limit"
+              add={termAdd("credit_limit", "Credit Limit value", (v) =>
+                setValue("creditLimit", v as never, { shouldDirty: true }),
+              )}
+            />
             <Controller
               control={control}
               name="creditLimit"
@@ -1165,15 +1555,21 @@ export function KycForm({
                   value={field.value != null ? String(field.value) : ""}
                   onValueChange={(v) => field.onChange(v || undefined)}
                   placeholder="Select credit limit"
-                  options={creditLimitList.map((c) => ({
+                  options={withExtra(creditLimitList, "credit_limit").map((c) => ({
                     value: c,
                     label: /^\d+$/.test(c) ? `₹${Number(c).toLocaleString("en-IN")}` : c,
                   }))}
                 />
               )}
             />
-          </Field>
-          <Field label="Transporter" labelOnly>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <AddLabelRow
+              label="Transporter"
+              add={termAdd("transporter", "Transporter", (v) =>
+                setValue("transporter", v, { shouldDirty: true }),
+              )}
+            />
             <Controller
               control={control}
               name="transporter"
@@ -1183,12 +1579,18 @@ export function KycForm({
                   value={field.value ?? ""}
                   onValueChange={(v) => field.onChange(v || undefined)}
                   placeholder="Select transporter"
-                  options={transporterList.map((t) => ({ value: t, label: t }))}
+                  options={withExtra(transporterList, "transporter").map((t) => ({ value: t, label: t }))}
                 />
               )}
             />
-          </Field>
-          <Field label="Quantity Deviation" labelOnly>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <AddLabelRow
+              label="Quantity Deviation"
+              add={termAdd("qty_deviation", "Quantity Deviation", (v) =>
+                setValue("qtyDeviation", v, { shouldDirty: true }),
+              )}
+            />
             <Controller
               control={control}
               name="qtyDeviation"
@@ -1198,11 +1600,11 @@ export function KycForm({
                   value={field.value ?? ""}
                   onValueChange={(v) => field.onChange(v || undefined)}
                   placeholder="Select deviation"
-                  options={qtyDeviationList.map((t) => ({ value: t, label: t }))}
+                  options={withExtra(qtyDeviationList, "qty_deviation").map((t) => ({ value: t, label: t }))}
                 />
               )}
             />
-          </Field>
+          </div>
         </div>
 
         {/* Other References + Client Notes side by side to save vertical space. */}
@@ -1461,14 +1863,28 @@ function MasterChips({
   name,
   label,
   options,
+  add,
 }: {
   control: Control<KycFormValues>;
   name: "customerTypeIds" | "industryTypeIds";
   label: string;
   options: MasterOptionItem[];
+  /** Optional "+ Add" control rendered at the end of the chip row. */
+  add?: React.ReactNode;
 }) {
   return (
-    <Field label={label} labelOnly>
+    <div className="flex flex-col gap-2">
+      <span
+        className="font-bold"
+        style={{
+          fontFamily: "var(--font-sans), system-ui, sans-serif",
+          fontSize: 14,
+          letterSpacing: "-0.005em",
+          color: "var(--color-ink-strong)",
+        }}
+      >
+        {label}
+      </span>
       <Controller
         control={control}
         name={name}
@@ -1477,9 +1893,12 @@ function MasterChips({
           return (
             <>
               {options.length === 0 ? (
-                <p className="text-[13px] text-ink-subtle">
-                  No options - add in Admin &#8594; Masters.
-                </p>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <p className="text-[13px] text-ink-subtle">
+                    No options yet.
+                  </p>
+                  {add}
+                </div>
               ) : (
                 <div
                   role="group"
@@ -1510,7 +1929,7 @@ function MasterChips({
                       >
                         <span
                           className={cn(
-                            "inline-flex size-[16px] items-center justify-center rounded-[4px] border-[1.75px] transition-colors",
+                            "inline-flex size-[16px] shrink-0 items-center justify-center rounded-[4px] border-[1.75px] transition-colors",
                             checked
                               ? "bg-brand border-brand text-white"
                               : "border-[#9199b6] bg-white text-transparent",
@@ -1518,17 +1937,18 @@ function MasterChips({
                         >
                           <Check size={11} strokeWidth={3} />
                         </span>
-                        {opt.name}
+                        <span className="whitespace-nowrap">{opt.name}</span>
                       </button>
                     );
                   })}
+                  {add ? <div className="self-center">{add}</div> : null}
                 </div>
               )}
             </>
           );
         }}
       />
-    </Field>
+    </div>
   );
 }
 

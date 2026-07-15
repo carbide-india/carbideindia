@@ -10,6 +10,8 @@ import {
   clientBankAccounts,
 } from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
+import { fetchGstDetails, type GstDetails } from "@/lib/kyb/gst-lookup";
+import { getClientRecord, type ClientRecord } from "@/lib/queries/clients";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 import {
   CreateClientKycSchema,
@@ -328,4 +330,26 @@ export async function updateClientKyc(
   updateTag(CACHE_TAGS.clients);
   revalidatePath("/clients");
   return { ok: true };
+}
+
+/**
+ * Fetch a client's business details (legal/trade name, registered address,
+ * taxpayer type, GSTIN status) from the configured GST-verification provider.
+ * Provider + endpoint are env-driven (see lib/kyb/gst-lookup.ts); when
+ * unconfigured this returns a clear notConfigured result so the form stays
+ * manual.
+ */
+export async function fetchGstDetailsAction(gstin: string): Promise<GstDetails> {
+  await requireUser();
+  return fetchGstDetails(gstin);
+}
+
+/**
+ * Full read-only client record for the KYC Quick View - every field the user
+ * filled on the onboarding form, with type/product master names resolved.
+ * Fetched on demand when the popup opens (register + record page).
+ */
+export async function getClientRecordForView(id: string): Promise<ClientRecord | null> {
+  await requireUser();
+  return getClientRecord(id);
 }

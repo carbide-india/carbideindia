@@ -14,7 +14,7 @@ import {
 } from "@/lib/drafts/form-drafts";
 
 /** Keep at most this many ACTIVE drafts per form family; older ones recycle. */
-const MAX_ACTIVE_PER_FORM = 10;
+const MAX_ACTIVE_PER_FORM = 20;
 /** Recycled drafts are permanently purged this long after being recycled. */
 const RECYCLE_TTL_MS = 48 * 60 * 60 * 1000;
 

@@ -5,8 +5,8 @@ import { listEmployeeOptions } from "@/lib/queries/employees";
 import { getClientForEdit } from "@/lib/queries/clients";
 import { getClientDocuments } from "@/lib/queries/client-documents";
 import { listCustomOptionsMap } from "@/lib/queries/custom-lists";
-import { DashboardHeader } from "@/components/layout/header";
-import { DashboardFooter } from "@/components/layout/footer";
+import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
+import { UserMenuServer } from "@/components/header/user-menu-server";
 import { KycForm } from "@/components/clients/kyc-form";
 import { BackLink } from "@/components/ui/back-link";
 
@@ -38,9 +38,8 @@ export default async function EditClientPage({ params }: PageProps) {
   const clientCode = client.clientCode;
 
   return (
-    <>
-      <DashboardHeader generatedAt={new Date()} />
-      <main className="mx-auto max-w-[980px] px-12 max-md:px-4 pt-8 pb-16">
+    <EnquiryModuleShell title="Client KYC" userMenu={<UserMenuServer />}>
+      <div className="w-full">
         <header className="mb-6">
           <div className="mb-4">
             <BackLink href="/clients" label="Client Master" />
@@ -60,10 +59,12 @@ export default async function EditClientPage({ params }: PageProps) {
           productTypes={productTypes}
           departments={departments}
           employees={employees}
+          isAdmin
           editClientId={id}
           initialValues={client}
           clientCode={clientCode}
           documents={documents}
+          designationOptions={kycLists["designation"]}
           paymentTermsOptions={kycLists["payment_terms"]}
           freightOptions={kycLists["freight_charges"]}
           creditDaysOptions={kycLists["credit_days"]}
@@ -74,8 +75,7 @@ export default async function EditClientPage({ params }: PageProps) {
           accountTypeOptions={kycLists["account_type"]}
           stateOptions={kycLists["state"]}
         />
-      </main>
-      <DashboardFooter />
-    </>
+      </div>
+    </EnquiryModuleShell>
   );
 }
