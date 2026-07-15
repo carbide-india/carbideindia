@@ -11,8 +11,6 @@ import {
   INQUIRY_PRIORITY_LABELS,
   INQUIRY_SOURCES,
   INQUIRY_SOURCE_LABELS,
-  INQUIRY_CURRENCIES,
-  INQUIRY_COUNTRIES,
 } from "@/db/enums";
 import { CreateInquirySchema } from "@/lib/validators/inquiry";
 import { createInquiry, updateInquiry } from "@/app/(app)/inquiries/actions";
@@ -25,7 +23,7 @@ import { NotesField } from "@/components/ui/notes-field";
 import { INDIA_STATES, citiesForState } from "@/lib/data/india-states-cities";
 import { SearchableSelect } from "./searchable-select";
 import { Field, SectionCard, GroupHeader } from "./form-field";
-import { ClientTypeToggle, ExistingClientPicker } from "./client-autofill";
+import { ExistingClientPicker } from "./client-autofill";
 import { ProductsSection } from "./products-section";
 import { ChecklistSection } from "./checklist-section";
 import type { ClientAutofill, ClientOption } from "@/lib/queries/clients";
@@ -34,6 +32,30 @@ import type { MasterOptionItem } from "@/lib/queries/masters";
 import type { SampleOption } from "@/lib/queries/samples";
 import type { ShapeConfig } from "@/lib/masters/shape-config";
 import type { PickerMasters } from "@/components/erp/product-picker";
+import { InlineOptionAdd } from "@/components/clients/inline-option-add";
+import { addCustomOption } from "@/app/(app)/_actions/custom-lists";
+import { CURRENCY_CODES } from "@/lib/data/currencies";
+import { COUNTRIES } from "@/lib/data/geo";
+
+/** Field label with an optional action (e.g. inline "+ Add") on the right. */
+function LabelWithAdd({ label, add }: { label: string; add?: React.ReactNode }) {
+  return (
+    <div className="mb-2 flex items-center justify-between gap-2">
+      <label
+        className="font-bold"
+        style={{
+          fontFamily: "var(--font-sans), system-ui, sans-serif",
+          fontSize: 14,
+          letterSpacing: "-0.005em",
+          color: "var(--color-ink-strong)",
+        }}
+      >
+        {label}
+      </label>
+      {add}
+    </div>
+  );
+}
 
 /** RHF holds the schema's *input* shape (pre-transform); zodResolver hands
  *  the parsed *output* (with `quantityUom` defaulted, `""` folded to
@@ -61,6 +83,10 @@ interface Props {
   stateOptions?: string[];
   cityOptions?: string[];
   unitOptions?: string[];
+  /** ENQ Dropdown Master lists for Currency / Country / Quantity UOM. */
+  currencyOptions?: string[];
+  countryOptions?: string[];
+  uomOptions?: string[];
   /** Pre-registered samples for the per-product "Linked Sample" picker. */
   sampleOptions?: SampleOption[];
   /** Current employee - preselected as the assigned sales person. */
@@ -109,6 +135,9 @@ export function InquiryForm({
   stateOptions,
   cityOptions,
   unitOptions,
+  currencyOptions,
+  countryOptions,
+  uomOptions,
   sampleOptions,
   defaultSalesPersonId,
   editInquiryId,
@@ -118,6 +147,19 @@ export function InquiryForm({
 }: Props) {
   // Custom-master lists fall back to the built-in datasets.
   const stateList = stateOptions?.length ? stateOptions : INDIA_STATES;
+
+  // Editable Currency / Country lists (ENQ Dropdown Master), with locally-added
+  // values shown instantly before router.refresh() syncs them from the server.
+  const [extraCurrencies, setExtraCurrencies] = React.useState<string[]>([]);
+  const [extraCountries, setExtraCountries] = React.useState<string[]>([]);
+  const currencyList = React.useMemo(
+    () => Array.from(new Set([...(currencyOptions?.length ? currencyOptions : CURRENCY_CODES), ...extraCurrencies])),
+    [currencyOptions, extraCurrencies],
+  );
+  const countryList = React.useMemo(
+    () => Array.from(new Set([...(countryOptions?.length ? countryOptions : COUNTRIES), ...extraCountries])),
+    [countryOptions, extraCountries],
+  );
   const isEdit = editInquiryId !== undefined;
   const draftsOn = Boolean(enableDrafts) && !isEdit;
   const router = useRouter();
@@ -137,7 +179,7 @@ export function InquiryForm({
   } = useForm<InquiryFormValues, unknown, InquiryFormOutput>({
     resolver: zodResolver(CreateInquirySchema),
     defaultValues: {
-      clientMode: "new",
+      clientMode: "old",
       enquiryDate: todayLocalIso(),
       priority: "normal",
       currency: "INR",
@@ -189,7 +231,6 @@ export function InquiryForm({
     },
   });
 
-  const clientMode = watch("clientMode");
   const clientId = watch("clientId");
 
   const {
@@ -238,18 +279,10 @@ export function InquiryForm({
   function applyAutofill(data: ClientAutofill) {
     setValue("companyName", data.name);
     if (data.export !== null) setValue("export", data.export);
-    if (
-      data.currency &&
-      (INQUIRY_CURRENCIES as readonly string[]).includes(data.currency)
-    ) {
-      setValue("currency", data.currency as (typeof INQUIRY_CURRENCIES)[number]);
-    }
-    if (
-      data.country &&
-      (INQUIRY_COUNTRIES as readonly string[]).includes(data.country)
-    ) {
-      setValue("country", data.country as (typeof INQUIRY_COUNTRIES)[number]);
-    }
+    // Currency / Country are free-text now (editable via ENQ Dropdown Master),
+    // so the client's values flow straight through.
+    if (data.currency) setValue("currency", data.currency);
+    if (data.country) setValue("country", data.country);
     setValue("state", data.state ?? "");
     setValue("city", data.city ?? "");
     setValue("addressLine1", data.addressLine1 ?? "");
@@ -321,28 +354,28 @@ export function InquiryForm({
     <form onSubmit={submit} className="flex flex-col gap-6" noValidate>
       {/* ── 1 · Client ───────────────────────────────────────────────── */}
       <SectionCard>
-        {/* Client Type · (Existing Client, when Old) · Company Name - one line. */}
+        {/* Existing client (required) · New Client button · Company Name - one
+            line. New clients are onboarded only via the Client KYC form. */}
         <div className="flex flex-wrap items-start gap-4">
-          <div className="w-auto shrink-0 max-md:w-full">
-            <ClientTypeToggle
-              mode={clientMode}
-              onModeChange={(m) => {
-                setValue("clientMode", m);
-                if (m === "new") setValue("clientId", undefined);
-              }}
+          <div className="w-[300px] max-md:w-full">
+            <ExistingClientPicker
+              clientId={clientId}
+              onClientChange={(id) => setValue("clientId", id)}
+              clients={clients}
+              onAutofill={applyAutofill}
+              error={errors.clientId?.message}
             />
           </div>
-          {clientMode === "old" && (
-            <div className="w-[300px] max-md:w-full">
-              <ExistingClientPicker
-                clientId={clientId}
-                onClientChange={(id) => setValue("clientId", id)}
-                clients={clients}
-                onAutofill={applyAutofill}
-                error={errors.clientId?.message}
-              />
-            </div>
-          )}
+          <div className="pt-[26px] max-md:w-full max-md:pt-0">
+            <a
+              href="/clients/new"
+              title="Onboard a new client (opens the Client KYC form)"
+              className="inline-flex h-[42px] items-center gap-1.5 rounded-lg border-[1.75px] border-[#3f3f94] bg-[#f4f4fd] px-3.5 text-[13px] font-bold text-[#3f3f94] transition hover:-translate-y-0.5 hover:bg-[#3f3f94] hover:text-white"
+            >
+              <Plus className="h-[15px] w-[15px]" strokeWidth={2.6} />
+              New Client
+            </a>
+          </div>
           <div className="min-w-[240px] max-w-[460px] flex-1 max-md:w-full">
             <Field id="inq-company" label="Company Name" required>
               <input
@@ -380,7 +413,7 @@ export function InquiryForm({
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
+        <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
           <Field id="inq-date" label="Enquiry Date">
             <input
               id="inq-date"
@@ -424,43 +457,90 @@ export function InquiryForm({
               )}
             />
           </Field>
+          <Field id="inq-first" label="First Enquiry?">
+            <Controller
+              control={control}
+              name="firstEnquiry"
+              render={({ field }) => (
+                <Select
+                  id="inq-first"
+                  value={field.value === undefined ? "" : field.value ? "yes" : "no"}
+                  onValueChange={(v) => field.onChange(v === "" ? undefined : v === "yes")}
+                  placeholder="Client's first enquiry?"
+                  options={YES_NO_OPTIONS}
+                />
+              )}
+            />
+          </Field>
         </div>
 
         <div className="grid grid-cols-5 gap-3 max-lg:grid-cols-3 max-md:grid-cols-2">
-          <Field id="inq-currency" label="Currency">
+          <div className="flex flex-col">
+            <LabelWithAdd
+              label="Currency"
+              add={
+                <InlineOptionAdd
+                  title="Currency"
+                  add={async (n) => {
+                    const r = await addCustomOption("enquiry", "currency", n);
+                    return r.ok ? { ok: true, value: n } : { ok: false, error: r.error };
+                  }}
+                  onAdded={(v) => {
+                    setExtraCurrencies((p) => [...p, v]);
+                    setValue("currency", v);
+                  }}
+                />
+              }
+            />
             <Controller
               control={control}
               name="currency"
               render={({ field }) => (
                 <Select
                   id="inq-currency"
+                  ariaLabel="Currency"
                   value={field.value ?? "INR"}
                   onValueChange={field.onChange}
-                  options={INQUIRY_CURRENCIES.map((c) => ({
-                    value: c,
-                    label: c,
-                  }))}
+                  searchable
+                  searchPlaceholder="Search currencies"
+                  options={currencyList.map((c) => ({ value: c, label: c }))}
                 />
               )}
             />
-          </Field>
-          <Field id="inq-country" label="Country">
+          </div>
+          <div className="flex flex-col">
+            <LabelWithAdd
+              label="Country"
+              add={
+                <InlineOptionAdd
+                  title="Country"
+                  add={async (n) => {
+                    const r = await addCustomOption("enquiry", "country", n);
+                    return r.ok ? { ok: true, value: n } : { ok: false, error: r.error };
+                  }}
+                  onAdded={(v) => {
+                    setExtraCountries((p) => [...p, v]);
+                    setValue("country", v);
+                  }}
+                />
+              }
+            />
             <Controller
               control={control}
               name="country"
               render={({ field }) => (
                 <Select
                   id="inq-country"
+                  ariaLabel="Country"
                   value={field.value ?? "India"}
                   onValueChange={field.onChange}
-                  options={INQUIRY_COUNTRIES.map((c) => ({
-                    value: c,
-                    label: c,
-                  }))}
+                  searchable
+                  searchPlaceholder="Search countries"
+                  options={countryList.map((c) => ({ value: c, label: c }))}
                 />
               )}
             />
-          </Field>
+          </div>
           {watch("country") === "India" ? (
             <>
               <Field id="inq-state" label="State">
@@ -696,14 +776,19 @@ export function InquiryForm({
         </div>
       </SectionCard>
 
-      {/* ── 2 · Checklist ────────────────────────────────────────────── */}
-      <ChecklistSection
-        control={control}
-        register={register}
-        productDescriptionError={errors.productDescription?.message}
-      />
+      {/* ── 2 · Checklist (edit mode only) ───────────────────────────── */}
+      {/* On new enquiries the checklist + product description live INSIDE each
+          product card (per-product). Edit mode keeps the header-level checklist
+          since products aren't re-synced from enquiry edits. */}
+      {isEdit && (
+        <ChecklistSection
+          control={control}
+          register={register}
+          productDescriptionError={errors.productDescription?.message}
+        />
+      )}
 
-      {/* ── 3 · Products ─────────────────────────────────────────────── */}
+      {/* ── 3 · Products (with per-product checklist) ────────────────── */}
       {/* Products are hidden in edit mode - they link to costings/quotes and
           are managed from the SM Repo, not re-synced on enquiry edits. */}
       {!isEdit && pickerMasters && (
@@ -718,6 +803,7 @@ export function InquiryForm({
           shapeProfiles={shapeProfiles}
           pickerMasters={pickerMasters}
           unitOptions={unitOptions}
+          uomOptions={uomOptions}
           sampleOptions={sampleOptions}
         />
       )}

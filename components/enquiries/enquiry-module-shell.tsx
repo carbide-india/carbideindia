@@ -168,9 +168,16 @@ function navFor(pathname: string): NavDef[] {
     });
   }
   // Forms with their own "Custom" dropdown lists get a Custom editor entry.
+  // The Sample Register family labels it "SAM Dropdown Master"; others keep
+  // "CUST Dropdown Master" (e.g. Client KYC).
   if (custom) {
     items.push({
-      label: "CUST Dropdown Master",
+      label:
+        custom.formKey === "sample"
+          ? "SAM Dropdown Master"
+          : custom.formKey === "enquiry"
+            ? "ENQ Dropdown Master"
+            : "CUST Dropdown Master",
       href: custom.route as Route,
       Icon: SlidersHorizontal,
       ready: true,

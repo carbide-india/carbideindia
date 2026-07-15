@@ -13,7 +13,7 @@
 import { BANKS, ACCOUNT_TYPES } from "@/lib/data/banks";
 import { INDIAN_STATES, COUNTRIES } from "@/lib/data/geo";
 import { INDIA_STATES } from "@/lib/data/india-states-cities";
-import { SAMPLE_LOCATIONS, STAGE_LOCATIONS } from "@/db/enums";
+import { SAMPLE_LOCATIONS, STAGE_LOCATIONS, SAMPLE_REPORT_TYPES, QUANTITY_UOMS } from "@/db/enums";
 import { CURRENCY_CODES } from "@/lib/data/currencies";
 
 /** Convenience default cities for the enquiry City list (the form still merges
@@ -162,6 +162,24 @@ export const CUSTOM_LISTS: Record<string, FormCustomListsDef> = {
         defaults: ["mm", "cm", "m", "inch"],
       },
       {
+        key: "uom",
+        label: "Quantity UOM",
+        hint: "Unit of measure on each product's quantity.",
+        defaults: [...QUANTITY_UOMS],
+      },
+      {
+        key: "currency",
+        label: "Currency",
+        hint: "The Currency dropdown - full ISO currency set.",
+        defaults: [...CURRENCY_CODES],
+      },
+      {
+        key: "country",
+        label: "Country",
+        hint: "The Country dropdown.",
+        defaults: [...COUNTRIES],
+      },
+      {
         key: "state",
         label: "State",
         hint: "The State dropdown (India).",
@@ -191,6 +209,12 @@ export const CUSTOM_LISTS: Record<string, FormCustomListsDef> = {
         label: "Stage Location",
         hint: "Lab / vendor list used on each tracking stage.",
         defaults: [...STAGE_LOCATIONS],
+      },
+      {
+        key: "sample_report",
+        label: "Sample Reports",
+        hint: "Report types on the Reports & Processing checklist.",
+        defaults: [...SAMPLE_REPORT_TYPES],
       },
     ],
   },
@@ -222,18 +246,22 @@ export const CUSTOM_LIST_CATEGORIES: Record<
     },
   },
   enquiry: {
-    order: ["Dimensions", "Location"],
+    order: ["Dimensions", "Location & Currency"],
     of: {
       unit: "Dimensions",
-      state: "Location",
-      city: "Location",
+      uom: "Dimensions",
+      currency: "Location & Currency",
+      country: "Location & Currency",
+      state: "Location & Currency",
+      city: "Location & Currency",
     },
   },
   sample: {
-    order: ["Location"],
+    order: ["Location", "Reports"],
     of: {
       sample_location: "Location",
       stage_location: "Location",
+      sample_report: "Reports",
     },
   },
 };

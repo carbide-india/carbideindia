@@ -102,6 +102,7 @@ export async function createSample(
 
   const values: Omit<NewSample, "sampleNo"> = {
     sampleDate: v.sampleDate ? new Date(v.sampleDate) : undefined,
+    clientId: v.clientId,
     inquiryId: v.inquiryId,
     location: v.location,
     responsiblePersonId: v.responsiblePersonId,
@@ -263,4 +264,11 @@ export async function setSampleStatusBulk(
   }
   revalidatePath("/samples");
   return { ok: true };
+}
+
+/** Full sample snapshot for the register Quick View (auth-gated). */
+export async function getSampleForView(id: string) {
+  await requireUser();
+  const { getSampleOption } = await import("@/lib/queries/samples");
+  return getSampleOption(id);
 }

@@ -637,6 +637,8 @@ export const inquiries = pgTable(
     toleranceCheck: checkStateEnum("tolerance_check"),
     conditionCheck: checkStateEnum("condition_check"),
     sampleReceived: boolean("sample_received"),
+    // Whether this is the client's first-ever enquiry (Yes/No on the form).
+    firstEnquiry: boolean("first_enquiry"),
     // Free-text "what we assumed" per check, filled when a check is marked Assumed.
     assumedValues: jsonb("assumed_values").$type<{
       quantity?: string;
@@ -717,6 +719,22 @@ export const inquiryItems = pgTable(
     conditionId: uuid("condition_id").references(() => masterOptions.id, { onDelete: "set null" }),
     quantityNos: numeric("quantity_nos"),
     quantityUom: text("quantity_uom").notNull().default("Nos"),
+    // Per-product enquiry checklist (moved from the inquiry header): each product
+    // carries its own Given / Not Given / Assumed marks, assumed-value notes,
+    // docs given, sample-received flag, and a free-text description.
+    quantityStatus: checkStateEnum("quantity_status"),
+    shapeDimensionCheck: checkStateEnum("shape_dimension_check"),
+    gradeCheck: checkStateEnum("grade_check"),
+    toleranceCheck: checkStateEnum("tolerance_check"),
+    conditionCheck: checkStateEnum("condition_check"),
+    assumedQuantity: text("assumed_quantity"),
+    assumedShapeDimension: text("assumed_shape_dimension"),
+    assumedGrade: text("assumed_grade"),
+    assumedTolerance: text("assumed_tolerance"),
+    assumedCondition: text("assumed_condition"),
+    docsGiven: text("docs_given").array(),
+    sampleReceived: boolean("sample_received"),
+    description: text("description"),
     // FK to the Item / Product Master. SSOT invariant I1 (ERP Phase 4, migration
     // 0034): every product line ALWAYS carries an item_id (a reused/created Item,
     // possibly a draft), written in the same tx as the line. onDelete: restrict —
@@ -901,6 +919,9 @@ export const samples = pgTable(
     // where-used). Both nullable + set-null; legacy samples link only inquiryId.
     inquiryItemId: uuid("inquiry_item_id").references(() => inquiryItems.id, { onDelete: "set null" }),
     itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
+    // Client-first flow (KYC → Sample → Enquiry): a sample is logged for a
+    // client before any enquiry exists, so it links directly to the client.
+    clientId: uuid("client_id").references(() => clients.id, { onDelete: "set null" }),
     sampleNo: text("sample_no").notNull().unique(),
     location: text("location").notNull().default("AYK Cabin"),
     responsiblePersonId: uuid("responsible_person_id").references(() => employees.id, { onDelete: "set null" }),
@@ -935,6 +956,7 @@ export const samples = pgTable(
   (t) => [
     index("samples_status_idx").on(t.sampleStatus, t.sampleDate),
     index("samples_inquiry_idx").on(t.inquiryId),
+    index("samples_client_idx").on(t.clientId),
     // Phase 7 — sample where-used on the Item + enquiry-line lineage.
     index("samples_item_idx").on(t.itemId),
     index("samples_inquiry_item_idx").on(t.inquiryItemId),

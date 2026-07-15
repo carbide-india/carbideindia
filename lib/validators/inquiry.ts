@@ -1,7 +1,7 @@
 import { z } from "zod";
 import {
-  INQUIRY_PRIORITIES, INQUIRY_SOURCES, INQUIRY_CURRENCIES, INQUIRY_COUNTRIES,
-  CHECK_STATES, QUANTITY_UOMS, DOC_GIVEN_OPTIONS, INQUIRY_SHAPES,
+  INQUIRY_PRIORITIES, INQUIRY_SOURCES,
+  CHECK_STATES, DOC_GIVEN_OPTIONS, INQUIRY_SHAPES,
   ENQUIRY_STATUSES, FEAS_VERDICTS, RECHECK_STATES, FEASIBILITY_STATUSES, FEAS_PRIORITIES,
   FEAS_CHECK_VERDICTS,
 } from "@/db/enums";
@@ -34,6 +34,21 @@ export const ProductItemSchema = z.object({
    *  via the sample's back-link (samples.inquiry_item_id / inquiry_id), not an
    *  inquiry_items column. */
   sampleId:     z.string().uuid().optional(),
+  // ── Per-product enquiry checklist (Given / Not Given / Assumed) ──
+  quantityStatus:      z.enum(CHECK_STATES).optional(),
+  shapeDimensionCheck: z.enum(CHECK_STATES).optional(),
+  gradeCheck:          z.enum(CHECK_STATES).optional(),
+  toleranceCheck:      z.enum(CHECK_STATES).optional(),
+  conditionCheck:      z.enum(CHECK_STATES).optional(),
+  assumedQuantity:       OptionalText(200),
+  assumedShapeDimension: OptionalText(200),
+  assumedGrade:          OptionalText(200),
+  assumedTolerance:      OptionalText(200),
+  assumedCondition:      OptionalText(200),
+  docsGiven:      z.array(z.enum(DOC_GIVEN_OPTIONS)).optional(),
+  sampleReceived: z.boolean().optional(),
+  /** Per-product "Product Description" (shown at the bottom of each product). */
+  description:    OptionalText(2000),
 });
 export type ProductItemInput = z.input<typeof ProductItemSchema>;
 
@@ -48,10 +63,13 @@ const InquiryFieldsSchema = z.object({
   enquiryDate: z.string().optional(),                 // ISO date; defaults server-side to now
   priority: z.enum(INQUIRY_PRIORITIES),
   source: z.enum(INQUIRY_SOURCES).optional(),
+  firstEnquiry: z.boolean().optional(),               // is this the client's first enquiry?
   companyName: Trimmed(160).min(1, "Company name is required"),
   export: z.boolean().optional(),
-  currency: z.enum(INQUIRY_CURRENCIES),
-  country: z.enum(INQUIRY_COUNTRIES),
+  // Currency / Country are editable dropdowns (ENQ Dropdown Master) - free
+  // strings rather than a fixed enum. Defaults keep new enquiries on INR/India.
+  currency: z.string().trim().min(1).max(40).default("INR"),
+  country: z.string().trim().min(1).max(80).default("India"),
   state: OptionalText(80), city: OptionalText(80),
   addressLine1: OptionalText(240), addressLine2: OptionalText(240),
   addressLine3: OptionalText(240), addressLine4: OptionalText(240),
@@ -68,10 +86,13 @@ const InquiryFieldsSchema = z.object({
       }),
     )
     .optional(),
-  productDescription: Trimmed(2000).min(1, "Product description is required"),
+  // Header-level description is now derived from the first product's description
+  // (the checklist + description moved into each product card). Kept optional so
+  // the create action can mirror product[0].description into the inquiry column.
+  productDescription: Trimmed(2000).optional(),
   quantityStatus: z.enum(CHECK_STATES).optional(),
   quantityNos: z.number().positive("Quantity must be positive").optional(),
-  quantityUom: z.enum(QUANTITY_UOMS).default("Nos"),
+  quantityUom: z.string().trim().min(1).max(20).default("Nos"),
   docsGiven: z.array(z.enum(DOC_GIVEN_OPTIONS)).optional(),
   shapeDimensionCheck: z.enum(CHECK_STATES).optional(),
   gradeCheck: z.enum(CHECK_STATES).optional(),
@@ -117,7 +138,7 @@ export const UpdateInquirySchema = InquiryFieldsSchema
   // Product edits are not yet wired to inquiry_items (Phase B). Omit `products`
   // so the strict update schema rejects it instead of accepting-then-ignoring it.
   .omit({ products: true })
-  .extend({ quantityUom: z.enum(QUANTITY_UOMS) })
+  .extend({ quantityUom: z.string().trim().min(1).max(20) })
   .partial()
   .strict()
   .refine((v) => Object.keys(v).length > 0, { message: "No changes to save." });

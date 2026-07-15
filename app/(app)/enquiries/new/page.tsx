@@ -61,6 +61,9 @@ export default async function EnquiriesNewPage({ searchParams }: PageProps) {
         stateOptions={enquiryLists["state"]}
         cityOptions={enquiryLists["city"]}
         unitOptions={enquiryLists["unit"]}
+        currencyOptions={enquiryLists["currency"]}
+        countryOptions={enquiryLists["country"]}
+        uomOptions={enquiryLists["uom"]}
         sampleOptions={sampleOptions}
         defaultSalesPersonId={me.id}
         enableDrafts

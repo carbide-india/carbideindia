@@ -190,17 +190,29 @@ export async function createInquiry(
           contactEmail: v.contactEmail,
           ccEmails: v.ccEmails,
           extraContacts: v.extraContacts,
-          productDescription: v.productDescription,
-          quantityStatus: v.quantityStatus,
+          // The checklist + description moved into each product card; mirror the
+          // first product's values into the header columns for back-compat with
+          // the register / feasibility that still read inquiry-level fields.
+          productDescription: p0?.description ?? v.productDescription ?? p0?.custProductName ?? "-",
+          quantityStatus: p0?.quantityStatus ?? v.quantityStatus,
           quantityNos: p0?.quantityNos ?? undefined,
           quantityUom: p0?.quantityUom ?? v.quantityUom,
-          docsGiven: v.docsGiven,
-          shapeDimensionCheck: v.shapeDimensionCheck,
-          gradeCheck: v.gradeCheck,
-          toleranceCheck: v.toleranceCheck,
-          conditionCheck: v.conditionCheck,
-          sampleReceived: v.sampleReceived,
-          assumedValues: v.assumedValues,
+          docsGiven: p0?.docsGiven ?? v.docsGiven,
+          shapeDimensionCheck: p0?.shapeDimensionCheck ?? v.shapeDimensionCheck,
+          gradeCheck: p0?.gradeCheck ?? v.gradeCheck,
+          toleranceCheck: p0?.toleranceCheck ?? v.toleranceCheck,
+          conditionCheck: p0?.conditionCheck ?? v.conditionCheck,
+          sampleReceived: p0?.sampleReceived ?? v.sampleReceived,
+          firstEnquiry: v.firstEnquiry,
+          assumedValues: p0
+            ? {
+                quantity: p0.assumedQuantity ?? undefined,
+                shapeDimension: p0.assumedShapeDimension ?? undefined,
+                grade: p0.assumedGrade ?? undefined,
+                tolerance: p0.assumedTolerance ?? undefined,
+                condition: p0.assumedCondition ?? undefined,
+              }
+            : v.assumedValues,
           shape: p0?.shape ?? undefined,
           outerDia: p0?.outerDia ?? undefined,
           innerDia: p0?.innerDia ?? undefined,

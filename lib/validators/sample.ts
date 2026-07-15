@@ -2,7 +2,6 @@ import { z } from "zod";
 import {
   SAMPLE_STATUSES,
   STAGE_STATUSES,
-  SAMPLE_REPORT_TYPES,
 } from "@/db/enums";
 
 const Trimmed = (max: number) => z.string().trim().max(max);
@@ -27,7 +26,8 @@ const OptionalText = (max = 500) =>
  */
 const SampleFieldsSchema = z.object({
   sampleDate: z.string().optional(),                  // ISO date; defaults server-side to now
-  inquiryId: z.string().uuid().optional(),            // linked enquiry → sampleNo auto-derives
+  clientId: z.string().uuid().optional(),             // client-first flow: the sample's client
+  inquiryId: z.string().uuid().optional(),            // set later when an enquiry links this sample
   sampleNo: OptionalText(60),                         // free-text fallback when unlinked
   location: LocationText.default("AYK Cabin"),
   responsiblePersonId: z.string().uuid().optional(),
@@ -51,7 +51,9 @@ const SampleFieldsSchema = z.object({
   drawingAudioUrl: OptionalText(2000),
   costingStatus: z.enum(STAGE_STATUSES).default("not_started"),
   costingCompletedOn: z.string().optional(),
-  reportsUploaded: z.array(z.enum(SAMPLE_REPORT_TYPES)).optional(),
+  // Report types are an editable custom list (SAM Dropdown Master) - free
+  // strings rather than a fixed enum so admins can add/rename report types.
+  reportsUploaded: z.array(Trimmed(120).min(1)).optional(),
   reportsInSmFolder: z.boolean().default(false),
   processedDate: z.string().optional(),               // ISO date
   processNotes: OptionalText(2000),

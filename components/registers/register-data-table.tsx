@@ -130,10 +130,48 @@ export interface RowMenuItem<TRow> {
   danger?: boolean;
 }
 
+/** Quick relative-date buckets for the compact "Period" filter. */
+export const PERIOD_OPTIONS: { value: string; label: string }[] = [
+  { value: "today", label: "Today" },
+  { value: "7d", label: "Last 7 days" },
+  { value: "30d", label: "Last 30 days" },
+  { value: "month", label: "This month" },
+  { value: "quarter", label: "This quarter" },
+  { value: "year", label: "This year" },
+];
+
+/** Resolve a Period key to an inclusive [from, to] range (to = now). */
+function periodRange(key: string): { from: Date | null; to: Date | null } {
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  switch (key) {
+    case "today":
+      return { from: startOfDay, to: now };
+    case "7d":
+      return { from: new Date(now.getTime() - 7 * 864e5), to: now };
+    case "30d":
+      return { from: new Date(now.getTime() - 30 * 864e5), to: now };
+    case "month":
+      return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now };
+    case "quarter":
+      return { from: new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1), to: now };
+    case "year":
+      return { from: new Date(now.getFullYear(), 0, 1), to: now };
+    default:
+      return { from: null, to: null };
+  }
+}
+
 export interface FilterConfig<TRow> {
   id: string;
   label: string;
-  type: "select" | "dateRange";
+  /**
+   * "select" — faceted equality. "dateRange" — two date inputs (bulky). "period"
+   * — a single compact dropdown of relative buckets (Today / Last 7 days / …),
+   * the space-friendly replacement for a date range. Both date types need an
+   * `accessor` returning the row's Date.
+   */
+  type: "select" | "dateRange" | "period";
   /** For `select` filters: the choosable values (value matched against the column's string sortValue). */
   options?: { value: string; label: string }[];
   /**
@@ -380,6 +418,19 @@ export function RegisterDataTable<TRow>({
         if (!chosen) continue;
         const acc = filterAccessor(f);
         out = out.filter((r) => asText(acc(r) as string) === chosen);
+      } else if (f.type === "period") {
+        const chosen = selectFilters[f.id];
+        if (!chosen) continue;
+        const { from, to } = periodRange(chosen);
+        if (!from && !to) continue;
+        const acc = filterAccessor(f);
+        out = out.filter((r) => {
+          const d = asDate(acc(r) as Date | string | null);
+          if (!d) return false;
+          if (from && d < from) return false;
+          if (to && d > to) return false;
+          return true;
+        });
       } else {
         const range = dateFilters[f.id];
         if (!range || (!range.from && !range.to)) continue;
@@ -638,9 +689,9 @@ export function RegisterDataTable<TRow>({
   return (
     <div>
       {/* Toolbar ------------------------------------------------------------- */}
-      <div className="mb-4 flex items-center gap-2 flex-wrap">
+      <div className="mb-4 flex items-center gap-1.5 flex-wrap">
         {!hideToolbarSearch && (
-          <label className="relative flex-1 min-w-[220px] max-w-md">
+          <label className="relative flex-1 min-w-[190px] max-w-[240px]">
             <Search
               size={15}
               strokeWidth={2.2}
@@ -669,7 +720,7 @@ export function RegisterDataTable<TRow>({
         )}
 
         {filters.map((f) =>
-          f.type === "select" ? (
+          f.type === "select" || f.type === "period" ? (
             <select
               key={f.id}
               value={selectFilters[f.id] ?? ""}
@@ -677,11 +728,13 @@ export function RegisterDataTable<TRow>({
                 setSelectFilters((s) => ({ ...s, [f.id]: e.target.value }))
               }
               aria-label={f.label}
-              className="rounded-chip border border-hairline bg-surface-card px-3 py-2 text-[14px] text-ink-strong outline-none focus:border-brand"
+              className="rounded-chip border border-hairline bg-surface-card px-2.5 py-2 text-[13px] text-ink-strong outline-none focus:border-brand"
               style={{ boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)" }}
             >
-              <option value="">All {f.label.toLowerCase()}</option>
-              {(f.options ?? []).map((o) => (
+              <option value="">
+                {f.type === "period" ? "Any time" : `All ${f.label.toLowerCase()}`}
+              </option>
+              {(f.type === "period" ? PERIOD_OPTIONS : f.options ?? []).map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
                 </option>

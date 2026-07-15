@@ -1,0 +1,1 @@
+ALTER TABLE "inquiries" ADD COLUMN "first_enquiry" boolean;

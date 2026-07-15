@@ -1,7 +1,7 @@
 import "server-only";
-import { and, desc, eq, getTableColumns, ilike, inArray, or } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, ilike, inArray, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { samples, inquiries, employees, type Sample } from "@/db/schema";
+import { samples, inquiries, clients, employees, type Sample } from "@/db/schema";
 import type { SampleStatus, StageStatus } from "@/db/enums";
 
 /** One row of the /samples register table. */
@@ -10,13 +10,22 @@ export interface SampleListItem {
   sampleNo: string;
   sampleDate: Date;
   companyName: string | null;
+  clientId: string | null;
   location: string;
+  responsibleId: string | null;
   responsibleName: string | null;
   sampleStatus: SampleStatus;
   dimensionStatus: StageStatus;
   chemicalStatus: StageStatus;
   drawingStatus: StageStatus;
   costingStatus: StageStatus;
+  reportCount: number;
+  photoCount: number;
+  reportsUploaded: string[];
+  notes: string | null;
+  inSmFolder: boolean;
+  linkedToEnquiry: boolean;
+  createdAt: Date;
 }
 
 export interface SampleFilters {
@@ -50,25 +59,58 @@ export async function listSamples(
       or(ilike(samples.sampleNo, like), ilike(samples.sampleNotes, like)),
     );
   }
-  return db
+  const rows = await db
     .select({
       id: samples.id,
       sampleNo: samples.sampleNo,
       sampleDate: samples.sampleDate,
-      companyName: inquiries.companyName,
+      // Prefer the directly-linked client; fall back to the enquiry's company.
+      companyName: sql<string | null>`coalesce(${clients.name}, ${inquiries.companyName})`,
+      clientId: samples.clientId,
       location: samples.location,
+      responsibleId: samples.responsiblePersonId,
       responsibleName: employees.name,
       sampleStatus: samples.sampleStatus,
       dimensionStatus: samples.dimensionStatus,
       chemicalStatus: samples.chemicalStatus,
       drawingStatus: samples.drawingStatus,
       costingStatus: samples.costingStatus,
+      reportsUploaded: samples.reportsUploaded,
+      photoUrls: samples.photoUrls,
+      notes: samples.sampleNotes,
+      inSmFolder: samples.reportsInSmFolder,
+      inquiryId: samples.inquiryId,
+      createdAt: samples.createdAt,
     })
     .from(samples)
+    .leftJoin(clients, eq(samples.clientId, clients.id))
     .leftJoin(inquiries, eq(samples.inquiryId, inquiries.id))
     .leftJoin(employees, eq(samples.responsiblePersonId, employees.id))
     .where(conds.length ? and(...conds) : undefined)
     .orderBy(desc(samples.sampleDate), desc(samples.createdAt));
+
+  return rows.map((r) => ({
+    id: r.id,
+    sampleNo: r.sampleNo,
+    sampleDate: r.sampleDate,
+    companyName: r.companyName,
+    clientId: r.clientId,
+    location: r.location,
+    responsibleId: r.responsibleId,
+    responsibleName: r.responsibleName,
+    sampleStatus: r.sampleStatus,
+    dimensionStatus: r.dimensionStatus,
+    chemicalStatus: r.chemicalStatus,
+    drawingStatus: r.drawingStatus,
+    costingStatus: r.costingStatus,
+    reportsUploaded: r.reportsUploaded ?? [],
+    reportCount: (r.reportsUploaded ?? []).length,
+    photoCount: (r.photoUrls ?? []).length,
+    notes: r.notes,
+    inSmFolder: r.inSmFolder,
+    linkedToEnquiry: Boolean(r.inquiryId),
+    createdAt: r.createdAt,
+  }));
 }
 
 /** Full sample row for the detail page. */
@@ -93,14 +135,32 @@ export type SampleOption = Sample & {
   responsibleName: string | null;
 };
 
+/** A single sample's full snapshot (for the register Quick View). */
+export async function getSampleOption(id: string): Promise<SampleOption | null> {
+  const [row] = await db
+    .select({
+      ...getTableColumns(samples),
+      companyName: sql<string | null>`coalesce(${clients.name}, ${inquiries.companyName})`,
+      responsibleName: employees.name,
+    })
+    .from(samples)
+    .leftJoin(clients, eq(samples.clientId, clients.id))
+    .leftJoin(inquiries, eq(samples.inquiryId, inquiries.id))
+    .leftJoin(employees, eq(samples.responsiblePersonId, employees.id))
+    .where(eq(samples.id, id))
+    .limit(1);
+  return row ?? null;
+}
+
 export async function listSampleOptions(): Promise<SampleOption[]> {
   return db
     .select({
       ...getTableColumns(samples),
-      companyName: inquiries.companyName,
+      companyName: sql<string | null>`coalesce(${clients.name}, ${inquiries.companyName})`,
       responsibleName: employees.name,
     })
     .from(samples)
+    .leftJoin(clients, eq(samples.clientId, clients.id))
     .leftJoin(inquiries, eq(samples.inquiryId, inquiries.id))
     .leftJoin(employees, eq(samples.responsiblePersonId, employees.id))
     .orderBy(desc(samples.sampleDate), desc(samples.createdAt))

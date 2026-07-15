@@ -1,7 +1,8 @@
 import "server-only";
-import { and, asc, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, or, sql, inArray, type SQL } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/lib/db";
-import { inquiries, inquiryItems, items, employees, type Inquiry } from "@/db/schema";
+import { inquiries, inquiryItems, items, employees, masterOptions, type Inquiry } from "@/db/schema";
 import type { EnquiryStatus, FeasibilityStatus } from "@/db/enums";
 import { specMasterAliases } from "@/lib/flow/spec-resolve";
 import { listSamplesForInquiries } from "@/lib/queries/samples";
@@ -17,6 +18,17 @@ export interface InquiryListItem {
   feasibilityStatus: FeasibilityStatus;
   salesPersonName: string | null;
   productDescription: string;
+  /** Extra columns (toggleable in the register). */
+  export: boolean | null;
+  firstEnquiry: boolean | null;
+  currency: string;
+  country: string;
+  city: string | null;
+  state: string | null;
+  contactName: string | null;
+  departmentName: string | null;
+  productCount: number;
+  createdAt: Date;
   /** Physical samples attached to this enquiry (via samples.inquiry_id). */
   samples: { id: string; sampleNo: string; sampleStatus: import("@/db/enums").SampleStatus }[];
 }
@@ -52,6 +64,7 @@ export async function listInquiries(
       or(ilike(inquiries.companyName, like), ilike(inquiries.smNumber, like)),
     );
   }
+  const dept = alias(masterOptions, "dept_master");
   const rows = await db
     .select({
       id: inquiries.id,
@@ -63,16 +76,42 @@ export async function listInquiries(
       feasibilityStatus: inquiries.feasibilityStatus,
       salesPersonName: employees.name,
       productDescription: inquiries.productDescription,
+      export: inquiries.export,
+      firstEnquiry: inquiries.firstEnquiry,
+      currency: inquiries.currency,
+      country: inquiries.country,
+      city: inquiries.city,
+      state: inquiries.state,
+      contactFirstName: inquiries.contactFirstName,
+      contactLastName: inquiries.contactLastName,
+      departmentName: dept.name,
+      createdAt: inquiries.createdAt,
     })
     .from(inquiries)
     .leftJoin(employees, eq(inquiries.assignedSalesPersonId, employees.id))
+    .leftJoin(dept, eq(inquiries.departmentId, dept.id))
     .where(conds.length ? and(...conds) : undefined)
     .orderBy(desc(inquiries.enquiryDate), desc(inquiries.createdAt));
 
+  const ids = rows.map((r) => r.id);
+
+  // Per-enquiry product-line counts (one grouped query).
+  const counts = ids.length
+    ? await db
+        .select({ inquiryId: inquiryItems.inquiryId, n: sql<number>`count(*)::int` })
+        .from(inquiryItems)
+        .where(inArray(inquiryItems.inquiryId, ids))
+        .groupBy(inquiryItems.inquiryId)
+    : [];
+  const countBy = new Map(counts.map((c) => [c.inquiryId, c.n]));
+
   // Attach linked physical samples (per-line back-link, aggregated per enquiry).
-  const byInquiry = await listSamplesForInquiries(rows.map((r) => r.id));
-  return rows.map((r) => ({
+  const byInquiry = await listSamplesForInquiries(ids);
+  return rows.map(({ contactFirstName, contactLastName, ...r }) => ({
     ...r,
+    contactName:
+      [contactFirstName, contactLastName].filter(Boolean).join(" ").trim() || null,
+    productCount: countBy.get(r.id) ?? 0,
     samples: (byInquiry.get(r.id) ?? []).map((s) => ({
       id: s.id,
       sampleNo: s.sampleNo,
@@ -211,6 +250,7 @@ export function getInquiryEditValues(inq: Inquiry) {
     toleranceCheck: inq.toleranceCheck ?? undefined,
     conditionCheck: inq.conditionCheck ?? undefined,
     sampleReceived: inq.sampleReceived ?? undefined,
+    firstEnquiry: inq.firstEnquiry ?? undefined,
     dimensionNotes: inq.dimensionNotes ?? "",
     smFolderLink: inq.smFolderLink ?? "",
     enquiryNotes: inq.enquiryNotes ?? "",

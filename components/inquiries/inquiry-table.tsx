@@ -39,6 +39,11 @@ import type { EmployeeOption } from "@/lib/queries/employees";
 
 export const NEW_INQUIRY_ROUTE: Route = "/enquiries/new";
 
+/** A compact Yes/No pill (green = yes, slate = no). Labels default to Yes/No. */
+function YesNo({ value, yes = "Yes", no = "No" }: { value: boolean | null; yes?: string; no?: string }) {
+  return <Chip label={value ? yes : no} tone={value ? "green" : "slate"} />;
+}
+
 interface Props {
   rows: InquiryListItem[];
   employees: EmployeeOption[];
@@ -66,6 +71,29 @@ export function InquiryTable({ rows, employees, variant = "enquiry" }: Props) {
         : `/enquiries/register/${id}`) as Route,
     [variant],
   );
+  // Status columns for each variant. The variant's own status leads (visible);
+  // the other one ships hidden so the Columns menu can reveal it.
+  const enquiryStatusCol: RegisterColumn<InquiryListItem> = {
+    id: "enquiryStatus",
+    header: "Enquiry",
+    width: "132px",
+    defaultHidden: variant === "feasibility",
+    sortValue: (r) => ENQUIRY_STATUS_LABELS[r.enquiryStatus],
+    cell: (r) => (
+      <Chip label={ENQUIRY_STATUS_LABELS[r.enquiryStatus]} tone={ENQUIRY_STATUS_COLORS[r.enquiryStatus]} />
+    ),
+  };
+  const feasibilityStatusCol: RegisterColumn<InquiryListItem> = {
+    id: "feasibilityStatus",
+    header: "Feasibility",
+    width: "152px",
+    defaultHidden: variant === "enquiry",
+    sortValue: (r) => FEASIBILITY_STATUS_LABELS[r.feasibilityStatus],
+    cell: (r) => (
+      <Chip label={FEASIBILITY_STATUS_LABELS[r.feasibilityStatus]} tone={FEASIBILITY_STATUS_COLORS[r.feasibilityStatus]} />
+    ),
+  };
+
   const columns = React.useMemo<RegisterColumn<InquiryListItem>[]>(
     () => [
       {
@@ -87,7 +115,7 @@ export function InquiryTable({ rows, employees, variant = "enquiry" }: Props) {
       {
         id: "enquiryDate",
         header: "Date",
-        width: "108px",
+        width: "104px",
         sortValue: (r) => r.enquiryDate,
         cell: (r) => (
           <span className="tabular-nums text-ink-soft">
@@ -98,12 +126,23 @@ export function InquiryTable({ rows, employees, variant = "enquiry" }: Props) {
       {
         id: "companyName",
         header: "Company",
+        width: "200px",
         truncate: true,
         searchable: true,
         sortValue: (r) => r.companyName,
         cell: (r) => (
-          <span className="text-ink-strong font-medium">{r.companyName}</span>
+          <span className="text-ink-strong font-semibold">{r.companyName}</span>
         ),
+      },
+      {
+        id: "contactName",
+        header: "Contact",
+        width: "150px",
+        truncate: true,
+        searchable: true,
+        defaultHidden: true,
+        sortValue: (r) => r.contactName ?? "",
+        cell: (r) => <span className="text-ink-soft">{r.contactName ?? "-"}</span>,
       },
       {
         id: "productDescription",
@@ -112,6 +151,16 @@ export function InquiryTable({ rows, employees, variant = "enquiry" }: Props) {
         searchable: true,
         sortValue: (r) => r.productDescription,
         cell: (r) => <span className="text-ink-soft">{r.productDescription}</span>,
+      },
+      {
+        id: "productCount",
+        header: "Items",
+        width: "76px",
+        align: "right",
+        sortValue: (r) => r.productCount,
+        cell: (r) => (
+          <span className="tabular-nums font-semibold text-ink-strong">{r.productCount || "-"}</span>
+        ),
       },
       {
         id: "samples",
@@ -157,8 +206,65 @@ export function InquiryTable({ rows, employees, variant = "enquiry" }: Props) {
         ),
       },
       {
+        id: "export",
+        header: "Export",
+        width: "92px",
+        sortValue: (r) => (r.export ? "Yes" : "No"),
+        exportValue: (r) => (r.export ? "Yes" : "No"),
+        cell: (r) => <YesNo value={r.export} yes="Export" no="Domestic" />,
+      },
+      {
+        id: "firstEnquiry",
+        header: "First Enq.",
+        width: "96px",
+        defaultHidden: true,
+        sortValue: (r) => (r.firstEnquiry ? "Yes" : "No"),
+        exportValue: (r) => (r.firstEnquiry == null ? "" : r.firstEnquiry ? "Yes" : "No"),
+        cell: (r) =>
+          r.firstEnquiry == null ? <span className="text-[#b3b8c2]">-</span> : <YesNo value={r.firstEnquiry} />,
+      },
+      {
+        id: "location",
+        header: "Location",
+        width: "150px",
+        truncate: true,
+        defaultHidden: true,
+        sortValue: (r) => [r.city, r.state].filter(Boolean).join(", "),
+        cell: (r) => {
+          const loc = [r.city, r.state].filter(Boolean).join(", ");
+          return <span className="text-ink-soft">{loc || "-"}</span>;
+        },
+      },
+      {
+        id: "country",
+        header: "Country",
+        width: "120px",
+        truncate: true,
+        defaultHidden: true,
+        sortValue: (r) => r.country,
+        cell: (r) => <span className="text-ink-soft">{r.country}</span>,
+      },
+      {
+        id: "currency",
+        header: "Curr.",
+        width: "80px",
+        defaultHidden: true,
+        sortValue: (r) => r.currency,
+        cell: (r) => <span className="font-mono text-[12px] text-ink-soft">{r.currency}</span>,
+      },
+      {
+        id: "departmentName",
+        header: "Department",
+        width: "140px",
+        truncate: true,
+        defaultHidden: true,
+        sortValue: (r) => r.departmentName ?? "",
+        cell: (r) => <span className="text-ink-soft">{r.departmentName ?? "-"}</span>,
+      },
+      {
         id: "salesPersonName",
         header: "Sales Person",
+        width: "150px",
         truncate: true,
         searchable: true,
         sortValue: (r) => r.salesPersonName ?? "",
@@ -167,50 +273,63 @@ export function InquiryTable({ rows, employees, variant = "enquiry" }: Props) {
           <span className="text-ink-soft">{r.salesPersonName ?? "-"}</span>
         ),
       },
-      // Register shows Enquiry status; the Feasibility queue shows Feasibility.
+      {
+        id: "createdAt",
+        header: "Created",
+        width: "104px",
+        defaultHidden: true,
+        sortValue: (r) => r.createdAt,
+        cell: (r) => <span className="tabular-nums text-ink-subtle">{formatDate(r.createdAt)}</span>,
+      },
+      // The variant's own status leads; the other trails hidden. Feasibility
+      // queue → Feasibility first; Enquiry register → Enquiry first.
       ...(variant === "feasibility"
-        ? ([
-            {
-              id: "feasibilityStatus",
-              header: "Feasibility",
-              width: "148px",
-              sortValue: (r) => FEASIBILITY_STATUS_LABELS[r.feasibilityStatus],
-              cell: (r) => (
-                <Chip
-                  label={FEASIBILITY_STATUS_LABELS[r.feasibilityStatus]}
-                  tone={FEASIBILITY_STATUS_COLORS[r.feasibilityStatus]}
-                />
-              ),
-            },
-          ] as RegisterColumn<InquiryListItem>[])
-        : ([
-            {
-              id: "enquiryStatus",
-              header: "Enquiry",
-              width: "128px",
-              sortValue: (r) => ENQUIRY_STATUS_LABELS[r.enquiryStatus],
-              cell: (r) => (
-                <Chip
-                  label={ENQUIRY_STATUS_LABELS[r.enquiryStatus]}
-                  tone={ENQUIRY_STATUS_COLORS[r.enquiryStatus]}
-                />
-              ),
-            },
-          ] as RegisterColumn<InquiryListItem>[])),
+        ? [feasibilityStatusCol, enquiryStatusCol]
+        : [enquiryStatusCol, feasibilityStatusCol]),
     ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [variant, hrefFor],
   );
 
+  // Distinct country list (from the loaded rows) for the country facet.
+  const countryOptions = React.useMemo(() => {
+    const set = new Set<string>();
+    for (const r of rows) if (r.country) set.add(r.country);
+    return [...set].sort().map((c) => ({ value: c, label: c }));
+  }, [rows]);
+
   const filters = React.useMemo<FilterConfig<InquiryListItem>[]>(
     () => [
+      variant === "feasibility"
+        ? {
+            id: "feasibilityStatus",
+            label: "Status",
+            type: "select" as const,
+            options: FEASIBILITY_STATUSES.map((s) => ({
+              value: FEASIBILITY_STATUS_LABELS[s],
+              label: FEASIBILITY_STATUS_LABELS[s],
+            })),
+            accessor: (r: InquiryListItem) => FEASIBILITY_STATUS_LABELS[r.feasibilityStatus],
+          }
+        : {
+            id: "enquiryStatus",
+            label: "Status",
+            type: "select" as const,
+            options: ENQUIRY_STATUSES.map((s) => ({
+              value: ENQUIRY_STATUS_LABELS[s],
+              label: ENQUIRY_STATUS_LABELS[s],
+            })),
+            accessor: (r: InquiryListItem) => ENQUIRY_STATUS_LABELS[r.enquiryStatus],
+          },
       {
-        id: "enquiryStatus",
-        label: "Status",
+        id: "priority",
+        label: "Priority",
         type: "select",
-        options: ENQUIRY_STATUSES.map((s) => ({
-          value: ENQUIRY_STATUS_LABELS[s],
-          label: ENQUIRY_STATUS_LABELS[s],
+        options: INQUIRY_PRIORITIES.map((p) => ({
+          value: INQUIRY_PRIORITY_LABELS[p],
+          label: INQUIRY_PRIORITY_LABELS[p],
         })),
+        accessor: (r) => INQUIRY_PRIORITY_LABELS[r.priority],
       },
       {
         id: "salesPersonName",
@@ -220,13 +339,30 @@ export function InquiryTable({ rows, employees, variant = "enquiry" }: Props) {
         accessor: (r) => r.salesPersonName ?? "",
       },
       {
+        id: "export",
+        label: "Trade",
+        type: "select",
+        options: [
+          { value: "Export", label: "Export" },
+          { value: "Domestic", label: "Domestic" },
+        ],
+        accessor: (r) => (r.export ? "Export" : "Domestic"),
+      },
+      {
+        id: "country",
+        label: "Country",
+        type: "select",
+        options: countryOptions,
+        accessor: (r) => r.country,
+      },
+      {
         id: "enquiryDate",
-        label: "Enquiry date",
-        type: "dateRange",
+        label: "Period",
+        type: "period",
         accessor: (r) => r.enquiryDate,
       },
     ],
-    [employees],
+    [employees, variant, countryOptions],
   );
 
   return (

@@ -736,7 +736,7 @@ export function KycForm({
 
         {/* GSTIN · Company Name · Assign Sales Person · Export · Grade · Tags —
             one line. GSTIN sits first and auto-fetches the company details. */}
-        <div className="grid grid-cols-[minmax(165px,1fr)_minmax(190px,1.4fr)_minmax(150px,1fr)_105px_85px_minmax(120px,0.85fr)] gap-3 max-xl:grid-cols-2 max-md:grid-cols-1">
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.7fr)_minmax(0,0.55fr)_minmax(0,0.9fr)] gap-3 max-xl:grid-cols-3 max-md:grid-cols-2">
           <Field id="kyc-gstin" label="GSTIN">
             <Controller
               control={control}

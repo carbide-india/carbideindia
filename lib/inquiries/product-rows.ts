@@ -1,4 +1,5 @@
 import type { ProductItemInput } from "@/lib/validators/inquiry";
+import type { CheckState } from "@/db/enums";
 
 /** The subset of CreateInquiry input the product rows are built from. */
 interface Src {
@@ -28,6 +29,12 @@ export interface BuiltProductRow {
   dimensionNotes: string | null;
   gradeId: string | null; gradeCustomer: string | null; toleranceId: string | null; conditionId: string | null;
   quantityNos: string | null; quantityUom: string;
+  // ── Per-product checklist (real inquiry_items columns) ──
+  quantityStatus: CheckState | null; shapeDimensionCheck: CheckState | null; gradeCheck: CheckState | null;
+  toleranceCheck: CheckState | null; conditionCheck: CheckState | null;
+  assumedQuantity: string | null; assumedShapeDimension: string | null; assumedGrade: string | null;
+  assumedTolerance: string | null; assumedCondition: string | null;
+  docsGiven: string[] | null; sampleReceived: boolean | null; description: string | null;
   /** NOT an inquiry_items column - carried through so the create action can
    *  back-link the chosen sample (samples.inquiry_item_id / inquiry_id). */
   sampleId: string | null;
@@ -54,6 +61,13 @@ export function productRowsForInquiry(v: Src): BuiltProductRow[] {
     dimensionNotes: txt(p.dimensionNotes),
     gradeId: txt(p.gradeId), gradeCustomer: txt(p.gradeCustomer), toleranceId: txt(p.toleranceId), conditionId: txt(p.conditionId),
     quantityNos: numStr(p.quantityNos), quantityUom: txt(p.quantityUom) ?? "Nos",
+    quantityStatus: p.quantityStatus ?? null, shapeDimensionCheck: p.shapeDimensionCheck ?? null,
+    gradeCheck: p.gradeCheck ?? null, toleranceCheck: p.toleranceCheck ?? null, conditionCheck: p.conditionCheck ?? null,
+    assumedQuantity: txt(p.assumedQuantity), assumedShapeDimension: txt(p.assumedShapeDimension),
+    assumedGrade: txt(p.assumedGrade), assumedTolerance: txt(p.assumedTolerance), assumedCondition: txt(p.assumedCondition),
+    docsGiven: p.docsGiven && p.docsGiven.length ? p.docsGiven : null,
+    sampleReceived: typeof p.sampleReceived === "boolean" ? p.sampleReceived : null,
+    description: txt(p.description),
     sampleId: txt(p.sampleId),
   }));
 }

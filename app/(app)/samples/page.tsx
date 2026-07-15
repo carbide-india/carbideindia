@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import {
-  SampleTable,
+  SampleRegister,
   NEW_SAMPLE_ROUTE,
-} from "@/components/samples/sample-table";
+} from "@/components/samples/sample-register";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
 import { UserMenuServer } from "@/components/header/user-menu-server";
 import { requireUser } from "@/lib/auth/current";
@@ -55,14 +55,9 @@ export default async function SamplesPage() {
     >
       <div className="mx-auto w-full max-w-[1600px]">
         <header className="mb-5 flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-[26px] font-black leading-none tracking-tight text-[#3f3f94]">
-              Sample Register
-            </h1>
-            <p className="mt-1.5 text-[12.5px] font-semibold tabular-nums text-[#6b7280]">
-              {rows.length} {rows.length === 1 ? "sample" : "samples"}
-            </p>
-          </div>
+          <h1 className="text-[26px] font-black leading-none tracking-tight text-[#3f3f94]">
+            Sample Register
+          </h1>
           <Link
             href={NEW_SAMPLE_ROUTE}
             className="inline-flex items-center gap-2 rounded-chip px-5 py-2.5 text-[14px] text-white transition-transform hover:-translate-y-px"
@@ -78,7 +73,7 @@ export default async function SamplesPage() {
           </Link>
         </header>
 
-        <SampleTable rows={rows} employees={employees} />
+        <SampleRegister rows={rows} employees={employees} />
       </div>
     </EnquiryModuleShell>
   );

@@ -9,8 +9,16 @@ import {
   type UseFormWatch,
   type UseFormSetValue,
 } from "react-hook-form";
-import { Trash2 } from "lucide-react";
-import { INQUIRY_SHAPES, QUANTITY_UOMS } from "@/db/enums";
+import { Trash2, Check } from "lucide-react";
+import {
+  INQUIRY_SHAPES,
+  QUANTITY_UOMS,
+  CHECK_STATES,
+  CHECK_STATE_LABELS,
+  DOC_GIVEN_OPTIONS,
+  type CheckState,
+} from "@/db/enums";
+import { cn } from "@/lib/utils";
 import { Select } from "@/components/ui/select";
 import { NotesField } from "@/components/ui/notes-field";
 import { Field, SectionCard, GroupHeader } from "./form-field";
@@ -42,6 +50,8 @@ interface Props {
   pickerMasters: PickerMasters;
   /** Enquiry Custom Dropdown Master - dimension Unit list (falls back to defaults). */
   unitOptions?: string[];
+  /** ENQ Dropdown Master - Quantity UOM list (falls back to QUANTITY_UOMS). */
+  uomOptions?: string[];
   /** Pre-registered samples the user can attach to a product line (Sample-before-
    *  Enquiry flow). Full snapshots so the read-only panel renders with no fetch. */
   sampleOptions?: SampleOption[];
@@ -69,7 +79,77 @@ const EMPTY_PRODUCT = {
   quantityNos: undefined,
   quantityUom: "Nos",
   sampleId: undefined,
+  quantityStatus: undefined,
+  shapeDimensionCheck: undefined,
+  gradeCheck: undefined,
+  toleranceCheck: undefined,
+  conditionCheck: undefined,
+  assumedQuantity: "",
+  assumedShapeDimension: "",
+  assumedGrade: "",
+  assumedTolerance: "",
+  assumedCondition: "",
+  docsGiven: [],
+  sampleReceived: undefined,
+  description: "",
 };
+
+const CHECK_OPTIONS = CHECK_STATES.map((s) => ({ value: s, label: CHECK_STATE_LABELS[s] }));
+const CHECK_TEXT_COLOR: Record<CheckState, string> = {
+  given: "!text-emerald-700",
+  not_given: "!text-[#d32f2f]",
+  assumed: "!text-amber-700",
+};
+const YES_NO = [
+  { value: "yes", label: "Yes" },
+  { value: "no", label: "No" },
+];
+
+/** One per-product checklist mark (Given / Not Given / Assumed) with a
+ *  follow-up "what did you assume?" input when Assumed is picked. */
+function ProductCheck({
+  index,
+  label,
+  name,
+  assumed,
+  control,
+  register,
+}: {
+  index: number;
+  label: string;
+  name: "quantityStatus" | "shapeDimensionCheck" | "gradeCheck" | "toleranceCheck" | "conditionCheck";
+  assumed: "assumedQuantity" | "assumedShapeDimension" | "assumedGrade" | "assumedTolerance" | "assumedCondition";
+  control: Control<InquiryFormValues>;
+  register: UseFormRegister<InquiryFormValues>;
+}) {
+  return (
+    <Field label={label}>
+      <Controller
+        control={control}
+        name={`products.${index}.${name}`}
+        render={({ field }) => (
+          <div className="flex flex-col gap-2">
+            <Select
+              options={CHECK_OPTIONS}
+              value={field.value ?? ""}
+              onValueChange={(v) => field.onChange((v || undefined) as CheckState | undefined)}
+              placeholder="Select"
+              className={cn("font-bold", field.value ? CHECK_TEXT_COLOR[field.value as CheckState] : "")}
+            />
+            {field.value === "assumed" && (
+              <input
+                type="text"
+                className="nt-input"
+                placeholder="What value did you assume?"
+                {...register(`products.${index}.${assumed}`)}
+              />
+            )}
+          </div>
+        )}
+      />
+    </Field>
+  );
+}
 
 /**
  * Section 3 of the New Inquiry form - Products. A repeatable per-product
@@ -89,9 +169,11 @@ export function ProductsSection({
   shapeProfiles,
   pickerMasters,
   unitOptions,
+  uomOptions,
   sampleOptions = [],
 }: Props) {
   const unitList = unitOptions?.length ? unitOptions : DIMENSION_UNITS;
+  const uomList = uomOptions?.length ? uomOptions : [...QUANTITY_UOMS];
   const { fields, append, remove } = useFieldArray({ control, name: "products" });
   // Per-row attached Item (from the Material Search). Keyed by field.id so it
   // survives reorder/removal; presence pins the picker chip + drives the
@@ -157,61 +239,130 @@ export function ProductsSection({
             }
           />
 
-          {/* SAP-style Material Search - the primary way to add a product. */}
-          <div>
-            <span className="mb-1.5 block text-[12px] font-semibold text-ink-soft">
-              Material
+          {/* Checklist FIRST - what the client gave us for reference (Given /
+              Not Given / Assumed), packed densely to save space. */}
+          <div className="flex flex-col gap-3 rounded-lg border border-[#dcdce8] bg-white p-4">
+            <span className="text-[12px] font-bold uppercase tracking-[0.08em] text-[#3f3f94]">
+              Checklist
             </span>
-            <ProductPicker
-              masters={pickerMasters}
-              selected={attached[field.id] ?? null}
-              onSelect={(p) => applyPrefill(index, field.id, p)}
-              onClear={() =>
-                setAttached((prev) => {
-                  const cp = { ...prev };
-                  delete cp[field.id];
-                  return cp;
-                })
-              }
-            />
+            <div className="grid grid-cols-6 gap-3 max-lg:grid-cols-3 max-md:grid-cols-2">
+              <ProductCheck index={index} label="Quantity" name="quantityStatus" assumed="assumedQuantity" control={control} register={register} />
+              <ProductCheck index={index} label="Shape & Dimension" name="shapeDimensionCheck" assumed="assumedShapeDimension" control={control} register={register} />
+              <ProductCheck index={index} label="Grade" name="gradeCheck" assumed="assumedGrade" control={control} register={register} />
+              <ProductCheck index={index} label="Tolerance" name="toleranceCheck" assumed="assumedTolerance" control={control} register={register} />
+              <ProductCheck index={index} label="Condition" name="conditionCheck" assumed="assumedCondition" control={control} register={register} />
+              <Field label="Sample Received">
+                <Controller
+                  control={control}
+                  name={`products.${index}.sampleReceived`}
+                  render={({ field: f }) => (
+                    <Select
+                      options={YES_NO}
+                      value={f.value === undefined ? "" : f.value ? "yes" : "no"}
+                      onValueChange={(v) => f.onChange(v === "" ? undefined : v === "yes")}
+                      placeholder="Select"
+                      className="font-bold"
+                    />
+                  )}
+                />
+              </Field>
+            </div>
+            <Field label="Docs Given">
+              <Controller
+                control={control}
+                name={`products.${index}.docsGiven`}
+                render={({ field: f }) => (
+                  <div className="flex flex-wrap gap-2">
+                    {DOC_GIVEN_OPTIONS.map((opt) => {
+                      const selected = f.value ?? [];
+                      const checked = selected.includes(opt);
+                      return (
+                        <button
+                          key={opt}
+                          type="button"
+                          role="checkbox"
+                          aria-checked={checked}
+                          onClick={() => f.onChange(checked ? selected.filter((o) => o !== opt) : [...selected, opt])}
+                          className={cn(
+                            "inline-flex items-center gap-2 rounded-chip border-[1.75px] px-3 py-2 text-[13px] font-semibold transition-colors",
+                            checked
+                              ? "border-brand bg-brand/8 text-ink-strong"
+                              : "border-[#9199b6] bg-surface-card text-ink-strong hover:border-[#6f78a0] hover:bg-[#f3f4f8]",
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "inline-flex size-[16px] items-center justify-center rounded-[4px] border-[1.75px] transition-colors",
+                              checked ? "bg-brand border-brand text-white" : "border-[#9199b6] bg-white text-transparent",
+                            )}
+                          >
+                            <Check size={11} strokeWidth={3} />
+                          </span>
+                          {opt}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              />
+            </Field>
           </div>
 
-          {/* Linked Sample - attach a pre-registered physical sample (Sample is
-              logged BEFORE the enquiry) so all its data flows into this line. */}
+          {/* Material Search + Linked Sample on one line. The picked sample's
+              read-only panel renders full-width below the row. */}
           {(() => {
             const pickedId = watch(`products.${index}.sampleId`);
             const picked = sampleOptions.find((o) => o.id === pickedId);
             return (
-              <div>
-                <span className="mb-1.5 block text-[12px] font-semibold text-ink-soft">
-                  Linked Sample
-                </span>
-                <div className="max-w-[420px]">
-                  <Controller
-                    control={control}
-                    name={`products.${index}.sampleId`}
-                    render={({ field: f }) => (
-                      <Select
-                        id={`products.${index}.sampleId`}
-                        ariaLabel="Linked Sample"
-                        value={f.value ?? ""}
-                        onValueChange={(v) => f.onChange(v || undefined)}
-                        placeholder={
-                          sampleOptions.length === 0 ? "No samples registered yet" : "Attach a registered sample"
-                        }
-                        disabled={sampleOptions.length === 0}
-                        searchable
-                        searchPlaceholder="Search sample no. / company"
-                        options={sampleOptions.map((o) => ({
-                          value: o.id,
-                          label: `${o.sampleNo}${o.companyName ? ` · ${o.companyName}` : ""}`,
-                        }))}
-                      />
-                    )}
-                  />
+              <>
+                <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+                  <div>
+                    <span className="mb-1.5 block text-[12px] font-semibold text-ink-soft">
+                      Material
+                    </span>
+                    <ProductPicker
+                      masters={pickerMasters}
+                      selected={attached[field.id] ?? null}
+                      onSelect={(p) => applyPrefill(index, field.id, p)}
+                      onClear={() =>
+                        setAttached((prev) => {
+                          const cp = { ...prev };
+                          delete cp[field.id];
+                          return cp;
+                        })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <span className="mb-1.5 block text-[12px] font-semibold text-ink-soft">
+                      Linked Sample
+                    </span>
+                    <Controller
+                      control={control}
+                      name={`products.${index}.sampleId`}
+                      render={({ field: f }) => (
+                        <Select
+                          id={`products.${index}.sampleId`}
+                          ariaLabel="Linked Sample"
+                          value={f.value ?? ""}
+                          onValueChange={(v) => f.onChange(v || undefined)}
+                          placeholder={
+                            sampleOptions.length === 0 ? "No samples registered yet" : "Attach a registered sample"
+                          }
+                          disabled={sampleOptions.length === 0}
+                          searchable
+                          searchPlaceholder="Search sample no. / company"
+                          options={sampleOptions.map((o) => ({
+                            value: o.id,
+                            label: `${o.sampleNo}${o.companyName ? ` · ${o.companyName}` : ""}`,
+                          }))}
+                        />
+                      )}
+                    />
+                  </div>
                 </div>
                 {picked && <SampleSummaryPanel sample={picked} />}
-              </div>
+              </>
             );
           })()}
 
@@ -252,7 +403,7 @@ export function ProductsSection({
           {/* Shape + Unit + dimensions on one line - auto-fit so the visible
               boxes stretch to fill the row (no wasted space, no truncation)
               however many dimensions the chosen shape shows. */}
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3 max-md:grid-cols-2">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(108px,1fr))] gap-2.5 max-lg:grid-cols-4 max-md:grid-cols-2">
             <Field id={`products.${index}.shape`} label="Shape">
               <Controller
                 control={control}
@@ -386,12 +537,31 @@ export function ProductsSection({
                     id={`products.${index}.quantityUom`}
                     value={f.value ?? "Nos"}
                     onValueChange={f.onChange}
-                    options={QUANTITY_UOMS.map((u) => ({ value: u, label: u }))}
+                    searchable
+                    options={uomList.map((u) => ({ value: u, label: u }))}
                   />
                 )}
               />
             </Field>
           </div>
+
+          {/* Product Description - at the bottom of each product. */}
+          <Field id={`products.${index}.description`} label="Product Description">
+            <Controller
+              control={control}
+              name={`products.${index}.description`}
+              render={({ field: df }) => (
+                <NotesField
+                  id={`products.${index}.description`}
+                  ariaLabel="Product Description"
+                  rows={2}
+                  placeholder="What the client is asking for, in their words"
+                  value={df.value ?? ""}
+                  onChange={df.onChange}
+                />
+              )}
+            />
+          </Field>
         </div>
         );
       })}

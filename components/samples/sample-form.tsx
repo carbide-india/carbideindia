@@ -39,13 +39,12 @@ import {
   Segmented,
 } from "@/components/inquiries/form-field";
 import type { EmployeeOption } from "@/lib/queries/employees";
-import type { InquiryOption } from "@/lib/queries/inquiries";
+import type { ClientOption, ClientAutofill } from "@/lib/queries/clients";
 
-/** Form-level schema: the register form always requires a Sample No (the
- *  linked-enquiry auto-numbering path still exists server-side, it's just no
- *  longer driven from this form). */
+/** Form-level schema: the register form always requires a Sample No. A sample
+ *  is logged for a client (client-first flow) before any enquiry exists. */
 const SampleFormSchema = CreateSampleSchema.superRefine((v, ctx) => {
-  if (!v.sampleNo && !v.inquiryId) {
+  if (!v.sampleNo) {
     ctx.addIssue({
       code: "custom",
       path: ["sampleNo"],
@@ -62,21 +61,35 @@ type SampleFormOutput = z.output<typeof SampleFormSchema>;
 
 interface Props {
   employees: EmployeeOption[];
-  /** Recent enquiries for the "Linked Enquiry" picker - attach a sample to an
-   *  SM from the sample side (the enquiry side can also attach per product). */
-  inquiryOptions?: InquiryOption[];
+  /** Active clients (Client Master) for the "Client" picker - the sample is
+   *  logged for a client (KYC → Sample → Enquiry flow); on pick, the client's
+   *  KYC details are fetched and shown. */
+  clients?: ClientOption[];
   /** Editable Sample Location options (Custom Dropdown Master). Falls back to
    *  the built-in SAMPLE_LOCATIONS. */
   sampleLocationOptions?: string[];
   /** Editable Stage Location options (Custom Dropdown Master). Falls back to
    *  the built-in STAGE_LOCATIONS. */
   stageLocationOptions?: string[];
+  /** Editable Sample Report types (SAM Dropdown Master). Falls back to the
+   *  built-in SAMPLE_REPORT_TYPES. */
+  reportOptions?: string[];
   /** Prefill values (used to resume a saved draft). */
   initialValues?: Partial<SampleFormValues>;
   /** Enable auto-saving this form as a draft. */
   enableDrafts?: boolean;
   /** When resuming a draft, its id (auto-save continues into the same draft). */
   resumeDraftId?: string;
+}
+
+/** One labelled detail chip in the fetched-client summary strip. */
+function ClientDetail({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="inline-flex items-baseline gap-1.5">
+      <span className="text-[10.5px] uppercase tracking-wide font-semibold text-ink-subtle">{label}</span>
+      <span className="text-[13px] font-medium text-ink-soft">{value}</span>
+    </span>
+  );
 }
 
 /** Local YYYY-MM-DD for the date input's default (today, user's timezone). */
@@ -165,13 +178,32 @@ const TRACKED_STAGES = [
  */
 export function SampleForm({
   employees,
-  inquiryOptions = [],
+  clients = [],
   sampleLocationOptions,
   stageLocationOptions,
+  reportOptions,
   initialValues,
   enableDrafts,
   resumeDraftId,
 }: Props) {
+  const reportOptionList = reportOptions?.length ? reportOptions : [...SAMPLE_REPORT_TYPES];
+  // Fetched KYC snapshot of the picked client (company / location / contact).
+  const [client, setClient] = React.useState<ClientAutofill | null>(null);
+  const clientSeq = React.useRef(0);
+  async function pickClient(id: string | undefined, onSet: (v: string | undefined) => void) {
+    onSet(id);
+    setClient(null);
+    if (!id) return;
+    const seq = ++clientSeq.current;
+    try {
+      const res = await fetch(`/api/clients/${id}/autofill`);
+      if (!res.ok) return;
+      const data = (await res.json()) as ClientAutofill;
+      if (seq === clientSeq.current) setClient(data);
+    } catch {
+      /* non-blocking - the sample still saves */
+    }
+  }
   const draftsOn = Boolean(enableDrafts);
   // Location option lists - editable via the Custom Dropdown Master, with the
   // built-in enum arrays as the fallback.
@@ -315,32 +347,25 @@ export function SampleForm({
         hint="Sample number as written on the physical sample / register."
         inlineHint
       >
-        <div className="mb-3 max-w-[440px]">
-          <Field label="Linked Enquiry (optional)" labelOnly>
+        <div className="grid grid-cols-6 gap-3 max-lg:grid-cols-3 max-md:grid-cols-2 items-start">
+          <Field label="Client" labelOnly>
             <Controller
               control={control}
-              name="inquiryId"
+              name="clientId"
               render={({ field }) => (
                 <Select
-                  ariaLabel="Linked Enquiry"
+                  ariaLabel="Client"
                   value={field.value ?? ""}
-                  onValueChange={(v) => field.onChange(v || undefined)}
-                  placeholder={
-                    inquiryOptions.length === 0 ? "No enquiries yet" : "Attach to an enquiry (SM)"
-                  }
-                  disabled={inquiryOptions.length === 0}
+                  onValueChange={(v) => pickClient(v || undefined, field.onChange)}
+                  placeholder={clients.length === 0 ? "No clients yet" : "Pick a client"}
+                  disabled={clients.length === 0}
                   searchable
-                  searchPlaceholder="Search SM / company"
-                  options={inquiryOptions.map((o) => ({
-                    value: o.id,
-                    label: `${o.smNumber} · ${o.companyName}`,
-                  }))}
+                  searchPlaceholder="Search clients"
+                  options={clients.map((c) => ({ value: c.id, label: c.name }))}
                 />
               )}
             />
           </Field>
-        </div>
-        <div className="grid grid-cols-5 gap-3 max-lg:grid-cols-3 max-md:grid-cols-1 items-start">
           <Field id="smp-date" label="Date">
             <input
               id="smp-date"
@@ -411,6 +436,29 @@ export function SampleForm({
             />
           </Field>
         </div>
+
+        {/* Fetched client details (from Client Master) - read-only context. */}
+        {client && (
+          <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-[#dfe2ea] bg-surface-soft px-4 py-2.5">
+            <span className="text-[13.5px] font-bold text-ink-strong">{client.name}</span>
+            {[client.city, client.state].filter(Boolean).length > 0 && (
+              <ClientDetail label="Location" value={[client.city, client.state].filter(Boolean).join(", ")} />
+            )}
+            {client.customerTypeName && <ClientDetail label="Customer Type" value={client.customerTypeName} />}
+            {client.industryTypeName && <ClientDetail label="Industry" value={client.industryTypeName} />}
+            {client.contact && (
+              <ClientDetail
+                label="Contact"
+                value={[
+                  [client.contact.firstName, client.contact.lastName].filter(Boolean).join(" "),
+                  client.contact.contactNo,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              />
+            )}
+          </div>
+        )}
 
         <Field id="smp-notes" label="Sample Notes">
           <Controller
@@ -551,41 +599,10 @@ export function SampleForm({
         </div>
       </SectionCard>
 
-      {/* ── 4 · Costing ──────────────────────────────────────────────── */}
-      <SectionCard
-        title="Costing"
-        hint="In-house - status and completion only, no location."
-        inlineHint
-      >
-        <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
-          <MiniField label="Status" className="min-w-[200px]">
-            <Controller
-              control={control}
-              name="costingStatus"
-              render={({ field }) => (
-                <Select
-                  options={STAGE_STATUS_OPTIONS}
-                  value={field.value ?? "not_started"}
-                  onValueChange={(v) =>
-                    field.onChange(v as (typeof STAGE_STATUSES)[number])
-                  }
-                  ariaLabel="Costing status"
-                />
-              )}
-            />
-          </MiniField>
-          <MiniField label="Completed On">
-            <input
-              type="date"
-              className="nt-input w-[180px]"
-              aria-label="Costing completed on"
-              {...register("costingCompletedOn")}
-            />
-          </MiniField>
-        </div>
-      </SectionCard>
+      {/* Costing is NOT captured at sample registration (it's a later stage) -
+          removed from this form; the DB column keeps its default. */}
 
-      {/* ── 5 · Reports & Processing ─────────────────────────────────── */}
+      {/* ── 4 · Reports & Processing ─────────────────────────────────── */}
       <SectionCard title="Reports & Processing">
         <div className="grid grid-cols-[1fr_auto_auto] gap-5 max-lg:grid-cols-1 items-start">
         <Field label="Sample Reports Uploaded">
@@ -594,7 +611,7 @@ export function SampleForm({
             name="reportsUploaded"
             render={({ field }) => (
               <div className="flex flex-wrap gap-2">
-                {SAMPLE_REPORT_TYPES.map((opt) => {
+                {reportOptionList.map((opt) => {
                   const selected = field.value ?? [];
                   const checked = selected.includes(opt);
                   return (
