@@ -30,6 +30,10 @@ export const ProductItemSchema = z.object({
   conditionId:  z.string().uuid().optional(),
   quantityNos:  ItemNum,
   quantityUom:  z.string().trim().max(20).optional(),
+  /** Pre-registered Sample Register row linked to this product line. Persisted
+   *  via the sample's back-link (samples.inquiry_item_id / inquiry_id), not an
+   *  inquiry_items column. */
+  sampleId:     z.string().uuid().optional(),
 });
 export type ProductItemInput = z.input<typeof ProductItemSchema>;
 

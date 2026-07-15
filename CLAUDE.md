@@ -45,7 +45,7 @@ Fresh-DB bootstrap order: `db:migrate` → `seed:defaults` → `bootstrap-admin`
 
 ## Domain language (sales pipeline — Phase 2+)
 
-Carbide's sales flow, per Manan (the client): **Inquiry → Primary Feasibility → Costing → Quotation → Sales Order (PO)**.
+Carbide's sales flow, per Manan (the client): **Client KYC → Sample Register → New Enquiry → Primary Feasibility → Costing → Quotation → Sales Order (PO)**. (The launchpad numbers the forms in this order: KYC=01, Sample=02, Enquiry=03; a physical sample is logged *before* the enquiry and attached to it.)
 
 - **SM number**: unique sales-module id auto-generated per inquiry (one client, 4 inquiries = 4 SM numbers); the SM is the linkable "repo" for everything about that inquiry.
 - **KYC form** = client onboarding: Product Types (multi-select checkboxes), Customer Type + Industry Type (single-select, admin-managed masters), contact person auto-fetch, meeting date/start/end.

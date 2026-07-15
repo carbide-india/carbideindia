@@ -132,7 +132,7 @@ function navFor(pathname: string): NavDef[] {
     ...((familySeg(pathname) === "clients" || familySeg(pathname) === "contacts")
       ? ([
           {
-            label: "Contact Person Address Book",
+            label: "Client Address Book",
             href: "/contacts" as Route,
             Icon: Contact,
             ready: true,
@@ -170,7 +170,7 @@ function navFor(pathname: string): NavDef[] {
   // Forms with their own "Custom" dropdown lists get a Custom editor entry.
   if (custom) {
     items.push({
-      label: "Custom Dropdown Master",
+      label: "CUST Dropdown Master",
       href: custom.route as Route,
       Icon: SlidersHorizontal,
       ready: true,
@@ -328,7 +328,7 @@ export function EnquiryModuleShell({
                     "flex h-[44px] items-center gap-3 rounded-lg px-3.5 text-[14px] transition";
                   return (
                     <Fragment key={n.label}>
-                      {showDivider && <div className="my-1.5 h-px bg-[#eceef4]" />}
+                      {showDivider && <div className="my-2 h-[1.5px] rounded-full bg-[#c2c7d6]" />}
                       {!n.ready ? (
                         <span
                           title="Coming soon"
@@ -356,7 +356,7 @@ export function EnquiryModuleShell({
 
                 {bulkUpload && (
                   <>
-                    <div className="my-1.5 h-px bg-[#eceef4]" />
+                    <div className="my-2 h-[1.5px] rounded-full bg-[#c2c7d6]" />
                     {bulkUpload}
                   </>
                 )}

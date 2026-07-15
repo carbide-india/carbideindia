@@ -15,7 +15,7 @@ interface Props {
   spec: ImportSpec;
   lookups: Lookups;
   isAdmin: boolean;
-  commit: (rows: ImportRowPayload[]) => Promise<{ created: number; skipped: number; newMasters: number; errors: { row: number; reason: string }[] }>;
+  commit: (rows: ImportRowPayload[]) => Promise<{ created: number; skipped: number; duplicates?: number; newMasters: number; errors: { row: number; reason: string }[] }>;
   /** When provided (e.g. inside a modal), called after a successful import
    *  instead of navigating to the register - lets the caller close/refresh. */
   onDone?: () => void;
@@ -86,7 +86,12 @@ export function ImportWorkbench({ spec, lookups, isAdmin, commit, onDone }: Prop
     setPending(true);
     try {
       const res = await commit(payload);
-      fireToast({ message: `Imported ${res.created} ${spec.title}${res.created === 1 ? "" : "s"}${res.skipped ? `, ${res.skipped} skipped` : ""}.`, type: "success" });
+      const dup = res.duplicates ?? 0;
+      const errCount = res.errors.length;
+      const parts = [`Imported ${res.created} ${spec.title}${res.created === 1 ? "" : "s"}`];
+      if (dup) parts.push(`${dup} duplicate${dup === 1 ? "" : "s"} skipped`);
+      if (errCount) parts.push(`${errCount} error${errCount === 1 ? "" : "s"}`);
+      fireToast({ message: `${parts.join(" · ")}.`, type: errCount ? "error" : "success" });
       if (onDone) {
         onDone();
         router.refresh();

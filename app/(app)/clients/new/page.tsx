@@ -78,6 +78,8 @@ export default async function NewClientKycPage({
           bankOptions={kycLists["bank_name"]}
           accountTypeOptions={kycLists["account_type"]}
           stateOptions={kycLists["state"]}
+          countryOptions={kycLists["country"]}
+          currencyOptions={kycLists["currency"]}
           enableDrafts
           resumeDraftId={draftPayload ? draftParam : undefined}
           initialValues={draftPayload ? (draftPayload as Partial<KycFormValues>) : undefined}

@@ -25,6 +25,8 @@ import {
 } from "@/lib/masters/shape-config";
 import { ProductPicker, type PickerMasters } from "@/components/erp/product-picker";
 import type { MaterialPrefill } from "@/app/(app)/_actions/product-picker";
+import { SampleSummaryPanel } from "./sample-summary-panel";
+import type { SampleOption } from "@/lib/queries/samples";
 
 interface Props {
   control: Control<InquiryFormValues>;
@@ -40,6 +42,9 @@ interface Props {
   pickerMasters: PickerMasters;
   /** Enquiry Custom Dropdown Master - dimension Unit list (falls back to defaults). */
   unitOptions?: string[];
+  /** Pre-registered samples the user can attach to a product line (Sample-before-
+   *  Enquiry flow). Full snapshots so the read-only panel renders with no fetch. */
+  sampleOptions?: SampleOption[];
 }
 
 /** Units a product's dimensions can be expressed in. */
@@ -63,6 +68,7 @@ const EMPTY_PRODUCT = {
   conditionId: undefined,
   quantityNos: undefined,
   quantityUom: "Nos",
+  sampleId: undefined,
 };
 
 /**
@@ -83,6 +89,7 @@ export function ProductsSection({
   shapeProfiles,
   pickerMasters,
   unitOptions,
+  sampleOptions = [],
 }: Props) {
   const unitList = unitOptions?.length ? unitOptions : DIMENSION_UNITS;
   const { fields, append, remove } = useFieldArray({ control, name: "products" });
@@ -168,6 +175,45 @@ export function ProductsSection({
               }
             />
           </div>
+
+          {/* Linked Sample - attach a pre-registered physical sample (Sample is
+              logged BEFORE the enquiry) so all its data flows into this line. */}
+          {(() => {
+            const pickedId = watch(`products.${index}.sampleId`);
+            const picked = sampleOptions.find((o) => o.id === pickedId);
+            return (
+              <div>
+                <span className="mb-1.5 block text-[12px] font-semibold text-ink-soft">
+                  Linked Sample
+                </span>
+                <div className="max-w-[420px]">
+                  <Controller
+                    control={control}
+                    name={`products.${index}.sampleId`}
+                    render={({ field: f }) => (
+                      <Select
+                        id={`products.${index}.sampleId`}
+                        ariaLabel="Linked Sample"
+                        value={f.value ?? ""}
+                        onValueChange={(v) => f.onChange(v || undefined)}
+                        placeholder={
+                          sampleOptions.length === 0 ? "No samples registered yet" : "Attach a registered sample"
+                        }
+                        disabled={sampleOptions.length === 0}
+                        searchable
+                        searchPlaceholder="Search sample no. / company"
+                        options={sampleOptions.map((o) => ({
+                          value: o.id,
+                          label: `${o.sampleNo}${o.companyName ? ` · ${o.companyName}` : ""}`,
+                        }))}
+                      />
+                    )}
+                  />
+                </div>
+                {picked && <SampleSummaryPanel sample={picked} />}
+              </div>
+            );
+          })()}
 
           <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
             <Field

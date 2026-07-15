@@ -31,6 +31,7 @@ import { ChecklistSection } from "./checklist-section";
 import type { ClientAutofill, ClientOption } from "@/lib/queries/clients";
 import type { EmployeeOption } from "@/lib/queries/employees";
 import type { MasterOptionItem } from "@/lib/queries/masters";
+import type { SampleOption } from "@/lib/queries/samples";
 import type { ShapeConfig } from "@/lib/masters/shape-config";
 import type { PickerMasters } from "@/components/erp/product-picker";
 
@@ -60,6 +61,8 @@ interface Props {
   stateOptions?: string[];
   cityOptions?: string[];
   unitOptions?: string[];
+  /** Pre-registered samples for the per-product "Linked Sample" picker. */
+  sampleOptions?: SampleOption[];
   /** Current employee - preselected as the assigned sales person. */
   defaultSalesPersonId: string;
   /**
@@ -106,6 +109,7 @@ export function InquiryForm({
   stateOptions,
   cityOptions,
   unitOptions,
+  sampleOptions,
   defaultSalesPersonId,
   editInquiryId,
   initialValues,
@@ -319,7 +323,7 @@ export function InquiryForm({
       <SectionCard>
         {/* Client Type · (Existing Client, when Old) · Company Name - one line. */}
         <div className="flex flex-wrap items-start gap-4">
-          <div className="w-[268px] max-md:w-full">
+          <div className="w-auto shrink-0 max-md:w-full">
             <ClientTypeToggle
               mode={clientMode}
               onModeChange={(m) => {
@@ -339,7 +343,7 @@ export function InquiryForm({
               />
             </div>
           )}
-          <div className="min-w-[280px] flex-1">
+          <div className="min-w-[240px] max-w-[460px] flex-1 max-md:w-full">
             <Field id="inq-company" label="Company Name" required>
               <input
                 id="inq-company"
@@ -350,19 +354,33 @@ export function InquiryForm({
               />
             </Field>
           </div>
+          <div className="w-[132px] max-md:w-full">
+            <Field id="inq-export" label="Export">
+              <Controller
+                control={control}
+                name="export"
+                render={({ field }) => (
+                  <Select
+                    id="inq-export"
+                    value={field.value === undefined ? "" : field.value ? "yes" : "no"}
+                    onValueChange={(v) => field.onChange(v === "" ? undefined : v === "yes")}
+                    placeholder="Select"
+                    options={YES_NO_OPTIONS}
+                  />
+                )}
+              />
+            </Field>
+          </div>
+          <div className="w-[160px] max-md:w-full">
+            <Field id="inq-sm" label="SM Number">
+              <div className="flex min-h-[42px] items-center rounded-lg border border-[#dcdce8] bg-[#f4f5f9] px-3 py-2 text-[12px] leading-snug text-[#9aa0ab]">
+                Auto-generated on save
+              </div>
+            </Field>
+          </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
-          <Field id="inq-sm" label="SM Number">
-            <input
-              id="inq-sm"
-              type="text"
-              className="nt-input"
-              placeholder="Auto-generated on save"
-              disabled
-              readOnly
-            />
-          </Field>
+        <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
           <Field id="inq-date" label="Enquiry Date">
             <input
               id="inq-date"
@@ -408,26 +426,7 @@ export function InquiryForm({
           </Field>
         </div>
 
-        <div className="grid grid-cols-6 gap-3 max-lg:grid-cols-3 max-md:grid-cols-2">
-          <Field id="inq-export" label="Export">
-            <Controller
-              control={control}
-              name="export"
-              render={({ field }) => (
-                <Select
-                  id="inq-export"
-                  value={
-                    field.value === undefined ? "" : field.value ? "yes" : "no"
-                  }
-                  onValueChange={(v) =>
-                    field.onChange(v === "" ? undefined : v === "yes")
-                  }
-                  placeholder="Select"
-                  options={YES_NO_OPTIONS}
-                />
-              )}
-            />
-          </Field>
+        <div className="grid grid-cols-5 gap-3 max-lg:grid-cols-3 max-md:grid-cols-2">
           <Field id="inq-currency" label="Currency">
             <Controller
               control={control}
@@ -719,6 +718,7 @@ export function InquiryForm({
           shapeProfiles={shapeProfiles}
           pickerMasters={pickerMasters}
           unitOptions={unitOptions}
+          sampleOptions={sampleOptions}
         />
       )}
 

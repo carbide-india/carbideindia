@@ -9,5 +9,7 @@ export async function commitKycImport(rows: ImportRowPayload[]): Promise<ImportC
   await requireAdmin();
   return runImportCommit(rows, {
     createRecord: (input) => createClientKyc(input as Parameters<typeof createClientKyc>[0]),
+    // A client is identified by name / GSTIN / PAN - repeated rows are skipped.
+    dedupeKeys: ["name", "gstin", "panNo"],
   });
 }

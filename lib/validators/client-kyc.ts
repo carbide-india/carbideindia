@@ -1,7 +1,5 @@
 import { z } from "zod";
 import {
-  INQUIRY_CURRENCIES,
-  INQUIRY_COUNTRIES,
   GST_REGISTRATION_TYPES,
   ADDRESS_TYPES,
   CLIENT_GRADES,
@@ -71,8 +69,11 @@ const ClientKycFieldsSchema = z.object({
   grade: z.enum(CLIENT_GRADES).optional(),
   departmentId: z.string().uuid().optional(),
   export: z.boolean().optional(),
-  currency: z.enum(INQUIRY_CURRENCIES).default("INR"),
-  country: z.enum(INQUIRY_COUNTRIES).default("India"),
+  // Currency + Country are editable dropdowns (Custom Dropdown Master) backed by
+  // the full ISO currency / world-country lists, so they're free strings rather
+  // than a fixed enum. Defaults keep new clients on INR / India.
+  currency: z.string().trim().min(1).max(40).default("INR"),
+  country: z.string().trim().min(1).max(80).default("India"),
   state: OptionalText(80), city: OptionalText(80),
   addressLine1: OptionalText(240), addressLine2: OptionalText(240),
   addressLine3: OptionalText(240), addressLine4: OptionalText(240),
@@ -142,8 +143,8 @@ export type CreateClientKycParsed = z.output<typeof CreateClientKycSchema>;
  */
 export const UpdateClientKycSchema = ClientKycFieldsSchema
   .extend({
-    currency: z.enum(INQUIRY_CURRENCIES),
-    country: z.enum(INQUIRY_COUNTRIES),
+    currency: z.string().trim().min(1).max(40),
+    country: z.string().trim().min(1).max(80),
   })
   .partial()
   .strict()

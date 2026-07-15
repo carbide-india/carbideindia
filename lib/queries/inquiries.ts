@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { inquiries, inquiryItems, items, employees, type Inquiry } from "@/db/schema";
 import type { EnquiryStatus, FeasibilityStatus } from "@/db/enums";
 import { specMasterAliases } from "@/lib/flow/spec-resolve";
+import { listSamplesForInquiries } from "@/lib/queries/samples";
 
 /** One row of the /inquiries register table. */
 export interface InquiryListItem {
@@ -16,6 +17,8 @@ export interface InquiryListItem {
   feasibilityStatus: FeasibilityStatus;
   salesPersonName: string | null;
   productDescription: string;
+  /** Physical samples attached to this enquiry (via samples.inquiry_id). */
+  samples: { id: string; sampleNo: string; sampleStatus: import("@/db/enums").SampleStatus }[];
 }
 
 export interface InquiryFilters {
@@ -49,7 +52,7 @@ export async function listInquiries(
       or(ilike(inquiries.companyName, like), ilike(inquiries.smNumber, like)),
     );
   }
-  return db
+  const rows = await db
     .select({
       id: inquiries.id,
       smNumber: inquiries.smNumber,
@@ -65,6 +68,17 @@ export async function listInquiries(
     .leftJoin(employees, eq(inquiries.assignedSalesPersonId, employees.id))
     .where(conds.length ? and(...conds) : undefined)
     .orderBy(desc(inquiries.enquiryDate), desc(inquiries.createdAt));
+
+  // Attach linked physical samples (per-line back-link, aggregated per enquiry).
+  const byInquiry = await listSamplesForInquiries(rows.map((r) => r.id));
+  return rows.map((r) => ({
+    ...r,
+    samples: (byInquiry.get(r.id) ?? []).map((s) => ({
+      id: s.id,
+      sampleNo: s.sampleNo,
+      sampleStatus: s.sampleStatus,
+    })),
+  }));
 }
 
 /** Full inquiry row for the detail page / feasibility panel. */

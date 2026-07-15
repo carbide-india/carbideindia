@@ -4,11 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import {
-  useQueryState,
-  parseAsString,
-  parseAsArrayOf,
-} from "nuqs";
+import { useQueryState, parseAsString } from "nuqs";
 import {
   MoreVertical,
   Eye,
@@ -30,7 +26,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { MultiSelect } from "@/components/ui/multi-select";
 import { ClientKycQuickView } from "@/components/clients/client-kyc-quick-view";
 import { fireToast } from "@/lib/toast";
 import {
@@ -233,10 +228,7 @@ export function ClientRegister({ rows, isAdmin }: Props) {
   const [status, setStatus] = useQueryState("status", parseAsString.withDefault(""));
   const [gstin, setGstin] = useQueryState("gstin", parseAsString.withDefault(""));
   const [stateFilter, setStateFilter] = useQueryState("state", parseAsString.withDefault(""));
-  const [tags, setTags] = useQueryState(
-    "tags",
-    parseAsArrayOf(parseAsString).withDefault([]),
-  );
+  const [tag, setTag] = useQueryState("tag", parseAsString.withDefault(""));
 
   // ── Column visibility (client-side, persisted) ──
   const [hiddenCols, setHiddenCols] = React.useState<Record<string, boolean>>({});
@@ -322,12 +314,10 @@ export function ClientRegister({ rows, isAdmin }: Props) {
       if (gstin === "has" && !r.gstin) return false;
       if (gstin === "none" && r.gstin) return false;
       if (stateFilter && r.state !== stateFilter) return false;
-      // Tags: match rows carrying ANY of the selected tags.
-      if (tags.length > 0 && !tags.some((t) => r.tags.includes(t)))
-        return false;
+      if (tag && !r.tags.includes(tag)) return false;
       return true;
     });
-  }, [rows, q, grade, salesPerson, customerType, industryType, trade, status, gstin, stateFilter, tags]);
+  }, [rows, q, grade, salesPerson, customerType, industryType, trade, status, gstin, stateFilter, tag]);
 
   const hasFilters =
     Boolean(q) ||
@@ -339,7 +329,7 @@ export function ClientRegister({ rows, isAdmin }: Props) {
     Boolean(status) ||
     Boolean(gstin) ||
     Boolean(stateFilter) ||
-    tags.length > 0;
+    Boolean(tag);
 
   function clearFilters() {
     setQ("");
@@ -351,11 +341,11 @@ export function ClientRegister({ rows, isAdmin }: Props) {
     setStatus("");
     setGstin("");
     setStateFilter("");
-    setTags([]);
+    setTag("");
   }
 
   const selectClass =
-    "shrink-0 rounded-chip border border-[#dcdce8] bg-white px-3 py-2 text-[13px] font-semibold text-[#3a4152] outline-none focus:border-[#3f3f94]";
+    "h-8 max-w-[150px] shrink-0 rounded-lg border border-[#dcdce8] bg-white px-2.5 text-[12.5px] font-semibold text-[#3a4152] outline-none focus:border-[#3f3f94]";
 
   return (
     <>
@@ -396,11 +386,11 @@ export function ClientRegister({ rows, isAdmin }: Props) {
 
       {/* Filter bar - single line (scrolls horizontally if the viewport is narrow). */}
       <div className="mb-4 flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]">
-        <label className="relative w-[200px] min-w-[160px] flex-1">
+        <label className="relative w-[220px] min-w-[180px] flex-1">
           <Search
-            size={15}
+            size={14}
             strokeWidth={2.2}
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#9aa0ab]"
+            className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[#9aa0ab]"
           />
           <input
             type="search"
@@ -408,7 +398,7 @@ export function ClientRegister({ rows, isAdmin }: Props) {
             onChange={(e) => setQ(e.target.value || "")}
             placeholder="Search company, code, contact, GSTIN…"
             aria-label="Search clients"
-            className="w-full rounded-chip border border-[#dcdce8] bg-white py-2 pl-9 pr-8 text-[13px] text-[#3a4152] outline-none placeholder:text-[#9aa0ab] focus:border-[#3f3f94]"
+            className="h-8 w-full rounded-lg border border-[#dcdce8] bg-white pl-8 pr-7 text-[12.5px] text-[#3a4152] outline-none placeholder:text-[#9aa0ab] focus:border-[#3f3f94]"
           />
           {q && (
             <button
@@ -526,15 +516,19 @@ export function ClientRegister({ rows, isAdmin }: Props) {
         )}
 
         {options.tags.length > 0 && (
-          <div className="shrink-0 rounded-chip border border-[#dcdce8] bg-white px-3 py-2">
-            <MultiSelect
-              options={options.tags.map((t) => ({ value: t, label: t }))}
-              selected={tags}
-              onChange={(next) => setTags(next.length ? next : [])}
-              placeholder="All tags"
-              className="min-w-[8rem] text-[13px] font-semibold text-[#3a4152]"
-            />
-          </div>
+          <select
+            value={tag}
+            onChange={(e) => setTag(e.target.value || "")}
+            aria-label="Tag"
+            className={selectClass}
+          >
+            <option value="">All tags</option>
+            {options.tags.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
         )}
 
         {/* Columns - hide/show optional columns. */}
@@ -602,21 +596,26 @@ export function ClientRegister({ rows, isAdmin }: Props) {
             </thead>
             <tbody>
               {filtered.map((r) => (
-                <tr key={r.id} className="group/row">
+                <tr
+                  key={r.id}
+                  className="group/row cursor-pointer"
+                  onClick={() => setQuickView(r)}
+                >
                   <Td sticky left={0} width={W_ACTIONS} className="align-top">
-                    <RowMenu
-                      row={r}
-                      isAdmin={isAdmin}
-                      onQuickView={() => setQuickView(r)}
-                    />
+                    {/* Row-action menu manages its own clicks - keep them from
+                        bubbling up to the row's quick-view handler. */}
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <RowMenu
+                        row={r}
+                        isAdmin={isAdmin}
+                        onQuickView={() => setQuickView(r)}
+                      />
+                    </div>
                   </Td>
                   <Td sticky left={LEFT_COMPANY} width={W_COMPANY} className="align-top">
-                    <Link
-                      href={`/clients/${r.id}` as Route}
-                      className="font-semibold text-[#1f2430] hover:text-[#3f3f94] hover:underline"
-                    >
+                    <span className="font-semibold text-[#1f2430] group-hover/row:text-[#3f3f94]">
                       {r.name}
-                    </Link>
+                    </span>
                   </Td>
                   <Td
                     sticky
@@ -682,9 +681,9 @@ function ColumnsMenu({
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-chip border border-[#dcdce8] bg-white px-3 py-2 text-[13px] font-semibold text-[#3a4152] transition hover:border-[#c9c9ea] hover:text-[#3f3f94]"
+          className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-[#dcdce8] bg-white px-2.5 text-[12.5px] font-semibold text-[#3a4152] transition hover:border-[#c9c9ea] hover:text-[#3f3f94]"
         >
-          <SlidersHorizontal size={14} strokeWidth={2.2} />
+          <SlidersHorizontal size={13} strokeWidth={2.2} />
           Columns
           {hiddenCount > 0 && (
             <span className="rounded-full bg-[#3f3f94] px-1.5 text-[10px] font-bold text-white tabular-nums">

@@ -29,20 +29,20 @@ const FORMS: { key: string; title: string; desc: string; tag: string; href: Rout
     Icon: UserCheck,
   },
   {
+    key: "sample",
+    title: "Sample Register",
+    desc: "Log a physical sample - number, location, responsible person, photos, and status.",
+    tag: "Sample",
+    href: "/samples/new" as Route,
+    Icon: FlaskConical,
+  },
+  {
     key: "enquiry",
     title: "New Enquiry",
     desc: "Start a sales enquiry - capture client, products, and specifications to generate an SM number.",
     tag: "Enquiry",
     href: "/enquiries/new" as Route,
     Icon: FilePlus2,
-  },
-  {
-    key: "sample",
-    title: "Sample Register",
-    desc: "Log a physical sample - number, location, responsible person, photos, and status.",
-    tag: "Feasibility",
-    href: "/samples/new" as Route,
-    Icon: FlaskConical,
   },
   {
     key: "costing",

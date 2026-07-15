@@ -11,9 +11,10 @@
  */
 
 import { BANKS, ACCOUNT_TYPES } from "@/lib/data/banks";
-import { INDIAN_STATES } from "@/lib/data/geo";
+import { INDIAN_STATES, COUNTRIES } from "@/lib/data/geo";
 import { INDIA_STATES } from "@/lib/data/india-states-cities";
 import { SAMPLE_LOCATIONS, STAGE_LOCATIONS } from "@/db/enums";
+import { CURRENCY_CODES } from "@/lib/data/currencies";
 
 /** Convenience default cities for the enquiry City list (the form still merges
  *  these with the built-in per-state cities). */
@@ -124,6 +125,18 @@ export const CUSTOM_LISTS: Record<string, FormCustomListsDef> = {
         defaults: [...INDIAN_STATES],
       },
       {
+        key: "country",
+        label: "Country",
+        hint: "The Country dropdown (Registration & Tax + addresses).",
+        defaults: [...COUNTRIES],
+      },
+      {
+        key: "currency",
+        label: "Currency",
+        hint: "The Currency dropdown (Registration & Tax) - full ISO currency set.",
+        defaults: [...CURRENCY_CODES],
+      },
+      {
         key: "account_type",
         label: "Account Type",
         hint: "Bank Details → Account Type.",
@@ -192,7 +205,7 @@ export const CUSTOM_LIST_CATEGORIES: Record<
   { order: string[]; of: Record<string, string> }
 > = {
   kyc: {
-    order: ["People", "Commercial Terms", "Banking", "Logistics", "Location"],
+    order: ["People", "Commercial Terms", "Banking", "Logistics", "Location & Currency"],
     of: {
       designation: "People",
       payment_terms: "Commercial Terms",
@@ -203,7 +216,9 @@ export const CUSTOM_LIST_CATEGORIES: Record<
       account_type: "Banking",
       bank_name: "Banking",
       transporter: "Logistics",
-      state: "Location",
+      state: "Location & Currency",
+      country: "Location & Currency",
+      currency: "Location & Currency",
     },
   },
   enquiry: {

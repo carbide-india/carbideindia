@@ -74,6 +74,8 @@ export default async function EditClientPage({ params }: PageProps) {
           bankOptions={kycLists["bank_name"]}
           accountTypeOptions={kycLists["account_type"]}
           stateOptions={kycLists["state"]}
+          countryOptions={kycLists["country"]}
+          currencyOptions={kycLists["currency"]}
         />
       </div>
     </EnquiryModuleShell>

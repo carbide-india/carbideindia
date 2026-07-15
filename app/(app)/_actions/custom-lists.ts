@@ -29,20 +29,25 @@ export async function addCustomOptionsBulk(
   formKey: string,
   listKey: string,
   labelsRaw: string[],
-): Promise<{ ok: true; added: number } | { ok: false; error: string }> {
+): Promise<{ ok: true; added: number; skipped: number } | { ok: false; error: string }> {
   await requireUser();
   if (!isKnownCustomList(formKey, listKey)) return { ok: false, error: "Unknown list." };
+  // Count every valid pasted value, then dedupe within the paste (case-
+  // insensitive) - the difference is the first bucket of skipped duplicates.
+  let validCount = 0;
   const seen = new Set<string>();
   const labels: string[] = [];
   for (const raw of labelsRaw) {
     const label = raw.trim();
     if (!label || label.length > 200) continue;
+    validCount++;
     const key = label.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
     labels.push(label);
   }
   if (labels.length === 0) return { ok: false, error: "Paste at least one value." };
+  let inserted = 0;
   try {
     const [row] = await db
       .select({ maxSort: sql<number>`coalesce(max(${formCustomOptions.sortOrder}), 0)` })
@@ -52,12 +57,20 @@ export async function addCustomOptionsBulk(
       );
     let sort = row?.maxSort ?? 0;
     const values = labels.map((label) => ({ formKey, listKey, label, sortOrder: ++sort }));
-    await db.insert(formCustomOptions).values(values).onConflictDoNothing();
+    // onConflictDoNothing skips values already in the list; `.returning()` tells
+    // us how many were actually inserted so we can report accurate counts.
+    const returned = await db
+      .insert(formCustomOptions)
+      .values(values)
+      .onConflictDoNothing()
+      .returning({ id: formCustomOptions.id });
+    inserted = returned.length;
   } catch {
     return { ok: false, error: "Couldn't save - has migration 0047 been applied?" };
   }
   revalidateFor(formKey);
-  return { ok: true, added: labels.length };
+  // Skipped = within-paste duplicates + values that already existed in the list.
+  return { ok: true, added: inserted, skipped: Math.max(0, validCount - inserted) };
 }
 
 export async function addCustomOption(

@@ -68,11 +68,11 @@ export const MODULES: ModuleDef[] = [
     match: ["/inquiries", "/quotations", "/negotiations", "/sales-orders", "/samples", "/meetings", "/costings"],
     hasForms: true,
     items: [
+      { href: "/samples" as Route, label: "Samples", Icon: FlaskConical },
       { href: "/inquiries" as Route, label: "Enquiries", Icon: FileText },
       { href: "/quotations" as Route, label: "Quotations", Icon: FileText },
       { href: "/negotiations" as Route, label: "Negotiations", Icon: Handshake },
       { href: "/sales-orders" as Route, label: "Sales Orders", Icon: PackageCheck },
-      { href: "/samples" as Route, label: "Samples", Icon: FlaskConical },
       { href: "/meetings" as Route, label: "Meetings", Icon: CalendarRange },
     ],
   },

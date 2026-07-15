@@ -9,7 +9,7 @@ import type { ImportSpec, Lookups, ImportRowPayload } from "@/lib/import/engine/
 
 type CommitFn = (
   rows: ImportRowPayload[],
-) => Promise<{ created: number; skipped: number; newMasters: number; errors: { row: number; reason: string }[] }>;
+) => Promise<{ created: number; skipped: number; duplicates?: number; newMasters: number; errors: { row: number; reason: string }[] }>;
 
 const STEPS = [
   { Icon: Download, label: "Download template", hint: "Pre-formatted .xlsx with dropdowns" },

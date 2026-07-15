@@ -12,9 +12,17 @@ import {
   FEASIBILITY_STATUS_COLORS,
   INQUIRY_PRIORITIES,
   INQUIRY_PRIORITY_LABELS,
+  SAMPLE_STATUS_LABELS,
+  SAMPLE_STATUS_COLORS,
 } from "@/db/enums";
 import { formatDate } from "@/lib/format";
 import { Chip, PRIORITY_TONES } from "./chip";
+
+/** Sample-status colour token → hex dot. */
+const SAMPLE_STATUS_TONE: Record<string, string> = {
+  slate: "#64748b", blue: "#2563eb", amber: "#d97706", orange: "#ea580c",
+  red: "#dc2626", stone: "#78716c", green: "#16a34a",
+};
 import {
   RegisterDataTable,
   type RegisterColumn,
@@ -104,6 +112,36 @@ export function InquiryTable({ rows, employees, variant = "enquiry" }: Props) {
         searchable: true,
         sortValue: (r) => r.productDescription,
         cell: (r) => <span className="text-ink-soft">{r.productDescription}</span>,
+      },
+      {
+        id: "samples",
+        header: "Samples",
+        width: "150px",
+        sortValue: (r) => r.samples.length,
+        exportValue: (r) => r.samples.map((s) => s.sampleNo).join(", "),
+        cell: (r) =>
+          r.samples.length === 0 ? (
+            <span className="text-[#b3b8c2]">-</span>
+          ) : (
+            <span className="flex flex-wrap items-center gap-1">
+              {r.samples.slice(0, 2).map((s) => (
+                <span
+                  key={s.id}
+                  className="inline-flex items-center gap-1 rounded-full bg-[#eef0ff] px-2 py-0.5 text-[11px] font-semibold text-[#3f3f94]"
+                  title={SAMPLE_STATUS_LABELS[s.sampleStatus]}
+                >
+                  <span
+                    className="inline-block size-1.5 rounded-full"
+                    style={{ background: SAMPLE_STATUS_TONE[SAMPLE_STATUS_COLORS[s.sampleStatus]] ?? "#64748b" }}
+                  />
+                  {s.sampleNo}
+                </span>
+              ))}
+              {r.samples.length > 2 && (
+                <span className="text-[11px] font-semibold text-ink-subtle">+{r.samples.length - 2}</span>
+              )}
+            </span>
+          ),
       },
       {
         id: "priority",

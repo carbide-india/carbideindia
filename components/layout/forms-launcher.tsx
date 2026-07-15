@@ -63,13 +63,6 @@ interface DisabledCard {
 
 const ACTIVE_CARDS: ActiveCard[] = [
   {
-    name: "Enquiry",
-    Icon: FileSearch,
-    desc: "Log a new sales enquiry - SM number auto-assigned.",
-    href: "/enquiries/new" as Route,
-    registerHref: "/inquiries" as Route,
-  },
-  {
     name: "Client KYC",
     Icon: BadgeCheck,
     desc: "Onboard a client - types, address, contact, meeting.",
@@ -82,6 +75,13 @@ const ACTIVE_CARDS: ActiveCard[] = [
     desc: "Track a physical sample through its stages.",
     href: "/samples/new" as Route,
     registerHref: "/samples" as Route,
+  },
+  {
+    name: "Enquiry",
+    Icon: FileSearch,
+    desc: "Log a new sales enquiry - SM number auto-assigned.",
+    href: "/enquiries/new" as Route,
+    registerHref: "/inquiries" as Route,
   },
   {
     name: "Quotation",

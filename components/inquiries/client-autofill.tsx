@@ -4,7 +4,8 @@ import * as React from "react";
 import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { fireToast } from "@/lib/toast";
-import { Field, Segmented } from "./form-field";
+import { cn } from "@/lib/utils";
+import { Field } from "./form-field";
 import type { ClientAutofill, ClientOption } from "@/lib/queries/clients";
 
 const MODE_OPTIONS = [
@@ -40,16 +41,33 @@ export function ClientTypeToggle({
 }) {
   return (
     <Field label="Client Type" labelOnly>
-      <Segmented
-        size="lg"
-        options={MODE_OPTIONS}
-        value={mode}
-        onChange={(m) => {
-          if (m) onModeChange(m);
-        }}
-        allowClear={false}
-        ariaLabel="New or old client"
-      />
+      <div
+        role="radiogroup"
+        aria-label="New or old client"
+        className="relative grid w-[210px] grid-cols-2 rounded-xl border border-[#dcdce8] bg-[#f4f5f9] p-1 max-md:w-full"
+      >
+        {/* Sliding indigo indicator - translates between the two halves. */}
+        <span
+          aria-hidden
+          className="absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-lg bg-[#3f3f94] shadow-[0_4px_14px_rgba(63,63,148,0.4)] transition-transform duration-300 ease-[cubic-bezier(.22,.61,.36,1)]"
+          style={{ transform: mode === "old" ? "translateX(100%)" : "translateX(0)" }}
+        />
+        {MODE_OPTIONS.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            role="radio"
+            aria-checked={mode === o.value}
+            onClick={() => onModeChange(o.value)}
+            className={cn(
+              "relative z-10 rounded-lg py-2 text-center text-[13.5px] font-bold transition-colors duration-200",
+              mode === o.value ? "text-white" : "text-[#6b7280] hover:text-[#3f3f94]",
+            )}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
     </Field>
   );
 }

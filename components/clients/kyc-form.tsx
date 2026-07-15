@@ -7,7 +7,7 @@ import { useForm, Controller, useFieldArray, type Control } from "react-hook-for
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
 import { upload } from "@vercel/blob/client";
-import { Check, Copy, Download, FileText, ImagePlus, Loader2, Plus, X } from "lucide-react";
+import { Check, Copy, FileText, ImagePlus, Loader2, Plus, X } from "lucide-react";
 import { CreateClientKycSchema } from "@/lib/validators/client-kyc";
 import { createClientKyc, fetchGstDetailsAction } from "@/app/(app)/clients/actions";
 import { parseGstin, type GstinParse, GST_STATE_NAMES } from "@/lib/data/gst";
@@ -25,8 +25,6 @@ import {
   GST_REGISTRATION_TYPES,
   GST_REGISTRATION_TYPE_LABELS,
   CLIENT_GRADES,
-  INQUIRY_CURRENCIES,
-  INQUIRY_COUNTRIES,
 } from "@/db/enums";
 import { fireToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -38,6 +36,7 @@ import { useFormDraft } from "@/components/drafts/use-form-draft";
 import type { MasterOptionItem } from "@/lib/queries/masters";
 import type { EmployeeOption } from "@/lib/queries/employees";
 import { COUNTRIES, INDIAN_STATES, pinToState, toAddressStateName } from "@/lib/data/geo";
+import { CURRENCY_CODES, currencyLabel } from "@/lib/data/currencies";
 import { BANKS, ACCOUNT_TYPES } from "@/lib/data/banks";
 import { ClientDocuments } from "@/components/clients/client-documents";
 import type { ClientDocument } from "@/lib/queries/client-documents";
@@ -70,6 +69,8 @@ interface Props {
   bankOptions?: string[];
   accountTypeOptions?: string[];
   stateOptions?: string[];
+  countryOptions?: string[];
+  currencyOptions?: string[];
   /** When set, the form edits this client in place (admin "Edit client")
    *  instead of onboarding a new one. */
   editClientId?: string;
@@ -152,19 +153,25 @@ function AddLabelRow({ label, add }: { label: string; add?: React.ReactNode }) {
  * Map a KYC country to its default currency - drives the auto-populate of the
  * Currency field when a Country is picked (Registration & Tax section).
  */
-const COUNTRY_TO_CURRENCY: Partial<
-  Record<(typeof INQUIRY_COUNTRIES)[number], (typeof INQUIRY_CURRENCIES)[number]>
-> = {
+const COUNTRY_TO_CURRENCY: Record<string, string> = {
   India: "INR",
   USA: "USD",
-  Russia: "Ruble",
-  Italy: "EURO",
-  Poland: "EURO",
+  UK: "GBP",
+  Russia: "RUB",
+  Italy: "EUR",
+  Poland: "PLN",
   Australia: "AUD",
-  UAE: "AHD",
-  Spain: "EURO",
-  Belgium: "EURO",
-  Others: "Others",
+  UAE: "AED",
+  Spain: "EUR",
+  Belgium: "EUR",
+  Germany: "EUR",
+  France: "EUR",
+  Netherlands: "EUR",
+  China: "CNY",
+  Japan: "JPY",
+  Canada: "CAD",
+  Singapore: "SGD",
+  Switzerland: "CHF",
 };
 
 function safeCardName(name: string): string {
@@ -207,6 +214,8 @@ export function KycForm({
   bankOptions,
   accountTypeOptions,
   stateOptions,
+  countryOptions,
+  currencyOptions,
   editClientId,
   initialValues,
   clientCode,
@@ -224,6 +233,8 @@ export function KycForm({
   const bankList = bankOptions?.length ? bankOptions : BANKS;
   const accountTypeList = accountTypeOptions?.length ? accountTypeOptions : ACCOUNT_TYPES;
   const stateList = stateOptions?.length ? stateOptions : INDIAN_STATES;
+  const countryList = countryOptions?.length ? countryOptions : COUNTRIES;
+  const currencyList: readonly string[] = currencyOptions?.length ? currencyOptions : CURRENCY_CODES;
 
   // Locally-added Designation / Department options show in their dropdown
   // instantly (before router.refresh() syncs them back from the server).
@@ -397,7 +408,7 @@ export function KycForm({
 
   /** Pick a Country → default its Currency and propagate the country down to
    *  every address block (Registration is the source of truth). */
-  function applyCountry(next: (typeof INQUIRY_COUNTRIES)[number]) {
+  function applyCountry(next: string) {
     setValue("country", next);
     const mapped = COUNTRY_TO_CURRENCY[next];
     if (mapped) setValue("currency", mapped);
@@ -481,7 +492,7 @@ export function KycForm({
     // is auto-completed too.
     if (parse.stateName) {
       setValue("placeOfSupply", parse.stateName, { shouldDirty: true });
-      applyCountry("India" as (typeof INQUIRY_COUNTRIES)[number]);
+      applyCountry("India");
       const addrState = toAddressStateName(parse.stateName);
       setValue("addresses.0.state", addrState, { shouldDirty: true });
       const t = watch("gstRegistrationType");
@@ -545,6 +556,19 @@ export function KycForm({
       });
     });
   }
+
+  // Auto-fetch GST details in the background the moment a complete, valid GSTIN
+  // is entered (no manual button). Guarded so each distinct GSTIN fetches once.
+  const lastAutoFetchedGstin = React.useRef<string>("");
+  React.useEffect(() => {
+    if (gstParse.valid && gstParse.normalized !== lastAutoFetchedGstin.current) {
+      lastAutoFetchedGstin.current = gstParse.normalized;
+      handleFetchGst();
+    }
+    // handleFetchGst reads the current gstin via watch(); the ref guard prevents
+    // re-fetching the same number, so we intentionally depend only on the parse.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gstParse.valid, gstParse.normalized]);
 
   /** Inline "+ Add" for a Commercial & Credit custom dropdown: writes the value
    *  to the list, shows it instantly, and selects it via `onSelect`. */
@@ -710,8 +734,54 @@ export function KycForm({
           </Field>
         )}
 
-        {/* Company Name · Assign Sales Person · Export · Grade · Tags — one line. */}
-        <div className="grid grid-cols-[minmax(200px,1.5fr)_minmax(160px,1fr)_120px_100px_minmax(170px,1fr)] gap-3 max-xl:grid-cols-2 max-md:grid-cols-1">
+        {/* GSTIN · Company Name · Assign Sales Person · Export · Grade · Tags —
+            one line. GSTIN sits first and auto-fetches the company details. */}
+        <div className="grid grid-cols-[minmax(165px,1fr)_minmax(190px,1.4fr)_minmax(150px,1fr)_105px_85px_minmax(120px,0.85fr)] gap-3 max-xl:grid-cols-2 max-md:grid-cols-1">
+          <Field id="kyc-gstin" label="GSTIN">
+            <Controller
+              control={control}
+              name="gstin"
+              render={({ field }) => (
+                <input
+                  id="kyc-gstin"
+                  type="text"
+                  inputMode="text"
+                  autoCapitalize="characters"
+                  spellCheck={false}
+                  maxLength={15}
+                  placeholder="27ABCDE1234F1Z5"
+                  className="nt-input font-mono uppercase tracking-wide"
+                  value={field.value ?? ""}
+                  onChange={(e) => handleGstinChange(e.target.value)}
+                  onBlur={() => {
+                    field.onBlur();
+                    runDupCheck();
+                  }}
+                />
+              )}
+            />
+            {gstPending && (
+              <p className="mt-1 inline-flex items-center gap-1 text-[12px] font-medium text-[#6b7280]">
+                <Loader2 className="h-[13px] w-[13px] animate-spin" /> Fetching details…
+              </p>
+            )}
+            {!gstPending && gstParse.status === "valid" && (
+              <p className="mt-1 inline-flex items-center gap-1 text-[12px] font-semibold text-[#15803d]">
+                <Check size={13} strokeWidth={3} /> Verified
+                {gstParse.stateName ? ` · ${gstParse.stateName}` : ""}
+              </p>
+            )}
+            {gstParse.status === "invalid" && (
+              <p className="mt-1 inline-flex items-center gap-1 text-[12px] font-semibold text-[#d32f2f]">
+                <X size={13} strokeWidth={3} /> {gstParse.error ?? "Invalid GST Number"}
+              </p>
+            )}
+            {gstParse.status === "idle" && gstParse.stateName && (
+              <p className="mt-1 text-[12px] font-medium text-[#6b7280]">
+                State: <span className="font-semibold text-ink-strong">{gstParse.stateName}</span>
+              </p>
+            )}
+          </Field>
           <Field id="kyc-name" label="Company Name" required>
             <input
               id="kyc-name"
@@ -903,64 +973,9 @@ export function KycForm({
         inlineHint
         hint="GST, PAN, MSME / Udyam registration and export / currency details."
       >
-        <div className="grid grid-cols-[1.4fr_1fr_1.15fr_0.85fr] gap-4 max-lg:grid-cols-2 max-md:grid-cols-1">
-          <Field id="kyc-gstin" label="GSTIN">
-            <div className="flex items-stretch gap-2">
-              <Controller
-                control={control}
-                name="gstin"
-                render={({ field }) => (
-                  <input
-                    id="kyc-gstin"
-                    type="text"
-                    inputMode="text"
-                    autoCapitalize="characters"
-                    spellCheck={false}
-                    maxLength={15}
-                    placeholder="27ABCDE1234F1Z5"
-                    className="nt-input flex-1 font-mono uppercase tracking-wide"
-                    value={field.value ?? ""}
-                    onChange={(e) => handleGstinChange(e.target.value)}
-                    onBlur={() => {
-                      field.onBlur();
-                      runDupCheck();
-                    }}
-                  />
-                )}
-              />
-              <button
-                type="button"
-                onClick={handleFetchGst}
-                disabled={gstPending}
-                title="Fetch company name, registered address and status from the GSTIN"
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border-[1.75px] border-[#3f3f94] bg-[#f4f4fd] px-3 text-[12.5px] font-bold text-[#3f3f94] transition hover:bg-[#3f3f94] hover:text-white disabled:opacity-50"
-              >
-                {gstPending ? (
-                  <Loader2 className="h-[15px] w-[15px] animate-spin" />
-                ) : (
-                  <Download className="h-[15px] w-[15px]" />
-                )}
-                Fetch
-              </button>
-            </div>
-            {gstParse.status === "valid" && (
-              <p className="mt-1 inline-flex items-center gap-1 text-[12px] font-semibold text-[#15803d]">
-                <Check size={13} strokeWidth={3} /> GST Number Verified
-                {gstParse.stateName ? ` · ${gstParse.stateName}` : ""}
-              </p>
-            )}
-            {gstParse.status === "invalid" && (
-              <p className="mt-1 inline-flex items-center gap-1 text-[12px] font-semibold text-[#d32f2f]">
-                <X size={13} strokeWidth={3} /> {gstParse.error ?? "Invalid GST Number"}
-              </p>
-            )}
-            {gstParse.status === "idle" && gstParse.stateName && (
-              <p className="mt-1 text-[12px] font-medium text-[#6b7280]">
-                State: <span className="font-semibold text-ink-strong">{gstParse.stateName}</span>
-                {gstParse.pan ? " · PAN filled" : " · keep typing to fill PAN"}
-              </p>
-            )}
-          </Field>
+        {/* PAN · MSME · GST Reg Type · Currency · Country · State - one line.
+            GSTIN moved to the Identity row and auto-fetches on a complete number. */}
+        <div className="grid grid-cols-6 gap-3 max-lg:grid-cols-3 max-md:grid-cols-2">
           <Field id="kyc-pan" label="PAN / IT No">
             <Controller
               control={control}
@@ -1012,26 +1027,6 @@ export function KycForm({
               )}
             />
           </Field>
-        </div>
-
-        {/* Non-blocking dedup warning - existing clients sharing this GSTIN/PAN. */}
-        {(dupPending || dupMatches.length > 0) && (
-          <p
-            className="text-[12.5px] font-semibold"
-            style={{ color: dupMatches.length > 0 ? "#B45309" : "var(--color-ink-subtle)" }}
-            role="status"
-          >
-            {dupPending
-              ? "Checking for duplicates"
-              : `Possible duplicate: ${dupMatches
-                  .map((m) => `${m.name}${m.clientCode ? ` (${m.clientCode})` : ""}`)
-                  .join(", ")}`}
-          </p>
-        )}
-
-        {/* Currency → Country - narrow, aligned to the 5-col row above (Export
-            now lives beside the Company Name in the Identity row). */}
-        <div className="grid grid-cols-5 gap-4 max-lg:grid-cols-3 max-md:grid-cols-1">
           <Field label="Currency" labelOnly>
             <Controller
               control={control}
@@ -1041,7 +1036,9 @@ export function KycForm({
                   ariaLabel="Currency"
                   value={field.value ?? "INR"}
                   onValueChange={field.onChange}
-                  options={INQUIRY_CURRENCIES.map((c) => ({ value: c, label: c }))}
+                  searchable
+                  searchPlaceholder="Search currencies"
+                  options={currencyList.map((c) => ({ value: c, label: c }))}
                 />
               )}
             />
@@ -1054,10 +1051,10 @@ export function KycForm({
                 <Select
                   ariaLabel="Country"
                   value={field.value ?? "India"}
-                  onValueChange={(v) =>
-                    applyCountry(v as (typeof INQUIRY_COUNTRIES)[number])
-                  }
-                  options={INQUIRY_COUNTRIES.map((c) => ({ value: c, label: c }))}
+                  onValueChange={(v) => applyCountry(v)}
+                  searchable
+                  searchPlaceholder="Search countries"
+                  options={countryList.map((c) => ({ value: c, label: c }))}
                 />
               )}
             />
@@ -1080,6 +1077,21 @@ export function KycForm({
             />
           </Field>
         </div>
+
+        {/* Non-blocking dedup warning - existing clients sharing this GSTIN/PAN. */}
+        {(dupPending || dupMatches.length > 0) && (
+          <p
+            className="text-[12.5px] font-semibold"
+            style={{ color: dupMatches.length > 0 ? "#B45309" : "var(--color-ink-subtle)" }}
+            role="status"
+          >
+            {dupPending
+              ? "Checking for duplicates"
+              : `Possible duplicate: ${dupMatches
+                  .map((m) => `${m.name}${m.clientCode ? ` (${m.clientCode})` : ""}`)
+                  .join(", ")}`}
+          </p>
+        )}
       </SectionCard>
 
       {/* ── 3 · Contact Person ───────────────────────────────────────── */}
@@ -1418,7 +1430,7 @@ export function KycForm({
                         placeholder="Select country"
                         searchable
                         searchPlaceholder="Search countries"
-                        options={COUNTRIES.map((c) => ({ value: c, label: c }))}
+                        options={countryList.map((c) => ({ value: c, label: c }))}
                       />
                     )}
                   />

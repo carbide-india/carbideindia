@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { z } from "zod";
 import { db } from "@/lib/db";
-import { inquiries, inquiryItems, inquiryItemFeasibility, clients, clientContacts, masterOptions, type NewInquiry } from "@/db/schema";
+import { inquiries, inquiryItems, inquiryItemFeasibility, clients, clientContacts, masterOptions, samples, type NewInquiry } from "@/db/schema";
 import { productRowsForInquiry, type BuiltProductRow } from "@/lib/inquiries/product-rows";
 import { syncProductToItem, type ItemSpec, type DbOrTx } from "@/lib/item-master/sync";
 import { requireUser, requireAdmin } from "@/lib/auth/current";
@@ -235,9 +235,18 @@ export async function createInquiry(
           const lineId = crypto.randomUUID();
           const spec = await specFromLine(tx, r);
           const res = await syncProductToItem(tx, spec, lineId, { id: me.id, name: me.name });
+          // sampleId is NOT an inquiry_items column - it back-links the chosen
+          // Sample Register row to this line (samples.inquiry_item_id / inquiry_id).
+          const { sampleId, ...itemCols } = r;
           await tx
             .insert(inquiryItems)
-            .values({ id: lineId, inquiryId: row.id, ...r, itemId: res.itemId });
+            .values({ id: lineId, inquiryId: row.id, ...itemCols, itemId: res.itemId });
+          if (sampleId) {
+            await tx
+              .update(samples)
+              .set({ inquiryId: row.id, inquiryItemId: lineId, updatedAt: new Date() })
+              .where(eq(samples.id, sampleId));
+          }
         }
       }
 

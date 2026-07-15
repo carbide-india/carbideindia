@@ -4,6 +4,7 @@ import { requireUser, getCurrentEmployee } from "@/lib/auth/current";
 import { getFormDraft } from "@/lib/queries/form-drafts";
 import { listEmployeeOptions } from "@/lib/queries/employees";
 import { listCustomOptionsMap } from "@/lib/queries/custom-lists";
+import { listInquiryOptions } from "@/lib/queries/inquiries";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
 import { UserMenuServer } from "@/components/header/user-menu-server";
 import { loadLookups, specRefKinds } from "@/lib/import/lookups";
@@ -23,6 +24,8 @@ export default async function NewSamplePage({ searchParams }: PageProps) {
   const employees = await listEmployeeOptions();
   // Editable location dropdowns (Custom Dropdown Master → Sample Register).
   const customLists = await listCustomOptionsMap("sample");
+  // Recent enquiries for the optional "Linked Enquiry" picker (bidirectional link).
+  const inquiryOptions = await listInquiryOptions();
 
   const sp = await searchParams;
   const draftParam = typeof sp.draft === "string" ? sp.draft : undefined;
@@ -51,6 +54,7 @@ export default async function NewSamplePage({ searchParams }: PageProps) {
       <div className="w-full">
         <SampleForm
           employees={employees}
+          inquiryOptions={inquiryOptions}
           sampleLocationOptions={customLists.sample_location}
           stageLocationOptions={customLists.stage_location}
           enableDrafts

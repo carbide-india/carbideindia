@@ -9,6 +9,7 @@ interface Src {
   dimensionNotes?: string;
   gradeId?: string; toleranceId?: string; conditionId?: string;
   quantityNos?: number; quantityUom?: string;
+  sampleId?: string;
 }
 
 const numStr = (v: unknown): string | null =>
@@ -27,6 +28,9 @@ export interface BuiltProductRow {
   dimensionNotes: string | null;
   gradeId: string | null; gradeCustomer: string | null; toleranceId: string | null; conditionId: string | null;
   quantityNos: string | null; quantityUom: string;
+  /** NOT an inquiry_items column - carried through so the create action can
+   *  back-link the chosen sample (samples.inquiry_item_id / inquiry_id). */
+  sampleId: string | null;
 }
 
 /** Build the inquiry_items rows for an inquiry. Prefers products[]; otherwise
@@ -50,5 +54,6 @@ export function productRowsForInquiry(v: Src): BuiltProductRow[] {
     dimensionNotes: txt(p.dimensionNotes),
     gradeId: txt(p.gradeId), gradeCustomer: txt(p.gradeCustomer), toleranceId: txt(p.toleranceId), conditionId: txt(p.conditionId),
     quantityNos: numStr(p.quantityNos), quantityUom: txt(p.quantityUom) ?? "Nos",
+    sampleId: txt(p.sampleId),
   }));
 }

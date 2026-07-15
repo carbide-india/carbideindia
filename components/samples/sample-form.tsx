@@ -39,6 +39,7 @@ import {
   Segmented,
 } from "@/components/inquiries/form-field";
 import type { EmployeeOption } from "@/lib/queries/employees";
+import type { InquiryOption } from "@/lib/queries/inquiries";
 
 /** Form-level schema: the register form always requires a Sample No (the
  *  linked-enquiry auto-numbering path still exists server-side, it's just no
@@ -61,6 +62,9 @@ type SampleFormOutput = z.output<typeof SampleFormSchema>;
 
 interface Props {
   employees: EmployeeOption[];
+  /** Recent enquiries for the "Linked Enquiry" picker - attach a sample to an
+   *  SM from the sample side (the enquiry side can also attach per product). */
+  inquiryOptions?: InquiryOption[];
   /** Editable Sample Location options (Custom Dropdown Master). Falls back to
    *  the built-in SAMPLE_LOCATIONS. */
   sampleLocationOptions?: string[];
@@ -161,6 +165,7 @@ const TRACKED_STAGES = [
  */
 export function SampleForm({
   employees,
+  inquiryOptions = [],
   sampleLocationOptions,
   stageLocationOptions,
   initialValues,
@@ -310,6 +315,31 @@ export function SampleForm({
         hint="Sample number as written on the physical sample / register."
         inlineHint
       >
+        <div className="mb-3 max-w-[440px]">
+          <Field label="Linked Enquiry (optional)" labelOnly>
+            <Controller
+              control={control}
+              name="inquiryId"
+              render={({ field }) => (
+                <Select
+                  ariaLabel="Linked Enquiry"
+                  value={field.value ?? ""}
+                  onValueChange={(v) => field.onChange(v || undefined)}
+                  placeholder={
+                    inquiryOptions.length === 0 ? "No enquiries yet" : "Attach to an enquiry (SM)"
+                  }
+                  disabled={inquiryOptions.length === 0}
+                  searchable
+                  searchPlaceholder="Search SM / company"
+                  options={inquiryOptions.map((o) => ({
+                    value: o.id,
+                    label: `${o.smNumber} · ${o.companyName}`,
+                  }))}
+                />
+              )}
+            />
+          </Field>
+        </div>
         <div className="grid grid-cols-5 gap-3 max-lg:grid-cols-3 max-md:grid-cols-1 items-start">
           <Field id="smp-date" label="Date">
             <input

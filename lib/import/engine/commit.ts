@@ -8,8 +8,18 @@ export interface ImportCommitResult {
   ok: boolean;
   created: number;
   skipped: number;
+  /** Rows skipped because they duplicate an earlier row or an existing record. */
+  duplicates: number;
   newMasters: number;
   errors: { row: number; reason: string }[];
+  /** 1-based row numbers that were skipped as duplicates (for the summary). */
+  duplicateRows: number[];
+}
+
+/** A create-action error that means "this record already exists" (so the row is
+ *  a duplicate to skip, not a hard failure). Kept broad on purpose. */
+function isDuplicateError(reason: string): boolean {
+  return /\b(already exists|duplicate|duplicat)/i.test(reason);
 }
 
 /** RefKind → the master_options kind it resolves to (grade is "internal_grade"). */
@@ -30,6 +40,13 @@ export interface RunImportCommitOpts {
   /** The form's existing create action - reused so business logic (auto
    *  numbering, upserts, snapshots) stays identical to single-record entry. */
   createRecord: (input: Record<string, unknown>) => Promise<{ ok: boolean; error?: string }>;
+  /**
+   * Field keys that identify a duplicate row. When set, two sheet rows sharing
+   * the same (case-insensitive) values for these fields are treated as the same
+   * record - the first is imported, later ones are skipped as duplicates. When
+   * omitted, an exact whole-row match is used as the fallback identity.
+   */
+  dedupeKeys?: string[];
 }
 
 /**
@@ -80,8 +97,28 @@ export async function runImportCommit(
     return v;
   }
 
-  // 3. Create one record per row.
+  // Identity key for within-file duplicate detection.
+  function rowKey(input: Record<string, unknown>): string | null {
+    if (opts.dedupeKeys && opts.dedupeKeys.length > 0) {
+      const parts = opts.dedupeKeys
+        .map((k) => String(input[k] ?? "").trim().toLowerCase())
+        .filter(Boolean);
+      // No identifying value on this row → can't judge it a duplicate.
+      return parts.length ? parts.join("|") : null;
+    }
+    // Fallback: exact whole-row match (catches copy-paste duplicate rows).
+    const norm = Object.keys(input)
+      .sort()
+      .map((k) => `${k}=${JSON.stringify(input[k])}`)
+      .join("&");
+    return norm || null;
+  }
+
+  // 3. Create one record per row (skipping in-file + existing duplicates).
   let created = 0;
+  let duplicates = 0;
+  const duplicateRows: number[] = [];
+  const seenKeys = new Set<string>();
   for (let i = 0; i < rows.length; i++) {
     const input: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(rows[i]!)) {
@@ -91,14 +128,41 @@ export async function runImportCommit(
     for (const [k, dv] of Object.entries(opts.defaults ?? {})) {
       if (input[k] === undefined) input[k] = dv;
     }
+
+    // Within-file duplicate: same identity as an earlier row → skip.
+    const key = rowKey(input);
+    if (key !== null) {
+      if (seenKeys.has(key)) {
+        duplicates++;
+        duplicateRows.push(i + 1);
+        continue;
+      }
+      seenKeys.add(key);
+    }
+
     try {
       const res = await opts.createRecord(input);
-      if (res.ok) created++;
-      else errors.push({ row: i + 1, reason: res.error ?? "create failed" });
+      if (res.ok) {
+        created++;
+      } else if (res.error && isDuplicateError(res.error)) {
+        // Existing-record duplicate (e.g. GSTIN/PAN already on file) → skip.
+        duplicates++;
+        duplicateRows.push(i + 1);
+      } else {
+        errors.push({ row: i + 1, reason: res.error ?? "create failed" });
+      }
     } catch (e) {
       errors.push({ row: i + 1, reason: e instanceof Error ? e.message : String(e) });
     }
   }
 
-  return { ok: errors.length === 0, created, skipped: errors.length, newMasters, errors };
+  return {
+    ok: errors.length === 0,
+    created,
+    skipped: errors.length + duplicates,
+    duplicates,
+    newMasters,
+    errors,
+    duplicateRows,
+  };
 }
