@@ -150,7 +150,7 @@ export function EnquiryLaunchpad() {
       </div>
 
       {/* ── Card grid - compact, centred, prominently outlined so all 8 fit. ── */}
-      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="mx-auto mt-5 grid max-w-[1120px] grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {FORMS.map((f, i) => {
           const n = String(i + 1).padStart(2, "0");
           return (
