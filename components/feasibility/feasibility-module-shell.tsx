@@ -11,7 +11,6 @@ import {
   ArrowLeft,
   LayoutGrid,
   ClipboardList,
-  Columns3,
   Circle,
   CircleHelp,
   CircleX,
@@ -41,7 +40,6 @@ interface StatusNav {
 
 const NAV: StatusNav[] = [
   { label: "All Reviews", status: "", Icon: ClipboardList, group: "overview" },
-  { label: "Kanban View", status: "__kanban", Icon: Columns3, group: "overview" },
   { label: "Not Started", status: "not_started", Icon: Circle, group: "pipeline" },
   { label: "Need Info", status: "need_info", Icon: CircleHelp, group: "pipeline" },
   { label: "Not Feasible", status: "not_feasible", Icon: CircleX, group: "pipeline" },
@@ -50,7 +48,6 @@ const NAV: StatusNav[] = [
 ];
 
 function hrefFor(status: string): Route {
-  if (status === "__kanban") return "/feasibility/kanban" as Route;
   return (status ? `/feasibility?status=${status}` : "/feasibility") as Route;
 }
 
@@ -137,10 +134,7 @@ export function FeasibilityModuleShell({
               {NAV.map((n, i) => {
                 const prev = NAV[i - 1];
                 const showDivider = i > 0 && !!prev && n.group !== prev.group;
-                const isActive =
-                  n.status === "__kanban"
-                    ? pathname === "/feasibility/kanban"
-                    : onQueue && activeStatus === n.status;
+                const isActive = onQueue && activeStatus === n.status;
                 const base = "flex h-[42px] items-center gap-3 rounded-lg px-3.5 text-[13.5px] transition";
                 return (
                   <Fragment key={n.label}>

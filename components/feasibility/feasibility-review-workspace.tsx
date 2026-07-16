@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import { Loader2, Paperclip, X, UploadCloud, CircleCheck } from "lucide-react";
 import { upload } from "@vercel/blob/client";
 import {
-  ACTIVE_RECHECK_STATES,
-  RECHECK_STATE_LABELS,
   FEAS_PRIORITIES,
   FEAS_PRIORITY_LABELS,
   FEASIBILITY_STATUS_LABELS,
@@ -22,19 +20,11 @@ import { FEAS_ATTACHMENT_TYPES, safeFeasFileName } from "@/lib/feasibility/attac
 import { fireToast } from "@/lib/toast";
 import { Select } from "@/components/ui/select";
 import { NotesField } from "@/components/ui/notes-field";
-import { Field, SectionCard, Segmented } from "@/components/inquiries/form-field";
+import { Field, SectionCard } from "@/components/inquiries/form-field";
 import { Chip } from "@/components/inquiries/chip";
+import { FeasibilityChecksBoard } from "@/components/feasibility/feasibility-checks-board";
 
 /* ── Option lists ──────────────────────────────────────────────────────── */
-const CHECK_OPTS = ACTIVE_RECHECK_STATES.map((v) => ({ value: v, label: RECHECK_STATE_LABELS[v] }));
-
-/** Contextual note placeholder per selected check state. */
-const NOTE_PLACEHOLDER: Partial<Record<RecheckState, string>> = {
-  done: "Notes (optional)",
-  need_info: "What info is needed",
-  not_feasible: "Why it's not feasible",
-  assumed: "Reason / what was assumed",
-};
 const PRIORITY_OPTS = FEAS_PRIORITIES.map((v) => ({ value: v, label: FEAS_PRIORITY_LABELS[v] }));
 const YES_NO = [
   { value: "yes", label: "Yes" },
@@ -123,6 +113,8 @@ export function FeasibilityReviewWorkspace({
   //   Costing · otherwise (Done + Assumed) → Pending Approval.
   const checkValues = CHECKS.map((c) => checks[c.key].value);
   const allDone = checkValues.every((v) => v === "done");
+  const doneCount = checkValues.filter((v) => v === "done").length;
+  const pendingCount = checkValues.filter((v) => v === "not_done").length;
   const derivedStatus: FeasibilityStatus = React.useMemo(() => {
     if (checkValues.some((v) => v === "not_feasible")) return "not_feasible";
     if (checkValues.some((v) => v === "need_info")) return "need_info";
@@ -189,49 +181,35 @@ export function FeasibilityReviewWorkspace({
 
   return (
     <div className="flex flex-col gap-6">
+      {/* ── At-a-glance status banner ──────────────────────────────────── */}
+      <div
+        className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-section border-2 border-[#2b303b] bg-surface-card px-5 py-3"
+        style={{ boxShadow: "0 6px 20px -10px rgba(15,23,42,0.2)" }}
+      >
+        <span className="text-[10.5px] font-black uppercase tracking-[0.12em] text-ink-subtle">Feasibility Status</span>
+        <Chip label={FEASIBILITY_STATUS_LABELS[derivedStatus]} tone={FEASIBILITY_STATUS_COLORS[derivedStatus]} />
+        <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#3f3f94]">Auto from checks</span>
+        <span className="ml-auto text-[13px] font-semibold text-ink-soft">
+          <span className="font-black tabular-nums text-ink-strong">{doneCount}</span> of 5 checks Done
+          {pendingCount > 0 && <span className="text-ink-subtle"> · {pendingCount} not done</span>}
+        </span>
+      </div>
+
       {/* ── Feasibility Checks ─────────────────────────────────────────── */}
       <SectionCard
         title="Feasibility Checks"
         inlineHint
-        hint="Mark each check · a Notes box opens on any selection (dictate supported)."
+        hint="Drag each check into a status · a reason popup opens for Need Info / Not Feasible / Assumed."
       >
-        <div className="flex flex-col gap-2.5">
-          {CHECKS.map(({ key, label }) => {
-            const st = checks[key];
-            const showNotes = st.value !== "not_done";
-            return (
-              <div
-                key={key}
-                className="rounded-[10px] border border-hairline bg-surface-soft p-3"
-              >
-                {/* Horizontal row: label + the 5 options */}
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                  <span className="w-[160px] shrink-0 text-[13.5px] font-bold text-ink-strong">{label}</span>
-                  <Segmented<RecheckState>
-                    options={CHECK_OPTS}
-                    value={st.value}
-                    onChange={(v) => setCheck(key, { value: v ?? "not_done" })}
-                    allowClear={false}
-                    activeTone="brand"
-                    ariaLabel={`${label} check`}
-                  />
-                </div>
-                {/* Notes with dictate — opens on any selection */}
-                {showNotes && (
-                  <div className="mt-2.5">
-                    <NotesField
-                      id={`feas-${key}-note`}
-                      rows={2}
-                      placeholder={NOTE_PLACEHOLDER[st.value] ?? "Notes"}
-                      value={st.notes}
-                      onChange={(v) => setCheck(key, { notes: v })}
-                    />
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+        <FeasibilityChecksBoard
+          items={CHECKS.map((c) => ({
+            key: c.key,
+            label: c.label,
+            value: checks[c.key].value,
+            notes: checks[c.key].notes,
+          }))}
+          onChange={(key, patch) => setCheck(key as CheckKey, patch)}
+        />
       </SectionCard>
 
       {/* ── Sign-off & Routing ─────────────────────────────────────────── */}
