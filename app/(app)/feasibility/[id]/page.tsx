@@ -5,10 +5,12 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { requireUser, getCurrentEmployee } from "@/lib/auth/current";
 import { getFeasibilityScorecard } from "@/lib/queries/feasibility";
-import { getInquiryWorkspaceHeader } from "@/lib/queries/sm-workspace";
+import { getInquiryWorkspaceHeader, getInquiryProducts } from "@/lib/queries/sm-workspace";
+import { getInquiryById } from "@/lib/queries/inquiries";
 import { listEmployeeOptions } from "@/lib/queries/employees";
 import { INQUIRY_PRIORITY_LABELS } from "@/db/enums";
 import { Chip, PRIORITY_TONES } from "@/components/inquiries/chip";
+import { ProductFeasibilityContext } from "@/components/inquiries/feasibility-context";
 import { FeasibilityReviewWorkspace } from "@/components/feasibility/feasibility-review-workspace";
 
 export const dynamic = "force-dynamic";
@@ -28,9 +30,11 @@ export default async function FeasibilityReviewPage({
   const { id } = await params;
   if (!UUID_RE.test(id)) notFound();
 
-  const [scorecard, header, employees, me] = await Promise.all([
+  const [scorecard, header, products, inquiry, employees, me] = await Promise.all([
     getFeasibilityScorecard(id),
     getInquiryWorkspaceHeader(id),
+    getInquiryProducts(id),
+    getInquiryById(id),
     listEmployeeOptions(),
     getCurrentEmployee(),
   ]);
@@ -56,6 +60,34 @@ export default async function FeasibilityReviewPage({
           {header.salesPersonName ? ` · ${header.salesPersonName}` : ""}
         </span>
       </header>
+
+      {/* Product spec context — collapsible so the scorecard stays the focus. */}
+      {inquiry && products.length > 0 && (
+        <details open className="group mb-5 rounded-section border border-hairline bg-surface-card">
+          <summary className="flex cursor-pointer list-none items-center gap-2 px-5 py-3 text-[12px] font-black uppercase tracking-[0.12em] text-[#3f3f94]">
+            <span className="grid size-5 place-items-center rounded-md bg-[#efeffb] text-[#3f3f94] transition-transform group-open:rotate-90">
+              <ArrowLeft className="h-[13px] w-[13px] rotate-180" />
+            </span>
+            Product Details
+            <span className="font-sans text-[12px] font-medium normal-case tracking-normal text-ink-subtle">
+              — {products.length} product{products.length === 1 ? "" : "s"} on this enquiry
+            </span>
+          </summary>
+          <div className="flex flex-col gap-4 border-t border-hairline px-5 py-4">
+            {products.map((p, i) => (
+              <div key={p.id} className="flex flex-col gap-2">
+                {products.length > 1 && (
+                  <span className="text-[12px] font-bold text-ink-strong">
+                    Product {i + 1}
+                    {p.custProductName ? ` · ${p.custProductName}` : ""}
+                  </span>
+                )}
+                <ProductFeasibilityContext product={p} inquiry={inquiry} />
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
 
       <FeasibilityReviewWorkspace
         inquiryId={header.id}

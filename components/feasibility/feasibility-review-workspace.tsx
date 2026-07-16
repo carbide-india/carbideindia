@@ -238,7 +238,7 @@ export function FeasibilityReviewWorkspace({
         inlineHint
         hint="Score each dimension 0–100 · target 75 · weighted into the index above."
       >
-        <div className="flex flex-col gap-2.5">
+        <div className="grid grid-cols-3 gap-2.5 max-lg:grid-cols-2 max-md:grid-cols-1">
           {dimensions.map((d) => (
             <DimensionRow
               key={d.key}
@@ -347,15 +347,17 @@ export function FeasibilityReviewWorkspace({
           </Field>
         </div>
 
-        <Field id="feas-assumptions" label="Assumptions">
-          <NotesField id="feas-assumptions" rows={2} placeholder="What we assumed where info was missing" value={sm.assumptions} onChange={(v) => setSm((s) => ({ ...s, assumptions: v }))} />
-        </Field>
-        <Field id="feas-clarifications" label="Customer Clarifications Needed">
-          <NotesField id="feas-clarifications" rows={2} placeholder="Info to request from the customer" value={sm.customerClarifications} onChange={(v) => setSm((s) => ({ ...s, customerClarifications: v }))} />
-        </Field>
-        <Field id="feas-actions" label="Action Items">
-          <NotesField id="feas-actions" rows={2} placeholder="Internal actions before costing" value={sm.actionItems} onChange={(v) => setSm((s) => ({ ...s, actionItems: v }))} />
-        </Field>
+        <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
+          <Field id="feas-assumptions" label="Assumptions">
+            <NotesField id="feas-assumptions" rows={2} placeholder="What we assumed where info was missing" value={sm.assumptions} onChange={(v) => setSm((s) => ({ ...s, assumptions: v }))} />
+          </Field>
+          <Field id="feas-clarifications" label="Customer Clarifications Needed">
+            <NotesField id="feas-clarifications" rows={2} placeholder="Info to request from the customer" value={sm.customerClarifications} onChange={(v) => setSm((s) => ({ ...s, customerClarifications: v }))} />
+          </Field>
+          <Field id="feas-actions" label="Action Items">
+            <NotesField id="feas-actions" rows={2} placeholder="Internal actions before costing" value={sm.actionItems} onChange={(v) => setSm((s) => ({ ...s, actionItems: v }))} />
+          </Field>
+        </div>
       </SectionCard>
 
       {/* ── Footer: save + submit ──────────────────────────────────────── */}
@@ -483,47 +485,30 @@ function DimensionRow({
   disabled: boolean;
   onChange: (patch: Partial<RowState>) => void;
 }) {
-  const cv = asCheckVerdict(verdict);
   const isBlocker = row.isCritical && (verdict === "not_feasible" || row.risk === "high");
   return (
     <div
-      className="rounded-[12px] border p-3.5"
+      className="flex flex-col gap-2 rounded-[10px] border p-2.5"
       style={{
         borderColor: isBlocker ? "#f3b6b3" : "var(--color-hairline)",
         background: isBlocker ? "rgba(211,47,47,0.03)" : "var(--color-surface-soft)",
       }}
     >
-      {/* Header: label + hint · weight · verdict */}
-      <div className="flex flex-wrap items-start gap-x-3 gap-y-1.5">
-        <div className="min-w-[180px] flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-[14px] font-bold text-ink-strong">{dim.label}</span>
-            {row.isCritical && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#efeffb] px-1.5 py-0.5 text-[10px] font-black uppercase tracking-[0.06em] text-[#3f3f94]">
-                <Flag size={10} /> Critical
-              </span>
-            )}
-          </div>
-          <p className="mt-0.5 text-[12px] leading-snug text-ink-subtle">{dim.hint}</p>
-        </div>
-        <span className="rounded-full border border-hairline bg-white px-2 py-0.5 text-[11.5px] font-bold tabular-nums text-ink-muted">
-          wt {dim.weight}%
+      {/* Line 1: label + weight + score */}
+      <div className="flex items-center gap-2">
+        <span className="flex-1 truncate text-[12.5px] font-bold text-ink-strong" title={dim.hint || dim.label}>
+          {dim.label}
         </span>
-        <Chip label={FEAS_CHECK_VERDICT_LABELS[cv]} tone={FEAS_CHECK_VERDICT_TONES[cv]} />
-      </div>
-
-      {/* Bullet graph */}
-      <div className="mt-2.5 flex items-center gap-3">
-        <div className="flex-1">
-          <FeasibilityBulletGraph score={row.score} target={FEAS_SCORE_BANDS.feasible} verdict={verdict} />
-        </div>
+        <span className="shrink-0 rounded-full border border-hairline bg-white px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-ink-muted">
+          {dim.weight}%
+        </span>
         <input
           type="number"
           min={0}
           max={100}
           inputMode="numeric"
           disabled={disabled}
-          className="nt-input w-[74px] text-center tabular-nums"
+          className="nt-input w-[52px] shrink-0 px-1.5 text-center tabular-nums"
           aria-label={`${dim.label} score`}
           placeholder="—"
           value={row.score == null ? "" : row.score}
@@ -536,35 +521,36 @@ function DimensionRow({
         />
       </div>
 
-      {/* Controls: risk · critical · note */}
-      <div className="mt-2.5 flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2">
-          <span className="text-[11.5px] font-bold uppercase tracking-[0.06em] text-ink-subtle">Risk</span>
-          <Segmented<FeasRisk>
-            options={RISK_OPTS}
-            value={row.risk ?? undefined}
-            onChange={(v) => onChange({ risk: v ?? null })}
-            ariaLabel={`${dim.label} risk`}
-            activeTone="brand"
-          />
-        </div>
+      {/* Line 2: bullet graph */}
+      <FeasibilityBulletGraph score={row.score} target={FEAS_SCORE_BANDS.feasible} verdict={verdict} />
+
+      {/* Line 3: risk + critical + note */}
+      <div className="flex items-center gap-1.5">
+        <Segmented<FeasRisk>
+          options={RISK_OPTS}
+          value={row.risk ?? undefined}
+          onChange={(v) => onChange({ risk: v ?? null })}
+          ariaLabel={`${dim.label} risk`}
+          activeTone="brand"
+        />
         <button
           type="button"
           disabled={disabled}
           onClick={() => onChange({ isCritical: !row.isCritical })}
           aria-pressed={row.isCritical}
-          className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[12.5px] font-bold transition-colors disabled:opacity-50"
+          title={row.isCritical ? "Critical (veto) dimension" : "Mark critical"}
+          className="inline-flex shrink-0 items-center justify-center rounded-lg border p-1.5 transition-colors disabled:opacity-50"
           style={
             row.isCritical
               ? { borderColor: "#3f3f94", background: "#3f3f94", color: "#fff" }
               : { borderColor: "var(--color-hairline-strong)", background: "#fff", color: "var(--color-ink-muted)" }
           }
         >
-          <Flag size={13} /> Critical
+          <Flag size={13} />
         </button>
         <input
-          className="nt-input min-w-[180px] flex-1"
-          placeholder="Note (optional)"
+          className="nt-input min-w-0 flex-1 px-2 text-[12.5px]"
+          placeholder="Note"
           aria-label={`${dim.label} note`}
           value={row.note}
           disabled={disabled}
