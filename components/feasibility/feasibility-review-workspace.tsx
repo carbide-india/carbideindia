@@ -183,7 +183,7 @@ export function FeasibilityReviewWorkspace({
         inlineHint
         hint="Approved · Proceed to Costing unlocks the costing stage."
       >
-        <div className="grid grid-cols-4 gap-4 max-lg:grid-cols-2 max-md:grid-cols-1">
+        <div className="grid grid-cols-5 gap-3 max-lg:grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1">
           <Field label="Priority" labelOnly>
             <Select
               value={priority ?? ""}
