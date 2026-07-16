@@ -55,7 +55,11 @@ const NEW_FORM_ROUTES: Record<string, string> = {
 // Client (KYC) family - so its sidebar reads Client Master, not New Enquiry.
 function familySeg(pathname: string): string {
   const seg = pathname.split("/")[1] ?? "";
-  return seg === "contacts" ? "clients" : seg;
+  if (seg === "contacts") return "clients";
+  // Primary Feasibility lives inside the Forms module — it borrows the enquiry
+  // family's sidebar (Create New Enquiry, Enquiry Register, Primary Feasibility…).
+  if (seg === "feasibility") return "enquiries";
+  return seg;
 }
 function newFormRoute(pathname: string): string {
   return NEW_FORM_ROUTES[familySeg(pathname)] ?? "/enquiries/new";
@@ -164,7 +168,7 @@ function navFor(pathname: string): NavDef[] {
       href: "/feasibility" as Route,
       Icon: ClipboardCheck,
       ready: true,
-      active: () => false,
+      active: (p) => p.startsWith("/feasibility"),
       group: "records",
     });
   }
@@ -209,15 +213,17 @@ export function EnquiryModuleShell({
   // so the top title never just repeats the page's own <h1> below it.
   const headerSeg = familySeg(pathname);
   const headerKind = draftKindForSegment(headerSeg);
-  const pageTitle = headerKind
-    ? FORM_DRAFT_META[headerKind].noun
-    : headerSeg === "enquiries" || headerSeg === "inquiries"
-      ? // The enquiry module reads as "New Enquiry" everywhere except the
-        // form-selection launchpad, which stays "Forms".
-        pathname === "/enquiries"
-        ? "Forms"
-        : "New Enquiry"
-      : title ?? "Forms";
+  const pageTitle = pathname.startsWith("/feasibility")
+    ? "Primary Feasibility"
+    : headerKind
+      ? FORM_DRAFT_META[headerKind].noun
+      : headerSeg === "enquiries" || headerSeg === "inquiries"
+        ? // The enquiry module reads as "New Enquiry" everywhere except the
+          // form-selection launchpad, which stays "Forms".
+          pathname === "/enquiries"
+          ? "Forms"
+          : "New Enquiry"
+        : title ?? "Forms";
   // Sidebar is hidden entirely on the launchpad (form selection).
   const showSidebar = pathname !== "/enquiries";
   const nav = navFor(pathname);

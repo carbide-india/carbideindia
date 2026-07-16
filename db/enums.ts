@@ -322,9 +322,15 @@ export const FEAS_VERDICTS = ["to_check", "available", "not_available"] as const
 export type FeasVerdict = (typeof FEAS_VERDICTS)[number];
 export const FEAS_VERDICT_LABELS: Record<FeasVerdict, string> = { to_check: "To Check", available: "Available", not_available: "Not Available" };
 
-export const RECHECK_STATES = ["not_done", "yes", "no"] as const;
+// Primary-Feasibility check state, per the client sheet: Not Done / Yes /
+// Assumed (a Notes box appears only when "Assumed"). Append-only: `assumed`
+// added at the end; `no` kept for data-compat (unused by the new UI).
+export const RECHECK_STATES = ["not_done", "yes", "no", "assumed"] as const;
 export type RecheckState = (typeof RECHECK_STATES)[number];
-export const RECHECK_STATE_LABELS: Record<RecheckState, string> = { not_done: "Not Done", yes: "Yes", no: "No" };
+export const RECHECK_STATE_LABELS: Record<RecheckState, string> = { not_done: "Not Done", yes: "Yes", no: "No", assumed: "Assumed" };
+export const RECHECK_STATE_TONES: Record<RecheckState, string> = { not_done: "slate", yes: "green", no: "red", assumed: "amber" };
+/** The live check options surfaced in the feasibility UI (drops the legacy `no`). */
+export const ACTIVE_RECHECK_STATES = ["not_done", "yes", "assumed"] as const;
 
 // Primary-Feasibility SM-level status (gated: Not Started → In Review →
 // (Need Info) → Pending Approval → {Proceed to Costing | Not Feasible}).

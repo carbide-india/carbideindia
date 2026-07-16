@@ -14,8 +14,6 @@ import {
   PackageCheck,
   FlaskConical,
   CalendarRange,
-  ClipboardCheck,
-  BadgeCheck,
 } from "lucide-react";
 
 /**
@@ -24,7 +22,7 @@ import {
  * via {@link moduleForPath}. This is the source of truth for which section
  * lives in which module - moving an item between modules is a one-line edit.
  */
-export type ModuleKey = "wms" | "enquiries" | "feasibility" | "masters" | "admin";
+export type ModuleKey = "wms" | "enquiries" | "masters" | "admin";
 
 export interface NavItem {
   href: Route;
@@ -67,7 +65,7 @@ export const MODULES: ModuleDef[] = [
     key: "enquiries",
     label: "Enquiries",
     home: "/inquiries",
-    match: ["/inquiries", "/quotations", "/negotiations", "/sales-orders", "/samples", "/meetings", "/costings"],
+    match: ["/inquiries", "/quotations", "/negotiations", "/sales-orders", "/samples", "/meetings", "/costings", "/feasibility"],
     hasForms: true,
     items: [
       { href: "/samples" as Route, label: "Samples", Icon: FlaskConical },
@@ -76,16 +74,6 @@ export const MODULES: ModuleDef[] = [
       { href: "/negotiations" as Route, label: "Negotiations", Icon: Handshake },
       { href: "/sales-orders" as Route, label: "Sales Orders", Icon: PackageCheck },
       { href: "/meetings" as Route, label: "Meetings", Icon: CalendarRange },
-    ],
-  },
-  {
-    key: "feasibility",
-    label: "Primary Feasibility",
-    home: "/feasibility" as Route,
-    match: ["/feasibility"],
-    items: [
-      { href: "/feasibility" as Route, label: "Feasibility Queue", Icon: ClipboardCheck },
-      { href: "/feasibility/approvals" as Route, label: "Approvals", Icon: BadgeCheck },
     ],
   },
   {

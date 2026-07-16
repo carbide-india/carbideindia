@@ -14,11 +14,11 @@ export default async function FeasibilityDashboardPage() {
 
   const n = (...s: string[]) => rows.filter((r) => s.includes(r.status)).length;
   const total = rows.length;
+  const notStarted = n("not_started");
   const inReview = n("in_review");
-  const pending = n("pending_approval");
+  const needInfo = n("need_info");
   const approved = n("proceed_to_costing");
   const notFeasible = n("not_feasible");
-  const blocked = rows.filter((r) => r.blockerCount > 0).length;
   const pct = total ? Math.round((approved / total) * 100) : 0;
 
   return (
@@ -32,11 +32,11 @@ export default async function FeasibilityDashboardPage() {
 
       <div className="mb-5 grid grid-cols-3 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
         <StatMini label="Total Reviews" value={total} accent="#3f3f94" sub={`${pct}% cleared`} />
+        <StatMini label="Not Started" value={notStarted} accent="#64748b" />
         <StatMini label="In Review" value={inReview} accent="#2563eb" />
-        <StatMini label="Pending Approval" value={pending} accent="#7c3aed" />
+        <StatMini label="Need Info" value={needInfo} accent="#d97706" />
         <StatMini label="Approved · Costing" value={approved} accent="#16a34a" />
         <StatMini label="Not Feasible" value={notFeasible} accent="#dc2626" />
-        <StatMini label="Blocked" value={blocked} accent="#dc2626" />
       </div>
 
       <FeasibilityQueueTable rows={rows} />

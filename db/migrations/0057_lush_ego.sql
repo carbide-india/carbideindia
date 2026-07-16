@@ -1,0 +1,1 @@
+ALTER TYPE "public"."recheck_state" ADD VALUE 'assumed';
