@@ -73,10 +73,10 @@ describe("CreateSampleSchema", () => {
     expect(CreateSampleSchema.safeParse({ chemicalLocation: "   " }).success).toBe(false);
   });
 
-  it("rejects unknown report types", () => {
+  it("takes free-text report types (now an editable list, not a fixed enum)", () => {
     expect(
       CreateSampleSchema.safeParse({ reportsUploaded: ["Vibe Report"] }).success,
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it("rejects a non-uuid inquiryId / responsiblePersonId", () => {

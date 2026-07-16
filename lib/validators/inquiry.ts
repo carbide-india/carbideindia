@@ -138,7 +138,14 @@ export const UpdateInquirySchema = InquiryFieldsSchema
   // Product edits are not yet wired to inquiry_items (Phase B). Omit `products`
   // so the strict update schema rejects it instead of accepting-then-ignoring it.
   .omit({ products: true })
-  .extend({ quantityUom: z.string().trim().min(1).max(20) })
+  // Re-declare the columns that carry a `.default()` WITHOUT it — otherwise
+  // `.partial()` still injects the default on an empty patch, so `{}` would
+  // sail past the nonempty refine AND silently reset currency/country/UoM.
+  .extend({
+    quantityUom: z.string().trim().min(1).max(20),
+    currency: z.string().trim().min(1).max(40),
+    country: z.string().trim().min(1).max(80),
+  })
   .partial()
   .strict()
   .refine((v) => Object.keys(v).length > 0, { message: "No changes to save." });

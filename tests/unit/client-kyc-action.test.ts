@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("next/cache", () => ({ revalidatePath: vi.fn(), updateTag: vi.fn() }));
+vi.mock("next/cache", () => ({
+  revalidatePath: vi.fn(),
+  updateTag: vi.fn(),
+  // lib/queries/clients.ts wraps listActiveClientNames in unstable_cache;
+  // under vitest just pass the function straight through (no caching).
+  unstable_cache: (fn: unknown) => fn,
+}));
 // createClientKyc now imports lib/clients/dedup, which `import "server-only"`.
 // Neutralise it under vitest (the dedup guard early-returns with no GSTIN/PAN).
 vi.mock("server-only", () => ({}));
