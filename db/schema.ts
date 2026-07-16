@@ -33,6 +33,7 @@ import {
   INQUIRY_SOURCES,
   FEAS_PRIORITIES,
   FEAS_CHECK_VERDICTS,
+  FEAS_RISKS,
   SAMPLE_STATUSES,
   STAGE_STATUSES,
   COSTING_DONE_STATUSES,
@@ -594,6 +595,7 @@ export const inquiryPriorityEnum = pgEnum("inquiry_priority", INQUIRY_PRIORITIES
 export const inquirySourceEnum = pgEnum("inquiry_source", INQUIRY_SOURCES);
 export const feasPriorityEnum = pgEnum("feas_priority", FEAS_PRIORITIES);
 export const feasCheckVerdictEnum = pgEnum("feas_check_verdict", FEAS_CHECK_VERDICTS);
+export const feasRiskEnum = pgEnum("feas_risk", FEAS_RISKS);
 
 /** SM numbers: SM9579, SM9580,  (observed last manual number SM9578).
  *  Admin can re-base via setval through the admin settings action. */
@@ -761,6 +763,7 @@ export const inquiryItemFeasibility = pgTable(
     inquiryItemId: uuid("inquiry_item_id")
       .notNull()
       .references(() => inquiryItems.id, { onDelete: "cascade" }),
+    // Original 5 checks (2026-07-12).
     shapeDimVerdict: feasCheckVerdictEnum("shape_dim_verdict"),
     gradeVerdict: feasCheckVerdictEnum("grade_verdict"),
     toleranceVerdict: feasCheckVerdictEnum("tolerance_verdict"),
@@ -771,6 +774,20 @@ export const inquiryItemFeasibility = pgTable(
     toleranceNote: text("tolerance_note"),
     conditionNote: text("condition_note"),
     quantityNote: text("quantity_note"),
+    // Full DFM review dimensions (2026-07-16, migration 0055).
+    drawingCompletenessVerdict: feasCheckVerdictEnum("drawing_completeness_verdict"),
+    toolingProcessVerdict: feasCheckVerdictEnum("tooling_process_verdict"),
+    materialSupplyVerdict: feasCheckVerdictEnum("material_supply_verdict"),
+    surfaceFinishVerdict: feasCheckVerdictEnum("surface_finish_verdict"),
+    specialProcessVerdict: feasCheckVerdictEnum("special_process_verdict"),
+    drawingCompletenessNote: text("drawing_completeness_note"),
+    toolingProcessNote: text("tooling_process_note"),
+    materialSupplyNote: text("material_supply_note"),
+    surfaceFinishNote: text("surface_finish_note"),
+    specialProcessNote: text("special_process_note"),
+    // Engineer's rolled-up per-product verdict + risk.
+    itemVerdict: feasCheckVerdictEnum("item_verdict"),
+    itemRiskRating: feasRiskEnum("item_risk_rating"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -778,6 +795,104 @@ export const inquiryItemFeasibility = pgTable(
 );
 export type InquiryItemFeasibility = typeof inquiryItemFeasibility.$inferSelect;
 export type NewInquiryItemFeasibility = typeof inquiryItemFeasibility.$inferInsert;
+
+// ── SM-level primary feasibility review (2026-07-16, migration 0055) ──
+// One row per inquiry. The APQP "Team Feasibility Commitment" gate artifact:
+// engineer runs the review → submits → an admin approves/rejects to release the
+// enquiry to costing. Supersedes the legacy embedded feas* columns on inquiries.
+export const inquiryFeasibility = pgTable(
+  "inquiry_feasibility",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    inquiryId: uuid("inquiry_id")
+      .notNull()
+      .references(() => inquiries.id, { onDelete: "cascade" }),
+    status: feasibilityStatusEnum("status").notNull().default("not_started"),
+    // Rolled-up outcome + APQP risk dimension.
+    overallVerdict: feasCheckVerdictEnum("overall_verdict"),
+    riskRating: feasRiskEnum("risk_rating"),
+    // v2 decision-scorecard roll-up (migration 0056): weighted 0–100 index +
+    // count of critical veto blockers. Recomputed server-side by the scoring
+    // engine on every save (lib/feasibility/score.ts).
+    overallScore: numeric("overall_score"),
+    blockerCount: integer("blocker_count").notNull().default(0),
+    // SM-level (commercial) checks.
+    exportRegulatoryVerdict: feasCheckVerdictEnum("export_regulatory_verdict"),
+    exportRegulatoryNote: text("export_regulatory_note"),
+    leadTimeVerdict: feasCheckVerdictEnum("lead_time_verdict"),
+    leadTimeNote: text("lead_time_note"),
+    // Narrative outputs that feed costing / the customer.
+    assumptions: text("assumptions"),
+    customerClarifications: text("customer_clarifications"),
+    actionItems: text("action_items"),
+    priority: feasPriorityEnum("priority"),
+    export: boolean("export"),
+    // Two-role audit trail: engineer submits, admin approves.
+    engineerId: uuid("engineer_id").references(() => employees.id, { onDelete: "set null" }),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }),
+    approverId: uuid("approver_id").references(() => employees.id, { onDelete: "set null" }),
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+    approvalNote: text("approval_note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("inquiry_feasibility_inquiry_uidx").on(t.inquiryId),
+    index("inquiry_feasibility_status_idx").on(t.status),
+  ],
+);
+export type InquiryFeasibility = typeof inquiryFeasibility.$inferSelect;
+export type NewInquiryFeasibility = typeof inquiryFeasibility.$inferInsert;
+
+// ── Primary Feasibility v2 decision-scorecard (2026-07-16, migration 0056) ──
+// Admin-editable dimension catalogue. Seeded from lib/feasibility/dimensions.ts
+// (idempotent, scripts/seed-defaults.ts); Carbide's engineers tune weights here.
+export const feasibilityDimensions = pgTable(
+  "feasibility_dimensions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    key: text("key").notNull(),
+    label: text("label").notNull(),
+    hint: text("hint"),
+    weight: numeric("weight").notNull().default("0"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("feasibility_dimensions_key_uidx").on(t.key)],
+);
+export type FeasibilityDimension = typeof feasibilityDimensions.$inferSelect;
+export type NewFeasibilityDimension = typeof feasibilityDimensions.$inferInsert;
+
+// One score row per inquiry × dimension. `weightSnapshot` freezes the weight
+// used at scoring time so later master edits never silently re-score old jobs.
+export const inquiryFeasibilityScores = pgTable(
+  "inquiry_feasibility_scores",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    inquiryId: uuid("inquiry_id")
+      .notNull()
+      .references(() => inquiries.id, { onDelete: "cascade" }),
+    dimensionKey: text("dimension_key").notNull(),
+    weightSnapshot: numeric("weight_snapshot").notNull().default("0"),
+    // 0–100; null = not yet scored (drives Needs-info).
+    score: integer("score"),
+    risk: feasRiskEnum("risk"),
+    isCritical: boolean("is_critical").notNull().default(false),
+    // Derived band verdict (persisted for querying/sorting the queue).
+    verdict: feasCheckVerdictEnum("verdict"),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("inquiry_feasibility_scores_inq_dim_uidx").on(t.inquiryId, t.dimensionKey),
+    index("inquiry_feasibility_scores_inquiry_idx").on(t.inquiryId),
+  ],
+);
+export type InquiryFeasibilityScore = typeof inquiryFeasibilityScores.$inferSelect;
+export type NewInquiryFeasibilityScore = typeof inquiryFeasibilityScores.$inferInsert;
 
 // ── Item / Product Master (2026-06-17, Alok) ────────────────────
 export const costingTypeEnum = pgEnum("costing_type", COSTING_TYPES);

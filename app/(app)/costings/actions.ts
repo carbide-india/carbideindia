@@ -13,6 +13,7 @@ import {
   computeInhouseCosting,
   computeBoCosting,
 } from "@/lib/costing/compute";
+import { isFeasibilityApproved } from "@/lib/queries/feasibility";
 
 type SaveCostingResult =
   | { ok: true; id: string; finalCostPerPiece: number }
@@ -36,6 +37,16 @@ export async function saveCosting(
     };
   }
   const v = parsed.data;
+
+  // ── Hard gate: costing is blocked until Primary Feasibility is approved ──
+  // (feasibility status = proceed_to_costing). Enforces the professional
+  // pipeline; a not-feasible or pending review cannot be costed.
+  if (!(await isFeasibilityApproved(v.inquiryId))) {
+    return {
+      ok: false,
+      error: "Primary Feasibility must be approved before this enquiry can be costed.",
+    };
+  }
 
   // ── Apply rate-field defaults (only when the field was omitted) ──
   const lossPct = v.lossPct ?? 0.15;

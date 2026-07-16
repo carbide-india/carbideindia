@@ -1,6 +1,6 @@
 import type { Metadata, Route } from "next";
 import Link from "next/link";
-import { Bell, Bot, FileText, Database, Cog, ChevronRight } from "lucide-react";
+import { Bell, Bot, FileText, Database, Cog, ClipboardCheck, ChevronRight } from "lucide-react";
 import { getCurrentEmployee } from "@/lib/auth/current";
 import { getUnreadCount } from "@/lib/queries/notifications";
 import { UserMenuServer } from "@/components/header/user-menu-server";
@@ -30,10 +30,17 @@ const MODULES: {
   },
   {
     key: "enquiries",
-    title: "Forms",
+    title: "FORMS",
     desc: "Manage incoming requests, client quotations, and sales pipeline tracking.",
     href: "/enquiries" as Route,
     Icon: FileText,
+  },
+  {
+    key: "feasibility",
+    title: "PRIMARY FEASIBILITY",
+    desc: "Technical DFM review & sign-off. Verify manufacturability before costing.",
+    href: "/feasibility" as Route,
+    Icon: ClipboardCheck,
   },
   {
     key: "masters",
@@ -80,7 +87,7 @@ export default async function HubPage() {
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <header className="hub-in border-b border-[#e5e7eb] bg-white/95 backdrop-blur-sm">
-        <div className="mx-auto flex h-[80px] w-full max-w-[1320px] items-center gap-6 px-8">
+        <div className="mx-auto flex h-[80px] w-full max-w-[1560px] items-center gap-6 px-8">
           <span className="shrink-0 text-[20px] font-bold tracking-tight text-[#9aa0ab] max-lg:hidden">
             Choose Your Workspace To Get Started
           </span>
@@ -105,7 +112,7 @@ export default async function HubPage() {
       </header>
 
       {/* ── Body ───────────────────────────────────────────────────────── */}
-      <main className="mx-auto w-full max-w-[1320px] px-8 py-8">
+      <main className="mx-auto w-full max-w-[1560px] px-8 py-8">
         {/* Centred greeting - big logo + "Carbide India Welcomes {name}." */}
         <div className="hub-in flex flex-col items-center gap-5 text-center">
           <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4">
@@ -126,7 +133,7 @@ export default async function HubPage() {
         {/* Module cards - a distinctive gradient-banner layout: an index in the
             banner, an icon badge overlapping its bottom edge, and a circular
             arrow CTA that fills on hover. */}
-        <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {MODULES.map((m, i) => (
             <Link
               key={m.key}

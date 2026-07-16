@@ -155,15 +155,16 @@ function navFor(pathname: string): NavDef[] {
         ] as NavDef[])
       : []),
   ];
-  // Primary Feasibility launcher - enquiry family only (pick an SM to verify).
+  // Primary Feasibility is now its own Hub module - keep a cross-link launcher
+  // in the enquiry family (opens the standalone /feasibility module).
   const fam = familySeg(pathname);
   if (fam === "enquiries" || fam === "inquiries") {
     items.push({
       label: "Primary Feasibility",
-      href: "/enquiries/feasibility" as Route,
+      href: "/feasibility" as Route,
       Icon: ClipboardCheck,
       ready: true,
-      active: (p) => p.startsWith("/enquiries/feasibility"),
+      active: () => false,
       group: "records",
     });
   }

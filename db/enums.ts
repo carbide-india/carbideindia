@@ -326,30 +326,51 @@ export const RECHECK_STATES = ["not_done", "yes", "no"] as const;
 export type RecheckState = (typeof RECHECK_STATES)[number];
 export const RECHECK_STATE_LABELS: Record<RecheckState, string> = { not_done: "Not Done", yes: "Yes", no: "No" };
 
-export const FEASIBILITY_STATUSES = ["not_started", "initiated", "need_info", "need_help", "primary_feasibility_done", "proceed_to_costing"] as const;
+// Primary-Feasibility SM-level status (gated: Not Started → In Review →
+// (Need Info) → Pending Approval → {Proceed to Costing | Not Feasible}).
+// `initiated`, `need_help`, `primary_feasibility_done` are DEPRECATED (kept for
+// data-compat, filtered from the UI via ACTIVE_FEASIBILITY_STATUSES). Enum is
+// append-only — new values (in_review, pending_approval, not_feasible) are added
+// at the END so the pg enum only ever grows.
+export const FEASIBILITY_STATUSES = ["not_started", "initiated", "need_info", "need_help", "primary_feasibility_done", "proceed_to_costing", "in_review", "pending_approval", "not_feasible"] as const;
 export type FeasibilityStatus = (typeof FEASIBILITY_STATUSES)[number];
 export const FEASIBILITY_STATUS_LABELS: Record<FeasibilityStatus, string> = {
   not_started: "Not Started", initiated: "Initiated", need_info: "Need Info", need_help: "Need Help",
-  primary_feasibility_done: "Primary Feasibility Done", proceed_to_costing: "Proceed to Costing",
+  primary_feasibility_done: "Primary Feasibility Done", proceed_to_costing: "Approved · Proceed to Costing",
+  in_review: "In Review", pending_approval: "Pending Approval", not_feasible: "Not Feasible",
 };
 export const FEASIBILITY_STATUS_COLORS: Record<FeasibilityStatus, string> = {
   not_started: "slate", initiated: "blue", need_info: "amber", need_help: "red",
   primary_feasibility_done: "purple", proceed_to_costing: "green",
+  in_review: "blue", pending_approval: "purple", not_feasible: "red",
 };
+/** Deprecated statuses hidden from every picker/filter (data-compat only). */
+export const DEPRECATED_FEASIBILITY_STATUSES = ["initiated", "need_help", "primary_feasibility_done"] as const;
+/** The live status set surfaced in the module UI (pickers, KPI strip, filters). */
+export const ACTIVE_FEASIBILITY_STATUSES = FEASIBILITY_STATUSES.filter(
+  (s): s is FeasibilityStatus => !DEPRECATED_FEASIBILITY_STATUSES.includes(s as (typeof DEPRECATED_FEASIBILITY_STATUSES)[number]),
+);
 
 export const FEAS_PRIORITIES = ["p1", "p2", "p3", "p5_high_profile"] as const;     // sheet: 1, 2, 3, 5. High Profile
 export type FeasPriority = (typeof FEAS_PRIORITIES)[number];
 export const FEAS_PRIORITY_LABELS: Record<FeasPriority, string> = { p1: "1", p2: "2", p3: "3", p5_high_profile: "5. High Profile" };
 
-// Per-product primary-feasibility verdict (one per checked dimension).
-export const FEAS_CHECK_VERDICTS = ["feasible", "not_feasible", "need_info"] as const;
+// Per-dimension primary-feasibility verdict. Append-only: `feasible_with_deviation`
+// (feasible but needs a deviation/recommended change, per APQP's middle path) added last.
+export const FEAS_CHECK_VERDICTS = ["feasible", "not_feasible", "need_info", "feasible_with_deviation"] as const;
 export type FeasCheckVerdict = (typeof FEAS_CHECK_VERDICTS)[number];
 export const FEAS_CHECK_VERDICT_LABELS: Record<FeasCheckVerdict, string> = {
-  feasible: "Feasible", not_feasible: "Not feasible", need_info: "Need info",
+  feasible: "Feasible", not_feasible: "Not feasible", need_info: "Need info", feasible_with_deviation: "Feasible w/ deviation",
 };
 export const FEAS_CHECK_VERDICT_TONES: Record<FeasCheckVerdict, string> = {
-  feasible: "green", not_feasible: "red", need_info: "amber",
+  feasible: "green", not_feasible: "red", need_info: "amber", feasible_with_deviation: "blue",
 };
+
+// Overall feasibility risk rating (APQP risk dimension).
+export const FEAS_RISKS = ["low", "medium", "high"] as const;
+export type FeasRisk = (typeof FEAS_RISKS)[number];
+export const FEAS_RISK_LABELS: Record<FeasRisk, string> = { low: "Low", medium: "Medium", high: "High" };
+export const FEAS_RISK_TONES: Record<FeasRisk, string> = { low: "green", medium: "amber", high: "red" };
 
 // ── Sample Register (Phase 3) — option lists from Manan's sheet ──
 export const SAMPLE_LOCATIONS = ["AYK Cabin", "Display", "Jayshree", "Lab", "Other"] as const;

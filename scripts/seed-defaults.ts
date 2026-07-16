@@ -27,6 +27,7 @@ import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { MASTER_KINDS, type MasterKind } from "@/db/enums";
 import { presetForShapeName } from "@/lib/masters/shape-config";
+import { FEASIBILITY_DIMENSIONS } from "@/lib/feasibility/dimensions";
 
 async function seedStatusSettings(): Promise<void> {
   await db.execute(sql`
@@ -300,12 +301,30 @@ async function seedRoles(): Promise<void> {
   console.log(`employee_roles[admin]: ${grantRows[0]?.n ?? 0} grant(s) present`);
 }
 
+async function seedFeasibilityDimensions(): Promise<void> {
+  // Primary Feasibility v2 scorecard (migration 0056): the admin-editable
+  // dimension catalogue, seeded from the code defaults. Idempotent on `key`, so
+  // re-running never clobbers weight tuning done in the master.
+  for (const d of FEASIBILITY_DIMENSIONS) {
+    await db.execute(sql`
+      INSERT INTO feasibility_dimensions (key, label, hint, weight, sort_order, is_active)
+      VALUES (${d.key}, ${d.label}, ${d.hint}, ${String(d.defaultWeight)}, ${d.sortOrder}, true)
+      ON CONFLICT (key) DO NOTHING
+    `);
+  }
+  const rows = (await db.execute(
+    sql`SELECT count(*)::int AS n FROM feasibility_dimensions`,
+  )) as unknown as { n: number }[];
+  console.log(`feasibility_dimensions: seeded — ${rows[0]?.n ?? 0} rows present`);
+}
+
 async function main(): Promise<void> {
   await seedStatusSettings();
   await seedOrgSettings();
   await seedMasterOptions();
   await seedShapeConfigs();
   await seedRoles();
+  await seedFeasibilityDimensions();
   console.log("seed-defaults: done");
 }
 
