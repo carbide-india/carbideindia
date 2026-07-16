@@ -26,6 +26,14 @@ import { Field, SectionCard, Segmented } from "@/components/inquiries/form-field
 
 /* ── Option lists ──────────────────────────────────────────────────────── */
 const CHECK_OPTS = ACTIVE_RECHECK_STATES.map((v) => ({ value: v, label: RECHECK_STATE_LABELS[v] }));
+
+/** Contextual note placeholder per selected check state. */
+const NOTE_PLACEHOLDER: Partial<Record<RecheckState, string>> = {
+  done: "Notes (optional)",
+  need_info: "What info is needed",
+  not_feasible: "Why it's not feasible",
+  assumed: "Reason / what was assumed",
+};
 const PRIORITY_OPTS = FEAS_PRIORITIES.map((v) => ({ value: v, label: FEAS_PRIORITY_LABELS[v] }));
 const STATUS_OPTS = ACTIVE_FEASIBILITY_STATUSES.map((v) => ({ value: v, label: FEASIBILITY_STATUS_LABELS[v] }));
 const YES_NO = [
@@ -118,14 +126,11 @@ export function FeasibilityReviewWorkspace({
   async function onSave() {
     setSaving(true);
     try {
-      // Emit a check value only when it's non-default; a note whenever the
-      // check is Yes or Assumed (notes are captured for both).
+      // Emit a check value only when it's non-default; a note whenever any
+      // option other than "Not Done" is selected.
       const emit = (s: CheckState) => ({
         value: s.value === "not_done" ? undefined : s.value,
-        notes:
-          (s.value === "yes" || s.value === "assumed") && s.notes.trim()
-            ? s.notes.trim()
-            : undefined,
+        notes: s.value !== "not_done" && s.notes.trim() ? s.notes.trim() : undefined,
       });
       const sd = emit(checks.sizeDrawing);
       const tol = emit(checks.tolerance);
@@ -171,36 +176,40 @@ export function FeasibilityReviewWorkspace({
       <SectionCard
         title="Feasibility Checks"
         inlineHint
-        hint="Mark each check · a Notes box opens on Yes or Assumed (dictate supported)."
+        hint="Mark each check · a Notes box opens on any selection (dictate supported)."
       >
-        <div className="grid grid-cols-5 gap-2.5 max-lg:grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1">
+        <div className="flex flex-col gap-2.5">
           {CHECKS.map(({ key, label }) => {
             const st = checks[key];
-            const showNotes = st.value === "yes" || st.value === "assumed";
+            const showNotes = st.value !== "not_done";
             return (
               <div
                 key={key}
-                className="flex flex-col gap-2 rounded-[10px] border border-hairline bg-surface-soft p-2.5"
+                className="rounded-[10px] border border-hairline bg-surface-soft p-3"
               >
-                <span className="truncate text-[12.5px] font-bold text-ink-strong" title={label}>{label}</span>
-                {/* Compact segmented state (small pills) */}
-                <Segmented<RecheckState>
-                  options={CHECK_OPTS}
-                  value={st.value}
-                  onChange={(v) => setCheck(key, { value: v ?? "not_done" })}
-                  allowClear={false}
-                  activeTone="brand"
-                  ariaLabel={`${label} check`}
-                />
-                {/* Notes with dictate — opens on Yes or Assumed */}
-                {showNotes && (
-                  <NotesField
-                    id={`feas-${key}-note`}
-                    rows={2}
-                    placeholder={st.value === "assumed" ? "Reason / assumed" : "Notes"}
-                    value={st.notes}
-                    onChange={(v) => setCheck(key, { notes: v })}
+                {/* Horizontal row: label + the 5 options */}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <span className="w-[160px] shrink-0 text-[13.5px] font-bold text-ink-strong">{label}</span>
+                  <Segmented<RecheckState>
+                    options={CHECK_OPTS}
+                    value={st.value}
+                    onChange={(v) => setCheck(key, { value: v ?? "not_done" })}
+                    allowClear={false}
+                    activeTone="brand"
+                    ariaLabel={`${label} check`}
                   />
+                </div>
+                {/* Notes with dictate — opens on any selection */}
+                {showNotes && (
+                  <div className="mt-2.5">
+                    <NotesField
+                      id={`feas-${key}-note`}
+                      rows={2}
+                      placeholder={NOTE_PLACEHOLDER[st.value] ?? "Notes"}
+                      value={st.notes}
+                      onChange={(v) => setCheck(key, { notes: v })}
+                    />
+                  </div>
                 )}
               </div>
             );

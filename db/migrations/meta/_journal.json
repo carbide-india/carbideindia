@@ -407,6 +407,13 @@
       "when": 1784204103620,
       "tag": "0058_sticky_inhumans",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1784205899760,
+      "tag": "0059_giant_stepford_cuckoos",
+      "breakpoints": true
     }
   ]
 }
