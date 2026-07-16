@@ -54,6 +54,7 @@ export async function saveFeasibilityChecklist(
     feasPriority: v.priority,
     feasExport: v.export,
     feasActionsList: v.actionsList,
+    feasAttachments: v.attachments,
     feasibilityCheckedById: v.feasibilityCheckedById,
     assignedSalesPersonId: v.assignedSalesPersonId,
     feasibilityStatus: v.status,

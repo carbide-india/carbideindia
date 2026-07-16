@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, Paperclip, X, UploadCloud } from "lucide-react";
+import { upload } from "@vercel/blob/client";
 import {
   ACTIVE_RECHECK_STATES,
   RECHECK_STATE_LABELS,
@@ -17,6 +18,7 @@ import {
 import type { Inquiry } from "@/db/schema";
 import type { EmployeeOption } from "@/lib/queries/employees";
 import { saveFeasibilityChecklist } from "@/app/(app)/feasibility/actions";
+import { FEAS_ATTACHMENT_TYPES, safeFeasFileName } from "@/lib/feasibility/attachments";
 import { fireToast } from "@/lib/toast";
 import { Select } from "@/components/ui/select";
 import { NotesField } from "@/components/ui/notes-field";
@@ -73,6 +75,34 @@ export function FeasibilityReviewWorkspace({
   );
   const [status, setStatus] = React.useState<FeasibilityStatus>(inquiry.feasibilityStatus);
   const [actionsList, setActionsList] = React.useState(inquiry.feasActionsList ?? "");
+  const [attachments, setAttachments] = React.useState<{ name: string; url: string }[]>(
+    inquiry.feasAttachments ?? [],
+  );
+  const [uploading, setUploading] = React.useState(0);
+
+  async function handleFiles(files: FileList | null) {
+    if (!files) return;
+    for (const file of Array.from(files)) {
+      if (!FEAS_ATTACHMENT_TYPES.has(file.type)) {
+        fireToast({ type: "error", message: `${file.name}: unsupported file type.` });
+        continue;
+      }
+      setUploading((n) => n + 1);
+      try {
+        const blob = await upload(`feasibility/${safeFeasFileName(file.name)}`, file, {
+          access: "public",
+          handleUploadUrl: "/api/feasibility/upload",
+          clientPayload: JSON.stringify({ contentType: file.type }),
+        });
+        setAttachments((prev) => [...prev, { name: file.name, url: blob.url }]);
+      } catch {
+        fireToast({ type: "error", message: `${file.name}: upload failed.` });
+      } finally {
+        setUploading((n) => n - 1);
+      }
+    }
+  }
+  const removeAttachment = (url: string) => setAttachments((prev) => prev.filter((a) => a.url !== url));
 
   const setCheck = React.useCallback((key: CheckKey, patch: Partial<CheckState>) => {
     setChecks((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } }));
@@ -117,6 +147,7 @@ export function FeasibilityReviewWorkspace({
         priority,
         export: exportVal,
         actionsList: actionsList.trim() ? actionsList.trim() : undefined,
+        attachments,
         feasibilityCheckedById: checkedById,
         assignedSalesPersonId: salesPersonId,
         status,
@@ -231,15 +262,25 @@ export function FeasibilityReviewWorkspace({
           </Field>
         </div>
 
-        <Field id="feas-actions-list" label="Actions List">
-          <NotesField
-            id="feas-actions-list"
-            rows={2}
-            placeholder="Actions to take before costing"
-            value={actionsList}
-            onChange={setActionsList}
-          />
-        </Field>
+        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+          <Field id="feas-actions-list" label="Actions List">
+            <NotesField
+              id="feas-actions-list"
+              rows={2}
+              placeholder="Actions to take before costing"
+              value={actionsList}
+              onChange={setActionsList}
+            />
+          </Field>
+          <Field label="Attachments" labelOnly>
+            <AttachmentsField
+              attachments={attachments}
+              uploading={uploading}
+              onPick={handleFiles}
+              onRemove={removeAttachment}
+            />
+          </Field>
+        </div>
       </SectionCard>
 
       {/* ── Footer ─────────────────────────────────────────────────────── */}
@@ -258,6 +299,77 @@ export function FeasibilityReviewWorkspace({
           Save Review
         </button>
       </div>
+    </div>
+  );
+}
+
+/* ── Attachments (client-direct upload to Vercel Blob) ─────────────────── */
+function AttachmentsField({
+  attachments,
+  uploading,
+  onPick,
+  onRemove,
+}: {
+  attachments: { name: string; url: string }[];
+  uploading: number;
+  onPick: (files: FileList | null) => void;
+  onRemove: (url: string) => void;
+}) {
+  const ref = React.useRef<HTMLInputElement>(null);
+  return (
+    <div className="flex flex-col gap-2">
+      {attachments.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {attachments.map((a) => (
+            <span
+              key={a.url}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#dcdce8] bg-white px-2.5 py-1.5 text-[12px] font-semibold text-ink-soft"
+            >
+              <a
+                href={a.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex max-w-[180px] items-center gap-1.5 truncate hover:text-brand hover:underline"
+                title={a.name}
+              >
+                <Paperclip className="h-[13px] w-[13px] shrink-0" />
+                <span className="truncate">{a.name}</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => onRemove(a.url)}
+                aria-label={`Remove ${a.name}`}
+                className="text-ink-subtle hover:text-[#d32f2f]"
+              >
+                <X size={13} strokeWidth={2.4} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <input
+        ref={ref}
+        type="file"
+        multiple
+        hidden
+        onChange={(e) => {
+          onPick(e.target.files);
+          e.target.value = "";
+        }}
+      />
+      <button
+        type="button"
+        onClick={() => ref.current?.click()}
+        disabled={uploading > 0}
+        className="inline-flex h-[42px] w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[#c9c9ea] bg-white text-[13px] font-bold text-[#3f3f94] transition hover:border-brand disabled:opacity-60"
+      >
+        {uploading > 0 ? (
+          <Loader2 size={15} style={{ animation: "spinFast 0.8s linear infinite" }} />
+        ) : (
+          <UploadCloud size={16} />
+        )}
+        {uploading > 0 ? `Uploading ${uploading}…` : "Add files"}
+      </button>
     </div>
   );
 }

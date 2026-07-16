@@ -30,6 +30,10 @@ export const SaveFeasibilityChecklistSchema = z
     priority: z.enum(FEAS_PRIORITIES).optional(),
     export: z.boolean().optional(),
     actionsList: OptionalText(2000),
+    attachments: z
+      .array(z.object({ name: z.string().trim().min(1).max(300), url: z.string().url().max(1000) }))
+      .max(50)
+      .optional(),
     feasibilityCheckedById: z.string().uuid().optional(),
     assignedSalesPersonId: z.string().uuid().optional(),
     status: z.enum(FEASIBILITY_STATUSES).optional(),
