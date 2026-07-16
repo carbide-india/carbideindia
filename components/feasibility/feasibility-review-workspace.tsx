@@ -6,7 +6,6 @@ import { Loader2 } from "lucide-react";
 import {
   ACTIVE_RECHECK_STATES,
   RECHECK_STATE_LABELS,
-  RECHECK_STATE_TONES,
   FEAS_PRIORITIES,
   FEAS_PRIORITY_LABELS,
   ACTIVE_FEASIBILITY_STATUSES,
@@ -22,7 +21,6 @@ import { fireToast } from "@/lib/toast";
 import { Select } from "@/components/ui/select";
 import { NotesField } from "@/components/ui/notes-field";
 import { Field, SectionCard, Segmented } from "@/components/inquiries/form-field";
-import { Chip } from "@/components/inquiries/chip";
 
 /* ── Option lists ──────────────────────────────────────────────────────── */
 const CHECK_OPTS = ACTIVE_RECHECK_STATES.map((v) => ({ value: v, label: RECHECK_STATE_LABELS[v] }));
@@ -144,30 +142,23 @@ export function FeasibilityReviewWorkspace({
         inlineHint
         hint="Mark each check · a Notes box opens on Yes or Assumed (dictate supported)."
       >
-        <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
+        <div className="grid grid-cols-5 gap-2.5 max-lg:grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1">
           {CHECKS.map(({ key, label }) => {
             const st = checks[key];
             const showNotes = st.value === "yes" || st.value === "assumed";
             return (
               <div
                 key={key}
-                className="flex flex-col gap-2.5 rounded-[10px] border border-hairline bg-surface-soft p-3"
+                className="flex flex-col gap-2 rounded-[10px] border border-hairline bg-surface-soft p-2.5"
               >
-                {/* Label + current state chip */}
-                <div className="flex items-center gap-2">
-                  <span className="flex-1 truncate text-[13.5px] font-bold text-ink-strong">{label}</span>
-                  {st.value !== "not_done" && (
-                    <Chip label={RECHECK_STATE_LABELS[st.value]} tone={RECHECK_STATE_TONES[st.value]} />
-                  )}
-                </div>
-                {/* Segmented state (full-width, equal segments) */}
+                <span className="truncate text-[12.5px] font-bold text-ink-strong" title={label}>{label}</span>
+                {/* Compact segmented state (small pills) */}
                 <Segmented<RecheckState>
                   options={CHECK_OPTS}
                   value={st.value}
                   onChange={(v) => setCheck(key, { value: v ?? "not_done" })}
                   allowClear={false}
                   activeTone="brand"
-                  size="lg"
                   ariaLabel={`${label} check`}
                 />
                 {/* Notes with dictate — opens on Yes or Assumed */}
@@ -175,7 +166,7 @@ export function FeasibilityReviewWorkspace({
                   <NotesField
                     id={`feas-${key}-note`}
                     rows={2}
-                    placeholder={st.value === "assumed" ? "Reason / what was assumed" : "Notes (optional)"}
+                    placeholder={st.value === "assumed" ? "Reason / assumed" : "Notes"}
                     value={st.notes}
                     onChange={(v) => setCheck(key, { notes: v })}
                   />
