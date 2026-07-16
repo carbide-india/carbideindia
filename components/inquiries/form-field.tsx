@@ -65,12 +65,12 @@ export function MiniField({
   className?: string;
 }) {
   return (
-    <div className={cn("flex flex-col gap-1.5", className)}>
+    <div className={cn("flex flex-col gap-2", className)}>
       <span
         className="font-bold"
         style={{
           fontFamily: "var(--font-sans), system-ui, sans-serif",
-          fontSize: 12,
+          fontSize: 13,
           letterSpacing: "-0.005em",
           color: "var(--color-ink-strong)",
         }}
@@ -241,7 +241,7 @@ export function Segmented<T extends string>({
               active
                 ? activeTone === "brand"
                   ? "bg-brand text-white border-[1.5px] border-brand shadow-[0_0_0_3px_rgba(63,63,148,0.25)]"
-                  : "bg-white text-ink-strong border border-hairline-strong shadow-sm"
+                  : "bg-brand text-white border border-brand shadow-sm"
                 : "text-ink-muted hover:text-ink-strong border border-transparent",
             )}
           >

@@ -1561,9 +1561,11 @@ html[data-density="compact"] body {
    control rather than a flat box. */
 .nt-input {
   width: 100%;
-  padding: 15px 18px;
+  /* Unified field box: one calmer, proportionate height across every form
+     (≈44px) so field boxes match each other and stop dwarfing their labels. */
+  padding: 11px 15px;
   font-family: var(--font-sans, system-ui, sans-serif);
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 600;
   line-height: 1.4;
   color: var(--color-ink-strong);
