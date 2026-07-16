@@ -242,7 +242,7 @@ export function FeasibilityReviewWorkspace({
               ariaLabel="Assign sales person"
             />
           </Field>
-          <Field label="Feasibility Checked" labelOnly>
+          <Field label="Feasibility Checked By" labelOnly>
             <Select
               value={checkedById ?? ""}
               onValueChange={(v) => setCheckedById(v || undefined)}
