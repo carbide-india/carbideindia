@@ -603,8 +603,11 @@ export function RegisterDataTable<TRow>({
   // block is the contiguous leftmost run: the row-menu + select affordances,
   // then every leading column flagged `pinnedLeft`, stopping at the first
   // un-pinned body column.
+  // Must match the leaf widths in `leafWidth()` (__menu 46px, __select 40px) so
+  // a frozen column's sticky `left` offset lines up exactly with the rendered
+  // columns — a mismatch leaves a sliver where scrolling content bleeds through.
   const MENU_W = 46;
-  const SELECT_W = 46;
+  const SELECT_W = 40;
   const pinned = React.useMemo(() => {
     const map = new Map<string, { left: number; width: number; last: boolean }>();
     if (!columns.some((c) => c.pinnedLeft)) return map;

@@ -12,10 +12,11 @@ import {
   FEAS_CHECK_VERDICT_TONES,
   FEAS_RISK_LABELS,
   FEAS_RISK_TONES,
+  INQUIRY_PRIORITY_LABELS,
 } from "@/db/enums";
 import { FEAS_INDEX_THRESHOLDS } from "@/lib/feasibility/dimensions";
 import { formatDate } from "@/lib/format";
-import { Chip } from "@/components/inquiries/chip";
+import { Chip, PRIORITY_TONES } from "@/components/inquiries/chip";
 import {
   RegisterDataTable,
   type RegisterColumn,
@@ -66,6 +67,7 @@ export function FeasibilityQueueTable({ rows }: { rows: FeasibilityQueueItem[] }
         id: "smNumber",
         header: "SM No.",
         width: "94px",
+        pinnedLeft: true,
         searchable: true,
         sortValue: (r) => r.smNumber,
         cell: (r) => (
@@ -77,11 +79,20 @@ export function FeasibilityQueueTable({ rows }: { rows: FeasibilityQueueItem[] }
       {
         id: "companyName",
         header: "Company",
-        width: "200px",
+        width: "190px",
+        pinnedLeft: true,
         truncate: true,
         searchable: true,
         sortValue: (r) => r.companyName,
         cell: (r) => <span className="font-semibold text-ink-strong">{r.companyName}</span>,
+      },
+      {
+        id: "priority",
+        header: "Priority",
+        width: "104px",
+        sortValue: (r) => INQUIRY_PRIORITY_LABELS[r.priority],
+        exportValue: (r) => INQUIRY_PRIORITY_LABELS[r.priority],
+        cell: (r) => <Chip label={INQUIRY_PRIORITY_LABELS[r.priority]} tone={PRIORITY_TONES[r.priority]} />,
       },
       {
         id: "productCount",
@@ -135,8 +146,8 @@ export function FeasibilityQueueTable({ rows }: { rows: FeasibilityQueueItem[] }
       },
       {
         id: "blockerCount",
-        header: "Blockers",
-        width: "84px",
+        header: "Blocks",
+        width: "78px",
         align: "right",
         sortValue: (r) => r.blockerCount,
         cell: (r) =>
@@ -152,6 +163,30 @@ export function FeasibilityQueueTable({ rows }: { rows: FeasibilityQueueItem[] }
         width: "168px",
         sortValue: (r) => FEASIBILITY_STATUS_LABELS[r.status],
         cell: (r) => <Chip label={FEASIBILITY_STATUS_LABELS[r.status]} tone={FEASIBILITY_STATUS_COLORS[r.status]} />,
+      },
+      {
+        id: "enquiryDate",
+        header: "Enquiry Date",
+        width: "116px",
+        defaultHidden: true,
+        sortValue: (r) => r.enquiryDate,
+        cell: (r) => <span className="tabular-nums text-ink-soft">{formatDate(r.enquiryDate)}</span>,
+      },
+      {
+        id: "submittedAt",
+        header: "Submitted",
+        width: "116px",
+        defaultHidden: true,
+        sortValue: (r) => r.submittedAt ?? new Date(0),
+        cell: (r) => <span className="tabular-nums text-ink-soft">{r.submittedAt ? formatDate(r.submittedAt) : "-"}</span>,
+      },
+      {
+        id: "approvedAt",
+        header: "Approved",
+        width: "116px",
+        defaultHidden: true,
+        sortValue: (r) => r.approvedAt ?? new Date(0),
+        cell: (r) => <span className="tabular-nums text-ink-soft">{r.approvedAt ? formatDate(r.approvedAt) : "-"}</span>,
       },
       {
         id: "age",

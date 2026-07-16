@@ -494,21 +494,29 @@ function DimensionRow({
         background: isBlocker ? "rgba(211,47,47,0.03)" : "var(--color-surface-soft)",
       }}
     >
-      {/* Line 1: label + weight + score */}
+      {/* Line 1: label + weight */}
       <div className="flex items-center gap-2">
-        <span className="flex-1 truncate text-[12.5px] font-bold text-ink-strong" title={dim.hint || dim.label}>
+        <span className="flex-1 truncate text-[13px] font-bold text-ink-strong" title={dim.hint || dim.label}>
           {dim.label}
         </span>
         <span className="shrink-0 rounded-full border border-hairline bg-white px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-ink-muted">
-          {dim.weight}%
+          wt {dim.weight}%
         </span>
+      </div>
+
+      {/* Line 2: bullet graph + score input (inline width beats .nt-input's width:100%) */}
+      <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <FeasibilityBulletGraph score={row.score} target={FEAS_SCORE_BANDS.feasible} verdict={verdict} />
+        </div>
         <input
           type="number"
           min={0}
           max={100}
           inputMode="numeric"
           disabled={disabled}
-          className="nt-input w-[52px] shrink-0 px-1.5 text-center tabular-nums"
+          className="nt-input shrink-0 text-center tabular-nums"
+          style={{ width: 60, paddingLeft: 6, paddingRight: 6 }}
           aria-label={`${dim.label} score`}
           placeholder="—"
           value={row.score == null ? "" : row.score}
@@ -520,9 +528,6 @@ function DimensionRow({
           }}
         />
       </div>
-
-      {/* Line 2: bullet graph */}
-      <FeasibilityBulletGraph score={row.score} target={FEAS_SCORE_BANDS.feasible} verdict={verdict} />
 
       {/* Line 3: risk + critical + note */}
       <div className="flex items-center gap-1.5">
