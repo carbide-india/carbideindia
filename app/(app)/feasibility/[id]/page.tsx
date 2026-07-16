@@ -46,14 +46,27 @@ export default async function FeasibilityReviewPage({
         <ArrowLeft className="h-[15px] w-[15px]" /> Feasibility Queue
       </Link>
 
-      <header className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-section border border-hairline bg-surface-card px-5 py-4">
-        <span className="font-mono text-[18px] font-black text-[#3f3f94]">{header.smNumber}</span>
-        <Chip label={INQUIRY_PRIORITY_LABELS[header.priority]} tone={PRIORITY_TONES[header.priority]} />
-        <span className="text-[15px] font-semibold text-ink-strong">{header.clientName}</span>
-        <span className="text-[13px] text-ink-subtle">
-          {header.productCount} product{header.productCount === 1 ? "" : "s"}
-          {header.salesPersonName ? ` · ${header.salesPersonName}` : ""}
-        </span>
+      <header
+        className="mb-5 rounded-section border-2 border-[#2b303b] bg-surface-card px-6 py-4"
+        style={{ boxShadow: "0 6px 20px -10px rgba(15,23,42,0.22)" }}
+      >
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <span className="font-mono text-[24px] font-black leading-none text-[#3f3f94]">{header.smNumber}</span>
+          <Chip label={INQUIRY_PRIORITY_LABELS[header.priority]} tone={PRIORITY_TONES[header.priority]} />
+          <span className="text-[22px] font-black leading-none tracking-tight text-ink-strong">
+            {header.clientName}
+          </span>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[13.5px] font-medium text-ink-soft">
+          {inquiry.productDescription && (
+            <span className="font-bold text-ink-strong">{inquiry.productDescription}</span>
+          )}
+          <span className="text-ink-subtle">
+            {header.productCount} product{header.productCount === 1 ? "" : "s"}
+          </span>
+          {inquiry.country && <span className="text-ink-subtle">· {inquiry.country}</span>}
+          {header.salesPersonName && <span className="text-ink-subtle">· {header.salesPersonName}</span>}
+        </div>
       </header>
 
       {/* Auto-fetched enquiry snapshot (read-only) — exactly the sheet's fields. */}

@@ -90,10 +90,14 @@ export function FeasibilityReviewWorkspace({
   async function onSave() {
     setSaving(true);
     try {
-      // Emit a check value only when it's non-default; a note only for "assumed".
+      // Emit a check value only when it's non-default; a note whenever the
+      // check is Yes or Assumed (notes are captured for both).
       const emit = (s: CheckState) => ({
         value: s.value === "not_done" ? undefined : s.value,
-        notes: s.value === "assumed" && s.notes.trim() ? s.notes.trim() : undefined,
+        notes:
+          (s.value === "yes" || s.value === "assumed") && s.notes.trim()
+            ? s.notes.trim()
+            : undefined,
       });
       const sd = emit(checks.sizeDrawing);
       const tol = emit(checks.tolerance);
@@ -138,40 +142,42 @@ export function FeasibilityReviewWorkspace({
       <SectionCard
         title="Feasibility Checks"
         inlineHint
-        hint="Mark each check · add a reason only where you had to assume."
+        hint="Mark each check · a Notes box opens on Yes or Assumed (dictate supported)."
       >
-        <div className="flex flex-col gap-2.5">
+        <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
           {CHECKS.map(({ key, label }) => {
             const st = checks[key];
-            const assumed = st.value === "assumed";
+            const showNotes = st.value === "yes" || st.value === "assumed";
             return (
               <div
                 key={key}
                 className="flex flex-col gap-2.5 rounded-[10px] border border-hairline bg-surface-soft p-3"
               >
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                  <span className="text-[13.5px] font-bold text-ink-strong">{label}</span>
+                {/* Label + current state chip */}
+                <div className="flex items-center gap-2">
+                  <span className="flex-1 truncate text-[13.5px] font-bold text-ink-strong">{label}</span>
                   {st.value !== "not_done" && (
                     <Chip label={RECHECK_STATE_LABELS[st.value]} tone={RECHECK_STATE_TONES[st.value]} />
                   )}
-                  <div className="ml-auto">
-                    <Segmented<RecheckState>
-                      options={CHECK_OPTS}
-                      value={st.value}
-                      onChange={(v) => setCheck(key, { value: v ?? "not_done" })}
-                      allowClear={false}
-                      activeTone="brand"
-                      ariaLabel={`${label} check`}
-                    />
-                  </div>
                 </div>
-                {assumed && (
-                  <input
-                    className="nt-input text-[13px]"
-                    placeholder="Reason / what was assumed"
-                    aria-label={`${label} assumption reason`}
+                {/* Segmented state (full-width, equal segments) */}
+                <Segmented<RecheckState>
+                  options={CHECK_OPTS}
+                  value={st.value}
+                  onChange={(v) => setCheck(key, { value: v ?? "not_done" })}
+                  allowClear={false}
+                  activeTone="brand"
+                  size="lg"
+                  ariaLabel={`${label} check`}
+                />
+                {/* Notes with dictate — opens on Yes or Assumed */}
+                {showNotes && (
+                  <NotesField
+                    id={`feas-${key}-note`}
+                    rows={2}
+                    placeholder={st.value === "assumed" ? "Reason / what was assumed" : "Notes (optional)"}
                     value={st.notes}
-                    onChange={(e) => setCheck(key, { notes: e.target.value })}
+                    onChange={(v) => setCheck(key, { notes: v })}
                   />
                 )}
               </div>
