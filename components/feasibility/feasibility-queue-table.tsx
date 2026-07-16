@@ -25,17 +25,15 @@ function ageInDays(createdAt: Date): number {
   return Math.max(0, Math.floor((Date.now() - new Date(createdAt).getTime()) / 864e5));
 }
 
-/** Compact "done/total" checks readout + a thin brand-indigo progress fill. */
+/** Plain "done/total" checks readout (green once all five are marked). */
 function ChecksBar({ done, total }: { done: number; total: number }) {
-  const pct = total > 0 ? Math.max(0, Math.min(100, (done / total) * 100)) : 0;
+  const complete = done >= total && total > 0;
   return (
-    <span className="inline-flex w-full items-center justify-end gap-2">
-      <span className="tabular-nums font-bold text-ink-strong" style={{ fontSize: 13 }}>
-        {done}/{total}
-      </span>
-      <span className="h-1.5 w-[40px] shrink-0 overflow-hidden rounded-full bg-[#e6e8f0]">
-        <span className="block h-full rounded-full" style={{ width: `${pct}%`, background: "#3f3f94" }} />
-      </span>
+    <span
+      className="tabular-nums font-bold"
+      style={{ fontSize: 13, color: complete ? "var(--color-green-deep)" : "var(--color-ink-strong)" }}
+    >
+      {done}/{total}
     </span>
   );
 }
