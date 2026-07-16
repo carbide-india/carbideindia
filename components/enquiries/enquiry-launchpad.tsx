@@ -12,6 +12,7 @@ import {
   Handshake,
   PackageCheck,
   CalendarCheck,
+  ClipboardCheck,
 } from "lucide-react";
 
 const MONO = "var(--font-mono-display)";
@@ -43,6 +44,14 @@ const FORMS: { key: string; title: string; desc: string; tag: string; href: Rout
     tag: "Enquiry",
     href: "/enquiries/new" as Route,
     Icon: FilePlus2,
+  },
+  {
+    key: "feasibility",
+    title: "Primary Feasibility",
+    desc: "Technical DFM review - verify each enquiry can be manufactured before it is costed.",
+    tag: "Feasibility",
+    href: "/feasibility" as Route,
+    Icon: ClipboardCheck,
   },
   {
     key: "costing",
