@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
-import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
+import { FeasibilityModuleShell } from "@/components/feasibility/feasibility-module-shell";
 import { UserMenuServer } from "@/components/header/user-menu-server";
 
-// Primary Feasibility lives inside the Forms module — it renders in the shared
-// Enquiry/Forms shell (sidebar + Back to Forms) rather than a standalone module.
+// Primary Feasibility is its own module (own shell + status sidebar + Kanban),
+// reached from the Forms launchpad card and the enquiry sidebar cross-link.
 export default function FeasibilityModuleLayout({ children }: { children: ReactNode }) {
-  return <EnquiryModuleShell userMenu={<UserMenuServer />}>{children}</EnquiryModuleShell>;
+  return <FeasibilityModuleShell userMenu={<UserMenuServer />}>{children}</FeasibilityModuleShell>;
 }

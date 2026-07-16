@@ -1,19 +1,30 @@
 import { requireUser } from "@/lib/auth/current";
 import { listFeasibilityQueue } from "@/lib/queries/feasibility";
 import { FeasibilityQueueTable } from "@/components/feasibility/feasibility-queue-table";
+import { FEASIBILITY_STATUSES, FEASIBILITY_STATUS_LABELS, type FeasibilityStatus } from "@/db/enums";
 
 export const dynamic = "force-dynamic";
 
 /**
  * Primary Feasibility dashboard — the review queue fronted by a pipeline KPI
- * strip. Each row opens its DFM review workspace.
+ * strip. The sidebar filters the queue by status via `?status=`.
  */
-export default async function FeasibilityDashboardPage() {
+export default async function FeasibilityDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
   await requireUser();
-  const rows = await listFeasibilityQueue();
+  const all = await listFeasibilityQueue();
 
-  const n = (...s: string[]) => rows.filter((r) => s.includes(r.status)).length;
-  const total = rows.length;
+  const sp = await searchParams;
+  const activeStatus = FEASIBILITY_STATUSES.includes(sp.status as FeasibilityStatus)
+    ? (sp.status as FeasibilityStatus)
+    : null;
+  const rows = activeStatus ? all.filter((r) => r.status === activeStatus) : all;
+
+  const n = (...s: string[]) => all.filter((r) => s.includes(r.status)).length;
+  const total = all.length;
   const notStarted = n("not_started");
   const inReview = n("in_review");
   const needInfo = n("need_info");
@@ -24,7 +35,14 @@ export default async function FeasibilityDashboardPage() {
   return (
     <div className="mx-auto w-full max-w-[1600px]">
       <header className="mb-5">
-        <h1 className="text-[26px] font-black leading-none tracking-tight text-[#3f3f94]">Primary Feasibility</h1>
+        <h1 className="text-[26px] font-black leading-none tracking-tight text-[#3f3f94]">
+          Primary Feasibility
+          {activeStatus && (
+            <span className="ml-2 text-[16px] font-bold text-ink-subtle">
+              · {FEASIBILITY_STATUS_LABELS[activeStatus]}
+            </span>
+          )}
+        </h1>
         <p className="mt-1.5 text-[14px] text-ink-subtle">
           Technical DFM review &amp; sign-off — verify each enquiry can be manufactured before it is costed.
         </p>
