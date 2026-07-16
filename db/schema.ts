@@ -680,6 +680,8 @@ export const inquiries = pgTable(
     feasConditionCheck: recheckStateEnum("feas_condition_check").notNull().default("not_done"),
     feasConditionNotes: text("feas_condition_notes"),
     feasActionsList: text("feas_actions_list"),
+    // General feasibility remarks (beside Actions List).
+    feasNotes: text("feas_notes"),
     // Feasibility attachments (drawings, specs, photos) — public blob URLs.
     feasAttachments: jsonb("feas_attachments").$type<Array<{ name: string; url: string }>>(),
     feasibilityCheckedById: uuid("feasibility_checked_by_id").references(() => employees.id, { onDelete: "set null" }),

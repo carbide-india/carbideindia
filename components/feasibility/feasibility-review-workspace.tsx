@@ -2,15 +2,15 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Paperclip, X, UploadCloud } from "lucide-react";
+import { Loader2, Paperclip, X, UploadCloud, CircleCheck } from "lucide-react";
 import { upload } from "@vercel/blob/client";
 import {
   ACTIVE_RECHECK_STATES,
   RECHECK_STATE_LABELS,
   FEAS_PRIORITIES,
   FEAS_PRIORITY_LABELS,
-  ACTIVE_FEASIBILITY_STATUSES,
   FEASIBILITY_STATUS_LABELS,
+  FEASIBILITY_STATUS_COLORS,
   type FeasPriority,
   type FeasibilityStatus,
   type RecheckState,
@@ -23,6 +23,7 @@ import { fireToast } from "@/lib/toast";
 import { Select } from "@/components/ui/select";
 import { NotesField } from "@/components/ui/notes-field";
 import { Field, SectionCard, Segmented } from "@/components/inquiries/form-field";
+import { Chip } from "@/components/inquiries/chip";
 
 /* ── Option lists ──────────────────────────────────────────────────────── */
 const CHECK_OPTS = ACTIVE_RECHECK_STATES.map((v) => ({ value: v, label: RECHECK_STATE_LABELS[v] }));
@@ -35,7 +36,6 @@ const NOTE_PLACEHOLDER: Partial<Record<RecheckState, string>> = {
   assumed: "Reason / what was assumed",
 };
 const PRIORITY_OPTS = FEAS_PRIORITIES.map((v) => ({ value: v, label: FEAS_PRIORITY_LABELS[v] }));
-const STATUS_OPTS = ACTIVE_FEASIBILITY_STATUSES.map((v) => ({ value: v, label: FEASIBILITY_STATUS_LABELS[v] }));
 const YES_NO = [
   { value: "yes", label: "Yes" },
   { value: "no", label: "No" },
@@ -81,8 +81,8 @@ export function FeasibilityReviewWorkspace({
   const [checkedById, setCheckedById] = React.useState<string | undefined>(
     inquiry.feasibilityCheckedById ?? undefined,
   );
-  const [status, setStatus] = React.useState<FeasibilityStatus>(inquiry.feasibilityStatus);
   const [actionsList, setActionsList] = React.useState(inquiry.feasActionsList ?? "");
+  const [notes, setNotes] = React.useState(inquiry.feasNotes ?? "");
   const [attachments, setAttachments] = React.useState<{ name: string; url: string }[]>(
     inquiry.feasAttachments ?? [],
   );
@@ -115,6 +115,22 @@ export function FeasibilityReviewWorkspace({
   const setCheck = React.useCallback((key: CheckKey, patch: Partial<CheckState>) => {
     setChecks((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } }));
   }, []);
+
+  // Feasibility status is DERIVED from the five checks (auto-routes the review
+  // into the right sidebar/Kanban column):
+  //   any Not Feasible → Not Feasible · any Need Info → Need Info ·
+  //   any still Not Done → Not Started · all Done → Approved · Proceed to
+  //   Costing · otherwise (Done + Assumed) → Pending Approval.
+  const checkValues = CHECKS.map((c) => checks[c.key].value);
+  const allDone = checkValues.every((v) => v === "done");
+  const derivedStatus: FeasibilityStatus = React.useMemo(() => {
+    if (checkValues.some((v) => v === "not_feasible")) return "not_feasible";
+    if (checkValues.some((v) => v === "need_info")) return "need_info";
+    if (checkValues.some((v) => v === "not_done")) return "not_started";
+    if (checkValues.every((v) => v === "done")) return "proceed_to_costing";
+    return "pending_approval";
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checks]);
 
   const [saving, setSaving] = React.useState(false);
 
@@ -152,10 +168,11 @@ export function FeasibilityReviewWorkspace({
         priority,
         export: exportVal,
         actionsList: actionsList.trim() ? actionsList.trim() : undefined,
+        notes: notes.trim() ? notes.trim() : undefined,
         attachments,
         feasibilityCheckedById: checkedById,
         assignedSalesPersonId: salesPersonId,
-        status,
+        status: derivedStatus,
       };
 
       const res = await saveFeasibilityChecklist(inquiry.id, payload);
@@ -261,17 +278,19 @@ export function FeasibilityReviewWorkspace({
             />
           </Field>
           <Field label="Feasibility Status" labelOnly>
-            <Select
-              value={status}
-              onValueChange={(v) => setStatus(v as FeasibilityStatus)}
-              placeholder="Select"
-              options={STATUS_OPTS}
-              ariaLabel="Feasibility status"
-            />
+            <div className="flex h-[42px] items-center gap-2 rounded-[10px] border border-hairline bg-surface-soft px-3">
+              <Chip
+                label={FEASIBILITY_STATUS_LABELS[derivedStatus]}
+                tone={FEASIBILITY_STATUS_COLORS[derivedStatus]}
+              />
+              <span className="ml-auto text-[9.5px] font-black uppercase tracking-[0.1em] text-ink-subtle">
+                Auto
+              </span>
+            </div>
           </Field>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+        <div className="grid grid-cols-3 gap-4 max-lg:grid-cols-2 max-md:grid-cols-1">
           <Field id="feas-actions-list" label="Actions List">
             <NotesField
               id="feas-actions-list"
@@ -279,6 +298,15 @@ export function FeasibilityReviewWorkspace({
               placeholder="Actions to take before costing"
               value={actionsList}
               onChange={setActionsList}
+            />
+          </Field>
+          <Field id="feas-notes" label="Notes">
+            <NotesField
+              id="feas-notes"
+              rows={2}
+              placeholder="General remarks"
+              value={notes}
+              onChange={setNotes}
             />
           </Field>
           <Field label="Attachments" labelOnly>
@@ -293,19 +321,30 @@ export function FeasibilityReviewWorkspace({
       </SectionCard>
 
       {/* ── Footer ─────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center justify-end gap-2.5 border-t border-hairline pt-4">
+      <div className="flex flex-wrap items-center justify-end gap-3 border-t border-hairline pt-4">
+        {allDone && (
+          <span className="text-[12.5px] font-semibold text-[#16a34a]">
+            All checks Done — saving approves this enquiry for costing.
+          </span>
+        )}
         <button
           type="button"
           onClick={onSave}
           disabled={saving}
           className="inline-flex items-center gap-2 rounded-pill px-5 py-2.5 text-[14px] text-white transition-opacity disabled:opacity-50"
           style={{
-            background: "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
+            background: allDone
+              ? "linear-gradient(135deg, #16a34a, #12813b)"
+              : "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
             fontWeight: 800,
           }}
         >
-          {saving && <Loader2 size={14} style={{ animation: "spinFast 0.8s linear infinite" }} />}
-          Save Review
+          {saving ? (
+            <Loader2 size={14} style={{ animation: "spinFast 0.8s linear infinite" }} />
+          ) : allDone ? (
+            <CircleCheck size={16} />
+          ) : null}
+          {allDone ? "Approve · Proceed to Costing" : "Save Review"}
         </button>
       </div>
     </div>
