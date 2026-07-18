@@ -34,7 +34,7 @@ export function TagsInput({ id = "tags-input", value, onChange, placeholder, max
   return (
     <div
       className="nt-input flex min-w-0 flex-wrap items-center gap-1.5"
-      style={{ padding: "10px 12px", minHeight: 56 }}
+      style={{ padding: "6px 12px", minHeight: 44 }}
       onClick={() => document.getElementById(id)?.focus()}
     >
       {value.map((t, i) => (
