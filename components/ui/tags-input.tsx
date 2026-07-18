@@ -33,7 +33,7 @@ export function TagsInput({ id = "tags-input", value, onChange, placeholder, max
 
   return (
     <div
-      className="nt-input flex flex-wrap items-center gap-1.5"
+      className="nt-input flex min-w-0 flex-wrap items-center gap-1.5"
       style={{ padding: "10px 12px", minHeight: 56 }}
       onClick={() => document.getElementById(id)?.focus()}
     >
@@ -66,7 +66,7 @@ export function TagsInput({ id = "tags-input", value, onChange, placeholder, max
           else if (e.key === "Backspace" && draft === "" && value.length > 0) removeAt(value.length - 1);
         }}
         placeholder={placeholder ?? (value.length === 0 ? "Type a tag and press Enter or comma to add" : "Add another tag")}
-        className="min-w-[180px] flex-1 bg-transparent outline-none"
+        className="min-w-[64px] flex-1 bg-transparent outline-none"
         style={{ fontSize: 15, fontWeight: 600, color: "var(--color-ink-strong)" }}
       />
     </div>

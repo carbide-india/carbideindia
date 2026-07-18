@@ -736,7 +736,7 @@ export function KycForm({
 
         {/* GSTIN · Company Name · Assign Sales Person · Export · Grade · Tags —
             one line. GSTIN sits first and auto-fetches the company details. */}
-        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.7fr)_minmax(0,0.55fr)_minmax(0,0.9fr)] gap-3 max-xl:grid-cols-3 max-md:grid-cols-2">
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,0.95fr)_minmax(0,0.65fr)_minmax(0,0.55fr)_minmax(0,1.1fr)] gap-3 max-xl:grid-cols-3 max-md:grid-cols-2">
           <Field id="kyc-gstin" label="GSTIN">
             <Controller
               control={control}
@@ -862,7 +862,7 @@ export function KycForm({
                   id="kyc-tags"
                   value={field.value ?? []}
                   onChange={field.onChange}
-                  placeholder="e.g. Mining, Defense, Cutting"
+                  placeholder="e.g. Mining, Defense"
                 />
               )}
             />
