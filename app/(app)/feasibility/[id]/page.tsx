@@ -39,25 +39,38 @@ export default async function FeasibilityReviewPage({
 
   return (
     <div className="mx-auto w-full max-w-[1400px]">
-      <Link
-        href={"/feasibility" as Route}
-        className="mb-3 inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink-subtle transition-colors hover:text-brand"
-      >
-        <ArrowLeft className="h-[15px] w-[15px]" /> Feasibility Queue
-      </Link>
-
       <header
-        className="mb-5 rounded-section border-2 border-[#2b303b] bg-surface-card px-6 py-4"
+        className="relative mb-5 rounded-section border-2 border-[#2b303b] bg-surface-card px-6 py-4"
         style={{ boxShadow: "0 6px 20px -10px rgba(15,23,42,0.22)" }}
       >
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        {/* Back to queue - lives inside the header, in the empty left gutter, so
+            it wastes no vertical space and keeps the identity centered. */}
+        <Link
+          href={"/feasibility" as Route}
+          className="group absolute left-5 top-1/2 hidden -translate-y-1/2 items-center gap-2 rounded-xl border-2 border-[#c7cae6] bg-surface-card px-[18px] py-2.5 text-[14.5px] font-extrabold text-ink-soft shadow-sm transition-all hover:-translate-y-1/2 hover:border-brand hover:text-brand hover:shadow-md lg:inline-flex"
+        >
+          <ArrowLeft
+            className="h-[18px] w-[18px] transition-transform group-hover:-translate-x-0.5"
+            strokeWidth={2.6}
+          />
+          Feasibility Queue
+        </Link>
+        {/* Compact back link for narrow screens (absolute button would overlap). */}
+        <Link
+          href={"/feasibility" as Route}
+          className="mb-2 inline-flex items-center gap-1.5 text-[13px] font-bold text-ink-subtle transition-colors hover:text-brand lg:hidden"
+        >
+          <ArrowLeft className="h-[15px] w-[15px]" strokeWidth={2.6} /> Feasibility Queue
+        </Link>
+
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-center">
           <span className="font-mono text-[24px] font-black leading-none text-[#3f3f94]">{header.smNumber}</span>
           <Chip label={INQUIRY_PRIORITY_LABELS[header.priority]} tone={PRIORITY_TONES[header.priority]} />
           <span className="text-[22px] font-black leading-none tracking-tight text-ink-strong">
             {header.clientName}
           </span>
         </div>
-        <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[13.5px] font-medium text-ink-soft">
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-center text-[13.5px] font-medium text-ink-soft">
           {inquiry.productDescription && (
             <span className="font-bold text-ink-strong">{inquiry.productDescription}</span>
           )}

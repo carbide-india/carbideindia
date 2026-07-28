@@ -256,7 +256,9 @@ export function FeasibilityReviewWorkspace({
             />
           </Field>
           <Field label="Feasibility Status" labelOnly>
-            <div className="flex h-[42px] items-center gap-2 rounded-[10px] border border-hairline bg-surface-soft px-3">
+            {/* Read-only (auto-derived) but boxed with .nt-input so its height,
+                radius and border match the Select fields beside it exactly. */}
+            <div className="nt-input flex items-center gap-2">
               <Chip
                 label={FEASIBILITY_STATUS_LABELS[derivedStatus]}
                 tone={FEASIBILITY_STATUS_COLORS[derivedStatus]}
@@ -287,7 +289,7 @@ export function FeasibilityReviewWorkspace({
               onChange={setNotes}
             />
           </Field>
-          <Field label="Attachments" labelOnly>
+          <Field label="Attachments" labelOnly className="h-full">
             <AttachmentsField
               attachments={attachments}
               uploading={uploading}
@@ -343,7 +345,7 @@ function AttachmentsField({
 }) {
   const ref = React.useRef<HTMLInputElement>(null);
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex h-full flex-1 flex-col gap-2">
       {attachments.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {attachments.map((a) => (
@@ -387,7 +389,7 @@ function AttachmentsField({
         type="button"
         onClick={() => ref.current?.click()}
         disabled={uploading > 0}
-        className="inline-flex h-[42px] w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[#c9c9ea] bg-white text-[13px] font-bold text-[#3f3f94] transition hover:border-brand disabled:opacity-60"
+        className="inline-flex min-h-[42px] w-full flex-1 items-center justify-center gap-2 rounded-lg border border-dashed border-[#c9c9ea] bg-white text-[13px] font-bold text-[#3f3f94] transition hover:border-brand disabled:opacity-60"
       >
         {uploading > 0 ? (
           <Loader2 size={15} style={{ animation: "spinFast 0.8s linear infinite" }} />

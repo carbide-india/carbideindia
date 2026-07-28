@@ -175,7 +175,9 @@ export function FeasibilityChecksBoard({
         </div>
 
         <DragOverlay dropAnimation={null}>
-          {activeItem ? <CheckCard item={activeItem} floating /> : null}
+          {activeItem ? (
+            <CheckCard item={activeItem} tone={RECHECK_STATE_TONES[activeItem.value]} floating />
+          ) : null}
         </DragOverlay>
       </DndContext>
 
@@ -213,12 +215,15 @@ function StatusColumn({
     <div
       ref={setNodeRef}
       className={cn(
-        "flex min-w-[150px] flex-1 flex-col rounded-2xl border bg-white transition-colors duration-150",
-        isOver ? "shadow-[0_8px_24px_rgba(0,0,0,0.08)]" : "shadow-sm",
+        "flex min-w-[150px] flex-1 flex-col rounded-2xl bg-white transition-all duration-150",
+        isOver ? "shadow-[0_10px_28px_rgba(0,0,0,0.12)]" : "shadow-sm",
       )}
       style={{
-        borderColor: isOver ? fill(tone) : "var(--color-hairline, #e6e6f0)",
-        borderWidth: isOver ? 2 : 1,
+        borderStyle: "solid",
+        borderWidth: isOver ? 3 : 2,
+        borderColor: isOver
+          ? fill(tone)
+          : `color-mix(in srgb, ${fill(tone)} 55%, #ffffff)`,
       }}
     >
       {/* Header */}
@@ -253,12 +258,18 @@ function StatusColumn({
         style={isOver ? { background: lightBg(tone) } : undefined}
       >
         {items.length === 0 ? (
-          <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-[#e6e6f0] px-2 py-6 text-center text-[11px] font-semibold text-ink-subtle">
+          <div
+            className="flex flex-1 items-center justify-center rounded-xl border-2 border-dashed px-2 py-6 text-center text-[11px] font-bold"
+            style={{
+              borderColor: `color-mix(in srgb, ${fill(tone)} 45%, #ffffff)`,
+              color: `color-mix(in srgb, ${deep(tone)} 70%, #8b8ba3)`,
+            }}
+          >
             Drop a check here
           </div>
         ) : (
           items.map((it) => (
-            <DraggableCard key={it.key} item={it} dimmed={draggingKey === it.key} />
+            <DraggableCard key={it.key} item={it} tone={tone} dimmed={draggingKey === it.key} />
           ))
         )}
       </div>
@@ -267,7 +278,7 @@ function StatusColumn({
 }
 
 /* ── Draggable wrapper ─────────────────────────────────────────────────── */
-function DraggableCard({ item, dimmed }: { item: CheckItem; dimmed: boolean }) {
+function DraggableCard({ item, tone, dimmed }: { item: CheckItem; tone: string; dimmed: boolean }) {
   const { setNodeRef, listeners, attributes, isDragging } = useDraggable({ id: CARD(item.key) });
   return (
     <div
@@ -276,28 +287,44 @@ function DraggableCard({ item, dimmed }: { item: CheckItem; dimmed: boolean }) {
       {...attributes}
       className={cn("touch-none outline-none", (isDragging || dimmed) && "opacity-40")}
     >
-      <CheckCard item={item} />
+      <CheckCard item={item} tone={tone} />
     </div>
   );
 }
 
 /* ── Card visual ───────────────────────────────────────────────────────── */
-function CheckCard({ item, floating = false }: { item: CheckItem; floating?: boolean }) {
+function CheckCard({
+  item,
+  tone,
+  floating = false,
+}: {
+  item: CheckItem;
+  tone: string;
+  floating?: boolean;
+}) {
   const hasNote = Boolean(item.notes && item.notes.trim());
   return (
     <div
       className={cn(
-        "group flex cursor-grab select-none items-start gap-2 rounded-xl border border-[#e6e6f0] bg-white px-3 py-2.5 transition-shadow active:cursor-grabbing",
+        "group flex cursor-grab select-none items-start gap-2 rounded-xl px-3 py-2.5 transition-all active:cursor-grabbing",
         floating
-          ? "rotate-[1.5deg] cursor-grabbing shadow-[0_14px_32px_rgba(63,63,148,0.22)]"
-          : "hover:shadow-md",
+          ? "rotate-[1.5deg] cursor-grabbing shadow-[0_14px_32px_rgba(63,63,148,0.28)]"
+          : "shadow-sm hover:-translate-y-px hover:shadow-md",
       )}
+      style={{
+        borderStyle: "solid",
+        borderWidth: 2,
+        borderColor: `color-mix(in srgb, ${fill(tone)} 50%, #ffffff)`,
+        borderLeftWidth: 5,
+        borderLeftColor: fill(tone),
+        background: `color-mix(in srgb, ${lightBg(tone)} 55%, #ffffff)`,
+      }}
     >
-      <GripVertical className="mt-0.5 h-4 w-4 shrink-0 text-ink-subtle" />
+      <GripVertical className="mt-0.5 h-4 w-4 shrink-0" style={{ color: fill(tone) }} />
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[13px] font-bold text-ink-strong">{item.label}</div>
+        <div className="truncate text-[13.5px] font-extrabold text-ink-strong">{item.label}</div>
         {hasNote ? (
-          <div className="mt-0.5 flex items-center gap-1 text-[11px] text-ink-subtle">
+          <div className="mt-0.5 flex items-center gap-1 text-[11px] font-semibold text-ink-soft">
             <Paperclip className="h-3 w-3 shrink-0" />
             <span className="truncate">{item.notes}</span>
           </div>

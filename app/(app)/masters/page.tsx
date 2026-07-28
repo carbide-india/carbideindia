@@ -12,5 +12,5 @@ export const metadata = { title: "Masters - Carbide India" };
  */
 export default async function MastersPage() {
   await requireAdmin();
-  redirect("/items" as Route);
+  redirect("/masters/product_master" as Route);
 }

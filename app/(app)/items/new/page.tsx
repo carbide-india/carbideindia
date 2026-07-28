@@ -31,7 +31,7 @@ export default async function NewItemPage() {
           sizes={sizes}
           shapeProfiles={shapeProfiles.byId}
           title="New Product"
-          backHref={"/items" as Route}
+          backHref={"/masters/product_master" as Route}
           backLabel="Product Master"
         />
       </div>

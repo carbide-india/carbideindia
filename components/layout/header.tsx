@@ -5,6 +5,7 @@ import { UserMenuServer } from "@/components/header/user-menu-server";
 import { NewTaskTrigger } from "@/components/header/new-task-trigger";
 import { AdminPill } from "@/components/header/admin-pill";
 import { GlobalSearch } from "@/components/header/global-search";
+import { HeaderModuleTitle } from "@/components/layout/header-module-title";
 import { getCurrentEmployee } from "@/lib/auth/current";
 
 /**
@@ -70,6 +71,11 @@ export async function DashboardHeader({
               nothing ever overlaps. */}
           <div className="flex items-center gap-2.5 2xl:gap-3 shrink-0 max-xl:ml-auto max-md:gap-1.5">
             <GlobalSearch />
+            {/* Module title - just after the search, before the action icons.
+                Hidden on narrower widths so the action cluster never overflows. */}
+            <span className="max-2xl:hidden">
+              <HeaderModuleTitle />
+            </span>
             <NewTaskTrigger />
             {isAdmin && (
               <span className="max-2xl:hidden">

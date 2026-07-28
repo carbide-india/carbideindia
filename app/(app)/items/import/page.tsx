@@ -14,7 +14,7 @@ export default async function ItemImportPage() {
   const lookups = await loadLookups(specRefKinds(itemImportSpec.fields));
   return (
     <main className="mx-auto max-w-[1100px] px-8 max-md:px-4 pt-8 pb-16">
-      <Link href={"/items" as Route} className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink-subtle hover:text-ink-strong">
+      <Link href={"/masters/product_master" as Route} className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink-subtle hover:text-ink-strong">
         <ArrowLeft size={14} /> Item Master
       </Link>
       <h1 className="text-display-lg text-ink-strong mt-3">Bulk import - Items</h1>

@@ -8,6 +8,7 @@ import {
   PanelRightOpen,
   Building2,
   ArrowUpRight,
+  ArrowLeft,
   Factory,
 } from "lucide-react";
 import { COSTING_TYPE_LABELS } from "@/db/enums";
@@ -15,14 +16,12 @@ import { formatDate, formatInr } from "@/lib/format";
 import type { ItemDetail } from "@/lib/queries/items";
 import type { AuditEntry } from "@/lib/queries/audit";
 import type { ItemDocument } from "@/lib/queries/item-documents";
-import type { ItemStageCounts } from "@/lib/queries/item-stage";
 import type {
   ItemWhereUsed,
   RelatedRecord,
   CostHistoryRow,
   QuotePriceRow,
 } from "@/lib/queries/item-where-used";
-import { Stepper } from "@/components/erp/stepper";
 import { StatusPill, ITEM_STATUS_PILL, type PillTone } from "@/components/erp/status-pill";
 import { DetailGrid, type DetailField } from "@/components/erp/detail-grid";
 import { ContextDrawer } from "@/components/erp/context-drawer";
@@ -52,10 +51,7 @@ interface ItemWorkspaceProps {
   item: ItemDetail;
   auditEntries: AuditEntry[];
   documents: ItemDocument[];
-  counts: ItemStageCounts;
   whereUsed: ItemWhereUsed;
-  /** Furthest pipeline stage index (from deriveItemStage on the server). */
-  stageIndex: number;
   isAdmin: boolean;
 }
 
@@ -103,9 +99,7 @@ export function ItemWorkspace({
   item,
   auditEntries,
   documents,
-  counts,
   whereUsed,
-  stageIndex,
   isAdmin,
 }: ItemWorkspaceProps) {
   const [tab, setTab] = React.useState<TabKey>("overview");
@@ -117,12 +111,6 @@ export function ItemWorkspace({
     item.altUom && item.altUomConversion
       ? `${item.altUom} (1 = ${item.altUomConversion} ${item.uom ?? "base"})`
       : item.altUom;
-
-  // Money summary - latest chosen cost + latest quote unit price.
-  const latestCost = whereUsed.costHistory.find((c) => c.isChosen) ?? whereUsed.costHistory[0];
-  const latestCostValue = latestCost ? inr(latestCost.finalCostPerPiece) : null;
-  const latestQuote = whereUsed.quotePrices[0];
-  const latestQuoteValue = latestQuote ? inr(latestQuote.unitPrice) : null;
 
   const specFields: DetailField[] = [
     { label: "Shape", value: item.shapeName },
@@ -290,37 +278,26 @@ export function ItemWorkspace({
 
   return (
     <div className="mx-auto w-full max-w-[1600px]">
-      {/* Breadcrumb */}
-      <nav className="mb-4 flex items-center gap-1.5 text-[13px] text-ink-subtle">
-        <Link href={"/items" as Route} className="font-semibold transition hover:text-[#3f3f94]">
-          Product
-        </Link>
-        <span className="text-ink-subtle">›</span>
-        <Link href={"/items" as Route} className="font-semibold transition hover:text-[#3f3f94]">
+      {/* Back to Product Master (replaces the breadcrumb) */}
+      <div className="mb-4">
+        <Link
+          href={"/masters/product_master" as Route}
+          className="group inline-flex h-9 items-center gap-2 rounded-lg border border-hairline bg-surface-card px-3.5 text-[13px] font-bold text-ink-soft transition-colors hover:border-brand hover:text-brand"
+        >
+          <ArrowLeft size={16} strokeWidth={2.6} className="transition-transform group-hover:-translate-x-0.5" />
           Product Master
         </Link>
-        <span className="text-ink-subtle">›</span>
-        <span className="min-w-0 truncate font-semibold text-ink-strong" style={{ fontFamily: "var(--font-mono)" }}>
-          {item.itemCode}
-        </span>
-      </nav>
-
-      {/* Lifecycle stepper */}
-      <div
-        className="mb-6 overflow-hidden rounded-2xl border border-hairline bg-surface-card p-4"
-        style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}
-      >
-        <Stepper current={stageIndex} className="max-w-full" />
       </div>
 
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-        <div className="flex min-w-0 flex-1 flex-col gap-6">
-          <div className="rounded-2xl border border-hairline bg-surface-card p-6 max-md:p-4" style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}>
-            {header}
-          </div>
+      <div className="flex flex-col gap-6">
+        {/* Full-width identity card - centered hero so the product code reads big
+            and never cuts off. */}
+        <div className="rounded-2xl border border-hairline bg-surface-card p-8 max-md:p-5" style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}>
+          {header}
+        </div>
 
-          {/* Tab strip */}
-          <div className="rounded-2xl border border-hairline bg-surface-card" style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}>
+        {/* Tab strip */}
+        <div className="rounded-2xl border border-hairline bg-surface-card" style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}>
             <div role="tablist" aria-label="Item sections" className="flex items-center gap-1 overflow-x-auto border-b border-hairline px-3">
               {TABS.map((t) => {
                 const active = t.key === tab;
@@ -346,15 +323,6 @@ export function ItemWorkspace({
             <div className="p-6 max-md:p-4">{tabBody[tab]}</div>
           </div>
         </div>
-
-        {/* Item summary rail - identity · money · reach. */}
-        <SummaryRail
-          reach={whereUsed}
-          latestCost={latestCostValue}
-          costType={latestCost?.costingType ?? null}
-          latestQuote={latestQuoteValue}
-        />
-      </div>
 
       {/* Peek drawer - mirrors the top tabs (condensed). */}
       <ContextDrawer
@@ -432,35 +400,35 @@ function WorkspaceHeader({
   onPeek: () => void;
 }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-5">
-      <div className="min-w-0">
-        <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-ink-subtle">
-          Item Master · Record
-        </div>
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="font-mono text-[38px] leading-none tracking-tight text-ink-strong break-all">
-            {item.itemCode}
-          </h1>
-          <StatusPill tone={statusPill.tone}>{statusPill.label}</StatusPill>
-          {!item.isActive && <StatusPill tone="slate">Inactive</StatusPill>}
-        </div>
-        <p className="mt-3 text-[15px] text-ink-muted">
-          {item.seq && (
-            <>
-              <span className="font-semibold text-ink-soft">#{item.seq}</span>
-              <span className="mx-2 text-ink-subtle">·</span>
-            </>
-          )}
-          {item.shapeName ?? "-"}
-          {item.gradeName && (
-            <>
-              <span className="mx-2 text-ink-subtle">·</span>
-              {item.gradeName}
-            </>
-          )}
-        </p>
+    <div className="flex flex-col items-center text-center">
+      <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-ink-subtle">
+        Item Master · Record
       </div>
-      <div className="flex items-center gap-2.5">
+      {/* Prominent, centered product code so the user always knows which spec
+          they're on. Bigger font; wraps (never cuts off) on very long codes. */}
+      <h1 className="mt-3 max-w-full break-all font-mono text-[46px] font-bold leading-[1.08] tracking-tight text-[#3f3f94] max-lg:text-[36px] max-md:text-[26px]">
+        {item.itemCode}
+      </h1>
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+        <StatusPill tone={statusPill.tone}>{statusPill.label}</StatusPill>
+        {!item.isActive && <StatusPill tone="slate">Inactive</StatusPill>}
+      </div>
+      <p className="mt-3 text-[15px] text-ink-muted">
+        {item.seq && (
+          <>
+            <span className="font-semibold text-ink-soft">#{item.seq}</span>
+            <span className="mx-2 text-ink-subtle">·</span>
+          </>
+        )}
+        {item.shapeName ?? "-"}
+        {item.gradeName && (
+          <>
+            <span className="mx-2 text-ink-subtle">·</span>
+            {item.gradeName}
+          </>
+        )}
+      </p>
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5">
         <button
           type="button"
           onClick={onPeek}
@@ -484,71 +452,6 @@ function WorkspaceHeader({
           />
         )}
       </div>
-    </div>
-  );
-}
-
-/* ── Summary rail ──────────────────────────────────────────────────────── */
-
-function SummaryRail({
-  reach,
-  latestCost,
-  costType,
-  latestQuote,
-}: {
-  reach: ItemWhereUsed;
-  latestCost: string | null;
-  costType: string | null;
-  latestQuote: string | null;
-}) {
-  return (
-    <aside className="w-full shrink-0 lg:w-[300px]">
-      <div
-        className="flex flex-col gap-5 rounded-2xl border border-hairline bg-surface-card p-5 lg:sticky lg:top-4"
-        style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}
-      >
-        <div>
-          <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-subtle">
-            Item Summary
-          </div>
-        </div>
-        <RailStat
-          label="Latest cost"
-          value={latestCost ?? "-"}
-          sub={costType ? costType.replace("_", "-") : null}
-        />
-        <RailStat label="Latest quote" value={latestQuote ?? "-"} />
-        <div className="border-t border-hairline pt-4">
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <RailCount n={reach.reach.customerCount} label="Customers" />
-            <RailCount n={reach.reach.enquiryCount} label="Enquiries" />
-            <RailCount n={reach.reach.salesOrderCount} label="Orders" />
-          </div>
-        </div>
-      </div>
-    </aside>
-  );
-}
-
-function RailStat({ label, value, sub }: { label: string; value: string; sub?: string | null }) {
-  return (
-    <div>
-      <div className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-subtle">
-        {label}
-      </div>
-      <div className="mt-1 font-mono text-[20px] font-bold tabular-nums text-ink-strong">
-        {value}
-      </div>
-      {sub && <div className="text-[12px] text-ink-subtle">{sub}</div>}
-    </div>
-  );
-}
-
-function RailCount({ n, label }: { n: number; label: string }) {
-  return (
-    <div>
-      <div className="font-mono text-[18px] font-bold tabular-nums text-ink-strong">{n}</div>
-      <div className="text-[11px] text-ink-subtle">{label}</div>
     </div>
   );
 }

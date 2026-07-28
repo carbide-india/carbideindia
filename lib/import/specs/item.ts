@@ -10,7 +10,7 @@ const costingEnum = COSTING_TYPES.map((v) => ({ value: v, label: COSTING_TYPE_LA
  * the internal item code is generated server-side by createItem.
  */
 export const itemImportSpec: ImportSpec = {
-  formKey: "item", title: "Item", basePath: "/items",
+  formKey: "item", title: "Item", basePath: "/masters/product_master",
   fields: [
     { key: "shapeId", header: "Shape", type: "ref", ref: { kind: "shape", allowCreate: true }, example: "Round" },
     { key: "internalGradeId", header: "Internal Grade", type: "ref", ref: { kind: "grade", allowCreate: true }, example: "CIF06" },

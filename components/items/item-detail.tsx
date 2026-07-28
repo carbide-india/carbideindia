@@ -24,7 +24,7 @@ export function ItemDetail({ item, auditEntries, documents, isAdmin }: Props) {
     <div className="flex flex-col gap-8">
       {/* ── Back link ──────────────────────────────────────────────── */}
       <div>
-        <BackLink href="/items" label="Item Master" />
+        <BackLink href="/masters/product_master" label="Item Master" />
       </div>
 
       {/* ── Header ─────────────────────────────────────────────────── */}

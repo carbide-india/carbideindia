@@ -36,7 +36,6 @@ import {
   Field,
   MiniField,
   SectionCard,
-  Segmented,
 } from "@/components/inquiries/form-field";
 import type { EmployeeOption } from "@/lib/queries/employees";
 import type { ClientOption, ClientAutofill } from "@/lib/queries/clients";
@@ -134,11 +133,6 @@ const SAMPLE_STATUS_OPTIONS = SAMPLE_STATUSES.map((s) => ({
   value: s,
   label: SAMPLE_STATUS_LABELS[s],
 }));
-
-const SM_FOLDER_OPTIONS = [
-  { value: "not_done" as const, label: "Not Done" },
-  { value: "done" as const, label: "Done" },
-];
 
 /** The three location-tracked stages - Costing is its own section with no
  *  location (it's in-house by definition on Manan's sheet). */
@@ -534,8 +528,8 @@ export function SampleForm({
               className="rounded-xl border border-hairline p-3"
             >
               {/* Everything on one line - name · Status · Location · Completed · Notes. */}
-              <div className="grid grid-cols-[96px_150px_minmax(120px,0.8fr)_170px_minmax(170px,1.3fr)] items-end gap-3 max-xl:grid-cols-2 max-sm:grid-cols-1">
-                <div className="flex items-end pb-2 text-[14px] font-bold text-ink-strong max-xl:col-span-2 max-sm:col-span-1">
+              <div className="grid grid-cols-[96px_160px_160px_160px_minmax(200px,1fr)] items-start gap-3 max-xl:grid-cols-2 max-sm:grid-cols-1">
+                <div className="flex items-start pt-[30px] text-[14px] font-bold text-ink-strong max-xl:col-span-2 max-sm:col-span-1 max-xl:pt-0">
                   {row.label}
                 </div>
                 <MiniField label="Status">
@@ -653,27 +647,29 @@ export function SampleForm({
           />
         </Field>
 
-          <Field label="Reports in SM Folder">
-            <Controller
-              control={control}
-              name="reportsInSmFolder"
-              render={({ field }) => (
-                <Segmented
-                  options={SM_FOLDER_OPTIONS}
-                  value={field.value ? "done" : "not_done"}
-                  onChange={(v) => field.onChange(v === "done")}
-                  allowClear={false}
-                  ariaLabel="Reports in SM folder"
-                />
-              )}
-            />
-          </Field>
           <Field id="smp-processed" label="Samples Processed Date">
             <input
               id="smp-processed"
               type="date"
               className="nt-input"
               {...register("processedDate")}
+            />
+          </Field>
+          <Field id="smp-sm-folder" label="Reports in SM Folder">
+            <Controller
+              control={control}
+              name="reportsInSmFolder"
+              render={({ field }) => (
+                <select
+                  id="smp-sm-folder"
+                  className="nt-input"
+                  value={field.value ? "yes" : "no"}
+                  onChange={(e) => field.onChange(e.target.value === "yes")}
+                >
+                  <option value="no">No</option>
+                  <option value="yes">Yes</option>
+                </select>
+              )}
             />
           </Field>
         </div>

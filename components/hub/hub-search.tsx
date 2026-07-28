@@ -21,7 +21,7 @@ export function HubSearch() {
       <button
         type="button"
         onClick={openPalette}
-        className="group flex h-[50px] w-full max-w-[580px] items-center gap-3 rounded-xl border border-[#dfe1e6] bg-white px-4 text-left transition-all duration-200 hover:border-[#c9c9ea] hover:shadow-[0_2px_10px_rgba(63,63,148,0.10)] focus-visible:border-[#3f3f94] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3f3f94]/25"
+        className="group flex h-[50px] w-full max-w-[580px] items-center gap-3 rounded-xl border-[1.5px] border-[#c9c9ea] bg-[#f7f7fd] px-4 text-left shadow-[inset_0_1px_3px_rgba(63,63,148,0.07)] transition-all duration-200 hover:border-[#3f3f94] hover:bg-white hover:shadow-[0_2px_12px_rgba(63,63,148,0.15)] focus-visible:border-[#3f3f94] focus-visible:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3f3f94]/25"
         aria-label="Open search"
       >
         <Search className="h-[20px] w-[20px] shrink-0 text-[#9aa0ab] transition-colors group-hover:text-[#3f3f94]" />

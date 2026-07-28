@@ -263,7 +263,7 @@ export function ItemForm({
           : `Item ${res.itemCode} created`,
         type: "success",
       });
-      router.push("/items" as Route);
+      router.push("/masters/product_master" as Route);
     });
   });
 

@@ -1,26 +1,15 @@
-import { ItemTable } from "@/components/items/item-table";
-import { requireUser } from "@/lib/auth/current";
-import { listItems } from "@/lib/queries/items";
-import { MastersModuleShell } from "@/components/masters/masters-module-shell";
-import { UserMenuServer } from "@/components/header/user-menu-server";
+import { redirect } from "next/navigation";
+import type { Route } from "next";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Product Master (the internal Item Master), rendered inside the Masters module
- * shell (Carbide sidebar + indigo header). The page header, search and actions
- * all live in ItemTable so the search box sits beside the title.
+ * Legacy Item Master list URL. The canonical Product Master list now lives at
+ * `/masters/product_master` (inside the Masters module layout, so switching to it
+ * is an instant client nav rather than a full shell remount). This route stays as
+ * a redirect so every existing `/items` back-link / bookmark keeps working. Item
+ * detail / new / edit still live at `/items/[id]`, `/items/new`, `/items/[id]/edit`.
  */
-export default async function ItemsPage() {
-  const me = await requireUser();
-
-  const rows = await listItems();
-
-  return (
-    <MastersModuleShell userMenu={<UserMenuServer />}>
-      <div className="mx-auto w-full max-w-[1600px]">
-        <ItemTable rows={rows} isAdmin={me.isAdmin} />
-      </div>
-    </MastersModuleShell>
-  );
+export default function ItemsIndexRedirect() {
+  redirect("/masters/product_master" as Route);
 }

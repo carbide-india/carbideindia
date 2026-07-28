@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { Fragment, useState } from "react";
 import type { Route } from "next";
 import {
-  Bell,
   HelpCircle,
   FileText,
   FilePlus2,
@@ -24,6 +23,7 @@ import {
 import type { ReactNode } from "react";
 import { HubSearch } from "@/components/hub/hub-search";
 import { ModuleTitleBadge } from "@/components/layout/module-title-badge";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { draftKindForSegment, FORM_DRAFT_META } from "@/lib/drafts/form-drafts";
 import { customEditorForSegment } from "@/lib/custom-lists/registry";
 import { cn } from "@/lib/utils";
@@ -232,16 +232,9 @@ export function EnquiryModuleShell({
     <div className="flex min-h-screen flex-col bg-[#f4f5f7]">
       {/* ── Top header bar (full width) ─────────────────────────── */}
       <header className="sticky top-0 z-40 flex h-[60px] shrink-0 items-center gap-4 border-b border-[#e5e7eb] bg-white px-4">
-        {/* Left zone - toggle, Back-to-Forms, Hub, then the module title. On
-            form pages it gets extra width + a right buffer so a long title like
-            "CLIENT KYC" never collides with the centred search; on the launchpad
-            (no sidebar) it stays tight so "FORMS" hugs the Hub button. */}
-        <div
-          className={cn(
-            "flex min-w-0 items-center gap-3",
-            showSidebar ? "flex-[1.4] pr-6" : "flex-1",
-          )}
-        >
+        {/* Left zone - toggle, Back-to-Forms, Hub. The module title now sits to
+            the RIGHT of the search box (after HubSearch, before the icons). */}
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           {showSidebar && (
             <button
               type="button"
@@ -280,21 +273,19 @@ export function EnquiryModuleShell({
             <LayoutGrid className="h-[19px] w-[19px]" strokeWidth={2.4} />
             Hub
           </Link>
-          <ModuleTitleBadge title={pageTitle} align={showSidebar ? "center" : "start"} />
         </div>
 
         {/* Middle zone - centered search. */}
         <HubSearch />
 
+        {/* Module title - centered in the gap between the search and the icons. */}
+        <div className="flex flex-1 items-center justify-center">
+          <ModuleTitleBadge title={pageTitle} align="start" />
+        </div>
+
         {/* Right zone - actions. */}
-        <div className="flex flex-1 items-center justify-end gap-2.5">
-          <Link
-            href={"/inbox" as Route}
-            className="grid h-9 w-9 place-items-center rounded-full text-[#4b5563] transition hover:bg-[#efeffb] hover:text-[#3f3f94]"
-            aria-label="Notifications"
-          >
-            <Bell className="h-[18px] w-[18px]" />
-          </Link>
+        <div className="flex shrink-0 items-center justify-end gap-2.5">
+          <NotificationBell />
           <span
             title="Help - coming soon"
             className="grid h-9 w-9 cursor-default place-items-center rounded-full text-[#9aa0ab]"
@@ -312,11 +303,11 @@ export function EnquiryModuleShell({
         {showSidebar && (
           <aside
             className={cn(
-              "sticky top-[60px] h-[calc(100vh-60px)] shrink-0 overflow-hidden bg-white transition-[width] duration-300 ease-in-out",
-              collapsed ? "w-0 border-r-0" : "w-[248px] border-r border-[#e5e7eb]",
+              "sticky top-[60px] h-[calc(100vh-60px)] shrink-0 overflow-hidden border-r border-[#e5e7eb] bg-white transition-[width] duration-300 ease-in-out",
+              collapsed ? "w-[72px]" : "w-[248px]",
             )}
           >
-            <div className="flex h-full w-[248px] flex-col px-4 py-4">
+            <div className={cn("flex h-full flex-col py-4", collapsed ? "w-[72px] items-center px-2" : "w-[248px] px-4")}>
               {/* Big brand logo → hub, wordmark stacked beneath. Enlarged while
                   the surrounding spacing is tightened so the nav stays put. */}
               <Link
@@ -324,13 +315,15 @@ export function EnquiryModuleShell({
                 className="flex flex-col items-center gap-1 px-1"
                 aria-label="Carbide India hub"
               >
-                <img src="/brand/logo.png" alt="" className="h-24 w-auto" style={{ display: "block" }} />
-                <span className="text-[22px] font-extrabold leading-none tracking-tight text-[#3f3f94]">
-                  Carbide India
-                </span>
+                <img src="/brand/logo.png" alt="" className={cn("w-auto", collapsed ? "h-10" : "h-24")} style={{ display: "block" }} />
+                {!collapsed && (
+                  <span className="text-[22px] font-extrabold leading-none tracking-tight text-[#3f3f94]">
+                    Carbide India
+                  </span>
+                )}
               </Link>
 
-              <nav className="mt-4 flex flex-col gap-1.5">
+              <nav className="mt-4 flex w-full flex-col gap-1.5">
                 {nav.map((n, i) => {
                   const prev = nav[i - 1];
                   // A greyed divider separates each section (overview / create /
@@ -338,22 +331,25 @@ export function EnquiryModuleShell({
                   const showDivider =
                     i > 0 && !!n.group && !!prev?.group && n.group !== prev.group;
                   const isActive = n.ready && (n.active ? n.active(pathname) : false);
-                  const base =
-                    "flex h-[44px] items-center gap-3 rounded-lg px-3.5 text-[14px] transition";
+                  const base = cn(
+                    "flex h-[44px] items-center rounded-lg text-[14px] transition",
+                    collapsed ? "justify-center px-0" : "gap-3 px-3.5",
+                  );
                   return (
                     <Fragment key={n.label}>
                       {showDivider && <div className="my-2 h-[1.5px] rounded-full bg-[#c2c7d6]" />}
                       {!n.ready ? (
                         <span
-                          title="Coming soon"
+                          title={collapsed ? n.label : "Coming soon"}
                           className={`${base} cursor-default font-semibold text-[#b3b8c2]`}
                         >
                           <n.Icon className="h-[19px] w-[19px]" />
-                          {n.label}
+                          {!collapsed && n.label}
                         </span>
                       ) : (
                         <Link
                           href={n.href}
+                          title={collapsed ? n.label : undefined}
                           className={
                             isActive
                               ? `${base} bg-[#3f3f94] font-bold text-white shadow-[0_2px_8px_rgba(63,63,148,0.30)]`
@@ -361,14 +357,15 @@ export function EnquiryModuleShell({
                           }
                         >
                           <n.Icon className="h-[19px] w-[19px]" />
-                          {n.label}
+                          {!collapsed && n.label}
                         </Link>
                       )}
                     </Fragment>
                   );
                 })}
 
-                {bulkUpload && (
+                {/* Bulk-upload button carries a label, so only in the expanded rail. */}
+                {bulkUpload && !collapsed && (
                   <>
                     <div className="my-2 h-[1.5px] rounded-full bg-[#c2c7d6]" />
                     {bulkUpload}
@@ -376,13 +373,16 @@ export function EnquiryModuleShell({
                 )}
               </nav>
 
-              <div className="mt-auto flex flex-col gap-1.5">
+              <div className="mt-auto flex w-full flex-col gap-1.5">
                 <span
-                  title="Coming soon"
-                  className="flex h-[44px] cursor-default items-center gap-3 rounded-lg px-3.5 text-[14px] font-semibold text-[#9aa0ab]"
+                  title="Support - coming soon"
+                  className={cn(
+                    "flex h-[44px] cursor-default items-center rounded-lg text-[14px] font-semibold text-[#9aa0ab]",
+                    collapsed ? "justify-center px-0" : "gap-3 px-3.5",
+                  )}
                 >
                   <LifeBuoy className="h-[19px] w-[19px]" />
-                  Support
+                  {!collapsed && "Support"}
                 </span>
               </div>
             </div>

@@ -385,15 +385,20 @@ export function KycForm({
     if (bankSeeded.current) return;
     bankSeeded.current = true;
     if (bankFields.length === 0) {
-      appendBank({
-        isPrimary: true,
-        bankName: "",
-        accountNo: "",
-        ifsc: "",
-        branch: "",
-        accountHolder: "",
-        accountType: "",
-      });
+      // shouldFocus:false — this seed runs on mount; focusing the new row would
+      // scroll the page down to Bank Details instead of opening at the top.
+      appendBank(
+        {
+          isPrimary: true,
+          bankName: "",
+          accountNo: "",
+          ifsc: "",
+          branch: "",
+          accountHolder: "",
+          accountType: "",
+        },
+        { shouldFocus: false },
+      );
     }
   }, [bankFields.length, appendBank]);
 

@@ -87,7 +87,7 @@ const NAV: ReadonlyArray<RailGroup> = [
   },
   {
     label: "Product",
-    items: [{ href: "/items", label: "Item Master", Icon: Boxes }],
+    items: [{ href: "/masters/product_master", label: "Item Master", Icon: Boxes }],
   },
   {
     label: "Production",

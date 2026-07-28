@@ -1,4 +1,6 @@
 import Image from "next/image";
+import Link from "next/link";
+import type { Route } from "next";
 import { headers } from "next/headers";
 import { clientIpFromHeaders } from "@/lib/ip-gate";
 
@@ -28,8 +30,19 @@ export default async function AccessDeniedPage() {
       </h1>
       <p className="max-w-md text-sm text-neutral-500">
         This system is restricted to authorized Carbide India locations.
-        If you believe you should have access, contact your administrator.
+        Approved off-site users can still sign in below; if you believe you
+        should have access, contact your administrator.
       </p>
+
+      {/* Off-site owners with IP-bypass access sign in here, then the app opens
+          on any network. Non-bypass accounts still land back here after login. */}
+      <Link
+        href={"/login" as Route}
+        className="inline-flex items-center gap-2 rounded-lg bg-[#3F3F94] px-6 py-3 text-sm font-bold text-white shadow-[0_6px_16px_rgba(63,63,148,0.32)] transition hover:brightness-110"
+      >
+        Sign in
+      </Link>
+
       <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3">
         <p className="text-[11px] uppercase tracking-widest text-neutral-400">
           Your detected IP

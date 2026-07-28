@@ -83,7 +83,7 @@ export const MODULES: ModuleDef[] = [
     match: ["/masters", "/items", "/clients", "/job-cards"],
     items: [
       { href: "/masters" as Route, label: "Masters", Icon: Layers, adminOnly: true },
-      { href: "/items" as Route, label: "Item Master", Icon: Boxes },
+      { href: "/masters/product_master" as Route, label: "Item Master", Icon: Boxes },
       { href: "/clients" as Route, label: "Client Master", Icon: Building2, adminOnly: true },
       { href: "/job-cards" as Route, label: "Job Cards", Icon: ClipboardList },
     ],

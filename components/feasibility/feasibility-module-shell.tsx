@@ -5,7 +5,6 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { Fragment, useState, type ReactNode } from "react";
 import type { Route } from "next";
 import {
-  Bell,
   HelpCircle,
   LifeBuoy,
   ArrowLeft,
@@ -21,6 +20,7 @@ import {
 } from "lucide-react";
 import { HubSearch } from "@/components/hub/hub-search";
 import { ModuleTitleBadge } from "@/components/layout/module-title-badge";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { cn } from "@/lib/utils";
 
 /**
@@ -68,7 +68,7 @@ export function FeasibilityModuleShell({
     <div className="flex min-h-screen flex-col bg-[#f4f5f7]">
       {/* Top header */}
       <header className="sticky top-0 z-40 flex h-[60px] shrink-0 items-center gap-4 border-b border-[#e5e7eb] bg-white px-4">
-        <div className="flex min-w-0 flex-[1.4] items-center gap-3 pr-6">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}
@@ -96,19 +96,17 @@ export function FeasibilityModuleShell({
             <LayoutGrid className="h-[17px] w-[17px]" strokeWidth={2.4} />
             Hub
           </Link>
-          <ModuleTitleBadge title="Primary Feasibility" align="center" />
         </div>
 
         <HubSearch />
 
-        <div className="flex flex-1 items-center justify-end gap-2.5">
-          <Link
-            href={"/inbox" as Route}
-            className="grid h-9 w-9 place-items-center rounded-full text-[#4b5563] transition hover:bg-[#efeffb] hover:text-[#3f3f94]"
-            aria-label="Notifications"
-          >
-            <Bell className="h-[18px] w-[18px]" />
-          </Link>
+        {/* Module title - centered in the gap between the search and the icons. */}
+        <div className="flex flex-1 items-center justify-center">
+          <ModuleTitleBadge title="Primary Feasibility" align="start" />
+        </div>
+
+        <div className="flex shrink-0 items-center justify-end gap-2.5">
+          <NotificationBell />
           <span title="Help - coming soon" className="grid h-9 w-9 cursor-default place-items-center rounded-full text-[#9aa0ab]">
             <HelpCircle className="h-[18px] w-[18px]" />
           </span>
@@ -120,27 +118,31 @@ export function FeasibilityModuleShell({
       <div className="flex flex-1">
         <aside
           className={cn(
-            "sticky top-[60px] h-[calc(100vh-60px)] shrink-0 overflow-hidden bg-white transition-[width] duration-300 ease-in-out",
-            collapsed ? "w-0 border-r-0" : "w-[260px] border-r border-[#e5e7eb]",
+            "sticky top-[60px] h-[calc(100vh-60px)] shrink-0 overflow-hidden border-r border-[#e5e7eb] bg-white transition-[width] duration-300 ease-in-out",
+            collapsed ? "w-[72px]" : "w-[260px]",
           )}
         >
-          <div className="flex h-full w-[260px] flex-col px-4 py-4">
+          <div className={cn("flex h-full flex-col py-4", collapsed ? "w-[72px] items-center px-2" : "w-[260px] px-4")}>
             <Link href={"/hub" as Route} className="flex flex-col items-center gap-1 px-1" aria-label="Carbide India hub">
-              <img src="/brand/logo.png" alt="" className="h-24 w-auto" style={{ display: "block" }} />
-              <span className="text-[22px] font-extrabold leading-none tracking-tight text-[#3f3f94]">Carbide India</span>
+              <img src="/brand/logo.png" alt="" className={cn("w-auto", collapsed ? "h-10" : "h-24")} style={{ display: "block" }} />
+              {!collapsed && <span className="text-[22px] font-extrabold leading-none tracking-tight text-[#3f3f94]">Carbide India</span>}
             </Link>
 
-            <nav className="mt-4 flex flex-col gap-1.5">
+            <nav className="mt-4 flex w-full flex-col gap-1.5">
               {NAV.map((n, i) => {
                 const prev = NAV[i - 1];
                 const showDivider = i > 0 && !!prev && n.group !== prev.group;
                 const isActive = onQueue && activeStatus === n.status;
-                const base = "flex h-[42px] items-center gap-3 rounded-lg px-3.5 text-[13.5px] transition";
+                const base = cn(
+                  "flex h-[42px] items-center rounded-lg text-[13.5px] transition",
+                  collapsed ? "justify-center px-0" : "gap-3 px-3.5",
+                );
                 return (
                   <Fragment key={n.label}>
                     {showDivider && <div className="my-2 h-[1.5px] rounded-full bg-[#c2c7d6]" />}
                     <Link
                       href={hrefFor(n.status)}
+                      title={collapsed ? n.label : undefined}
                       className={
                         isActive
                           ? `${base} bg-[#3f3f94] font-bold text-white shadow-[0_2px_8px_rgba(63,63,148,0.30)]`
@@ -148,17 +150,23 @@ export function FeasibilityModuleShell({
                       }
                     >
                       <n.Icon className="h-[18px] w-[18px] shrink-0" />
-                      <span className="truncate">{n.label}</span>
+                      {!collapsed && <span className="truncate">{n.label}</span>}
                     </Link>
                   </Fragment>
                 );
               })}
             </nav>
 
-            <div className="mt-auto flex flex-col gap-1.5">
-              <span title="Coming soon" className="flex h-[42px] cursor-default items-center gap-3 rounded-lg px-3.5 text-[13.5px] font-semibold text-[#9aa0ab]">
+            <div className="mt-auto flex w-full flex-col gap-1.5">
+              <span
+                title="Support - coming soon"
+                className={cn(
+                  "flex h-[42px] cursor-default items-center rounded-lg text-[13.5px] font-semibold text-[#9aa0ab]",
+                  collapsed ? "justify-center px-0" : "gap-3 px-3.5",
+                )}
+              >
                 <LifeBuoy className="h-[18px] w-[18px]" />
-                Support
+                {!collapsed && "Support"}
               </span>
             </div>
           </div>

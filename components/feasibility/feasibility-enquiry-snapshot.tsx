@@ -29,18 +29,21 @@ const check = (v: string | null | undefined): React.ReactNode =>
 /** One label/value cell. */
 function Cell({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-1 px-3.5 py-2.5">
-      <span className="text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#6b7280]">{label}</span>
-      <span className="text-[13.5px] font-semibold leading-snug text-[#14151a]">{value}</span>
+    <div className="flex flex-col gap-1 px-4 py-3">
+      <span className="text-[11.5px] font-bold uppercase tracking-[0.04em] text-[#6b7280]">{label}</span>
+      <span className="text-[15.5px] font-bold leading-snug text-[#14151a]">{value}</span>
     </div>
   );
 }
 
-/** A titled section band. */
+/** A titled section band - prominent indigo accent + larger heading. */
 function Band({ title }: { title: string }) {
   return (
-    <div className="border-y border-[#e7e9f1] bg-[#eef0f6] px-3.5 py-1.5 text-[10.5px] font-black uppercase tracking-[0.12em] text-[#3f3f94]">
-      {title}
+    <div className="flex items-center gap-2.5 border-y-2 border-[#d6d9ea] bg-[#e7e9f6] px-4 py-2.5">
+      <span className="h-4 w-1.5 shrink-0 rounded-full bg-[#3f3f94]" />
+      <span className="text-[13.5px] font-black uppercase tracking-[0.1em] text-[#3f3f94]">
+        {title}
+      </span>
     </div>
   );
 }
@@ -54,10 +57,10 @@ export function FeasibilityEnquirySnapshot({
   product: InquiryProductCard | null;
 }) {
   const docs = (inquiry.docsGiven ?? []) as string[];
-  const gridClass = "grid grid-cols-2 divide-x divide-y divide-[#eceef4] sm:grid-cols-3 lg:grid-cols-4";
+  const gridClass = "grid grid-cols-2 divide-x divide-y divide-[#c6cbdd] sm:grid-cols-3 lg:grid-cols-4";
 
   return (
-    <div className="overflow-hidden rounded-section border border-hairline bg-surface-card">
+    <div className="overflow-hidden rounded-section border-2 border-[#b7bcd2] bg-surface-card">
       <Band title="Enquiry & Customer" />
       <div className={gridClass}>
         <Cell label="Sr No" value={dash(null)} />

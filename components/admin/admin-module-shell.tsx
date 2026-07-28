@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { HubSearch } from "@/components/hub/hub-search";
+import { ModuleTitleBadge } from "@/components/layout/module-title-badge";
 
 const MONO = "var(--font-mono-display)";
 
@@ -169,6 +170,10 @@ export function AdminModuleShell({
           </span>
         </Link>
         <HubSearch />
+        {/* Module title - centered in the gap between the search and the icons. */}
+        <div className="flex flex-1 items-center justify-center">
+          <ModuleTitleBadge title="Admin" align="start" />
+        </div>
         <div className="flex shrink-0 items-center gap-2.5">
           <Link
             href={"/admin/notifications" as Route}

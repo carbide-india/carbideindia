@@ -16,6 +16,7 @@ import {
   Pencil,
   Power,
   ArrowUpDown,
+  SlidersHorizontal,
 } from "lucide-react";
 import { COSTING_TYPE_LABELS } from "@/db/enums";
 import { formatDate } from "@/lib/format";
@@ -56,18 +57,40 @@ const SORTS: { value: SortKey; label: string }[] = [
   { value: "status", label: "Active first" },
 ];
 
+/** Filter facets - each bifurcated live from the visible rows. `get` resolves a
+ *  row's value for that facet (null = not set → excluded from the option list). */
+const FACETS: {
+  key: string;
+  label: string;
+  get: (r: ItemListItem) => string | null;
+}[] = [
+  { key: "status", label: "Status", get: (r) => (r.isActive ? "Active" : "Inactive") },
+  { key: "shape", label: "Shape", get: (r) => r.shapeName },
+  { key: "grade", label: "Grade", get: (r) => r.gradeName },
+  { key: "tolerance", label: "Tolerance", get: (r) => r.toleranceName },
+  { key: "condition", label: "Condition", get: (r) => r.conditionName },
+  { key: "size", label: "Size", get: (r) => r.sizeCode },
+  {
+    key: "costing",
+    label: "Costing",
+    get: (r) => (r.costingType ? COSTING_TYPE_LABELS[r.costingType] : null),
+  },
+  { key: "customer", label: "Customer", get: (r) => r.customerName },
+];
+
 /**
- * Product Master (Item Master) - a card grid. Each product is a self-contained,
- * glanceable card: the internal code as the hero, the decoded spec (shape /
- * grade / tolerance / condition / size) and dimensions on show, then customer &
- * product. A soft per-shape colour accent makes products read as distinct. No
- * horizontal scroll, no expand-to-see.
+ * Product Master (Item Master) - a dense column table. Row 1 is the title +
+ * search + sort + actions; row 2 is a horizontally-scrollable filter bar with a
+ * dropdown per facet (all derived from the data); the table starts on row 3 with
+ * prominent text, a sticky Item-Code column (left) and sticky Actions (right),
+ * horizontal scroll for the spec columns in between.
  */
 export function ItemTable({ rows, isAdmin }: Props) {
   const router = useRouter();
   const [quickView, setQuickView] = React.useState<ItemListItem | null>(null);
   const [search, setSearch] = React.useState("");
   const [sort, setSort] = React.useState<SortKey>("recent");
+  const [filters, setFilters] = React.useState<Record<string, string>>({});
 
   const toggleActive = React.useCallback(
     async (item: ItemListItem) => {
@@ -88,9 +111,41 @@ export function ItemTable({ rows, isAdmin }: Props) {
     [router],
   );
 
+  // Distinct option list per facet, derived from all rows.
+  const facetOptions = React.useMemo(() => {
+    const out: Record<string, string[]> = {};
+    for (const f of FACETS) {
+      const set = new Set<string>();
+      for (const r of rows) {
+        const v = f.get(r);
+        if (v) set.add(v);
+      }
+      const arr = Array.from(set);
+      if (f.key === "status") {
+        arr.sort((a, b) => (a === "Active" ? -1 : b === "Active" ? 1 : 0));
+      } else {
+        arr.sort((a, b) => a.localeCompare(b));
+      }
+      out[f.key] = arr;
+    }
+    return out;
+  }, [rows]);
+
+  const activeFilterCount = React.useMemo(
+    () => Object.values(filters).filter(Boolean).length,
+    [filters],
+  );
+
   const shown = React.useMemo(() => {
     const q = search.trim().toLowerCase();
     let out = rows;
+
+    // Facet filters.
+    const active = FACETS.filter((f) => filters[f.key]);
+    if (active.length) {
+      out = out.filter((r) => active.every((f) => f.get(r) === filters[f.key]));
+    }
+
     if (q) {
       out = out.filter((r) =>
         [
@@ -106,6 +161,7 @@ export function ItemTable({ rows, isAdmin }: Props) {
           .some((v) => (v as string).toLowerCase().includes(q)),
       );
     }
+
     const sorted = out.slice();
     const byDate = (a: ItemListItem, b: ItemListItem) =>
       +new Date(a.createdAt) - +new Date(b.createdAt);
@@ -132,17 +188,17 @@ export function ItemTable({ rows, isAdmin }: Props) {
         sorted.sort((a, b) => -byDate(a, b));
     }
     return sorted;
-  }, [rows, search, sort]);
+  }, [rows, search, sort, filters]);
 
   return (
     <>
-      {/* Page header - title, search (beside the title), and primary actions. */}
-      <header className="mb-5 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-4">
+      {/* ── Row 1: title + search + sort + primary actions (single line) ── */}
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
           <h1 className="text-[26px] font-black leading-none tracking-tight text-[#3f3f94]">
             Product Master
           </h1>
-          <label className="relative w-[320px] max-w-full">
+          <label className="relative w-[260px] max-w-full">
             <Search
               size={15}
               strokeWidth={2.2}
@@ -168,7 +224,6 @@ export function ItemTable({ rows, isAdmin }: Props) {
               </button>
             )}
           </label>
-          {/* Sort - sits beside the search bar. */}
           <label className="inline-flex items-center gap-2 text-[13px] text-ink-subtle">
             <ArrowUpDown size={14} strokeWidth={2.2} />
             <span className="font-semibold">Sort</span>
@@ -205,8 +260,7 @@ export function ItemTable({ rows, isAdmin }: Props) {
             href={NEW_ITEM_ROUTE}
             className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-[13px] font-bold text-white transition-transform hover:-translate-y-px"
             style={{
-              background:
-                "linear-gradient(135deg, rgb(63, 63, 148), rgb(47, 47, 111))",
+              background: "linear-gradient(135deg, rgb(63, 63, 148), rgb(47, 47, 111))",
               boxShadow: "0 6px 16px rgba(63, 63, 148, 0.32)",
             }}
           >
@@ -216,31 +270,96 @@ export function ItemTable({ rows, isAdmin }: Props) {
         </div>
       </header>
 
+      {/* ── Row 2: filter bar (compact, sized to fit on one line) ── */}
+      <div className="mt-3 flex items-center gap-1.5 overflow-x-auto pb-1.5 [scrollbar-width:thin]">
+        <span className="flex shrink-0 items-center gap-1 text-[10.5px] font-bold uppercase tracking-[0.04em] text-ink-subtle">
+          <SlidersHorizontal size={13} strokeWidth={2.4} />
+          <span className="max-md:hidden">Filters</span>
+        </span>
+        {FACETS.map((f) => (
+          <FacetSelect
+            key={f.key}
+            label={f.label}
+            value={filters[f.key] ?? ""}
+            options={facetOptions[f.key] ?? []}
+            onChange={(v) =>
+              setFilters((prev) => {
+                const next = { ...prev };
+                if (v) next[f.key] = v;
+                else delete next[f.key];
+                return next;
+              })
+            }
+          />
+        ))}
+        {activeFilterCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setFilters({})}
+            className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-brand/40 bg-brand/6 px-2 py-1 text-[12px] font-bold text-brand transition-colors hover:bg-brand/12"
+          >
+            <X size={12} strokeWidth={2.6} />
+            Clear ({activeFilterCount})
+          </button>
+        )}
+        <span className="ml-auto shrink-0 whitespace-nowrap pl-1.5 text-[12px] font-semibold text-ink-subtle tabular-nums">
+          {shown.length} of {rows.length}
+        </span>
+      </div>
+
+      {/* ── Row 3+: the table ── */}
       {shown.length === 0 ? (
         <div
-          className="rounded-section border border-dashed border-hairline-strong bg-surface-card px-6 py-16 text-center"
+          className="mt-3 rounded-section border border-dashed border-hairline-strong bg-surface-card px-6 py-16 text-center"
           style={{ boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)" }}
         >
           <p className="text-[15px] font-semibold text-ink-strong">
             {rows.length === 0
               ? "No products yet - create the first one."
-              : "No products match your search."}
+              : "No products match your filters."}
           </p>
           <p className="mt-1.5 text-[13px] text-ink-subtle">
             Each product gets a unique internal code assembled from shape, grade and size.
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {shown.map((item) => (
-            <ProductCard
-              key={item.id}
-              item={item}
-              isAdmin={isAdmin}
-              onQuickView={() => setQuickView(item)}
-              onToggle={() => void toggleActive(item)}
-            />
-          ))}
+        <div
+          className="mt-3 overflow-x-auto rounded-section border-2 border-[#b3b7dd] bg-surface-card"
+          style={{ boxShadow: "0 2px 10px rgba(15, 23, 42, 0.08)" }}
+        >
+          <table className="w-full min-w-[1240px] border-collapse text-left">
+            <thead>
+              <tr className="border-b-2 border-[#b9bce0] bg-[#e9ebfb]">
+                <Th sticky="left">Item Code</Th>
+                <Th>Status</Th>
+                <Th>Shape</Th>
+                <Th>Grade</Th>
+                <Th>Tolerance</Th>
+                <Th>Condition</Th>
+                <Th>Size</Th>
+                <Th>Dimensions</Th>
+                <Th>Customer</Th>
+                <Th>Product</Th>
+                <Th>HSN</Th>
+                <Th>UoM</Th>
+                <Th>Created</Th>
+                <Th sticky="right" className="text-right">
+                  <span className="sr-only">Actions</span>
+                </Th>
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map((item) => (
+                <ProductRow
+                  key={item.id}
+                  item={item}
+                  isAdmin={isAdmin}
+                  onQuickView={() => setQuickView(item)}
+                  onToggle={() => void toggleActive(item)}
+                />
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -255,9 +374,87 @@ export function ItemTable({ rows, isAdmin }: Props) {
   );
 }
 
-/* ── Product card ──────────────────────────────────────────────────────── */
+/* ── Filter dropdown ───────────────────────────────────────────────────── */
 
-function ProductCard({
+function FacetSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  onChange: (v: string) => void;
+}) {
+  const active = value !== "";
+  return (
+    <label
+      className={
+        "inline-flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1 transition-colors " +
+        (active
+          ? "border-brand bg-brand/6"
+          : "border-hairline bg-surface-card hover:border-hairline-strong")
+      }
+    >
+      <span className="text-[9.5px] font-bold uppercase tracking-[0.02em] text-ink-subtle">
+        {label}
+      </span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label={`Filter by ${label}`}
+        // field-sizing:content makes the select hug its CURRENT value (not the
+        // widest option), so short values like "All" don't leave an empty gap
+        // before the arrow. max-w caps long values; falls back gracefully where
+        // field-sizing is unsupported.
+        style={{ fieldSizing: "content" } as React.CSSProperties}
+        className={
+          "max-w-[130px] cursor-pointer truncate bg-transparent text-[12px] font-bold outline-none " +
+          (active ? "text-brand" : "text-ink-strong")
+        }
+      >
+        <option value="">All</option>
+        {options.map((o) => (
+          <option key={o} value={o}>
+            {o}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+/* ── Table header cell ─────────────────────────────────────────────────── */
+
+function Th({
+  children,
+  sticky,
+  className = "",
+}: {
+  children: React.ReactNode;
+  sticky?: "left" | "right";
+  className?: string;
+}) {
+  const stick =
+    sticky === "left"
+      ? "sticky left-0 z-20 bg-[#e9ebfb]"
+      : sticky === "right"
+        ? "sticky right-0 z-20 bg-[#e9ebfb]"
+        : "";
+  return (
+    <th
+      scope="col"
+      className={`whitespace-nowrap border-r border-[#c7cae6] px-4 py-3 text-[11.5px] font-extrabold uppercase tracking-[0.07em] text-[#3f3f94] last:border-r-0 ${stick} ${className}`}
+    >
+      {children}
+    </th>
+  );
+}
+
+/* ── One product row ───────────────────────────────────────────────────── */
+
+function ProductRow({
   item,
   isAdmin,
   onQuickView,
@@ -269,111 +466,80 @@ function ProductCard({
   onToggle: () => void;
 }) {
   const dims = composeDims(item);
-
-  const specs: ReadonlyArray<readonly [string, string | null]> = [
-    ["Shape", item.shapeName],
-    ["Grade", item.gradeName],
-    ["Tolerance", item.toleranceName],
-    ["Condition", item.conditionName],
-    ["Size", item.sizeCode],
-    ["Dimensions", dims],
-  ];
-  const shownSpecs = specs.filter(([, v]) => v);
+  const td =
+    "whitespace-nowrap border-r border-[#e6e8f0] px-4 py-3 align-middle text-[14px] text-ink-strong last:border-r-0";
+  const muted = "text-ink-subtle";
 
   return (
-    <div className="group flex flex-col rounded-2xl border-2 border-[#2b303b] bg-surface-card p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#3f3f94] hover:shadow-[0_14px_30px_rgba(63,63,148,0.16)]">
-      {/* Top: status + actions menu. */}
-      <div className="mb-2.5 flex items-start justify-between gap-2">
+    <tr className="group border-b border-[#d7dae4] transition-colors last:border-b-0 hover:bg-[#f4f5fe]">
+      {/* Item Code - sticky left, hero. */}
+      <td className={`${td} sticky left-0 z-10 bg-surface-card group-hover:bg-[#f4f5fe]`}>
+        <Link
+          href={`/items/${item.id}` as Route}
+          title={item.itemCode}
+          className="block max-w-[300px] truncate font-bold tracking-tight text-[#3f3f94] hover:underline"
+          style={{ fontFamily: "var(--font-mono)", fontSize: 14 }}
+        >
+          {item.itemCode}
+        </Link>
+      </td>
+
+      {/* Status. */}
+      <td className={td}>
         {item.isActive ? (
-          <span className="inline-flex items-center gap-1.5 text-[12px] font-bold text-[var(--color-green-deep)]">
+          <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] font-bold text-[var(--color-green-deep)]">
             <span className="size-1.5 rounded-full bg-[var(--color-green-deep)]" />
             Active
           </span>
         ) : (
-          <span className="inline-flex items-center rounded-full bg-[rgba(15,23,42,0.05)] px-2 py-0.5 text-[11px] font-bold text-ink-subtle">
+          <span className="inline-flex items-center rounded-full bg-[rgba(15,23,42,0.05)] px-2 py-0.5 text-[12px] font-bold text-ink-subtle">
             Inactive
           </span>
         )}
-        <CardMenu item={item} isAdmin={isAdmin} onQuickView={onQuickView} onToggle={onToggle} />
-      </div>
+      </td>
 
-      {/* Hero: the internal item code. */}
-      <Link
-        href={`/items/${item.id}` as Route}
-        className="font-bold leading-snug tracking-tight text-[#3f3f94] hover:underline break-all"
-        style={{ fontFamily: "var(--font-mono)", fontSize: 15 }}
+      <td className={`${td} font-semibold`}>{item.shapeName ?? <Dash />}</td>
+      <td className={`${td} font-semibold`}>{item.gradeName ?? <Dash />}</td>
+      <td className={`${td} font-semibold`}>{item.toleranceName ?? <Dash />}</td>
+      <td className={`${td} font-semibold`}>{item.conditionName ?? <Dash />}</td>
+      <td className={`${td} font-semibold`}>{item.sizeCode ?? <Dash />}</td>
+
+      {/* Dimensions - mono. */}
+      <td className={td}>
+        {dims ? (
+          <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600 }}>{dims}</span>
+        ) : (
+          <Dash />
+        )}
+      </td>
+
+      {/* Customer + Product - may be longer, allow up to a cap. */}
+      <td className={`${td} max-w-[220px] truncate font-semibold`} title={item.customerName ?? undefined}>
+        {item.customerName ?? <Dash />}
+      </td>
+      <td className={`${td} max-w-[240px] truncate`} title={item.custProductName ?? undefined}>
+        {item.custProductName ?? <Dash />}
+      </td>
+
+      <td className={`${td} ${muted} tabular-nums`}>{item.hsnCode ?? <Dash />}</td>
+      <td className={`${td} ${muted}`}>{item.uom ?? <Dash />}</td>
+      <td className={`${td} ${muted} tabular-nums`}>{formatDate(item.createdAt)}</td>
+
+      {/* Actions - sticky right. */}
+      <td
+        className={`${td} sticky right-0 z-10 bg-surface-card text-right group-hover:bg-[#f4f5fe]`}
       >
-        {item.itemCode}
-      </Link>
-
-      {/* Decoded spec - compact inline tiles: the label sits in front of the
-          value on a single line, so each attribute takes minimal height. */}
-      {shownSpecs.length > 0 && (
-        <dl className="mt-3 grid grid-cols-2 gap-1.5">
-          {shownSpecs.map(([label, value]) => (
-            <div
-              key={label}
-              className={
-                "flex items-baseline gap-2 rounded-md border border-hairline bg-surface-soft px-2.5 py-1.5" +
-                (label === "Dimensions" ? " col-span-2" : "")
-              }
-            >
-              <dt className="shrink-0 text-[9.5px] font-bold uppercase tracking-[0.04em] text-ink-subtle">
-                {label}
-              </dt>
-              <dd
-                className="min-w-0 flex-1 truncate text-[12.5px] font-bold text-ink-strong"
-                style={label === "Dimensions" ? { fontFamily: "var(--font-mono)", fontWeight: 700 } : undefined}
-                title={value ?? undefined}
-              >
-                {value}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      )}
-
-      {/* Customer + product - compact inline rows (label in front of value). */}
-      <div className="mt-1.5 grid grid-cols-1 gap-1.5">
-        <div className="flex items-baseline gap-2 rounded-md border border-hairline bg-surface-card px-2.5 py-1.5">
-          <span className="shrink-0 text-[9.5px] font-bold uppercase tracking-[0.04em] text-ink-subtle">
-            Customer
-          </span>
-          <span className="min-w-0 flex-1 text-[12.5px] font-semibold text-ink-strong break-words">
-            {item.customerName ?? "-"}
-          </span>
-        </div>
-        <div className="flex items-baseline gap-2 rounded-md border border-hairline bg-surface-card px-2.5 py-1.5">
-          <span className="shrink-0 text-[9.5px] font-bold uppercase tracking-[0.04em] text-ink-subtle">
-            Product
-          </span>
-          <span className="min-w-0 flex-1 text-[13px] font-bold text-ink-strong break-words">
-            {item.custProductName ?? "-"}
-          </span>
-        </div>
-      </div>
-
-      {/* Meta footer. */}
-      <div className="mt-4 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11.5px] font-medium text-ink-subtle">
-        <MetaChip>UoM {item.uom ?? "-"}</MetaChip>
-        <MetaChip>HSN {item.hsnCode ?? "-"}</MetaChip>
-        {item.partNo && <MetaChip>Part {item.partNo}</MetaChip>}
-        {item.costingType && <MetaChip>{COSTING_TYPE_LABELS[item.costingType]}</MetaChip>}
-        <span className="ml-auto tabular-nums">{formatDate(item.createdAt)}</span>
-      </div>
-    </div>
+        <RowMenu item={item} isAdmin={isAdmin} onQuickView={onQuickView} onToggle={onToggle} />
+      </td>
+    </tr>
   );
 }
 
-function MetaChip({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center rounded-md bg-surface-soft px-1.5 py-0.5 tabular-nums">
-      {children}
-    </span>
-  );
+function Dash() {
+  return <span className="text-ink-subtle">-</span>;
 }
 
-function CardMenu({
+function RowMenu({
   item,
   isAdmin,
   onQuickView,
