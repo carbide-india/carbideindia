@@ -1,5 +1,4 @@
-import { DashboardHeader } from "@/components/layout/header";
-import { DashboardFooter } from "@/components/layout/footer";
+import { WmsShellServer } from "@/components/wms/wms-shell-server";
 import { FilterBar } from "@/components/layout/filter-bar";
 import { TaskListPage } from "@/components/tasks/task-list-page";
 import { listEmployeeOptions } from "@/lib/queries/employees";
@@ -58,8 +57,7 @@ export default async function TasksPage({ searchParams }: PageProps) {
     d ? d.toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
 
   return (
-    <>
-      <DashboardHeader generatedAt={new Date()} />
+    <WmsShellServer>
       <FilterBar
         employees={employeeOptions}
         subjects={subjects}
@@ -88,7 +86,6 @@ export default async function TasksPage({ searchParams }: PageProps) {
         statusLabels={statusLabels}
         statusTones={statusTones}
       />
-      <DashboardFooter />
-    </>
+    </WmsShellServer>
   );
 }

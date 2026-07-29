@@ -1,5 +1,4 @@
-import { DashboardHeader } from "@/components/layout/header";
-import { DashboardFooter } from "@/components/layout/footer";
+import { WmsShellServer } from "@/components/wms/wms-shell-server";
 import { FilterBar } from "@/components/layout/filter-bar";
 import { MyDayWorkspace } from "@/components/tasks/my-day-workspace";
 import type { AgendaTask } from "@/components/tasks/agenda-board";
@@ -81,8 +80,7 @@ export default async function AgendaPage({ searchParams }: PageProps) {
     d ? d.toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
 
   return (
-    <>
-      <DashboardHeader generatedAt={new Date()} />
+    <WmsShellServer>
       <FilterBar
         employees={employeeOptions}
         subjects={subjects}
@@ -114,7 +112,6 @@ export default async function AgendaPage({ searchParams }: PageProps) {
         statusLabels={statusLabels}
         statusTones={statusTones}
       />
-      <DashboardFooter />
-    </>
+    </WmsShellServer>
   );
 }

@@ -1,5 +1,4 @@
-import { DashboardHeader } from "@/components/layout/header";
-import { DashboardFooter } from "@/components/layout/footer";
+import { WmsShellServer } from "@/components/wms/wms-shell-server";
 import { FilterBar } from "@/components/layout/filter-bar";
 import { KanbanBoard } from "@/components/tasks/kanban-board";
 import { listBoardTasks, listDistinctSubjects } from "@/lib/queries/tasks";
@@ -63,8 +62,7 @@ export default async function KanbanPage({ searchParams }: PageProps) {
     d ? d.toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
 
   return (
-    <>
-      <DashboardHeader generatedAt={new Date()} />
+    <WmsShellServer>
       <FilterBar
         employees={employeeOptions}
         subjects={subjects}
@@ -128,7 +126,6 @@ export default async function KanbanPage({ searchParams }: PageProps) {
           </div>
         </section>
       </main>
-      <DashboardFooter />
-    </>
+    </WmsShellServer>
   );
 }

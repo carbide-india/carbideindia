@@ -188,7 +188,7 @@ export function FilterBar({
     <div
       // Tight against the bottom of the sticky light header (96px desktop,
       // 72px mobile). No gap → no clipped content peeking through.
-      className="sticky top-[96px] max-md:top-[72px] z-40 border-b border-hairline"
+      className="sticky top-[60px] z-40 border-b border-hairline"
       style={{
         backgroundColor: "rgba(250, 251, 252, 0.82)",
         backdropFilter: "blur(20px) saturate(150%)",

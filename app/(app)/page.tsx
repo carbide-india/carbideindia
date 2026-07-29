@@ -1,5 +1,4 @@
-import { DashboardHeader } from "@/components/layout/header";
-import { DashboardFooter } from "@/components/layout/footer";
+import { WmsShellServer } from "@/components/wms/wms-shell-server";
 import { FilterBar } from "@/components/layout/filter-bar";
 import { KpiStrip } from "@/components/dashboard/kpi-strip";
 import { CollapsibleVelocity } from "@/components/dashboard/collapsible-velocity";
@@ -53,13 +52,11 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   } catch (err) {
     console.error("[dashboard] data load failed:", err);
     return (
-      <>
-        <DashboardHeader generatedAt={new Date()} />
+      <WmsShellServer>
         <main>
           <DashboardLoadError />
         </main>
-        <DashboardFooter />
-      </>
+      </WmsShellServer>
     );
   }
 
@@ -80,8 +77,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const isoDay = (d: Date) => d.toISOString().slice(0, 10);
 
   return (
-    <>
-      <DashboardHeader generatedAt={data.generatedAt} />
+    <WmsShellServer>
       <FilterBar
         employees={employeeOptions}
         subjects={subjects}
@@ -122,7 +118,6 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           </>
         )}
       </main>
-      <DashboardFooter />
-    </>
+    </WmsShellServer>
   );
 }

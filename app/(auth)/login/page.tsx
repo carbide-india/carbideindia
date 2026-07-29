@@ -1,12 +1,16 @@
 import { redirect } from "next/navigation";
 import type { Route } from "next";
 import Image from "next/image";
-import { SignOutButton } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
 import { getCurrentEmployee } from "@/lib/auth/current";
 import { SignInCard } from "@/components/auth/sign-in-card";
 import { AcceptInviteCard } from "@/components/auth/accept-invite-card";
+import { OrphanedSessionCard } from "@/components/auth/orphaned-session-card";
 import { DiamondCascade } from "@/components/auth/diamond-cascade";
+
+// Always render against the live session — never a cached view that could keep
+// showing a stale "already signed in" state after the user has signed out.
+export const dynamic = "force-dynamic";
 
 /**
  * /login - "drawing sheet DWG-002", exaggerated-minimal drafting style.
@@ -256,28 +260,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
             {inviteTicket ? (
               <AcceptInviteCard ticket={inviteTicket} />
             ) : orphanedSession ? (
-              <div
-                className="p-8 text-center"
-                style={{ background: "#FFFFFF", border: "1px solid #E7E2DA", boxShadow: "0 2px 10px rgba(30,36,71,0.06)" }}
-              >
-                <h2 className="mb-2 text-[17px] font-semibold" style={{ color: NAVY }}>
-                  Account not provisioned
-                </h2>
-                <p className="mb-6 text-[14px] leading-relaxed" style={{ color: "#78716C" }}>
-                  You&apos;re signed in, but this account isn&apos;t linked to
-                  an active employee. Contact your administrator, or sign out
-                  and try a different account.
-                </p>
-                <SignOutButton redirectUrl="/login">
-                  <button
-                    type="button"
-                    className="cursor-pointer rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-opacity duration-200 hover:opacity-90"
-                    style={{ background: NAVY }}
-                  >
-                    Sign out
-                  </button>
-                </SignOutButton>
-              </div>
+              <OrphanedSessionCard />
             ) : (
               <SignInCard />
             )}
