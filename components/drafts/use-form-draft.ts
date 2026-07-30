@@ -16,17 +16,29 @@ export function useFormDraft<T extends FieldValues>({
   resumeDraftId,
   watch,
   getValues,
+  extra,
 }: {
   kind: FormDraftKind;
   enabled: boolean;
   resumeDraftId?: string;
   watch: UseFormWatch<T>;
   getValues: UseFormGetValues<T>;
+  /**
+   * Extra payload merged into the saved draft, for state that lives OUTSIDE
+   * react-hook-form (e.g. uploaded photo URLs held in local state). Without
+   * this, that state is silently dropped from the draft and lost on resume.
+   * Kept in a ref so an inline arrow doesn't re-subscribe the watcher.
+   */
+  extra?: () => Record<string, unknown>;
 }) {
   const [draftId] = React.useState(() =>
     resumeDraftId ?? (enabled ? crypto.randomUUID() : ""),
   );
   const discardedRef = React.useRef(false);
+  const extraRef = React.useRef(extra);
+  React.useEffect(() => {
+    extraRef.current = extra;
+  });
 
   const save = React.useCallback(async () => {
     if (!enabled || !draftId || discardedRef.current) return;
@@ -34,7 +46,10 @@ export function useFormDraft<T extends FieldValues>({
       await saveFormDraft({
         kind,
         id: draftId,
-        payload: getValues() as Record<string, unknown>,
+        payload: {
+          ...(getValues() as Record<string, unknown>),
+          ...(extraRef.current ? extraRef.current() : {}),
+        },
       });
     } catch {
       /* ignore transient auto-save errors */
@@ -44,13 +59,21 @@ export function useFormDraft<T extends FieldValues>({
   React.useEffect(() => {
     if (!enabled || !draftId) return;
     let t: ReturnType<typeof setTimeout> | null = null;
+    let dirty = false; // edits made but not yet flushed by the debounce timer
     const sub = watch(() => {
+      dirty = true;
       if (t) clearTimeout(t);
-      t = setTimeout(() => void save(), 900);
+      t = setTimeout(() => {
+        dirty = false;
+        void save();
+      }, 900);
     });
     return () => {
       if (t) clearTimeout(t);
       sub.unsubscribe();
+      // Flush the last edits typed within the debounce window before leaving,
+      // so navigating away right after typing doesn't drop them.
+      if (dirty) void save();
     };
   }, [enabled, draftId, watch, save]);
 

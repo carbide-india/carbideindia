@@ -199,7 +199,7 @@ export function ItemQuickView({ item, isAdmin, onClose }: Props) {
             href={`/items/${item.id}` as Route}
             className="inline-flex items-center rounded-lg border border-hairline px-4 py-2 text-[13px] font-semibold text-ink-soft hover:border-brand hover:text-brand"
           >
-            Full record
+            Full Record
           </Link>
           <Link
             href={`/items/${item.id}/edit` as Route}

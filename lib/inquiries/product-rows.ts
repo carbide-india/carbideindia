@@ -28,6 +28,9 @@ export interface BuiltProductRow {
   dimensionUnit: string;
   dimensionNotes: string | null;
   gradeId: string | null; gradeCustomer: string | null; toleranceId: string | null; conditionId: string | null;
+  // 3-tier grades + production masters (migration 0062) — all master_options uuids.
+  gradeCustomerFacingId: string | null; gradeInternalProductionId: string | null;
+  internalProductionCodeId: string | null; partNoId: string | null;
   quantityNos: string | null; quantityUom: string;
   // ── Per-product checklist (real inquiry_items columns) ──
   quantityStatus: CheckState | null; shapeDimensionCheck: CheckState | null; gradeCheck: CheckState | null;
@@ -60,6 +63,8 @@ export function productRowsForInquiry(v: Src): BuiltProductRow[] {
     dimensionUnit: txt(p.dimensionUnit) ?? "mm",
     dimensionNotes: txt(p.dimensionNotes),
     gradeId: txt(p.gradeId), gradeCustomer: txt(p.gradeCustomer), toleranceId: txt(p.toleranceId), conditionId: txt(p.conditionId),
+    gradeCustomerFacingId: txt(p.gradeCustomerFacingId), gradeInternalProductionId: txt(p.gradeInternalProductionId),
+    internalProductionCodeId: txt(p.internalProductionCodeId), partNoId: txt(p.partNoId),
     quantityNos: numStr(p.quantityNos), quantityUom: txt(p.quantityUom) ?? "Nos",
     quantityStatus: p.quantityStatus ?? null, shapeDimensionCheck: p.shapeDimensionCheck ?? null,
     gradeCheck: p.gradeCheck ?? null, toleranceCheck: p.toleranceCheck ?? null, conditionCheck: p.conditionCheck ?? null,

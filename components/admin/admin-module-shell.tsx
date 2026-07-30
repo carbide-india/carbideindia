@@ -250,7 +250,7 @@ export function AdminModuleShell({
                         key={item.label}
                         title="Coming soon"
                         style={{ animationDelay: delay }}
-                        className={`${base} cursor-default border-dashed border-[#e9ebf0] bg-white/40 font-semibold text-[#b3b8c2]`}
+                        className={`${base} cursor-default border-[#e9ebf0] bg-white/40 font-semibold text-[#b3b8c2]`}
                       >
                         <item.Icon className="h-[18px] w-[18px] shrink-0" />
                         <span className="flex-1 truncate">{item.label}</span>

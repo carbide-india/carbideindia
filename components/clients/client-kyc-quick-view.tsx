@@ -393,7 +393,7 @@ export function ClientKycQuickView({ clientId, name, isActive, isAdmin, onClose 
             href={`/clients/${clientId}` as Route}
             className="inline-flex items-center rounded-lg border border-hairline px-4 py-2 text-[13px] font-semibold text-ink-soft hover:border-brand hover:text-brand"
           >
-            Full record
+            Full Record
           </Link>
           <Link
             href={`/clients/${clientId}/edit` as Route}

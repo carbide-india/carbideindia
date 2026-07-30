@@ -1030,7 +1030,7 @@ function Section({
 
 function Empty({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-dashed border-hairline-strong bg-surface-soft px-4 py-3 text-[13px] text-ink-subtle">
+    <div className="rounded-xl border border-hairline-strong bg-surface-soft px-4 py-3 text-[13px] text-ink-subtle">
       {children}
     </div>
   );
@@ -1048,7 +1048,7 @@ function EmptyCta({
   cta: string;
 }) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-hairline-strong bg-surface-soft px-6 py-12 text-center">
+    <div className="flex flex-col items-center gap-3 rounded-2xl border border-hairline-strong bg-surface-soft px-6 py-12 text-center">
       <CalendarClock size={28} strokeWidth={1.8} className="text-ink-subtle" />
       <div className="text-[15px] font-semibold text-ink-strong">{title}</div>
       <p className="max-w-md text-[13px] text-ink-muted">{body}</p>

@@ -62,6 +62,8 @@ export function MasterKindWorkbench({
   const [filter, setFilter] = React.useState<FilterMode>("all");
   const [advOpen, setAdvOpen] = React.useState(false);
   const [bulkMenuOpen, setBulkMenuOpen] = React.useState(false);
+  // Two-step confirm for the (irreversible) bulk delete, shown inline in the menu.
+  const [confirmBulkDelete, setConfirmBulkDelete] = React.useState(false);
 
   // Row interaction
   const [editingId, setEditingId] = React.useState<string | null>(null);
@@ -423,6 +425,7 @@ export function MasterKindWorkbench({
               onClick={() => {
                 setBulkMenuOpen((v) => !v);
                 setAdvOpen(false);
+                setConfirmBulkDelete(false);
               }}
               className="inline-flex h-[36px] items-center gap-2 rounded-lg border border-[#e6e8ec] bg-white px-3 text-[12.5px] font-semibold text-[#3a4152] transition hover:border-[#c9c9ea] hover:text-[#3f3f94]"
             >
@@ -436,37 +439,76 @@ export function MasterKindWorkbench({
             </button>
             {bulkMenuOpen && (
               <>
-                <div className="fixed inset-0 z-20" onClick={() => setBulkMenuOpen(false)} />
-                <div className="mst-pop absolute right-0 top-[42px] z-30 w-[210px] rounded-xl border border-[#e6e8ec] bg-white p-2 shadow-[0_16px_40px_rgba(63,63,148,0.16)]">
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => {
+                    setBulkMenuOpen(false);
+                    setConfirmBulkDelete(false);
+                  }}
+                />
+                <div className="mst-pop absolute right-0 top-[42px] z-50 w-[240px] rounded-xl border border-[#e6e8ec] bg-white p-2 shadow-[0_16px_40px_rgba(63,63,148,0.16)]">
+                  {/* Select-all does NOT close the menu, so the delete/deactivate
+                      actions become reachable in the same interaction. */}
                   <button
                     type="button"
-                    onClick={() => {
-                      toggleSelectAll();
-                      setBulkMenuOpen(false);
-                    }}
+                    onClick={() => toggleSelectAll()}
                     className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-semibold text-[#3a4152] transition hover:bg-[#f5f6f8]"
                   >
-                    <Check className="h-4 w-4" />
-                    {allVisibleSelected ? "Clear selection" : "Select all shown"}
+                    <Check className="h-4 w-4 shrink-0" />
+                    {allVisibleSelected ? "Clear Selection" : `Select All Shown (${filtered.length})`}
                   </button>
-                  <button
-                    type="button"
-                    disabled={selected.size === 0}
-                    onClick={bulkDeactivate}
-                    className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-semibold text-[#3a4152] transition hover:bg-[#f5f6f8] disabled:opacity-40"
-                  >
-                    <EyeOff className="h-4 w-4" />
-                    Deactivate selected
-                  </button>
-                  <button
-                    type="button"
-                    disabled={selected.size === 0}
-                    onClick={bulkDelete}
-                    className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-semibold text-[#d32f2f] transition hover:bg-[#fdf3f3] disabled:opacity-40"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Delete selected
-                  </button>
+
+                  <div className="my-1 h-px bg-[#eef0f3]" />
+
+                  {selected.size === 0 ? (
+                    <p className="px-2.5 py-2 text-[12px] font-medium leading-snug text-[#9aa0ab]">
+                      Select rows (or “Select all shown”) to deactivate or delete them.
+                    </p>
+                  ) : confirmBulkDelete ? (
+                    <div className="rounded-md bg-[#fdf3f3] p-2">
+                      <p className="mb-2 px-1 text-[12px] font-semibold leading-snug text-[#d32f2f]">
+                        Delete {selected.size} {selected.size === 1 ? singular.toLowerCase() : `${singular.toLowerCase()}s`}? This can’t be undone.
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setConfirmBulkDelete(false)}
+                          className="flex-1 rounded-md border border-[#e6e8ec] bg-white px-2 py-1.5 text-[12px] font-semibold text-[#3a4152] transition hover:bg-[#f5f6f8]"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setConfirmBulkDelete(false);
+                            bulkDelete();
+                          }}
+                          className="flex-1 rounded-md bg-[#d32f2f] px-2 py-1.5 text-[12px] font-bold text-white transition hover:bg-[#b71c1c]"
+                        >
+                          Delete {selected.size}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={bulkDeactivate}
+                        className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-semibold text-[#3a4152] transition hover:bg-[#f5f6f8]"
+                      >
+                        <EyeOff className="h-4 w-4 shrink-0" />
+                        Deactivate Selected ({selected.size})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmBulkDelete(true)}
+                        className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-semibold text-[#d32f2f] transition hover:bg-[#fdf3f3]"
+                      >
+                        <Trash2 className="h-4 w-4 shrink-0" />
+                        Delete Selected ({selected.size})
+                      </button>
+                    </>
+                  )}
                 </div>
               </>
             )}
@@ -568,7 +610,7 @@ export function MasterKindWorkbench({
                       )}
                       {!o.isActive && (
                         <span className="ml-2 rounded-full bg-[#f2f3f5] px-2 py-0.5 text-[10.5px] font-bold text-[#9aa0ab] no-underline">
-                          inactive
+                          Inactive
                         </span>
                       )}
                     </span>
@@ -729,7 +771,7 @@ export function MasterKindWorkbench({
                   className="inline-flex h-[38px] items-center gap-2 rounded-lg border border-[#dfe1e6] bg-white px-4 text-[13px] font-semibold text-[#3a4152] transition hover:border-[#c9c9ea] hover:text-[#3f3f94]"
                 >
                   <ListPlus className="h-[16px] w-[16px]" />
-                  {bulkOpen ? "Hide bulk add" : "Bulk add (paste many)"}
+                  {bulkOpen ? "Hide Bulk Add" : "Bulk Add (paste many)"}
                 </button>
 
                 {bulkOpen && (
@@ -755,7 +797,7 @@ export function MasterKindWorkbench({
                         className="inline-flex h-[38px] items-center gap-2 rounded-lg bg-[#3f3f94] px-4 text-[13px] font-bold text-white transition hover:bg-[#2f2f6f] disabled:opacity-50"
                       >
                         <ListPlus className="h-4 w-4" />
-                        Add all
+                        Add All
                       </button>
                       <span className="text-[12px] font-medium text-[#9aa0ab]">
                         {bulkText.split("\n").filter((s) => s.trim()).length} value(s)

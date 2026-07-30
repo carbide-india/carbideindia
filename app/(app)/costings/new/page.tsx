@@ -1,9 +1,13 @@
-import { notFound } from "next/navigation";
-import { CostingForm } from "@/components/costings/costing-form";
-import type { CreateCostingInput } from "@/lib/validators/costing";
+import { CostingCalculatorShell } from "@/components/costings/costing-calculator-shell";
+import { CostingTargetPicker } from "@/components/costings/costing-target-picker";
 import { requireUser } from "@/lib/auth/current";
-import { getInquiryItemCaption } from "@/lib/queries/costings";
-import { getFormDraft } from "@/lib/queries/form-drafts";
+import {
+  getCostingContext,
+  getCostingSpecForItem,
+  listCostableInquiryItems,
+} from "@/lib/queries/costings";
+import { listVendorOptions } from "@/lib/queries/vendors";
+import { listMasterOptions } from "@/lib/queries/masters";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
 import { UserMenuServer } from "@/components/header/user-menu-server";
 
@@ -22,28 +26,72 @@ export default async function NewCostingPage({ searchParams }: PageProps) {
 
   const inquiryItemId = typeof sp.inquiryItemId === "string" ? sp.inquiryItemId : "";
   const inquiryId = typeof sp.inquiryId === "string" ? sp.inquiryId : "";
-  const draftParam = typeof sp.draft === "string" ? sp.draft : undefined;
 
-  // Both UUIDs are required - without them we cannot save a costing.
+  // A costing must attach to a specific product line. When the page is opened
+  // without a valid target (e.g. the Forms launcher "Costing" tile or the
+  // register's "New Costing" button), show a picker of feasibility-approved
+  // lines instead of a dead-end 404.
   if (!UUID_RE.test(inquiryItemId) || !UUID_RE.test(inquiryId)) {
-    notFound();
+    const costable = await listCostableInquiryItems();
+    return (
+      <EnquiryModuleShell title="Costing Master" userMenu={<UserMenuServer />}>
+        <div className="w-full">
+          <CostingTargetPicker items={costable} />
+        </div>
+      </EnquiryModuleShell>
+    );
   }
 
-  const [productCaption, draftPayload] = await Promise.all([
-    getInquiryItemCaption(inquiryItemId),
-    draftParam ? getFormDraft("costing", draftParam) : Promise.resolve(null),
+  const [
+    context,
+    spec,
+    vendorOptions,
+    toolingChart,
+    machiningOp,
+    quantityTolerance,
+    paymentTerm,
+    externalGrade,
+    internalGrade,
+    tolerance,
+    condition,
+    internalProductionCode,
+    partNo,
+  ] = await Promise.all([
+    getCostingContext(inquiryItemId),
+    getCostingSpecForItem(inquiryItemId),
+    listVendorOptions(),
+    listMasterOptions("tooling_chart"),
+    listMasterOptions("machining_op"),
+    listMasterOptions("quantity_tolerance"),
+    listMasterOptions("payment_term"),
+    listMasterOptions("external_grade"),
+    listMasterOptions("internal_grade"),
+    listMasterOptions("tolerance"),
+    listMasterOptions("condition"),
+    listMasterOptions("internal_production_code"),
+    listMasterOptions("part_no"),
   ]);
 
   return (
-    <EnquiryModuleShell title="Costing Sheet" userMenu={<UserMenuServer />}>
+    <EnquiryModuleShell title="Costing Master" userMenu={<UserMenuServer />}>
       <div className="w-full">
-        <CostingForm
+        <CostingCalculatorShell
           inquiryItemId={inquiryItemId}
           inquiryId={inquiryId}
-          productCaption={productCaption}
-          enableDrafts
-          resumeDraftId={draftPayload ? draftParam : undefined}
-          initialValues={draftPayload ? (draftPayload as Partial<CreateCostingInput>) : undefined}
+          productCaption={context.productCaption}
+          lineQty={context.lineQty}
+          vendorOptions={vendorOptions}
+          masters={{ toolingChart, machiningOp, quantityTolerance, paymentTerm }}
+          defaultPaymentTerms={context.customerPaymentTerms}
+          spec={spec}
+          specMasters={{
+            externalGrade,
+            internalGrade,
+            tolerance,
+            condition,
+            internalProductionCode,
+            partNo,
+          }}
         />
       </div>
     </EnquiryModuleShell>

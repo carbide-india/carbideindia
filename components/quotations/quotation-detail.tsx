@@ -21,8 +21,9 @@ import type { UpdateQuotationInput } from "@/lib/validators/quotation";
 import type { EmployeeOption } from "@/lib/queries/employees";
 import { formatDate, formatInr } from "@/lib/format";
 import { fireToast } from "@/lib/toast";
-import { Field, MiniField, SectionCard, Segmented } from "@/components/inquiries/form-field";
+import { Field, MiniField, Segmented } from "@/components/inquiries/form-field";
 import { StatusPicker } from "@/components/inquiries/status-picker";
+import { MoneyInput } from "@/components/ui/money-input";
 
 /** Slim link block for the header - resolved server-side from inquiryId. */
 export interface QuotationInquiryLink {
@@ -234,105 +235,90 @@ export function QuotationDetail({ quotation, employees, inquiryLink, lines }: Pr
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr] items-start">
         {/* ── Main column ───────────────────────────────────────────── */}
         <div className="flex flex-col gap-6 min-w-0">
-          {/* Quoted Lines (read-only) */}
+          {/* ── Quoted Lines - feasibility-style banded cards ─────────── */}
           {lines.length > 0 && (
-            <SectionCard title="Quoted Lines">
-              <div className="flex flex-col gap-4">
-                {lines.map((line, idx) => (
-                  <QuotedLineCard key={line.id} line={line} lineNo={idx + 1} />
-                ))}
-              </div>
-            </SectionCard>
+            <section className="flex flex-col gap-4">
+              <h2 className="text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
+                Quoted Lines
+              </h2>
+              {lines.map((line, idx) => (
+                <QuotedLineCard key={line.id} line={line} lineNo={idx + 1} />
+              ))}
+            </section>
           )}
-
-          {/* Pricing (read) */}
-          <SectionCard title="Pricing">
-            <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-              <ReadStat label="Final Cost" value={money(quotation.finalCost)} />
-              <ReadStat label="Negotiation" value={money(quotation.negotiation)} />
-              <ReadStat label="Quote Price" value={money(quotation.quotePrice)} emphasis />
-            </div>
-          </SectionCard>
-
-          {/* Timeline (read) */}
-          <SectionCard title="Timeline & Validity">
-            <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-              <ReadStat label="Development Time" value={quotation.developmentTime ?? "-"} />
-              <ReadStat label="Delivery Time" value={quotation.deliveryTime ?? "-"} />
-              <ReadStat label="Validity" value={quotation.validity ?? "-"} />
-            </div>
-          </SectionCard>
 
           {/* Editable form note */}
           {lines.length > 0 && (
-            <p className="text-[13px] text-ink-muted -mt-2">
-              Editing here updates Line 1. Additional lines are shown read-only - full per-line editing is coming soon.
+            <p className="text-[13px] text-ink-muted -mt-1">
+              Editing below updates Line 1. Additional lines are shown read-only - full per-line editing is coming soon.
             </p>
           )}
 
-          {/* One form for the editable area: Product + Pricing + Timeline + Link/Sent. */}
-          <form onSubmit={onSubmit} className="flex flex-col gap-6" noValidate>
-            <SectionCard
-              title="Product"
-              hint="Customer-facing product, drawing and grade - only changed fields are saved."
-            >
-              <Field id="qd-product" label="Customer Product Name">
-                <input id="qd-product" type="text" className="nt-input" {...register("custProductName")} />
-              </Field>
-              <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-                <Field id="qd-drw" label="Customer Drawing No">
-                  <input id="qd-drw" type="text" className="nt-input" {...register("custDrawingNo")} />
+          {/* One form for the editable area, laid out as a cohesive
+              feasibility-style banded card (all fields stay editable). */}
+          <form onSubmit={onSubmit} noValidate>
+            <div className="overflow-hidden rounded-section border-2 border-[#b7bcd2] bg-surface-card">
+              <LineBand title="Product" />
+              <div className="flex flex-col gap-4 p-4">
+                <p className="-mt-1 text-[12.5px] text-ink-muted">
+                  Customer-facing product, drawing and grade - only changed fields are saved.
+                </p>
+                <Field id="qd-product" label="Customer Product Name">
+                  <input id="qd-product" type="text" className="nt-input" {...register("custProductName")} />
                 </Field>
-                <Field id="qd-rev" label="Drawing Revision No">
-                  <input id="qd-rev" type="text" className="nt-input" {...register("drawingRevisionNo")} />
-                </Field>
+                <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+                  <Field id="qd-drw" label="Customer Drawing No">
+                    <input id="qd-drw" type="text" className="nt-input" {...register("custDrawingNo")} />
+                  </Field>
+                  <Field id="qd-rev" label="Drawing Revision No">
+                    <input id="qd-rev" type="text" className="nt-input" {...register("drawingRevisionNo")} />
+                  </Field>
+                </div>
+                <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+                  <Field id="qd-part" label="Part No">
+                    <input id="qd-part" type="text" className="nt-input" {...register("partNo")} />
+                  </Field>
+                  <Field id="qd-gradecust" label="Grade Name for Customer">
+                    <input id="qd-gradecust" type="text" className="nt-input" {...register("gradeNameForCust")} />
+                  </Field>
+                </div>
+                <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
+                  <Field id="qd-grade" label="Grade (Customer)">
+                    <input id="qd-grade" type="text" className="nt-input" {...register("gradeCustomer")} />
+                  </Field>
+                  <Field id="qd-tol" label="Tolerance">
+                    <input id="qd-tol" type="text" className="nt-input" {...register("tolerance")} />
+                  </Field>
+                  <Field id="qd-cond" label="Condition">
+                    <input id="qd-cond" type="text" className="nt-input" {...register("condition")} />
+                  </Field>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-                <Field id="qd-part" label="Part No">
-                  <input id="qd-part" type="text" className="nt-input" {...register("partNo")} />
-                </Field>
-                <Field id="qd-gradecust" label="Grade Name for Customer">
-                  <input id="qd-gradecust" type="text" className="nt-input" {...register("gradeNameForCust")} />
-                </Field>
-              </div>
-              <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-                <Field id="qd-grade" label="Grade (Customer)">
-                  <input id="qd-grade" type="text" className="nt-input" {...register("gradeCustomer")} />
-                </Field>
-                <Field id="qd-tol" label="Tolerance">
-                  <input id="qd-tol" type="text" className="nt-input" {...register("tolerance")} />
-                </Field>
-                <Field id="qd-cond" label="Condition">
-                  <input id="qd-cond" type="text" className="nt-input" {...register("condition")} />
-                </Field>
-              </div>
-            </SectionCard>
 
-            <SectionCard title="Pricing" hint="All amounts in ₹.">
-              <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
-                <MiniField label="Final Cost">
+              <LineBand title="Pricing" />
+              <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-3">
+                <MiniField label="Final Cost (₹)">
                   <MoneyInput
                     aria-label="Final cost"
                     {...register("finalCost", { setValueAs: moneyValue })}
                   />
                 </MiniField>
-                <MiniField label="Negotiation">
+                <MiniField label="Negotiation (₹)">
                   <MoneyInput
                     aria-label="Negotiation"
                     {...register("negotiation", { setValueAs: moneyValue })}
                   />
                 </MiniField>
-                <MiniField label="Quote Price">
+                <MiniField label="Quote Price (₹)">
                   <MoneyInput
                     aria-label="Quote price"
                     {...register("quotePrice", { setValueAs: moneyValue })}
                   />
                 </MiniField>
               </div>
-            </SectionCard>
 
-            <SectionCard title="Timeline & Validity">
-              <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
+              <LineBand title="Timeline & Validity" />
+              <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-3">
                 <Field id="qd-dev" label="Development Time">
                   <input id="qd-dev" type="text" className="nt-input" {...register("developmentTime")} />
                 </Field>
@@ -343,63 +329,74 @@ export function QuotationDetail({ quotation, employees, inquiryLink, lines }: Pr
                   <input id="qd-val" type="text" className="nt-input" {...register("validity")} />
                 </Field>
               </div>
-            </SectionCard>
 
-            <SectionCard title="Quote Document">
-              <Field id="qd-link" label="Quotation Link">
-                <input
-                  id="qd-link"
-                  type="url"
-                  className="nt-input"
-                  placeholder="https://"
-                  {...register("quotationLink")}
-                />
-              </Field>
-              <Field label="Quote Sent" labelOnly>
-                <Controller
-                  control={control}
-                  name="quoteSent"
-                  render={({ field }) => (
-                    <Segmented
-                      options={QUOTE_SENT_OPTIONS}
-                      value={field.value ? "yes" : "no"}
-                      onChange={(v) => field.onChange(v === "yes")}
-                      allowClear={false}
-                      ariaLabel="Quote sent"
-                    />
-                  )}
-                />
-              </Field>
+              <LineBand title="Quote Document" />
+              <div className="flex flex-col gap-4 p-4">
+                <Field id="qd-link" label="Quotation Link">
+                  <input
+                    id="qd-link"
+                    type="url"
+                    className="nt-input"
+                    placeholder="https://"
+                    {...register("quotationLink")}
+                  />
+                </Field>
+                <Field label="Quote Sent" labelOnly>
+                  <Controller
+                    control={control}
+                    name="quoteSent"
+                    render={({ field }) => (
+                      <Segmented
+                        options={QUOTE_SENT_OPTIONS}
+                        value={field.value ? "yes" : "no"}
+                        onChange={(v) => field.onChange(v === "yes")}
+                        allowClear={false}
+                        ariaLabel="Quote sent"
+                      />
+                    )}
+                  />
+                </Field>
 
-              <div className="flex items-center justify-end border-t border-hairline pt-4">
-                <button
-                  type="submit"
-                  disabled={!isDirty || isSubmitting}
-                  className="inline-flex items-center gap-2 rounded-pill px-5 py-2.5 text-[14px] font-bold text-white transition-opacity disabled:opacity-50"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
-                  }}
-                >
-                  {isSubmitting && (
-                    <Loader2
-                      size={14}
-                      style={{ animation: "spinFast 0.8s linear infinite" }}
-                    />
-                  )}
-                  Save Changes
-                </button>
+                <div className="flex items-center justify-end border-t border-hairline pt-4">
+                  <button
+                    type="submit"
+                    disabled={!isDirty || isSubmitting}
+                    className="inline-flex items-center gap-2 rounded-pill px-5 py-2.5 text-[14px] font-bold text-white transition-opacity disabled:opacity-50"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
+                    }}
+                  >
+                    {isSubmitting && (
+                      <Loader2
+                        size={14}
+                        style={{ animation: "spinFast 0.8s linear infinite" }}
+                      />
+                    )}
+                    Save Changes
+                  </button>
+                </div>
               </div>
-            </SectionCard>
+            </div>
           </form>
         </div>
 
         {/* ── Sticky sidebar ─────────────────────────────────────────── */}
         <aside className="lg:sticky lg:top-24 flex flex-col gap-4 rounded-section border border-hairline bg-surface-card p-5">
           <div className="flex flex-col gap-2">
-            <span className="text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
-              Costing Done
-            </span>
+            {/* Costing Done header with Open Register sitting beside it. */}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
+                Costing Done
+              </span>
+              <Link
+                href={"/quotations" as Route}
+                className="inline-flex shrink-0 items-center gap-1.5 text-[13px] font-semibold text-ink-muted transition-colors hover:text-ink-strong"
+              >
+                <ArrowLeft size={13} strokeWidth={2.4} />
+                Open Register
+              </Link>
+            </div>
             <StatusPicker
               value={quotation.costingDoneStatus}
               options={COSTING_DONE_STATUSES}
@@ -409,7 +406,6 @@ export function QuotationDetail({ quotation, employees, inquiryLink, lines }: Pr
               ariaLabel="Costing done status"
             />
           </div>
-          <SidebarRow label="Quote Sent" value={quotation.quoteSent ? "Yes" : "No"} />
           {quotation.quotationLink && (
             <div className="flex flex-col gap-0.5">
               <span className="text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
@@ -426,42 +422,15 @@ export function QuotationDetail({ quotation, employees, inquiryLink, lines }: Pr
               </a>
             </div>
           )}
-          <SidebarRow label="Created" value={formatDate(quotation.createdAt)} />
-          {createdBy && <SidebarRow label="Created By" value={createdBy} />}
-          <SidebarRow label="Last Updated" value={formatDate(quotation.updatedAt)} />
-          <Link
-            href={"/quotations" as Route}
-            className="mt-1 inline-flex items-center gap-1.5 border-t border-hairline pt-4 text-[13px] font-semibold text-ink-muted hover:text-ink-strong transition-colors"
-          >
-            <ArrowLeft size={13} strokeWidth={2.4} />
-            Open Register
-          </Link>
+          {/* The four meta facts arranged 2-up (two lines). */}
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+            <SidebarRow label="Quote Sent" value={quotation.quoteSent ? "Yes" : "No"} />
+            <SidebarRow label="Created" value={formatDate(quotation.createdAt)} />
+            {createdBy && <SidebarRow label="Created By" value={createdBy} />}
+            <SidebarRow label="Last Updated" value={formatDate(quotation.updatedAt)} />
+          </div>
         </aside>
       </div>
-    </div>
-  );
-}
-
-function ReadStat({
-  label,
-  value,
-  emphasis,
-}: {
-  label: string;
-  value: string;
-  emphasis?: boolean;
-}) {
-  return (
-    <div className="flex flex-col gap-1 rounded-xl border border-hairline bg-surface-soft px-4 py-3">
-      <span className="text-[11px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
-        {label}
-      </span>
-      <span
-        className="tabular-nums text-ink-strong"
-        style={{ fontWeight: emphasis ? 800 : 600, fontSize: emphasis ? 20 : 16 }}
-      >
-        {value}
-      </span>
     </div>
   );
 }
@@ -477,82 +446,105 @@ function SidebarRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+/** Feasibility-style section band: indigo accent bar + black uppercase heading. */
+function LineBand({ title }: { title: string }) {
+  return (
+    <div className="flex items-center gap-2.5 border-y-2 border-[#d6d9ea] bg-[#e7e9f6] px-4 py-2.5">
+      <span className="h-4 w-1.5 shrink-0 rounded-full bg-[#3f3f94]" />
+      <span className="text-[13.5px] font-black uppercase tracking-[0.1em] text-[#3f3f94]">
+        {title}
+      </span>
+    </div>
+  );
+}
+
+/** Feasibility-style label/value cell (prominent label + bold value). */
+function LineCell({
+  label,
+  value,
+  emphasis,
+}: {
+  label: string;
+  value: React.ReactNode;
+  emphasis?: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-1 px-4 py-3">
+      <span className="text-[11.5px] font-bold uppercase tracking-[0.04em] text-[#6b7280]">
+        {label}
+      </span>
+      <span
+        className={
+          emphasis
+            ? "text-[17px] font-black leading-snug tabular-nums text-[#14151a]"
+            : "text-[15.5px] font-bold leading-snug text-[#14151a]"
+        }
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+/** em-dash placeholder in the muted feasibility tone. */
+const lineDash = (v: React.ReactNode): React.ReactNode =>
+  v == null || v === "" ? <span className="text-[#b3b8c2]">-</span> : v;
+
+/** shape + dimensions → "Flat OD40×L105×W36×Thk9" for the line band heading. */
+function specSummary(spec: QuotationLineWithSpec["spec"]): string {
+  const dims: string[] = [];
+  if (spec.outerDia) dims.push(`OD${spec.outerDia}`);
+  if (spec.innerDia) dims.push(`ID${spec.innerDia}`);
+  if (spec.length) dims.push(`L${spec.length}`);
+  if (spec.width) dims.push(`W${spec.width}`);
+  if (spec.thickness) dims.push(`Thk${spec.thickness}`);
+  return [spec.shapeName ?? "", dims.join("×")].filter(Boolean).join(" ");
+}
+
+/**
+ * One quoted line as a self-contained feasibility-style card: a banded heading
+ * ("Line 1 · <shape+dims>"), a dense divided label/value grid of the read-only
+ * spec (4-up on lg), then Pricing and Timeline bands with their own dense grids.
+ * All values are read-through from the line/item; editing happens in the form.
+ */
 function QuotedLineCard({ line, lineNo }: { line: QuotationLineWithSpec; lineNo: number }) {
   // Spec fields resolved read-through from the linked Item (§2.4); prices / qty
   // / timeline remain the line's own transactional facts.
   const spec = line.spec;
   const ask = line.ask;
+  const summary = specSummary(spec) || ask.custProductName || "";
+  const specGrid =
+    "grid grid-cols-2 divide-x divide-y divide-[#c6cbdd] sm:grid-cols-3 lg:grid-cols-4";
+  const triGrid = "grid grid-cols-1 divide-x divide-y divide-[#c6cbdd] sm:grid-cols-3";
+
   return (
-    <div className="rounded-xl border border-hairline bg-surface-soft px-4 py-4 flex flex-col gap-3">
-      <div className="flex items-center gap-2">
-        <span className="text-[11px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
-          Line {lineNo}
-        </span>
-        {ask.custProductName && (
-          <span className="text-[13.5px] font-semibold text-ink-strong">
-            {ask.custProductName}
-          </span>
-        )}
+    <div className="overflow-hidden rounded-section border-2 border-[#b7bcd2] bg-surface-card">
+      <LineBand title={summary ? `Line ${lineNo} · ${summary}` : `Line ${lineNo}`} />
+      <div className={specGrid}>
+        <LineCell label="Qty" value={lineDash(line.qty)} />
+        <LineCell label="Part No" value={lineDash(spec.partNo)} />
+        <LineCell label="Grade (Cust)" value={lineDash(spec.gradeCustomer)} />
+        <LineCell label="Grade Name" value={lineDash(spec.gradeNameForCust)} />
+        <LineCell label="Tolerance" value={lineDash(spec.toleranceName)} />
+        <LineCell label="Condition" value={lineDash(spec.conditionName)} />
+        <LineCell label="Drawing No" value={lineDash(ask.custDrawingNo)} />
+        <LineCell label="Rev" value={lineDash(ask.drawingRevisionNo)} />
       </div>
-      <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
-        <LineStat label="Qty" value={line.qty ?? "-"} />
-        <LineStat label="Part No" value={spec.partNo ?? "-"} />
-        <LineStat label="Grade (Cust)" value={spec.gradeCustomer ?? "-"} />
-        <LineStat label="Grade Name" value={spec.gradeNameForCust ?? "-"} />
-        <LineStat label="Tolerance" value={spec.toleranceName ?? "-"} />
-        <LineStat label="Condition" value={spec.conditionName ?? "-"} />
-        {ask.custDrawingNo && (
-          <LineStat label="Drawing No" value={ask.custDrawingNo} />
-        )}
-        {ask.drawingRevisionNo && (
-          <LineStat label="Rev" value={ask.drawingRevisionNo} />
-        )}
+
+      <LineBand title="Pricing" />
+      <div className={triGrid}>
+        <LineCell label="Final Cost" value={money(line.finalCost)} />
+        <LineCell label="Negotiation" value={money(line.negotiation)} />
+        <LineCell label="Quote Price" value={money(line.quotePrice)} emphasis />
       </div>
-      <div className="grid grid-cols-3 gap-4 border-t border-hairline pt-3 max-md:grid-cols-1">
-        <ReadStat label="Final Cost" value={money(line.finalCost)} />
-        <ReadStat label="Negotiation" value={money(line.negotiation)} />
-        <ReadStat label="Quote Price" value={money(line.quotePrice)} emphasis />
-      </div>
-      <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-        <LineStat label="Development Time" value={line.developmentTime ?? "-"} />
-        <LineStat label="Delivery Time" value={line.deliveryTime ?? "-"} />
-        <LineStat label="Validity" value={line.validity ?? "-"} />
+
+      <LineBand title="Timeline & Validity" />
+      <div className={triGrid}>
+        <LineCell label="Development Time" value={lineDash(line.developmentTime)} />
+        <LineCell label="Delivery Time" value={lineDash(line.deliveryTime)} />
+        <LineCell label="Validity" value={lineDash(line.validity)} />
       </div>
     </div>
   );
 }
 
-function LineStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-[11px] uppercase tracking-[0.10em] font-bold text-ink-subtle">
-        {label}
-      </span>
-      <span className="text-[13.5px] font-semibold text-ink-strong">{value}</span>
-    </div>
-  );
-}
-
-/** ₹-prefixed number input. */
-const MoneyInput = React.forwardRef<
-  HTMLInputElement,
-  React.InputHTMLAttributes<HTMLInputElement>
->(function MoneyInput(props, ref) {
-  return (
-    <div className="relative w-[180px]">
-      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[14px] font-semibold text-ink-subtle">
-        ₹
-      </span>
-      <input
-        ref={ref}
-        type="number"
-        inputMode="decimal"
-        min={0}
-        step="any"
-        className="nt-input w-full pl-7 tabular-nums"
-        placeholder="0"
-        {...props}
-      />
-    </div>
-  );
-});

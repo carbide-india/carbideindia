@@ -145,7 +145,7 @@ export function DocumentLibrary({ documents }: { documents: DocumentRow[] }) {
 
       {/* Library */}
       {documents.length === 0 ? (
-        <div className="rounded-section border border-dashed border-hairline-strong bg-surface-card px-6 py-12 text-center">
+        <div className="rounded-section border border-hairline-strong bg-surface-card px-6 py-12 text-center">
           <FileText size={28} className="mx-auto text-ink-subtle mb-2" />
           <p className="font-serif text-ink-strong" style={{ fontStyle: "italic", fontSize: 20 }}>
             No documents yet
@@ -180,6 +180,9 @@ function DocRow({ doc }: { doc: DocumentRow }) {
     });
   }
   function del() {
+    // Irreversible (removes the row AND the Blob file) - confirm first, matching
+    // the client-documents / item-documents surfaces.
+    if (!window.confirm("Delete this document? This cannot be undone.")) return;
     start(async () => {
       const res = await deleteDocument(doc.id);
       if (!res.ok) fireToast({ message: res.error });

@@ -156,7 +156,7 @@ export function CustomListsEditor({
 
       {/* ── Sections ── */}
       {orderedShown.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-[#d5d8e2] bg-white px-6 py-14 text-center">
+        <div className="rounded-2xl border border-[#d5d8e2] bg-white px-6 py-14 text-center">
           <p className="text-[15px] font-bold text-[#3a4152]">No dropdowns match your search.</p>
           {hasFilter && (
             <button
@@ -441,7 +441,7 @@ function ListCard({
             ) : (
               <div
                 key={o.id}
-                className="rounded-lg border border-dashed border-hairline px-3 py-1.5 text-[13px] text-ink-subtle"
+                className="rounded-lg border border-hairline px-3 py-1.5 text-[13px] text-ink-subtle"
               >
                 {o.label}
               </div>

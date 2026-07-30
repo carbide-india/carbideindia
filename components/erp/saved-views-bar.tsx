@@ -201,10 +201,10 @@ export function SavedViewsBar({
         type="button"
         onClick={handleCreate}
         disabled={pending}
-        className="inline-flex items-center gap-1 rounded-full border border-dashed border-hairline-strong px-2.5 py-1 text-[13px] font-semibold text-ink-subtle transition-colors hover:border-brand hover:text-brand disabled:opacity-50"
+        className="inline-flex items-center gap-1 rounded-full border border-hairline-strong px-2.5 py-1 text-[13px] font-semibold text-ink-subtle transition-colors hover:border-brand hover:text-brand disabled:opacity-50"
       >
         <Plus size={13} strokeWidth={2.4} />
-        New view
+        New View
       </button>
     </div>
   );

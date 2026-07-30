@@ -159,7 +159,7 @@ export function NotificationBell({ className }: { className?: string }) {
               className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] font-bold text-[#3f3f94] transition-colors hover:bg-white/70 disabled:opacity-50"
             >
               {markingAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCheck className="h-3.5 w-3.5" />}
-              Mark all read
+              Mark All Read
             </button>
           )}
         </div>
@@ -195,7 +195,7 @@ export function NotificationBell({ className }: { className?: string }) {
           onClick={() => setOpen(false)}
           className="flex items-center justify-center gap-1.5 border-t border-[#eceef4] bg-[#fafbff] py-3 text-[13px] font-bold text-[#3f3f94] transition-colors hover:bg-[#f1f2fd]"
         >
-          View all notifications
+          View All Notifications
           <ArrowRight className="h-[15px] w-[15px]" strokeWidth={2.4} />
         </Link>
       </PopoverContent>

@@ -53,7 +53,7 @@ export function FormDraftsList({
 
   if (items.length === 0) {
     return (
-      <div className="rounded-section border border-dashed border-hairline-strong bg-surface-card px-6 py-14 text-center text-[14px] text-ink-subtle">
+      <div className="rounded-section border border-hairline-strong bg-surface-card px-6 py-14 text-center text-[14px] text-ink-subtle">
         No {meta.noun.toLowerCase()} drafts yet - half-filled {meta.noun.toLowerCase()} forms auto-save here so you can resume them later.
       </div>
     );

@@ -242,6 +242,18 @@ export const MASTER_KINDS = [
   // Job Card (2026-06-30): production work-order masters.
   "dispatch_condition",
   "pressing_type",
+  // Form 04/05 costing (2026-07-30, migration 0062): three EMPTY admin masters
+  // Alok populates — grade given to the customer, internal production code, part no.
+  "external_grade",
+  "internal_production_code",
+  "part_no",
+  // Costing Master engine v3 (2026-07-30, migration 0064): four dropdowns the
+  // calculator needs. tooling_chart ships EMPTY (Alok fills); the other three
+  // are seeded per the sheet. Cardinal rule: every dropdown lives in Admin Master.
+  "tooling_chart",
+  "machining_op",
+  "quantity_tolerance",
+  "payment_term",
 ] as const;
 export type MasterKind = (typeof MASTER_KINDS)[number];
 
@@ -281,6 +293,13 @@ export const MASTER_KIND_LABELS: Record<MasterKind, string> = {
   shape: "Shape",
   dispatch_condition: "Dispatch Condition",
   pressing_type: "Pressing Type",
+  external_grade: "Grade (Given to Customer)",
+  internal_production_code: "Internal Production Code",
+  part_no: "Part No",
+  tooling_chart: "Tooling Chart",
+  machining_op: "Machining Operation",
+  quantity_tolerance: "Quantity Tolerance",
+  payment_term: "Payment Terms",
 };
 
 // ── Inquiry module (Phase 2) — option lists from Manan's sheet ──
@@ -417,12 +436,31 @@ export const SAMPLE_REPORT_TYPES = ["Dimension Report", "Chemical Analysis Repor
 export const COSTING_ROUTES = ["inhouse", "bought_out"] as const;
 export type CostingRoute = (typeof COSTING_ROUTES)[number];
 export const COSTING_ROUTE_LABELS: Record<CostingRoute, string> = { inhouse: "In-house", bought_out: "Bought-Out" };
-export const COSTING_LOGICS = ["previously_made", "tooling_available", "tooling_to_be_made", "no_tooling"] as const;
+// The first four values are DEPRECATED (kept for data-compat with already-saved
+// costings, filtered from the UI — mirror how deprecated task statuses are kept
+// in the physical pgEnum). The dropdown iterates COSTING_LOGIC_FORMULAS instead.
+// Append-only: the six formula slugs from Alok's sheet added at the END so the
+// pgEnum only ever grows (drizzle emits ALTER TYPE ADD VALUE ×6 — see 0044).
+export const COSTING_LOGICS = [
+  "previously_made", "tooling_available", "tooling_to_be_made", "no_tooling",
+  "bo_oh_nego", "bw_ratio_vc_oh_nego", "dw_ratio_forming", "ic_oh_nego", "ic_vc_oh_nego", "pw_ratio_forming",
+] as const;
 export type CostingLogic = (typeof COSTING_LOGICS)[number];
 export const COSTING_LOGIC_LABELS: Record<CostingLogic, string> = {
   previously_made: "Previously made", tooling_available: "Tooling available",
   tooling_to_be_made: "Tooling to be made", no_tooling: "No tooling",
+  bo_oh_nego: "BO + 35% OH + 3% Nego",
+  bw_ratio_vc_oh_nego: "BW × Ratio + Vendor Cost + 35% OH + 3% Nego",
+  dw_ratio_forming: "DW × Ratio + Forming",
+  ic_oh_nego: "IC + 35% OH + 3% Nego",
+  ic_vc_oh_nego: "IC + VC + 35% OH + 3% Nego",
+  pw_ratio_forming: "PW × Ratio + Forming",
 };
+/** The six live Costing Logic formulas (Alok's sheet, in sheet order). The
+ *  Costing Logic dropdown iterates THIS — the deprecated four above are hidden. */
+export const COSTING_LOGIC_FORMULAS = [
+  "bo_oh_nego", "bw_ratio_vc_oh_nego", "dw_ratio_forming", "ic_oh_nego", "ic_vc_oh_nego", "pw_ratio_forming",
+] as const satisfies readonly CostingLogic[];
 
 // ── Quote lifecycle (Phase 4) — from Quote Master / Negotiation / SO sheets ──
 export const COSTING_DONE_STATUSES = ["not_done", "in_process", "done"] as const;

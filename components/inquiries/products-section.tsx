@@ -44,6 +44,10 @@ interface Props {
   grades: MasterOptionItem[];
   tolerances: MasterOptionItem[];
   conditions: MasterOptionItem[];
+  /** 3-tier grades + production masters (migration 0062). */
+  externalGrades?: MasterOptionItem[];
+  internalProductionCodes?: MasterOptionItem[];
+  partNos?: MasterOptionItem[];
   /** Per-shape dimension config keyed by shape NAME (matches the master name). */
   shapeProfiles: Record<string, ShapeConfig>;
   /** Masters for the SAP-style Material Search / create-new mini-form. */
@@ -74,6 +78,11 @@ const EMPTY_PRODUCT = {
   dimensionUnit: "mm",
   dimensionNotes: "",
   gradeId: undefined,
+  gradeCustomer: "",
+  gradeCustomerFacingId: undefined,
+  gradeInternalProductionId: undefined,
+  internalProductionCodeId: undefined,
+  partNoId: undefined,
   toleranceId: undefined,
   conditionId: undefined,
   quantityNos: undefined,
@@ -166,6 +175,9 @@ export function ProductsSection({
   grades,
   tolerances,
   conditions,
+  externalGrades = [],
+  internalProductionCodes = [],
+  partNos = [],
   shapeProfiles,
   pickerMasters,
   unitOptions,
@@ -175,6 +187,25 @@ export function ProductsSection({
   const unitList = unitOptions?.length ? unitOptions : DIMENSION_UNITS;
   const uomList = uomOptions?.length ? uomOptions : [...QUANTITY_UOMS];
   const { fields, append, remove } = useFieldArray({ control, name: "products" });
+
+  // Keyboard-first array-row ergonomics: focus the first field of a freshly-
+  // added product card, and recover focus to the Add button on removal so a
+  // keyboard user never lands in a focus black-hole.
+  const addProductBtnRef = React.useRef<HTMLButtonElement>(null);
+  const focusNewProductRef = React.useRef(false);
+  React.useEffect(() => {
+    if (!focusNewProductRef.current) return;
+    focusNewProductRef.current = false;
+    const cards = document.querySelectorAll<HTMLElement>("[data-product-card]");
+    const last = cards[cards.length - 1];
+    // First genuine data field of the card: a text/number input or a custom
+    // Select trigger (the checklist's first dropdown), never the Remove button.
+    last
+      ?.querySelector<HTMLElement>(
+        'input:not([type=hidden]):not([disabled]), textarea:not([disabled]), button[aria-haspopup="listbox"]:not([disabled])',
+      )
+      ?.focus();
+  }, [fields.length]);
   // Per-row attached Item (from the Material Search). Keyed by field.id so it
   // survives reorder/removal; presence pins the picker chip + drives the
   // "attached" hint. The item_id itself is derived server-side by the existing
@@ -220,6 +251,7 @@ export function ProductsSection({
         return (
         <div
           key={field.id}
+          data-product-card
           className="flex flex-col gap-5 rounded-section border border-hairline p-5"
           style={{ background: "var(--color-surface-soft)" }}
         >
@@ -229,7 +261,10 @@ export function ProductsSection({
             action={
               <button
                 type="button"
-                onClick={() => remove(index)}
+                onClick={() => {
+                  remove(index);
+                  requestAnimationFrame(() => addProductBtnRef.current?.focus());
+                }}
                 disabled={fields.length === 1}
                 className="inline-flex shrink-0 items-center gap-1.5 rounded-chip border border-hairline px-3 py-1.5 text-[12.5px] font-semibold text-ink-muted transition-colors hover:border-hairline-strong hover:text-ink-strong disabled:cursor-not-allowed disabled:opacity-40"
               >
@@ -495,6 +530,50 @@ export function ProductsSection({
             />
           </Field>
 
+          {/* 3-tier grades + production codes (migration 0062). The customer's
+              raw grade text, the grade WE quote them, the internal production
+              grade, and the production/part codes each live on their own. */}
+          <div className="flex flex-col gap-3 rounded-lg border border-[#dcdce8] bg-white p-4">
+            <span className="text-[12px] font-bold uppercase tracking-[0.08em] text-[#3f3f94]">
+              Grades &amp; Codes
+            </span>
+            <div className="grid grid-cols-5 gap-4 max-lg:grid-cols-3 max-md:grid-cols-1">
+              <Field id={`products.${index}.gradeCustomer`} label="Grade Name (Customer)">
+                <input
+                  id={`products.${index}.gradeCustomer`}
+                  type="text"
+                  className="nt-input"
+                  placeholder="As the client stated it"
+                  {...register(`products.${index}.gradeCustomer`)}
+                />
+              </Field>
+              <ProductMasterSelect
+                control={control}
+                name={`products.${index}.gradeCustomerFacingId`}
+                label="Grade Given to Customer"
+                options={externalGrades}
+              />
+              <ProductMasterSelect
+                control={control}
+                name={`products.${index}.gradeInternalProductionId`}
+                label="Internal Grade for Production"
+                options={grades}
+              />
+              <ProductMasterSelect
+                control={control}
+                name={`products.${index}.internalProductionCodeId`}
+                label="Internal Production Code"
+                options={internalProductionCodes}
+              />
+              <ProductMasterSelect
+                control={control}
+                name={`products.${index}.partNoId`}
+                label="Part No"
+                options={partNos}
+              />
+            </div>
+          </div>
+
           {/* Masters + quantity - one row: grade, tolerance, condition, qty, uom */}
           <div className="grid grid-cols-5 gap-4 max-lg:grid-cols-3 max-md:grid-cols-1">
             <ProductMasterSelect
@@ -568,8 +647,12 @@ export function ProductsSection({
 
       <div>
         <button
+          ref={addProductBtnRef}
           type="button"
-          onClick={() => append({ ...EMPTY_PRODUCT })}
+          onClick={() => {
+            focusNewProductRef.current = true;
+            append({ ...EMPTY_PRODUCT });
+          }}
           className="inline-flex items-center gap-2 rounded-chip border border-brand bg-brand/8 px-4 py-2.5 text-[13px] font-semibold text-brand transition-colors hover:bg-brand/12"
         >
           + Add product
@@ -594,7 +677,11 @@ function ProductMasterSelect({
   name:
     | `products.${number}.gradeId`
     | `products.${number}.toleranceId`
-    | `products.${number}.conditionId`;
+    | `products.${number}.conditionId`
+    | `products.${number}.gradeCustomerFacingId`
+    | `products.${number}.gradeInternalProductionId`
+    | `products.${number}.internalProductionCodeId`
+    | `products.${number}.partNoId`;
   label: string;
   options: MasterOptionItem[];
 }) {

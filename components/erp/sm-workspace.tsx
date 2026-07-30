@@ -34,6 +34,7 @@ import {
 import type { Inquiry, InquiryItemFeasibility } from "@/db/schema";
 import type { EmployeeOption } from "@/lib/queries/employees";
 import type { AuditEntry } from "@/lib/queries/audit";
+import type { CostingDecision } from "@/lib/queries/costings";
 import type {
   InquiryWorkspaceHeader,
   InquiryProductCard,
@@ -57,6 +58,7 @@ import { AuditHistory } from "@/components/audit/audit-history";
 import { StatusPicker } from "@/components/inquiries/status-picker";
 import { FeasibilityPanel } from "@/components/inquiries/feasibility-panel";
 import { Chip, PRIORITY_TONES } from "@/components/inquiries/chip";
+import { CostingDecisionPanel } from "@/components/costings/costing-decision-panel";
 import { cn } from "@/lib/utils";
 
 /**
@@ -85,6 +87,7 @@ interface SmWorkspaceProps {
   employees: EmployeeOption[];
   auditEntries: AuditEntry[];
   itemFeasibility: Record<string, InquiryItemFeasibility>;
+  costingDecisions: Record<string, CostingDecision>;
   isAdmin: boolean;
   /**
    * When true, render the cockpit WITHOUT the ERP AppShell chrome (rail +
@@ -190,6 +193,7 @@ export function SmWorkspace({
   employees,
   auditEntries,
   itemFeasibility,
+  costingDecisions,
   isAdmin,
   embedded,
 }: SmWorkspaceProps) {
@@ -415,7 +419,13 @@ export function SmWorkspace({
               </Section>
             )}
             {tab === "costing" && (
-              <CostingTab inquiryId={header.id} products={products} onOpenItem={openItem} />
+              <CostingTab
+                inquiryId={header.id}
+                products={products}
+                costingDecisions={costingDecisions}
+                isAdmin={isAdmin}
+                onOpenItem={openItem}
+              />
             )}
             {tab === "quotation" && (
               <QuotationTab
@@ -955,10 +965,14 @@ function Field({
 function CostingTab({
   inquiryId,
   products,
+  costingDecisions,
+  isAdmin,
   onOpenItem,
 }: {
   inquiryId: string;
   products: InquiryProductCard[];
+  costingDecisions: Record<string, CostingDecision>;
+  isAdmin: boolean;
   onOpenItem: (id: string) => void;
 }) {
   if (products.length === 0) {
@@ -968,6 +982,11 @@ function CostingTab({
       </Section>
     );
   }
+  // Products with something to decide (a recommendation exists) or already locked.
+  const decidable = products.filter((p) => {
+    const d = costingDecisions[p.id];
+    return d && (d.recommendation != null || d.state.isLocked);
+  });
   return (
     <Section title="Costing" subtitle="BU/BO + in-house per product; the chosen costing feeds the quote price">
       <div className="overflow-x-auto">
@@ -1023,6 +1042,26 @@ function CostingTab({
           </tbody>
         </table>
       </div>
+
+      {decidable.length > 0 && (
+        <div className="mt-8 flex flex-col gap-5">
+          <div className="border-b border-hairline pb-2 text-[13px] font-bold uppercase tracking-[0.14em] text-ink-subtle">
+            Costing Decision
+          </div>
+          {decidable.map((p) => {
+            const d = costingDecisions[p.id];
+            if (!d) return null;
+            return (
+              <CostingDecisionPanel
+                key={p.id}
+                decision={d}
+                isAdmin={isAdmin}
+                productName={p.custProductName ?? p.shapeName ?? "Product"}
+              />
+            );
+          })}
+        </div>
+      )}
     </Section>
   );
 }
@@ -1031,7 +1070,7 @@ function CostingTab({
 
 function LockedPanel({ reason }: { reason: string }) {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-hairline-strong bg-surface-soft px-6 py-10 text-center">
+    <div className="flex flex-col items-center gap-2 rounded-xl border border-hairline-strong bg-surface-soft px-6 py-10 text-center">
       <Lock size={20} strokeWidth={2.2} className="text-ink-subtle" />
       <p className="max-w-md text-[13px] text-ink-muted">{reason}</p>
     </div>
@@ -1593,7 +1632,7 @@ function Section({
 
 function Empty({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-dashed border-hairline-strong bg-surface-soft px-4 py-3 text-[13px] text-ink-subtle">
+    <div className="rounded-xl border border-hairline-strong bg-surface-soft px-4 py-3 text-[13px] text-ink-subtle">
       {children}
     </div>
   );

@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { HubSearch } from "@/components/hub/hub-search";
+import { HistoryNav } from "@/components/layout/history-nav";
 import { ModuleTitleBadge } from "@/components/layout/module-title-badge";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { draftKindForSegment, FORM_DRAFT_META } from "@/lib/drafts/form-drafts";
@@ -253,6 +254,10 @@ export function EnquiryModuleShell({
               </span>
             </button>
           )}
+          {/* Browser-style back / forward — sits between the sidebar toggle and
+              Back-to-Forms, driving real history navigation with depth-aware
+              enable/disable. */}
+          <HistoryNav />
           {showSidebar && (
             <Link
               href={"/enquiries" as Route}

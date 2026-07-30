@@ -44,7 +44,7 @@ export function RecycleBinList({ items }: { items: RecycledDraftItem[] }) {
 
   if (items.length === 0) {
     return (
-      <div className="rounded-section border border-dashed border-hairline-strong bg-surface-card px-6 py-14 text-center text-[14px] text-ink-subtle">
+      <div className="rounded-section border border-hairline-strong bg-surface-card px-6 py-14 text-center text-[14px] text-ink-subtle">
         Recycle Bin is empty. Drafts you delete - or that overflow the 10-per-form limit - land
         here and are permanently removed 48 hours later.
       </div>
@@ -84,7 +84,10 @@ export function RecycleBinList({ items }: { items: RecycledDraftItem[] }) {
             </button>
             <button
               type="button"
-              onClick={() => run(d.id, () => deleteFormDraft(d.kind, d.id), "Draft permanently deleted.")}
+              onClick={() => {
+                if (!window.confirm("Delete this draft forever? This cannot be undone.")) return;
+                run(d.id, () => deleteFormDraft(d.kind, d.id), "Draft permanently deleted.");
+              }}
               disabled={pending === d.id}
               aria-label="Delete forever"
               title="Delete forever"

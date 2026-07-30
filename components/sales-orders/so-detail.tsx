@@ -17,6 +17,7 @@ import type { EmployeeOption } from "@/lib/queries/employees";
 import { formatDate, formatInr } from "@/lib/format";
 import { fireToast } from "@/lib/toast";
 import { Field, MiniField, SectionCard, Segmented } from "@/components/inquiries/form-field";
+import { MoneyInput } from "@/components/ui/money-input";
 
 /** Slim link block for the header - resolved server-side from inquiryId. */
 export interface SalesOrderInquiryLink {
@@ -320,10 +321,12 @@ export function SoDetail({ salesOrder, employees, inquiryLink, lines }: Props) {
             >
               <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
                 <MiniField label="Quote Price">
-                  <MoneyInput
-                    aria-label="Quote price"
-                    {...register("quotePrice", { setValueAs: moneyValue })}
-                  />
+                  <span className="block w-[180px]">
+                    <MoneyInput
+                      aria-label="Quote price"
+                      {...register("quotePrice", { setValueAs: moneyValue })}
+                    />
+                  </span>
                 </MiniField>
               </div>
               <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
@@ -569,27 +572,3 @@ function LineStat({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-
-/** ₹-prefixed number input. */
-const MoneyInput = React.forwardRef<
-  HTMLInputElement,
-  React.InputHTMLAttributes<HTMLInputElement>
->(function MoneyInput(props, ref) {
-  return (
-    <div className="relative w-[180px]">
-      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[14px] font-semibold text-ink-subtle">
-        ₹
-      </span>
-      <input
-        ref={ref}
-        type="number"
-        inputMode="decimal"
-        min={0}
-        step="any"
-        className="nt-input w-full pl-7 tabular-nums"
-        placeholder="0"
-        {...props}
-      />
-    </div>
-  );
-});

@@ -89,7 +89,7 @@ export function DraftsList({ drafts }: { drafts: DraftItem[] }) {
 
   if (items.length === 0) {
     return (
-      <div className="mt-10 flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#d7dbe3] bg-white/60 px-6 py-16 text-center">
+      <div className="mt-10 flex flex-col items-center justify-center rounded-2xl border border-[#e6e8ec] bg-white/60 px-6 py-16 text-center">
         <div className="grid h-16 w-16 place-items-center rounded-2xl bg-[#eef1fb]">
           <FilePlus2 className="h-8 w-8 text-[#2b46b5]" strokeWidth={1.8} />
         </div>

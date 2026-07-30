@@ -27,6 +27,7 @@ import {
 import { CreateSampleSchema } from "@/lib/validators/sample";
 import { createSample } from "@/app/(app)/samples/actions";
 import { useFormDraft } from "@/components/drafts/use-form-draft";
+import { useKeyboardForm } from "@/components/forms/use-keyboard-form";
 import { fireToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { Select } from "@/components/ui/select";
@@ -206,13 +207,18 @@ export function SampleForm({
   const stageLocations =
     stageLocationOptions?.length ? stageLocationOptions : [...STAGE_LOCATIONS];
   const router = useRouter();
+  const { formProps } = useKeyboardForm();
   const [pending, startTransition] = React.useTransition();
   const [serverError, setServerError] = React.useState<string | null>(null);
 
   // Photos live in local state (source of truth) and are merged into the
   // payload on submit - uploads run on file-pick, the save never waits on or
   // requires them.
-  const [photos, setPhotos] = React.useState<string[]>([]);
+  // Seed from a resumed draft so uploaded photos survive leave/resume (the draft
+  // now persists them via the useFormDraft `extra` payload below).
+  const [photos, setPhotos] = React.useState<string[]>(
+    () => (initialValues as { photoUrls?: string[] } | undefined)?.photoUrls ?? [],
+  );
   const [uploadingCount, setUploadingCount] = React.useState(0);
   const fileRef = React.useRef<HTMLInputElement>(null);
 
@@ -264,6 +270,8 @@ export function SampleForm({
     resumeDraftId,
     watch,
     getValues,
+    // Photos live outside RHF - persist them into the draft so they aren't lost.
+    extra: () => ({ photoUrls: photos }),
   });
 
   async function onPickFiles(e: React.ChangeEvent<HTMLInputElement>) {
@@ -334,7 +342,7 @@ export function SampleForm({
     | undefined;
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-6" noValidate>
+    <form onSubmit={submit} onKeyDown={formProps.onKeyDown} className="flex flex-col gap-6" noValidate>
       {/* ── 1 · Sample ───────────────────────────────────────────────── */}
       <SectionCard
         title="Sample"
@@ -498,7 +506,7 @@ export function SampleForm({
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={uploadingCount > 0}
-            className="inline-flex size-[96px] flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-hairline-strong text-ink-subtle hover:text-ink-strong hover:border-ink-subtle transition-colors disabled:opacity-60"
+            className="inline-flex size-[96px] flex-col items-center justify-center gap-1.5 rounded-xl border border-hairline-strong text-ink-subtle hover:text-ink-strong hover:border-ink-subtle transition-colors disabled:opacity-60"
           >
             {uploadingCount > 0 ? (
               <Loader2
@@ -704,9 +712,12 @@ export function SampleForm({
         className="flex items-center justify-end gap-3 pt-2"
         style={{ borderTop: "1px solid var(--color-hairline)" }}
       >
+        <span className="text-[11px] text-ink-subtle">Ctrl / ⌘ + Enter to save</span>
         <button
           type="submit"
-          disabled={pending}
+          // Block submit while photo uploads are still in flight, else the row
+          // saves before the just-uploaded files are attached and they're lost.
+          disabled={pending || uploadingCount > 0}
           className="text-cta text-white px-8 py-4 rounded-chip transition-transform disabled:opacity-50"
           style={{
             background:
@@ -717,7 +728,7 @@ export function SampleForm({
             letterSpacing: "0.005em",
           }}
         >
-          {pending ? "Registering" : "Register Sample"}
+          {uploadingCount > 0 ? "Uploading…" : pending ? "Registering" : "Register Sample"}
         </button>
       </div>
     </form>

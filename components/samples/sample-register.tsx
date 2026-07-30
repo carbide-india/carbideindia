@@ -353,21 +353,21 @@ export function SampleRegister({ rows, employees }: Props) {
 
         {hasFilters && (
           <button type="button" onClick={clearFilters} className="shrink-0 px-2 py-2 text-[12.5px] font-semibold text-[#6b7280] transition-colors hover:text-[#3a4152]">
-            Clear filters
+            Clear Filters
           </button>
         )}
       </div>
 
       {/* Table ------------------------------------------------------------ */}
       {filtered.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-[#d5d8e2] bg-white px-6 py-14 text-center">
+        <div className="rounded-2xl border border-[#d5d8e2] bg-white px-6 py-14 text-center">
           <p className="text-[15px] font-bold text-[#3a4152]">
             {hasFilters ? "No samples match these filters." : "No samples yet - log the first one."}
           </p>
           <p className="mt-1.5 text-[13px] text-[#6b7280]">
             {hasFilters ? (
               <button type="button" onClick={clearFilters} className="font-semibold text-[#3f3f94] underline underline-offset-2">
-                Clear filters
+                Clear Filters
               </button>
             ) : (
               <Link href={NEW_SAMPLE_ROUTE} className="font-semibold text-[#3f3f94] underline underline-offset-2">
@@ -443,7 +443,7 @@ function ColumnsMenu({ hidden, setHidden }: { hidden: Record<string, boolean>; s
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="max-h-[70vh] overflow-y-auto">
-        <DropdownMenuLabel>Show columns</DropdownMenuLabel>
+        <DropdownMenuLabel>Show Columns</DropdownMenuLabel>
         {OPT_COLUMNS.map((c) => {
           const visible = !hidden[c.id];
           return (
@@ -521,14 +521,14 @@ function RowMenu({ row, onQuickView }: { row: SampleListItem; onQuickView: () =>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="min-w-[11rem]">
-        <DropdownMenuItem className="text-[14px]" onSelect={(e) => { e.preventDefault(); onQuickView(); }}>
+        <DropdownMenuItem className="text-[14px]" onSelect={() => onQuickView()}>
           <Eye size={15} strokeWidth={2.2} />
-          Quick view
+          Quick View
         </DropdownMenuItem>
         <DropdownMenuItem asChild className="text-[14px]">
           <Link href={`/samples/${row.id}` as Route} className="flex items-center gap-2.5">
             <FileText size={15} strokeWidth={2.2} />
-            Full record
+            Full Record
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild className="text-[14px]">

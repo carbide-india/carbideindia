@@ -44,11 +44,24 @@ export function LocationSelect({
   );
   const specifying = choice === otherOption;
 
+  // Keyboard-first: when the user picks "Other(s)", move focus into the newly
+  // revealed (required) specify input so it isn't skipped. A ref flag keeps
+  // this from stealing focus on initial mount for a resumed free-text value.
+  const specifyRef = React.useRef<HTMLInputElement>(null);
+  const focusOnReveal = React.useRef(false);
+  React.useEffect(() => {
+    if (specifying && focusOnReveal.current) {
+      focusOnReveal.current = false;
+      specifyRef.current?.focus();
+    }
+  }, [specifying]);
+
   return (
     <div className="flex flex-col gap-2">
       <Select
         value={choice}
         onValueChange={(next) => {
+          focusOnReveal.current = next === otherOption;
           setChoice(next);
           onChange(next === otherOption ? custom : next);
         }}
@@ -58,6 +71,7 @@ export function LocationSelect({
       />
       {specifying && (
         <input
+          ref={specifyRef}
           type="text"
           className="nt-input"
           required

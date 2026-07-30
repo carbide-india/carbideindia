@@ -141,6 +141,33 @@ const MASTER_SEEDS: Record<MasterKind, string[]> = {
   ],
   dispatch_condition: ["Sintered", "Green", "Soft", "HIP"],
   pressing_type: ["Manual", "Auto", "Isostatic", "Extrusion"],
+  // Form 04/05 (migration 0062) — seeded EMPTY; Alok populates via Admin → Masters.
+  external_grade: [],
+  internal_production_code: [],
+  part_no: [],
+  // Costing Master engine v3 (migration 0064). tooling_chart ships EMPTY (Alok
+  // fills the tool types); the other three are seeded per Manan's/Alok's sheet.
+  tooling_chart: [], // data pending from Alok — admin adds via UI
+  machining_op: [
+    "OD",
+    "Thickness",
+    "ID",
+    "Tumbling",
+    "Angle on Surface",
+    "Radius on Surface",
+  ],
+  quantity_tolerance: ["5% +/-", "10% +/-", "Exact"],
+  payment_term: [
+    "100% Advance",
+    "50% Advance & 50% on Dispatch",
+    "100% on Dispatch",
+    "7 Days Credit",
+    "10 Days Credit",
+    "15 Days Credit",
+    "30 Days Credit",
+    "45 Days Credit",
+    "60 Days Credit",
+  ],
   tolerance: [
     "CID06",
     "CID06(CID07)",

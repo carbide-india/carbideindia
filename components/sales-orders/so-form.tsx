@@ -21,12 +21,14 @@ import type { EmployeeOption } from "@/lib/queries/employees";
 import { formatDate } from "@/lib/format";
 import { fireToast } from "@/lib/toast";
 import { Select } from "@/components/ui/select";
+import { MoneyInput } from "@/components/ui/money-input";
 import {
   Field,
   SectionCard,
   Segmented,
 } from "@/components/inquiries/form-field";
 import { useFormDraft } from "@/components/drafts/use-form-draft";
+import { useKeyboardForm } from "@/components/forms/use-keyboard-form";
 
 /** RHF holds the schema's *input* shape (pre-transform); zodResolver hands the
  *  parsed *output* (defaults applied, `""` folded to `undefined`) to the submit
@@ -227,8 +229,15 @@ export function SoForm({
     | string
     | undefined;
 
+  const { formProps } = useKeyboardForm();
+
   return (
-    <form onSubmit={submit} className="flex flex-col gap-6" noValidate>
+    <form
+      onSubmit={submit}
+      onKeyDown={formProps.onKeyDown}
+      className="flex flex-col gap-6"
+      noValidate
+    >
       {/* -- 1 . Linked Enquiry ------------------------------------------- */}
       <SectionCard
         title="Linked Enquiry"
@@ -520,6 +529,9 @@ export function SoForm({
         className="flex items-center justify-end gap-3 pt-2"
         style={{ borderTop: "1px solid var(--color-hairline)" }}
       >
+        <span className="text-[11px] text-ink-subtle">
+          Ctrl / &#8984; + Enter to save
+        </span>
         <button
           type="submit"
           disabled={pending}
@@ -539,31 +551,6 @@ export function SoForm({
     </form>
   );
 }
-
-/** &#8377;-prefixed number input -- the rupee sign sits inside the field so the
- *  amount always reads as money. */
-const MoneyInput = React.forwardRef<
-  HTMLInputElement,
-  React.InputHTMLAttributes<HTMLInputElement>
->(function MoneyInput(props, ref) {
-  return (
-    <div className="relative w-full">
-      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[14px] font-semibold text-ink-subtle">
-        &#8377;
-      </span>
-      <input
-        ref={ref}
-        type="number"
-        inputMode="decimal"
-        min={0}
-        step="any"
-        className="nt-input w-full pl-7 tabular-nums"
-        placeholder="0"
-        {...props}
-      />
-    </div>
-  );
-});
 
 function Caption({ label, children }: { label: string; children: React.ReactNode }) {
   return (

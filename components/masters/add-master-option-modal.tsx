@@ -164,7 +164,7 @@ export function AddMasterOptionModal({
                   className="inline-flex h-[38px] items-center gap-2 rounded-lg border border-[#dfe1e6] bg-white px-4 text-[13px] font-semibold text-[#3a4152] transition hover:border-[#c9c9ea] hover:text-[#3f3f94]"
                 >
                   <ListPlus className="h-[16px] w-[16px]" />
-                  {bulkOpen ? "Hide bulk add" : "Bulk add (paste many)"}
+                  {bulkOpen ? "Hide Bulk Add" : "Bulk Add (paste many)"}
                 </button>
 
                 {bulkOpen && (
@@ -190,7 +190,7 @@ export function AddMasterOptionModal({
                         className="inline-flex h-[38px] items-center gap-2 rounded-lg bg-[#3f3f94] px-4 text-[13px] font-bold text-white transition hover:bg-[#2f2f6f] disabled:opacity-50"
                       >
                         <ListPlus className="h-4 w-4" />
-                        Add all
+                        Add All
                       </button>
                       <span className="text-[12px] font-medium text-[#9aa0ab] tabular-nums">
                         {bulkText.split("\n").filter((s) => s.trim()).length} value(s)

@@ -33,6 +33,7 @@ import {
   Pencil,
   Check,
   MoreHorizontal,
+  Trash2,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -224,6 +225,16 @@ export interface RegisterDataTableProps<TRow> {
    */
   bulkActions?: BulkActionConfig[];
   /**
+   * When provided, the bulk bar gains a DESTRUCTIVE "Delete selected (N)"
+   * button. It confirms, then calls `onDelete(ids)`; on `ok` it clears the
+   * selection + refreshes + toasts success, otherwise toasts the error. Purely
+   * additive — registers that don't pass this are unaffected.
+   */
+  bulkDelete?: {
+    onDelete: (ids: string[]) => Promise<{ ok: boolean; error?: string }>;
+    label?: string;
+  };
+  /**
    * When provided, each row shows a three-dot menu of these actions instead of
    * the default hover open/edit icons. `rowMenuPlacement` controls whether the
    * menu column sits at the left edge (default "right").
@@ -237,6 +248,12 @@ export interface RegisterDataTableProps<TRow> {
   hideToolbarSearch?: boolean;
   /** Controlled search text. When set, overrides the internal search box. */
   externalQuery?: string;
+  /**
+   * Called by "Clear filters" (toolbar + empty-state) so a page that owns the
+   * search via `externalQuery` can reset it too - without this, Clear filters
+   * can't clear an external search and is left an inert no-op for that query.
+   */
+  onExternalQueryClear?: () => void;
   /**
    * When provided, each row gets a left chevron and can expand in place to show
    * this node (a decoded detail panel). Row-body clicks toggle the expansion
@@ -291,10 +308,12 @@ export function RegisterDataTable<TRow>({
   showExport = true,
   bulkAction,
   bulkActions,
+  bulkDelete,
   rowMenu,
   rowMenuPlacement = "right",
   hideToolbarSearch = false,
   externalQuery,
+  onExternalQueryClear,
   renderExpanded,
   emptyTitle,
   emptyHint,
@@ -460,10 +479,14 @@ export function RegisterDataTable<TRow>({
       enableHiding: false,
       header: ({ table }) => (
         <Checkbox
-          checked={table.getIsAllPageRowsSelected()}
-          indeterminate={table.getIsSomePageRowsSelected()}
-          onChange={(v) => table.toggleAllPageRowsSelected(v)}
-          ariaLabel="Select all rows on this page"
+          // Select ALL filtered rows (across every page), not just the visible
+          // page - otherwise a bulk action silently applies to a subset when the
+          // filtered set spans more than one page. Data is client-side, so this
+          // covers the entire matched set.
+          checked={table.getIsAllRowsSelected()}
+          indeterminate={table.getIsSomeRowsSelected()}
+          onChange={(v) => table.toggleAllRowsSelected(v)}
+          ariaLabel="Select all rows"
         />
       ),
       cell: ({ row }) => (
@@ -587,9 +610,12 @@ export function RegisterDataTable<TRow>({
     table.setPageIndex(0);
   }, [pageSize, table]);
 
-  // A new search / filter resets to the first page.
+  // A new search / filter resets to the first page AND clears the selection, so
+  // rows hidden by a filter can't linger in selection state (and resurface when
+  // the filter clears) or make the selected-count disagree with what's shown.
   React.useEffect(() => {
     table.setPageIndex(0);
+    table.resetRowSelection();
   }, [debouncedQuery, selectFilters, dateFilters, table]);
 
   // Clamp the page when the loaded rows shrink (refresh / filter).
@@ -647,6 +673,8 @@ export function RegisterDataTable<TRow>({
     setInternalQuery("");
     setSelectFilters({});
     setDateFilters({});
+    // If the page owns the search via externalQuery, ask it to clear too.
+    if (externalQuery !== undefined) onExternalQueryClear?.();
   }
 
   // -- Export (current filtered + sorted + visible columns) -------------------
@@ -813,6 +841,7 @@ export function RegisterDataTable<TRow>({
           count={selectedIds.length}
           ids={selectedIds}
           bulkActions={allBulkActions}
+          bulkDelete={bulkDelete}
           onExportSelected={exportSelected}
           onClear={() => table.resetRowSelection()}
           onApplied={() => {
@@ -1228,6 +1257,7 @@ function BulkBar({
   count,
   ids,
   bulkActions,
+  bulkDelete,
   onExportSelected,
   onClear,
   onApplied,
@@ -1235,6 +1265,10 @@ function BulkBar({
   count: number;
   ids: string[];
   bulkActions: BulkActionConfig[];
+  bulkDelete?: {
+    onDelete: (ids: string[]) => Promise<{ ok: boolean; error?: string }>;
+    label?: string;
+  };
   onExportSelected: () => void;
   onClear: () => void;
   onApplied: () => void;
@@ -1253,7 +1287,7 @@ function BulkBar({
         className="inline-flex items-center gap-1.5 h-8 px-3 rounded-pill text-[13px] font-bold border border-hairline bg-surface-card text-ink-soft hover:border-brand hover:text-brand transition-all"
       >
         <Download size={13} strokeWidth={2.2} />
-        Export selected
+        Export Selected
       </button>
 
       {bulkActions.map((action, i) => (
@@ -1266,12 +1300,22 @@ function BulkBar({
         />
       ))}
 
+      {bulkDelete && (
+        <BulkDeleteButton
+          count={count}
+          ids={ids}
+          onDelete={bulkDelete.onDelete}
+          label={bulkDelete.label}
+          onDeleted={onApplied}
+        />
+      )}
+
       <button
         type="button"
         onClick={onClear}
         className="ml-auto text-[13px] font-semibold text-ink-subtle hover:text-ink-strong transition-colors"
       >
-        Clear selection
+        Clear Selection
       </button>
     </div>
   );
@@ -1297,6 +1341,14 @@ function BulkActionGroup({
 
   async function apply() {
     if (!value) return;
+    const chosen = action.options.find((o) => o.value === value)?.label ?? value;
+    if (
+      !window.confirm(
+        `Apply "${action.label}: ${chosen}" to ${count} ${count === 1 ? "row" : "rows"}? This updates them all at once.`,
+      )
+    ) {
+      return;
+    }
     setPending(true);
     try {
       const res = await action.onApply(ids, value);
@@ -1347,6 +1399,69 @@ function BulkActionGroup({
   );
 }
 
+/**
+ * Destructive bulk-delete control for the bulk bar. Confirms, calls `onDelete`,
+ * then on success clears the selection + refreshes (via `onDeleted`) and toasts
+ * the outcome; on failure toasts the returned error. Owns its own pending state
+ * so a slow delete never blocks the other bulk-action groups.
+ */
+function BulkDeleteButton({
+  count,
+  ids,
+  onDelete,
+  label = "Delete selected",
+  onDeleted,
+}: {
+  count: number;
+  ids: string[];
+  onDelete: (ids: string[]) => Promise<{ ok: boolean; error?: string }>;
+  label?: string;
+  onDeleted: () => void;
+}) {
+  const [pending, setPending] = React.useState(false);
+
+  async function run() {
+    if (
+      !window.confirm(
+        `Delete ${count} ${count === 1 ? "quotation" : "quotations"}? This can't be undone.`,
+      )
+    ) {
+      return;
+    }
+    setPending(true);
+    try {
+      const res = await onDelete(ids);
+      if (res.ok) {
+        fireToast({ message: `Deleted ${count} ${count === 1 ? "row" : "rows"}.` });
+        onDeleted();
+      } else {
+        fireToast({ message: res.error ?? "Couldn't delete.", type: "error" });
+      }
+    } catch {
+      fireToast({ message: "Couldn't delete.", type: "error" });
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={run}
+      disabled={pending}
+      className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-pill text-[13px] font-bold border transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+      style={{
+        color: "var(--color-red)",
+        borderColor: "color-mix(in srgb, var(--color-red) 35%, transparent)",
+        background: "color-mix(in srgb, var(--color-red) 8%, transparent)",
+      }}
+    >
+      <Trash2 size={13} strokeWidth={2.2} />
+      {pending ? "Deleting" : `${label} (${count})`}
+    </button>
+  );
+}
+
 function EmptyState({
   filtered,
   title,
@@ -1360,7 +1475,7 @@ function EmptyState({
 }) {
   return (
     <div
-      className="rounded-section border border-dashed border-hairline-strong bg-surface-card px-6 py-14 text-center"
+      className="rounded-section border border-hairline-strong bg-surface-card px-6 py-14 text-center"
       style={{ boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)" }}
     >
       <p

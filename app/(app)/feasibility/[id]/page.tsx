@@ -7,10 +7,12 @@ import { requireUser } from "@/lib/auth/current";
 import { getInquiryWorkspaceHeader, getInquiryProducts } from "@/lib/queries/sm-workspace";
 import { getInquiryById } from "@/lib/queries/inquiries";
 import { listEmployeeOptions } from "@/lib/queries/employees";
+import { listItemLockStates, getInquiryVarianceRows } from "@/lib/queries/feasibility";
 import { INQUIRY_PRIORITY_LABELS } from "@/db/enums";
 import { Chip, PRIORITY_TONES } from "@/components/inquiries/chip";
 import { FeasibilityEnquirySnapshot } from "@/components/feasibility/feasibility-enquiry-snapshot";
 import { FeasibilityReviewWorkspace } from "@/components/feasibility/feasibility-review-workspace";
+import { LockDimensionsControl } from "@/components/feasibility/lock-dimensions-control";
 
 export const dynamic = "force-dynamic";
 
@@ -25,15 +27,17 @@ export default async function FeasibilityReviewPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireUser();
+  const me = await requireUser();
   const { id } = await params;
   if (!UUID_RE.test(id)) notFound();
 
-  const [header, products, inquiry, employees] = await Promise.all([
+  const [header, products, inquiry, employees, lockStates, varianceByItem] = await Promise.all([
     getInquiryWorkspaceHeader(id),
     getInquiryProducts(id),
     getInquiryById(id),
     listEmployeeOptions(),
+    listItemLockStates(id),
+    getInquiryVarianceRows(id),
   ]);
   if (!header || !inquiry) notFound();
 
@@ -86,6 +90,34 @@ export default async function FeasibilityReviewPage({
       <div className="mb-5">
         <FeasibilityEnquirySnapshot inquiry={inquiry} product={products[0] ?? null} />
       </div>
+
+      {/* ── Lock Dimensions & Specifications (Form 04 → Form 05 gate) ──────── */}
+      {lockStates.length > 0 && (
+        <section
+          className="mb-5 overflow-hidden rounded-section border-2 border-[#b7bcd2] bg-surface-card"
+        >
+          <div className="flex flex-wrap items-center gap-2.5 border-b-2 border-[#d6d9ea] bg-[#e7e9f6] px-4 py-2.5">
+            <span className="h-4 w-1.5 shrink-0 rounded-full bg-[#3f3f94]" />
+            <span className="text-[13.5px] font-black uppercase tracking-[0.1em] text-[#3f3f94]">
+              Lock Dimensions &amp; Specifications
+            </span>
+            <span className="ml-auto text-[11.5px] font-semibold text-ink-subtle">
+              Costing consumes the frozen baseline per locked line.
+            </span>
+          </div>
+          <div className="flex flex-col gap-3 p-4">
+            {lockStates.map((line, i) => (
+              <LockDimensionsControl
+                key={line.inquiryItemId}
+                line={line}
+                lineNumber={i + 1}
+                isAdmin={me.isAdmin}
+                varianceRows={varianceByItem[line.inquiryItemId] ?? null}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       <FeasibilityReviewWorkspace inquiry={inquiry} employees={employees} />
     </div>

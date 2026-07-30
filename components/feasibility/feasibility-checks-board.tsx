@@ -46,9 +46,9 @@ const REASON_PLACEHOLDER: Partial<Record<RecheckState, string>> = {
 };
 
 const REASON_TITLE: Partial<Record<RecheckState, string>> = {
-  need_info: 'Why "Need Info"?',
-  not_feasible: 'Why "Not Feasible"?',
-  assumed: 'Why "Assumed"?',
+  need_info: "What information is needed to complete Primary Feasibility?",
+  not_feasible: "Why is this not feasible?",
+  assumed: "What did you assume?",
 };
 
 /* dnd-kit ids are namespaced so a check key can never collide with a status. */
@@ -101,6 +101,42 @@ export function FeasibilityChecksBoard({
   }, [items]);
 
   const activeItem = activeKey ? items.find((i) => i.key === activeKey) ?? null : null;
+
+  // ── Keyboard operability ────────────────────────────────────────────────
+  // Drag-and-drop is mouse/touch only, so the board is also fully operable by
+  // keyboard: each card is focusable and Left/Right (or Up/Down) arrow keys
+  // move the check between status columns — opening the same reason popup when
+  // the target status needs a justification. We keep a node map so focus
+  // follows a card as it re-buckets into a new column, and so focus returns to
+  // the originating card when the reason popup closes.
+  const cardNodes = React.useRef(new Map<string, HTMLDivElement | null>());
+  const registerCard = React.useCallback((key: string, node: HTMLDivElement | null) => {
+    if (node) cardNodes.current.set(key, node);
+    else cardNodes.current.delete(key);
+  }, []);
+  const focusCard = React.useCallback((key: string) => {
+    requestAnimationFrame(() => cardNodes.current.get(key)?.focus());
+  }, []);
+
+  const moveCheck = React.useCallback(
+    (key: string, dir: 1 | -1) => {
+      const item = items.find((i) => i.key === key);
+      if (!item) return;
+      const order = ACTIVE_RECHECK_STATES as readonly RecheckState[];
+      const curIdx = Math.max(0, order.indexOf(item.value)); // fold legacy → col 0
+      const nextIdx = curIdx + dir;
+      if (nextIdx < 0 || nextIdx >= order.length) return; // at an edge
+      const target = order[nextIdx];
+      if (!target || target === item.value) return;
+      if (NEEDS_REASON.has(target)) {
+        setPending({ key, label: item.label, target, reason: item.notes ?? "" });
+        return;
+      }
+      onChange(key, { value: target });
+      focusCard(key);
+    },
+    [items, onChange, focusCard],
+  );
 
   function handleStart(e: DragStartEvent) {
     setActiveKey(parseCard(String(e.active.id)));
@@ -170,6 +206,8 @@ export function FeasibilityChecksBoard({
               items={byStatus.get(status) ?? []}
               isOver={overCol === status}
               draggingKey={activeKey}
+              onMove={moveCheck}
+              registerCard={registerCard}
             />
           ))}
         </div>
@@ -185,10 +223,16 @@ export function FeasibilityChecksBoard({
         <ReasonPopup
           pending={pending}
           onReason={(reason) => setPending((p) => (p ? { ...p, reason } : p))}
-          onCancel={() => setPending(null)}
+          onCancel={() => {
+            const k = pending.key;
+            setPending(null);
+            focusCard(k);
+          }}
           onConfirm={() => {
+            const k = pending.key;
             onChange(pending.key, { value: pending.target, notes: pending.reason.trim() });
             setPending(null);
+            focusCard(k);
           }}
         />
       )}
@@ -202,11 +246,15 @@ function StatusColumn({
   items,
   isOver,
   draggingKey,
+  onMove,
+  registerCard,
 }: {
   status: RecheckState;
   items: CheckItem[];
   isOver: boolean;
   draggingKey: string | null;
+  onMove: (key: string, dir: 1 | -1) => void;
+  registerCard: (key: string, node: HTMLDivElement | null) => void;
 }) {
   const { setNodeRef } = useDroppable({ id: COL(status) });
   const tone = RECHECK_STATE_TONES[status];
@@ -259,9 +307,10 @@ function StatusColumn({
       >
         {items.length === 0 ? (
           <div
-            className="flex flex-1 items-center justify-center rounded-xl border-2 border-dashed px-2 py-6 text-center text-[11px] font-bold"
+            className="flex flex-1 items-center justify-center rounded-xl border px-2 py-6 text-center text-[11px] font-bold"
             style={{
-              borderColor: `color-mix(in srgb, ${fill(tone)} 45%, #ffffff)`,
+              borderColor: `color-mix(in srgb, ${fill(tone)} 30%, #ffffff)`,
+              background: `color-mix(in srgb, ${lightBg(tone)} 40%, #ffffff)`,
               color: `color-mix(in srgb, ${deep(tone)} 70%, #8b8ba3)`,
             }}
           >
@@ -269,7 +318,14 @@ function StatusColumn({
           </div>
         ) : (
           items.map((it) => (
-            <DraggableCard key={it.key} item={it} tone={tone} dimmed={draggingKey === it.key} />
+            <DraggableCard
+              key={it.key}
+              item={it}
+              tone={tone}
+              dimmed={draggingKey === it.key}
+              onMove={onMove}
+              registerCard={registerCard}
+            />
           ))
         )}
       </div>
@@ -278,14 +334,59 @@ function StatusColumn({
 }
 
 /* ── Draggable wrapper ─────────────────────────────────────────────────── */
-function DraggableCard({ item, tone, dimmed }: { item: CheckItem; tone: string; dimmed: boolean }) {
+function DraggableCard({
+  item,
+  tone,
+  dimmed,
+  onMove,
+  registerCard,
+}: {
+  item: CheckItem;
+  tone: string;
+  dimmed: boolean;
+  onMove: (key: string, dir: 1 | -1) => void;
+  registerCard: (key: string, node: HTMLDivElement | null) => void;
+}) {
   const { setNodeRef, listeners, attributes, isDragging } = useDraggable({ id: CARD(item.key) });
+
+  const setRefs = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      setNodeRef(node);
+      registerCard(item.key, node);
+    },
+    [setNodeRef, registerCard, item.key],
+  );
+
+  const idx = (ACTIVE_RECHECK_STATES as readonly RecheckState[]).indexOf(item.value);
+  const posLabel = idx >= 0 ? `, column ${idx + 1} of ${ACTIVE_RECHECK_STATES.length}` : "";
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+      e.preventDefault();
+      e.stopPropagation();
+      onMove(item.key, -1);
+    } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+      e.preventDefault();
+      e.stopPropagation();
+      onMove(item.key, 1);
+    }
+  };
+
   return (
     <div
-      ref={setNodeRef}
+      ref={setRefs}
       {...listeners}
       {...attributes}
-      className={cn("touch-none outline-none", (isDragging || dimmed) && "opacity-40")}
+      // Own accessibility/keyboard wins over dnd-kit's generic draggable attrs.
+      role="button"
+      aria-roledescription="Feasibility check — press Left or Right arrow to change status"
+      aria-label={`${item.label}: ${RECHECK_STATE_LABELS[item.value]}${posLabel}. Use arrow keys to change status.`}
+      onKeyDown={handleKeyDown}
+      className={cn(
+        "touch-none rounded-xl outline-none",
+        "focus-visible:ring-2 focus-visible:ring-[#3f3f94] focus-visible:ring-offset-1",
+        (isDragging || dimmed) && "opacity-40",
+      )}
     >
       <CheckCard item={item} tone={tone} />
     </div>
@@ -331,7 +432,7 @@ function CheckCard({
         ) : (
           <div className="mt-0.5 flex items-center gap-1 text-[11px] text-ink-subtle/70">
             <Pencil className="h-3 w-3 shrink-0" />
-            <span>Drag to set status</span>
+            <span>Drag or use ← → keys</span>
           </div>
         )}
       </div>
@@ -356,6 +457,7 @@ function ReasonPopup({
   const tone = RECHECK_STATE_TONES[pending.target];
   const required = REASON_REQUIRED.has(pending.target);
   const blocked = required && !pending.reason.trim();
+  const dialogRef = React.useRef<HTMLDivElement>(null);
 
   // Escape closes (Cancel).
   React.useEffect(() => {
@@ -366,11 +468,52 @@ function ReasonPopup({
     return () => window.removeEventListener("keydown", onKey);
   }, [onCancel]);
 
+  // On open, move focus into the reason textarea so the modal is immediately
+  // usable from the keyboard (focus is restored to the originating card by the
+  // board when the popup closes).
+  React.useEffect(() => {
+    dialogRef.current?.querySelector<HTMLTextAreaElement>("textarea")?.focus();
+  }, []);
+
+  const focusablesInDialog = () => {
+    const root = dialogRef.current;
+    if (!root) return [] as HTMLElement[];
+    return Array.from(
+      root.querySelectorAll<HTMLElement>(
+        'a[href], button, textarea, input, select, [tabindex]:not([tabindex="-1"])',
+      ),
+    ).filter((el) => !el.hasAttribute("disabled") && el.tabIndex !== -1);
+  };
+
+  // Keep the modal a focus trap and stop Enter from bubbling to the form-level
+  // Ctrl/Cmd+Enter submit handler on the workspace container.
+  const onDialogKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter") {
+      e.stopPropagation();
+      return;
+    }
+    if (e.key !== "Tab") return;
+    const list = focusablesInDialog();
+    if (list.length === 0) return;
+    const first = list[0]!;
+    const last = list[list.length - 1]!;
+    const active = document.activeElement as HTMLElement | null;
+    if (e.shiftKey && (active === first || !dialogRef.current?.contains(active))) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && active === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+
   return (
     <div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      onKeyDown={onDialogKeyDown}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onCancel();
       }}

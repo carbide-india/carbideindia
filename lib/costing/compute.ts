@@ -1,3 +1,12 @@
+// Re-export the pure BO vendor-comparison engine so callers can import the whole
+// costing math surface from one module (`@/lib/costing/compute`).
+export {
+  vendorLandedCost,
+  compareVendors,
+  type VendorQuoteLike,
+  type VendorComparison,
+} from "@/lib/costing/compare";
+
 export interface InhouseInput {
   qty: number;
   toolFlatCost?: number;        // folded as toolFlatCost/qty into sintered/gm (sheet E17)

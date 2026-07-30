@@ -1635,6 +1635,46 @@ select.nt-input {
   .animate-toggle-pop { animation: none; }
 }
 
+/* Costing spec panel — Primary-Feasibility variance affordances.
+   • the inline "Primary Feasibility: X" tag slides up + fades in when a field
+     diverges from the frozen PF baseline;
+   • the amber warning banner drops in with a one-shot glow pulse;
+   • a just-changed field gets a brief expanding amber ring. */
+@keyframes specTagIn {
+  0%   { opacity: 0; transform: translateY(-4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.animate-spec-tag-in {
+  animation: specTagIn 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes specWarnIn {
+  0%   { opacity: 0; transform: translateY(-10px) scaleY(0.96); }
+  100% { opacity: 1; transform: translateY(0) scaleY(1); }
+}
+@keyframes specWarnPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+  50%      { box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.16); }
+}
+.animate-spec-warn-in {
+  transform-origin: top;
+  animation:
+    specWarnIn 0.34s cubic-bezier(0.16, 1, 0.3, 1),
+    specWarnPulse 1.6s ease-in-out 0.34s 1;
+}
+@keyframes specFieldPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.55); }
+  100% { box-shadow: 0 0 0 7px rgba(245, 158, 11, 0); }
+}
+.animate-spec-field-pulse {
+  border-radius: 12px;
+  animation: specFieldPulse 0.6s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-spec-tag-in,
+  .animate-spec-warn-in,
+  .animate-spec-field-pulse { animation: none; }
+}
+
 /* Task title link — cyan hover instead of the brand accent */
 .task-title-link:hover {
   color: rgb(var(--vp-cyan-deep));

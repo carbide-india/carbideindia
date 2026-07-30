@@ -41,7 +41,12 @@ export function isIpAllowed(
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
-  if (allowed.length === 0) return true;
+  // Empty / unset allowlist: gate DISABLED in development (local convenience),
+  // but FAIL CLOSED in production. An unset ALLOWED_IPS in prod must never
+  // silently expose the whole app to the public internet (CLAUDE.md: the app is
+  // "IP-restricted, not public"). Bypass-email owners can still reach the public
+  // /login and are let through by middleware regardless of this.
+  if (allowed.length === 0) return opts.nodeEnv !== "production";
   if (opts.nodeEnv !== "production" && LOCALHOST.has(ip)) return true;
   return allowed.includes(ip);
 }

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
-import { useForm, Controller, useFieldArray, type Control } from "react-hook-form";
+import { useForm, Controller, useFieldArray, useWatch, type Control } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
 import { upload } from "@vercel/blob/client";
@@ -27,15 +27,19 @@ import {
   CLIENT_GRADES,
 } from "@/db/enums";
 import { fireToast } from "@/lib/toast";
+import { firstErrorMessage } from "@/lib/forms/first-error";
+import { useUnsavedGuard } from "@/lib/forms/use-unsaved-guard";
 import { cn } from "@/lib/utils";
 import { Select } from "@/components/ui/select";
 import { TagsInput } from "@/components/ui/tags-input";
 import { Field, SectionCard, GroupHeader } from "@/components/inquiries/form-field";
 import { NotesField } from "@/components/ui/notes-field";
 import { useFormDraft } from "@/components/drafts/use-form-draft";
+import { useKeyboardForm } from "@/components/forms/use-keyboard-form";
 import type { MasterOptionItem } from "@/lib/queries/masters";
 import type { EmployeeOption } from "@/lib/queries/employees";
 import { COUNTRIES, INDIAN_STATES, pinToState, toAddressStateName } from "@/lib/data/geo";
+import { INDIA_CITIES } from "@/lib/data/india-states-cities";
 import { CURRENCY_CODES, currencyLabel } from "@/lib/data/currencies";
 import { BANKS, ACCOUNT_TYPES } from "@/lib/data/banks";
 import { ClientDocuments } from "@/components/clients/client-documents";
@@ -46,6 +50,59 @@ import type { ClientDocument } from "@/lib/queries/client-documents";
  *  defaulted) to the submit handler - exactly what createClientKyc takes. */
 export type KycFormValues = z.input<typeof CreateClientKycSchema>;
 type KycFormOutput = z.output<typeof CreateClientKycSchema>;
+
+/** All Indian cities across states, de-duped + sorted — the fallback list when
+ *  no state is chosen (or the state name doesn't map to the cities dataset). */
+const ALL_CITIES: string[] = Array.from(
+  new Set(Object.values(INDIA_CITIES).flat()),
+).sort((a, b) => a.localeCompare(b));
+
+/** Cities for a state name; tolerant of the "&" vs "and" UT naming difference
+ *  between the geo state list and the cities dataset. Never returns empty. */
+function citiesForState(state: string | null | undefined): string[] {
+  if (!state) return ALL_CITIES;
+  const map = INDIA_CITIES as Record<string, string[]>;
+  return map[state] ?? map[state.replace(/ and /g, " & ")] ?? ALL_CITIES;
+}
+
+/** City picker — a searchable dropdown that cascades from the row's selected
+ *  State (`addresses.${idx}.state`). Any pre-filled value (import / GST /
+ *  business-card autofill) stays visible even if it isn't in the dataset. */
+function CityField({ idx, control }: { idx: number; control: Control<KycFormValues> }) {
+  const state = useWatch({ control, name: `addresses.${idx}.state` });
+  const options = React.useMemo(
+    () =>
+      citiesForState(typeof state === "string" ? state : undefined).map((c) => ({
+        value: c,
+        label: c,
+      })),
+    [state],
+  );
+  return (
+    <Controller
+      control={control}
+      name={`addresses.${idx}.city`}
+      render={({ field }) => {
+        const value = (field.value as string | undefined) ?? "";
+        const opts =
+          value && !options.some((o) => o.value === value)
+            ? [{ value, label: value }, ...options]
+            : options;
+        return (
+          <Select
+            ariaLabel="City"
+            value={value}
+            onValueChange={(v) => field.onChange(v || undefined)}
+            placeholder="Select city"
+            searchable
+            searchPlaceholder="Search cities"
+            options={opts}
+          />
+        );
+      }}
+    />
+  );
+}
 
 interface Props {
   customerTypes: MasterOptionItem[];
@@ -284,7 +341,7 @@ export function KycForm({
     setValue,
     getValues,
     watch,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<KycFormValues, unknown, KycFormOutput>({
     resolver: zodResolver(CreateClientKycSchema),
     defaultValues: {
@@ -712,12 +769,18 @@ export function KycForm({
     });
   });
 
-  const firstFieldError = Object.values(errors)[0]?.message as
-    | string
-    | undefined;
+  const firstFieldError = firstErrorMessage(errors);
+
+  // Warn before losing unsaved edits (refresh/close) - the key safety net for
+  // EDIT mode, which has no draft autosave.
+  useUnsavedGuard(isDirty && !pending);
+
+  // Keyboard-first ergonomics: Enter advances to the next field (single-line
+  // inputs), Ctrl/Cmd + Enter submits. See use-keyboard-form for the rules.
+  const { formProps } = useKeyboardForm();
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-6" noValidate>
+    <form onSubmit={submit} onKeyDown={formProps.onKeyDown} className="flex flex-col gap-6" noValidate>
 
       {/* ── 1 · Identity ─────────────────────────────────────────────── */}
       <SectionCard
@@ -1312,7 +1375,7 @@ export function KycForm({
               notes: "",
             })
           }
-          className="inline-flex w-max items-center gap-1.5 rounded-lg border border-dashed border-[#c9c9ea] bg-[#f4f4fd] px-4 py-2.5 text-[13px] font-bold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#eeeefb]"
+          className="inline-flex w-max items-center gap-1.5 rounded-lg border border-[#c9c9ea] bg-[#f4f4fd] px-4 py-2.5 text-[13px] font-bold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#eeeefb]"
         >
           <Plus className="h-4 w-4" />
           Add Contact
@@ -1403,8 +1466,8 @@ export function KycForm({
               </div>
 
               <div className="grid grid-cols-4 gap-3 max-md:grid-cols-2">
-                <Field id={`kyc-addr${idx}-city`} label="City">
-                  <input id={`kyc-addr${idx}-city`} type="text" className="nt-input" {...register(`addresses.${idx}.city`)} />
+                <Field label="City" labelOnly>
+                  <CityField idx={idx} control={control} />
                 </Field>
                 <Field label="State" labelOnly>
                   <Controller
@@ -1476,7 +1539,7 @@ export function KycForm({
               pinCode: "",
             })
           }
-          className="inline-flex w-max items-center gap-1.5 rounded-lg border border-dashed border-[#c9c9ea] bg-[#f4f4fd] px-4 py-2.5 text-[13px] font-bold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#eeeefb]"
+          className="inline-flex w-max items-center gap-1.5 rounded-lg border border-[#c9c9ea] bg-[#f4f4fd] px-4 py-2.5 text-[13px] font-bold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#eeeefb]"
         >
           <Plus className="h-4 w-4" />
           Add address
@@ -1783,7 +1846,7 @@ export function KycForm({
               notes: "",
             })
           }
-          className="inline-flex w-max items-center gap-1.5 rounded-lg border border-dashed border-[#c9c9ea] bg-[#f4f4fd] px-4 py-2.5 text-[13px] font-bold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#eeeefb]"
+          className="inline-flex w-max items-center gap-1.5 rounded-lg border border-[#c9c9ea] bg-[#f4f4fd] px-4 py-2.5 text-[13px] font-bold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#eeeefb]"
         >
           <Plus className="h-4 w-4" />
           Add Account
@@ -1848,9 +1911,12 @@ export function KycForm({
         className="flex items-center justify-end gap-3 pt-2"
         style={{ borderTop: "1px solid var(--color-hairline)" }}
       >
+        <span className="text-[11px] text-ink-subtle">Ctrl / ⌘ + Enter to save</span>
         <button
           type="submit"
-          disabled={pending}
+          // Block submit while any business-card upload is still in flight, else
+          // the client saves before the just-uploaded scan URL is attached.
+          disabled={pending || uploading.front || uploading.back || uploading.other}
           className="text-cta text-white px-8 py-4 rounded-chip transition-transform disabled:opacity-50"
           style={{
             background:
@@ -1861,7 +1927,13 @@ export function KycForm({
             letterSpacing: "0.005em",
           }}
         >
-          {pending ? "Saving" : isEdit ? "Save changes" : "Onboard Client"}
+          {uploading.front || uploading.back || uploading.other
+            ? "Uploading…"
+            : pending
+              ? "Saving"
+              : isEdit
+                ? "Save changes"
+                : "Onboard Client"}
         </button>
       </div>
     </form>
@@ -2025,7 +2097,7 @@ function CardUpload({
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="inline-flex size-[120px] flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-hairline-strong text-ink-subtle hover:text-ink-strong hover:border-ink-subtle transition-colors disabled:opacity-60"
+          className="inline-flex size-[120px] flex-col items-center justify-center gap-1.5 rounded-xl border border-hairline-strong text-ink-subtle hover:text-ink-strong hover:border-ink-subtle transition-colors disabled:opacity-60"
         >
           {uploading ? (
             <Loader2
@@ -2127,7 +2199,7 @@ function OtherDocsUpload({
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="inline-flex size-[120px] flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-hairline-strong text-ink-subtle hover:text-ink-strong hover:border-ink-subtle transition-colors disabled:opacity-60"
+          className="inline-flex size-[120px] flex-col items-center justify-center gap-1.5 rounded-xl border border-hairline-strong text-ink-subtle hover:text-ink-strong hover:border-ink-subtle transition-colors disabled:opacity-60"
         >
           {uploading ? (
             <Loader2 size={18} style={{ animation: "spinFast 0.8s linear infinite" }} />

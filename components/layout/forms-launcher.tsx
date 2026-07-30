@@ -321,7 +321,7 @@ export function FormsLauncher({ variant }: { variant?: "drawer" }) {
                     className="fl-btn fl-btn-primary flex-1"
                     aria-label={`Open the ${name} form`}
                   >
-                    Open form
+                    Open Form
                     <ArrowRight className="fl-arrow" size={14} strokeWidth={2.6} />
                   </Link>
                   <Link

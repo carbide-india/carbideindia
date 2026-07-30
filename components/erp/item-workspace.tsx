@@ -482,7 +482,7 @@ function Section({
 
 function Empty({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-dashed border-hairline-strong bg-surface-soft px-4 py-3 text-[13px] text-ink-subtle">
+    <div className="rounded-xl border border-hairline-strong bg-surface-soft px-4 py-3 text-[13px] text-ink-subtle">
       {children}
     </div>
   );

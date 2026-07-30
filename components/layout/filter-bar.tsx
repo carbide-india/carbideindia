@@ -289,7 +289,7 @@ export function FilterBar({
               >
                 <span className="inline-flex items-center gap-1.5">
                   <User size={13} strokeWidth={2.2} />
-                  My tasks
+                  My Tasks
                 </span>
               </SegButton>
               <SegButton
@@ -300,7 +300,7 @@ export function FilterBar({
                   setEmp([]);
                 }}
               >
-                All tasks
+                All Tasks
               </SegButton>
             </div>
           )}
@@ -390,7 +390,7 @@ export function FilterBar({
                       <DropdownMenuItem asChild>
                         <Link href={"/tasks/import" as Route}>
                           <Upload size={14} strokeWidth={2} style={{ color: "var(--color-brand)" }} />
-                          Import tasks
+                          Import Tasks
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>

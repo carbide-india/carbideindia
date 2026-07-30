@@ -23,6 +23,7 @@ import { formatDate, formatInr } from "@/lib/format";
 import { fireToast } from "@/lib/toast";
 import { Field, MiniField, SectionCard } from "@/components/inquiries/form-field";
 import { StatusPicker } from "@/components/inquiries/status-picker";
+import { MoneyInput } from "@/components/ui/money-input";
 
 /** Slim link block for the header - resolved server-side from inquiryId. */
 export interface NegotiationInquiryLink {
@@ -296,22 +297,28 @@ export function NegotiationDetail({ negotiation, employees, inquiryLink, lines }
             <SectionCard title="Pricing" hint="All amounts in ₹ - only changed fields are saved.">
               <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
                 <MiniField label="Final Cost">
-                  <MoneyInput
-                    aria-label="Final cost"
-                    {...register("finalCost", { setValueAs: moneyValue })}
-                  />
+                  <span className="block w-[180px]">
+                    <MoneyInput
+                      aria-label="Final cost"
+                      {...register("finalCost", { setValueAs: moneyValue })}
+                    />
+                  </span>
                 </MiniField>
                 <MiniField label="Negotiation">
-                  <MoneyInput
-                    aria-label="Negotiation"
-                    {...register("negotiation", { setValueAs: moneyValue })}
-                  />
+                  <span className="block w-[180px]">
+                    <MoneyInput
+                      aria-label="Negotiation"
+                      {...register("negotiation", { setValueAs: moneyValue })}
+                    />
+                  </span>
                 </MiniField>
                 <MiniField label="Quote Price">
-                  <MoneyInput
-                    aria-label="Quote price"
-                    {...register("quotePrice", { setValueAs: moneyValue })}
-                  />
+                  <span className="block w-[180px]">
+                    <MoneyInput
+                      aria-label="Quote price"
+                      {...register("quotePrice", { setValueAs: moneyValue })}
+                    />
+                  </span>
                 </MiniField>
               </div>
             </SectionCard>
@@ -501,27 +508,3 @@ function LineStat({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-
-/** ₹-prefixed number input. */
-const MoneyInput = React.forwardRef<
-  HTMLInputElement,
-  React.InputHTMLAttributes<HTMLInputElement>
->(function MoneyInput(props, ref) {
-  return (
-    <div className="relative w-[180px]">
-      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[14px] font-semibold text-ink-subtle">
-        ₹
-      </span>
-      <input
-        ref={ref}
-        type="number"
-        inputMode="decimal"
-        min={0}
-        step="any"
-        className="nt-input w-full pl-7 tabular-nums"
-        placeholder="0"
-        {...props}
-      />
-    </div>
-  );
-});

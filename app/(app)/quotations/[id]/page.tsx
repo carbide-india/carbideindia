@@ -11,9 +11,8 @@ import {
 } from "@/components/quotations/quotation-detail";
 import { SyncProductsBanner } from "@/components/pipeline/sync-products-banner";
 import { syncProductsFromEnquiry } from "@/app/(app)/quotations/actions";
-import { WorkflowStepper } from "@/components/workflow/workflow-stepper";
-import { itemFurthestStage, stageIndex } from "@/lib/flow/derive-stage";
-import { isWorkflowFlagOn } from "@/lib/workflow/flags";
+import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
+import { UserMenuServer } from "@/components/header/user-menu-server";
 
 export const dynamic = "force-dynamic";
 
@@ -69,31 +68,22 @@ export default async function QuotationDetailPage({ params }: PageProps) {
   );
   const missingCount = seeds.filter((s) => !presentIds.has(s.inquiryItemId)).length;
 
-  // Phase 8 - read-only pipeline stepper (safe even flag-off) + flag-gated CTA.
-  const quotationFlagOn = await isWorkflowFlagOn("quotation");
-  const resolvedStage = quotation.quoteSent
-    ? { stage: "negotiation" as const, index: stageIndex("negotiation") }
-    : itemFurthestStage({ quotationCount: 1 });
-
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6">
-      <WorkflowStepper
-        resolved={resolvedStage}
-        flagOn={quotationFlagOn && !quotation.quoteSent}
-        advance={{ entity: "quotation", id: quotation.id, label: "Send Quote" }}
-      />
-      <SyncProductsBanner
-        missingCount={missingCount}
-        recordId={quotation.id}
-        recordLabel="quotation"
-        syncAction={syncProductsFromEnquiry}
-      />
-      <QuotationDetail
-        quotation={quotation}
-        employees={employees}
-        inquiryLink={inquiryLink}
-        lines={lines}
-      />
-    </main>
+    <EnquiryModuleShell title="Quotation" userMenu={<UserMenuServer />}>
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+        <SyncProductsBanner
+          missingCount={missingCount}
+          recordId={quotation.id}
+          recordLabel="quotation"
+          syncAction={syncProductsFromEnquiry}
+        />
+        <QuotationDetail
+          quotation={quotation}
+          employees={employees}
+          inquiryLink={inquiryLink}
+          lines={lines}
+        />
+      </div>
+    </EnquiryModuleShell>
   );
 }

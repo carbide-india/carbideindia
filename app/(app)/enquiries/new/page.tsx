@@ -24,12 +24,15 @@ export default async function EnquiriesNewPage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const draftParam = typeof sp.draft === "string" ? sp.draft : undefined;
 
-  const [clients, employees, grades, tolerances, conditions, departments, shapes, shapeProfiles, enquiryLists, sampleOptions] = await Promise.all([
+  const [clients, employees, grades, tolerances, conditions, externalGrades, internalProductionCodes, partNos, departments, shapes, shapeProfiles, enquiryLists, sampleOptions] = await Promise.all([
     listClientOptions(),
     listEmployeeOptions(),
     listMasterOptions("internal_grade"),
     listMasterOptions("tolerance"),
     listMasterOptions("condition"),
+    listMasterOptions("external_grade"),
+    listMasterOptions("internal_production_code"),
+    listMasterOptions("part_no"),
     listMasterOptions("department"),
     listMasterOptions("shape"),
     getShapeProfiles(),
@@ -55,6 +58,9 @@ export default async function EnquiriesNewPage({ searchParams }: PageProps) {
         grades={grades}
         tolerances={tolerances}
         conditions={conditions}
+        externalGrades={externalGrades}
+        internalProductionCodes={internalProductionCodes}
+        partNos={partNos}
         departments={departments}
         shapeProfiles={shapeProfiles.byName}
         pickerMasters={pickerMasters}

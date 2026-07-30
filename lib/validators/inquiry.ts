@@ -26,6 +26,13 @@ export const ProductItemSchema = z.object({
   dimensionNotes: OptionalText(2000),
   gradeId:     z.string().uuid().optional(),
   gradeCustomer: OptionalText(120),
+  // ── 3-tier grades + production masters (migration 0062) ──
+  // Grade we give the customer (external_grade master), distinct from the raw
+  // customer text (gradeCustomer) and the internal shop-floor grade.
+  gradeCustomerFacingId:     z.string().uuid().optional(),
+  gradeInternalProductionId: z.string().uuid().optional(),
+  internalProductionCodeId:  z.string().uuid().optional(),
+  partNoId:                  z.string().uuid().optional(),
   toleranceId:  z.string().uuid().optional(),
   conditionId:  z.string().uuid().optional(),
   quantityNos:  ItemNum,

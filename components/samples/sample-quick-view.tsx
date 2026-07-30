@@ -101,7 +101,7 @@ export function SampleQuickView({
             className="inline-flex items-center gap-1.5 rounded-lg border border-hairline px-4 py-2 text-[13px] font-semibold text-ink-soft hover:border-brand hover:text-brand"
           >
             <FileText size={14} strokeWidth={2.2} />
-            Full record
+            Full Record
           </Link>
           <Link
             href={`/samples/${sampleId}` as Route}

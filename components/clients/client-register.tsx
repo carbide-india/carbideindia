@@ -540,14 +540,14 @@ export function ClientRegister({ rows, isAdmin }: Props) {
             onClick={clearFilters}
             className="shrink-0 px-2 py-2 text-[13px] font-semibold text-[#6b7280] transition-colors hover:text-[#3a4152]"
           >
-            Clear filters
+            Clear Filters
           </button>
         )}
       </div>
 
       {/* Table -------------------------------------------------------------- */}
       {filtered.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-[#d5d8e2] bg-white px-6 py-14 text-center">
+        <div className="rounded-2xl border border-[#d5d8e2] bg-white px-6 py-14 text-center">
           <p className="text-[15px] font-bold text-[#3a4152]">
             {hasFilters
               ? "No clients match these filters."
@@ -560,7 +560,7 @@ export function ClientRegister({ rows, isAdmin }: Props) {
                 onClick={clearFilters}
                 className="font-semibold text-[#3f3f94] underline underline-offset-2"
               >
-                Clear filters
+                Clear Filters
               </button>
             ) : (
               "Use New client to capture KYC, or Bulk Import to bring in a sheet."
@@ -693,7 +693,7 @@ function ColumnsMenu({
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="max-h-[70vh] overflow-y-auto">
-        <DropdownMenuLabel>Show columns</DropdownMenuLabel>
+        <DropdownMenuLabel>Show Columns</DropdownMenuLabel>
         {OPT_COLUMNS.map((c) => {
           const visible = !hidden[c.id];
           return (
@@ -901,7 +901,7 @@ function RowMenu({
   const items: MenuItem[] = [
     {
       key: "view",
-      label: "Quick view",
+      label: "Quick View",
       icon: <Eye size={15} strokeWidth={2.2} />,
       onSelect: onQuickView,
     },
@@ -913,7 +913,7 @@ function RowMenu({
     },
     {
       key: "record",
-      label: "Full record",
+      label: "Full Record",
       icon: <FileText size={15} strokeWidth={2.2} />,
       href: `/clients/${row.id}` as Route,
     },

@@ -197,7 +197,7 @@ export function FeasibilityQueueTable({ rows }: { rows: FeasibilityQueueItem[] }
         },
       ]}
       emptyTitle="No enquiries to review yet."
-      emptyHint="Enquiries appear here for their primary feasibility review."
+      emptyHint="Enquiries appear here for their Primary Feasibility review."
     />
   );
 }

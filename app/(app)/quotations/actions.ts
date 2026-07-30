@@ -3,7 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { and, count, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { quotations, quotationItems, type NewQuotation } from "@/db/schema";
+import {
+  quotations,
+  quotationItems,
+  negotiations,
+  salesOrders,
+  type NewQuotation,
+} from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
 import {
   getQuoteAutofill,
@@ -11,6 +17,7 @@ import {
   type QuoteLineSeed,
 } from "@/lib/queries/quotes";
 import { COSTING_DONE_STATUSES, type CostingDoneStatus } from "@/db/enums";
+import { getChosenCostingLocksForItems } from "@/lib/queries/costings";
 import {
   CreateQuotationSchema,
   UpdateQuotationSchema,
@@ -58,9 +65,23 @@ export async function getInquiryItemsForQuote(
   return getInquiryItemSeeds(inquiryId);
 }
 
+/**
+ * Options for createQuotation.
+ * - `enforceCostingGate` (default true): require every quoted product line to
+ *   have an admin-approved + locked chosen costing before the quote can be
+ *   created (Phase 5 hard-gate). The legacy bulk importer of historical
+ *   quote-master rows passes `false` - those rows predate the costing-lock
+ *   workflow and carry no per-line inquiry_item link to gate against.
+ */
+export interface CreateQuotationOptions {
+  enforceCostingGate?: boolean;
+}
+
 export async function createQuotation(
   input: CreateQuotationInput,
+  opts: CreateQuotationOptions = {},
 ): Promise<ActionResult> {
+  const { enforceCostingGate = true } = opts;
   const me = await requireUser();
   const parsed = CreateQuotationSchema.safeParse(input);
   if (!parsed.success) {
@@ -87,7 +108,45 @@ export async function createQuotation(
   }
 
   // Build per-line rows first so line #1 can mirror into the legacy columns.
-  const lineRows = quoteLineRows(v);
+  const rawLineRows = quoteLineRows(v);
+
+  // ── Phase 5 HARD-GATE + authoritative cost basis ─────────────────────────
+  // Every product line being quoted must have an admin-approved + LOCKED chosen
+  // costing on its inquiry_item. We reject the whole action (naming the
+  // offending line(s)) if any line lacks one. For lines that pass, the per-piece
+  // cost basis (`finalCost`) is sourced SERVER-SIDE from the locked
+  // `finalUnitCost` - never from the client-sent value. Selling-side fields
+  // (quotePrice / negotiation) keep whatever margin the client layered on top.
+  let lineRows = rawLineRows;
+  if (enforceCostingGate) {
+    const gateIds = rawLineRows
+      .map((l) => l.inquiryItemId)
+      .filter((id): id is string => id !== null);
+    const locks = await getChosenCostingLocksForItems(gateIds);
+
+    const offending: string[] = [];
+    lineRows = rawLineRows.map((l, i) => {
+      const name =
+        l.custProductName ?? auto.productDescription ?? `Line ${i + 1}`;
+      const lock = l.inquiryItemId ? locks.get(l.inquiryItemId) : undefined;
+      if (!lock || !lock.isLocked || lock.finalUnitCost == null) {
+        offending.push(name);
+        return l;
+      }
+      // Authoritative: seed the cost basis from the locked approved unit cost.
+      return { ...l, finalCost: lock.finalUnitCost };
+    });
+
+    if (offending.length > 0) {
+      const named = offending.map((n) => `"${n}"`).join(", ");
+      const isOne = offending.length === 1;
+      return {
+        ok: false,
+        error: `${named} ${isOne ? "has" : "have"} no approved & locked costing - approve ${isOne ? "its" : "their"} costing before quoting.`,
+      };
+    }
+  }
+
   const line0 = lineRows[0];
 
   const values: Omit<NewQuotation, "quoteNo"> = {
@@ -314,6 +373,87 @@ export async function setQuotationStatus(
   revalidatePath("/quotations");
   revalidatePath(`/quotations/${id}`);
   return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Delete (hard) — the Recycle Bin is drafts-only, so quotations have no
+// record-level bin: this is a permanent delete, guarded client-side by a
+// confirm and here by an FK-safety check.
+// ---------------------------------------------------------------------------
+
+/**
+ * Count downstream records that would be silently orphaned by deleting this
+ * quotation. `negotiations.quotation_id` and `sales_orders.quotation_id` are
+ * both ON DELETE SET NULL, so a delete wouldn't fail — it would blank the link
+ * on those live records. We refuse instead (same posture as
+ * `deleteMasterOption`). `quotation_items` are ON DELETE CASCADE and go
+ * automatically, so they aren't counted.
+ */
+async function countQuotationRefs(id: string): Promise<number> {
+  const counts = await Promise.all([
+    db.$count(negotiations, eq(negotiations.quotationId, id)),
+    db.$count(salesOrders, eq(salesOrders.quotationId, id)),
+  ]);
+  return counts.reduce((sum, n) => sum + n, 0);
+}
+
+const QUOTATION_IN_USE_ERROR =
+  "In use by a negotiation / sales order - can't delete.";
+
+/** Hard-delete a single quotation (cascades its line items). Refuses when a
+ *  negotiation or sales order was built from it. */
+export async function deleteQuotation(
+  id: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requireUser();
+  if (!isUuid(id)) return { ok: false, error: "Invalid quotation id." };
+
+  try {
+    if ((await countQuotationRefs(id)) > 0) {
+      return { ok: false, error: QUOTATION_IN_USE_ERROR };
+    }
+    await db.delete(quotations).where(eq(quotations.id, id));
+  } catch (err) {
+    console.error("[deleteQuotation] failed", err);
+    return { ok: false, error: "Could not delete the quotation. Please try again." };
+  }
+
+  revalidatePath("/quotations");
+  return { ok: true };
+}
+
+/** Hard-delete the selected quotations, skipping any still referenced by a
+ *  negotiation / sales order. Reports how many were deleted vs. in-use. */
+export async function deleteQuotationsBulk(
+  ids: string[],
+): Promise<
+  | { ok: true; deleted: number; failed: number }
+  | { ok: false; error: string }
+> {
+  await requireUser();
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { ok: false, error: "No rows selected." };
+  }
+  if (!ids.every(isUuid)) return { ok: false, error: "Invalid quotation id." };
+
+  let deleted = 0;
+  let failed = 0;
+  for (const id of ids) {
+    try {
+      if ((await countQuotationRefs(id)) > 0) {
+        failed++;
+        continue;
+      }
+      await db.delete(quotations).where(eq(quotations.id, id));
+      deleted++;
+    } catch (err) {
+      console.error("[deleteQuotationsBulk] failed for", id, err);
+      failed++;
+    }
+  }
+
+  revalidatePath("/quotations");
+  return { ok: true, deleted, failed };
 }
 
 /** Bulk-set the costing-done status over the selected quotation rows. */

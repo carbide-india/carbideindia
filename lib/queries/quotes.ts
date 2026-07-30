@@ -180,6 +180,17 @@ export interface QuoteLineSeed {
   condition: string | null;
   /** Final cost per piece from the chosen costing (if one exists). */
   finalCost: string | null;
+  /**
+   * Locked-costing handoff (Phase 5): the chosen costing's admin-approval state.
+   * `isCostingLocked` + a non-null `finalUnitCost` together mean the decision is
+   * approved & locked and safe to quote against - the same rule the server
+   * hard-gate enforces. `finalUnitCost` is the authoritative approved per-piece
+   * cost the form prefills the line's Final Cost from.
+   */
+  isCostingLocked: boolean;
+  finalUnitCost: string | null;
+  approverName: string | null;
+  approvedAt: Date | null;
 }
 
 export async function getInquiryItemSeeds(
@@ -193,6 +204,7 @@ export async function getInquiryItemSeeds(
   const itemTolerance = alias(masterOptions, "item_tolerance");
   const itemCondition = alias(masterOptions, "item_condition");
   const chosen = alias(costings, "chosen_costing");
+  const approver = alias(employees, "cost_approver");
 
   const rows = await db
     .select({
@@ -211,6 +223,10 @@ export async function getInquiryItemSeeds(
       conditionLine: condition.name,
       conditionItem: itemCondition.name,
       finalCost: chosen.finalCostPerPiece,
+      isCostingLocked: chosen.isLocked,
+      finalUnitCost: chosen.finalUnitCost,
+      approvedAt: chosen.approvedAt,
+      approverName: approver.name,
     })
     .from(inquiryItems)
     .leftJoin(tolerance, eq(inquiryItems.toleranceId, tolerance.id))
@@ -225,6 +241,7 @@ export async function getInquiryItemSeeds(
         eq(chosen.isChosen, true),
       ),
     )
+    .leftJoin(approver, eq(approver.id, chosen.approverId))
     .where(eq(inquiryItems.inquiryId, inquiryId))
     .orderBy(asc(inquiryItems.sortOrder));
 
@@ -241,6 +258,10 @@ export async function getInquiryItemSeeds(
     tolerance: r.toleranceLine ?? r.toleranceItem,
     condition: r.conditionLine ?? r.conditionItem,
     finalCost: r.finalCost,
+    isCostingLocked: r.isCostingLocked ?? false,
+    finalUnitCost: r.finalUnitCost,
+    approverName: r.approverName,
+    approvedAt: r.approvedAt,
   }));
 }
 

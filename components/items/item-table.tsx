@@ -48,13 +48,13 @@ type SortKey =
   | "status";
 
 const SORTS: { value: SortKey; label: string }[] = [
-  { value: "recent", label: "Newest first" },
-  { value: "oldest", label: "Oldest first" },
+  { value: "recent", label: "Newest First" },
+  { value: "oldest", label: "Oldest First" },
   { value: "code", label: "Item Code (A→Z)" },
   { value: "codeDesc", label: "Item Code (Z→A)" },
   { value: "customer", label: "Customer (A→Z)" },
   { value: "customerDesc", label: "Customer (Z→A)" },
-  { value: "status", label: "Active first" },
+  { value: "status", label: "Active First" },
 ];
 
 /** Filter facets - each bifurcated live from the visible rows. `get` resolves a
@@ -247,7 +247,7 @@ export function ItemTable({ rows, isAdmin }: Props) {
             className="inline-flex items-center gap-2 rounded-lg border border-hairline bg-surface-card px-4 py-2.5 text-[13px] font-semibold text-ink-muted transition-colors hover:border-ink-subtle hover:text-ink-strong"
           >
             <Upload size={15} strokeWidth={2.2} />
-            Bulk upload
+            Bulk Upload
           </Link>
           <a
             href="/items/export.xlsx"
@@ -310,7 +310,7 @@ export function ItemTable({ rows, isAdmin }: Props) {
       {/* ── Row 3+: the table ── */}
       {shown.length === 0 ? (
         <div
-          className="mt-3 rounded-section border border-dashed border-hairline-strong bg-surface-card px-6 py-16 text-center"
+          className="mt-3 rounded-section border border-hairline-strong bg-surface-card px-6 py-16 text-center"
           style={{ boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)" }}
         >
           <p className="text-[15px] font-semibold text-ink-strong">
@@ -562,12 +562,12 @@ function RowMenu({
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onSelect={(e) => { e.preventDefault(); onQuickView(); }}>
-          <Eye size={14} strokeWidth={2.2} /> Quick view
+        <DropdownMenuItem onSelect={() => onQuickView()}>
+          <Eye size={14} strokeWidth={2.2} /> Quick View
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href={`/items/${item.id}` as Route}>
-            <FileText size={14} strokeWidth={2.2} /> Full record
+            <FileText size={14} strokeWidth={2.2} /> Full Record
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
@@ -578,7 +578,7 @@ function RowMenu({
         {isAdmin && (
           <DropdownMenuItem
             danger={item.isActive}
-            onSelect={(e) => { e.preventDefault(); onToggle(); }}
+            onSelect={() => onToggle()}
           >
             <Power size={14} strokeWidth={2.2} />
             {item.isActive ? "Deactivate" : "Reactivate"}

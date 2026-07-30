@@ -25,18 +25,39 @@ export default clerkMiddleware(async (auth, req) => {
     // IP are permitted ONLY for allowlisted bypass emails (owners working
     // off-site); everyone else gets the branded denial page.
     if (!isPublicRoute(req)) {
-      const { userId } = await auth();
+      const { userId, sessionClaims } = await auth();
       let bypass = false;
       if (userId) {
-        try {
-          const user = await (await clerkClient()).users.getUser(userId);
-          const email =
-            user.primaryEmailAddress?.emailAddress ??
-            user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId)?.emailAddress ??
-            null;
-          bypass = isBypassEmail(email);
-        } catch {
-          bypass = false;
+        // Fast path: if the (Clerk-signed) session token carries an email claim,
+        // decide with ZERO network calls. Configure this in the Clerk dashboard
+        // → Sessions → Customize token: {"email":"{{user.primary_email_address}}"}.
+        const claimEmail =
+          typeof (sessionClaims as { email?: unknown } | undefined)?.email === "string"
+            ? ((sessionClaims as { email?: string }).email ?? null)
+            : null;
+        if (claimEmail) {
+          bypass = isBypassEmail(claimEmail);
+        } else {
+          // Fallback: look the user up — but BOUNDED, so a slow/cold Clerk API
+          // call can never hang the gate (previously it could stall ~30s). On
+          // timeout or error we fail CLOSED (deny), never open; the user just
+          // retries and the warm call resolves.
+          try {
+            const client = await clerkClient();
+            const user = await Promise.race([
+              client.users.getUser(userId),
+              new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error("clerk getUser timeout")), 3500),
+              ),
+            ]);
+            const email =
+              user.primaryEmailAddress?.emailAddress ??
+              user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId)?.emailAddress ??
+              null;
+            bypass = isBypassEmail(email);
+          } catch {
+            bypass = false;
+          }
         }
       }
       if (!bypass) {

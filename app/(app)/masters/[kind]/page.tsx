@@ -28,6 +28,20 @@ const KIND_DESCRIPTION: Record<MasterKind, string> = {
     "How a finished job is dispatched - selected on production job cards.",
   pressing_type:
     "Pressing method used in production, referenced by job cards for routing.",
+  external_grade:
+    "Grade we give the customer on quotes - the customer-facing grade selected in Technical Review / Costing.",
+  internal_production_code:
+    "Internal production code assigned to a product line in Technical Review / Costing.",
+  part_no:
+    "Part number assigned to a product line in Technical Review / Costing.",
+  tooling_chart:
+    "Tool types on the Costing calculator (Perfect / Block / Big Tool) - Alok fills; drives the Tooling Chart dropdown.",
+  machining_op:
+    "Machining operations on the Costing calculator (OD, Thickness, ID, Tumbling) - each selection carries minutes + rate.",
+  quantity_tolerance:
+    "Order-quantity tolerance offered on the quotation (5% +/-, 10% +/-, Exact).",
+  payment_term:
+    "Standard payment terms offered on quotations (Advance, on Dispatch, credit days) - also defaulted from the Customer Master.",
 };
 
 interface PageProps {

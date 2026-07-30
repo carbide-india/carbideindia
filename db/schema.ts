@@ -747,6 +747,19 @@ export const inquiryItems = pgTable(
     // an Item that is referenced by a product can never be deleted (merges
     // repoint, they never blind-delete).
     itemId: uuid("item_id").references(() => items.id, { onDelete: "restrict" }).notNull(),
+    // ── Form 04 Technical Review lock gate + 3-tier grades (migration 0062) ──
+    // Dimensions/specs must be locked in Feasibility Review before Costing (Form 05)
+    // unlocks. Snapshot the PF baseline at lock time for the PF-vs-Costing variance report.
+    isDimensionsLocked: boolean("is_dimensions_locked").notNull().default(false),
+    lockedById: uuid("locked_by_id").references(() => employees.id, { onDelete: "set null" }),
+    lockedAt: timestamp("locked_at", { withTimezone: true }),
+    feasibilityBaseline: jsonb("feasibility_baseline"),
+    // Grade we give the customer (external_grade master) — distinct from gradeId/gradeCustomer.
+    gradeCustomerFacingId: uuid("grade_customer_facing_id").references(() => masterOptions.id, { onDelete: "set null" }),
+    // Internal shop-floor production grade (internal_grade master), hidden from customer quotes.
+    gradeInternalProductionId: uuid("grade_internal_production_id").references(() => masterOptions.id, { onDelete: "set null" }),
+    internalProductionCodeId: uuid("internal_production_code_id").references(() => masterOptions.id, { onDelete: "set null" }),
+    partNoId: uuid("part_no_id").references(() => masterOptions.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -1120,12 +1133,67 @@ export const costings = pgTable(
     outsourcedVendorCost: numeric("outsourced_vendor_cost"), vendorOhPct: numeric("vendor_oh_pct"),
     vendorNotes: text("vendor_notes"), developmentCost: numeric("development_cost"),
     developmentNotes: text("development_notes"), technicalNotes: text("technical_notes"),
+    // ── Form 05 weight matrix + single primary BO vendor (migration 0062) ──
+    blockWtPerPiece: numeric("block_wt_per_piece"),           // gms
+    blockWtOrderKg: numeric("block_wt_order_kg"),             // auto = qty * blockWtPerPiece / 1000
+    directWtPerPiece: numeric("direct_wt_per_piece"),         // gms
+    directWtOrderKg: numeric("direct_wt_order_kg"),           // auto = qty * directWtPerPiece / 1000
+    totalWtOrderKg: numeric("total_wt_order_kg"),
+    vendorId: uuid("vendor_id").references(() => vendors.id, { onDelete: "set null" }), // single primary BO vendor
+    vendorCodeSnapshot: text("vendor_code_snapshot"),
+    vendorQuoteLink: text("vendor_quote_link"),               // Vercel Blob URL, uploaded to SM folder
+    paymentTerms: text("payment_terms"),
+    // ── Costing Master engine v3 (migration 0064) ──────────────────
+    // Data + dropdowns the calculator needs. Sizes are transferred from the
+    // Tolerance Calculator / previous sheet (spec §10.2); free text.
+    finishedSize: text("finished_size"), toleranceSize: text("tolerance_size"),
+    sinteredSize: text("sintered_size"), greenSize: text("green_size"),
+    shrinkage: text("shrinkage"),
+    // Tooling Chart dropdown (Admin Master `tooling_chart`); Levy method already
+    // in toolCostMethod (Flat / Per-Piece / None), flat cost in toolFlatCost.
+    toolingChartId: uuid("tooling_chart_id").references((): AnyPgColumn => masterOptions.id, { onDelete: "set null" }),
+    toolPerPieceCost: numeric("tool_per_piece_cost"),
+    // Which weight-selection method drove Total Weight (spec §3): 1 previously
+    // made · 2 tooling available · 3 tooling to be made · 4 no tooling.
+    weightMethod: integer("weight_method"),
+    // Mandril Cost (spec §10.5) — Rate + Size, both default 0.
+    mandrilRate: numeric("mandril_rate"), mandrilSize: numeric("mandril_size"),
+    // Machining lines (spec §7). Each selected Admin-Master op carries Minutes +
+    // Rate; internal=false means an external vendor does it (vendorId → vendors).
+    machiningOps: jsonb("machining_ops").$type<
+      Array<{ opId: string; label: string; minutes: number; rate: number; internal: boolean; vendorId?: string }>
+    >(),
+    // Up to 3–5 external machining vendors, each a flat rate (spec §7).
+    externalMachiningVendors: jsonb("external_machining_vendors").$type<
+      Array<{ vendorId: string; label: string; rate: number }>
+    >(),
+    // "Any other Development Cost" repeatable lines (spec §10.5); levy =
+    // Flat / Per-Piece / None.
+    devCosts: jsonb("dev_costs").$type<
+      Array<{ description: string; qty: number; rate: number; amount: number; levy: string }>
+    >(),
+    // Quantity Tolerance dropdown (Admin Master `quantity_tolerance`, spec §10.8).
+    quantityToleranceId: uuid("quantity_tolerance_id").references((): AnyPgColumn => masterOptions.id, { onDelete: "set null" }),
     // computed outputs (snapshot)
     lossWt: numeric("loss_wt"), rmPerGm: numeric("rm_per_gm"), vaPerGm: numeric("va_per_gm"),
     sinteredCostPerGm: numeric("sintered_cost_per_gm"), sinteredPricePerPiece: numeric("sintered_price_per_piece"),
     shapingCostPerPiece: numeric("shaping_cost_per_piece"), machiningCostPerPiece: numeric("machining_cost_per_piece"),
     costAfterMachining: numeric("cost_after_machining"), negotiationAmount: numeric("negotiation_amount"),
     finalCostPerPiece: numeric("final_cost_per_piece"), quoteValue: numeric("quote_value"),
+    // ── Form 05 BO-vs-BU dual costing / recommendation / approver override / lock ──
+    // (Phase 1, migration 0061). Reuses costingRouteEnum for recommended/approved
+    // option so NO `ALTER TYPE ADD VALUE` is emitted (transaction-safe). Decision
+    // columns live on the chosen row (Shape A); approver cols mirror inquiryFeasibility.
+    recommendedOption: costingRouteEnum("recommended_option"),        // auto-picked lowest overall
+    recommendedVendorQuoteId: uuid("recommended_vendor_quote_id"),    // BO vendor behind the recommendation (nullable, no FK — validate in code)
+    approvedOption: costingRouteEnum("approved_option"),              // approver's final pick
+    chosenVendorQuoteId: uuid("chosen_vendor_quote_id").references((): AnyPgColumn => costingVendorQuotes.id, { onDelete: "set null" }), // winning BO vendor quote
+    isOverridden: boolean("is_overridden").notNull().default(false),
+    overrideReason: text("override_reason"),
+    finalUnitCost: numeric("final_unit_cost"),                       // locked number that feeds Form 06
+    approverId: uuid("approver_id").references(() => employees.id, { onDelete: "set null" }),
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+    isLocked: boolean("is_locked").notNull().default(false),
     // meta
     developmentTime: text("development_time"), deliveryTime: text("delivery_time"), validity: text("validity"),
     costingDoneStatus: costingDoneStatusEnum("costing_done_status").notNull().default("not_done"),
@@ -1143,6 +1211,74 @@ export const costings = pgTable(
 );
 export type Costing = typeof costings.$inferSelect;
 export type NewCosting = typeof costings.$inferInsert;
+
+// ── Vendor Master (Form 05, migration 0061) ─────────────────────
+// Standalone master (mirrors `clients`/`departments`), NOT a masterOptions kind —
+// structured commercial terms don't fit config-jsonb. Deactivate-only governance.
+/** Vendor codes: VN-0001, VN-0002,  */
+export const vendorsVendorCodeSeq = pgSequence("vendors_vendor_code_seq", { startWith: 1 });
+
+export const vendors = pgTable(
+  "vendors",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // Human code (VN-0001) mirroring clients_client_code_seq.
+    vendorCode: text("vendor_code").unique()
+      .default(sql`'VN-' || lpad(nextval('vendors_vendor_code_seq')::text, 4, '0')`),
+    name: text("name").notNull(),
+    contactPerson: text("contact_person"),
+    contactNo: text("contact_no"),
+    email: text("email"),
+    address: text("address"),
+    // Default commercial terms the BO matrix pre-fills from.
+    defaultCreditDays: integer("default_credit_days"),
+    paymentTerms: text("payment_terms"),
+    // Toggle for non-GST vendors (migration 0062).
+    isGstApplicable: boolean("is_gst_applicable").notNull().default(true),
+    notes: text("notes"),
+    isActive: boolean("is_active").notNull().default(true),
+    // Governance: deactivate-only — vendors are never hard-deleted.
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    sortOrder: integer("sort_order").notNull().default(100),
+    createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("vendors_active_sort_idx").on(t.isActive, t.sortOrder, t.name),
+    // Case-insensitive uniqueness (mirrors clients_name_lower_uidx).
+    uniqueIndex("vendors_name_lower_uidx").on(sql`lower(${t.name})`),
+  ],
+);
+export type Vendor = typeof vendors.$inferSelect;
+export type NewVendor = typeof vendors.$inferInsert;
+
+// ── BO multi-vendor matrix (Form 05, migration 0061) ────────────
+// One row per vendor quote under a bought-out costing (≤5 per costing — capped in
+// the zod validator, NOT the DB). vendorId is nullable so ad-hoc/one-off vendors
+// are allowed; vendorNameSnapshot denormalizes the name at capture time.
+export const costingVendorQuotes = pgTable(
+  "costing_vendor_quotes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    costingId: uuid("costing_id").notNull().references(() => costings.id, { onDelete: "cascade" }),
+    vendorId: uuid("vendor_id").references(() => vendors.id, { onDelete: "set null" }),
+    vendorNameSnapshot: text("vendor_name_snapshot"),
+    unitPrice: numeric("unit_price").notNull(),
+    leadTimeDays: integer("lead_time_days"),
+    creditPeriodDays: integer("credit_period_days"),
+    freightCost: numeric("freight_cost"),          // per ORDER (divided by qty for landed cost/pc)
+    vendorOhPct: numeric("vendor_oh_pct"),
+    developmentCost: numeric("development_cost"),
+    // landed cost/pc = unitPrice + unitPrice*vendorOhPct + developmentCost + freightCost/qty
+    sortOrder: integer("sort_order").notNull().default(0),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("costing_vendor_quotes_costing_idx").on(t.costingId, t.sortOrder)],
+);
+export type CostingVendorQuote = typeof costingVendorQuotes.$inferSelect;
+export type NewCostingVendorQuote = typeof costingVendorQuotes.$inferInsert;
 
 export const quotations = pgTable("quotations", {
   id: uuid("id").primaryKey().defaultRandom(),

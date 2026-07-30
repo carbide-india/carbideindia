@@ -8,6 +8,7 @@ export default defineConfig({
       "tests/unit/**/*.test.ts",
       "tests/unit/**/*.test.tsx",
       "tests/integration/**/*.test.ts",
+      "lib/**/*.test.ts",
     ],
     coverage: {
       include: ["lib/transforms/**/*.ts"],

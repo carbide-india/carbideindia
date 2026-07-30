@@ -23,6 +23,10 @@ import {
   ArrowLeft,
   PanelLeftClose,
   PanelLeftOpen,
+  Hammer,
+  Wrench,
+  Percent,
+  CreditCard,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { HubSearch } from "@/components/hub/hub-search";
@@ -43,6 +47,13 @@ const KIND_ICON: Record<MasterKind, typeof Users> = {
   shape: Shapes,
   dispatch_condition: Truck,
   pressing_type: Layers,
+  external_grade: Star,
+  internal_production_code: Package,
+  part_no: Package,
+  tooling_chart: Hammer,
+  machining_op: Wrench,
+  quantity_tolerance: Percent,
+  payment_term: CreditCard,
 };
 
 // The module top-bar title is always "Masters" (the module name) on every page

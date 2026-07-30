@@ -200,9 +200,67 @@ export function Segmented<T extends string>({
   activeTone = "default",
 }: SegmentedProps<T>) {
   const lg = size === "lg";
+  const btnRefs = React.useRef<(HTMLButtonElement | null)[]>([]);
+
+  // Roving tabindex: the selected option is the single tab stop; if nothing is
+  // selected, the first option is. Arrow/Home/End move between options.
+  const selectedIndex = options.findIndex((o) => o.value === value);
+  const tabStopIndex = selectedIndex === -1 ? 0 : selectedIndex;
+
+  const select = (i: number) => {
+    const o = options[i];
+    if (!o) return;
+    const active = o.value === value;
+    if (active) {
+      if (allowClear) onChange(undefined);
+      return;
+    }
+    onChange(o.value);
+  };
+
+  const focusAndSelect = (i: number) => {
+    const n = options.length;
+    if (n === 0) return;
+    const idx = ((i % n) + n) % n;
+    const o = options[idx];
+    if (!o) return;
+    // Arrow navigation selects the option it moves to (radiogroup semantics),
+    // then moves focus to it.
+    if (o.value !== value) onChange(o.value);
+    btnRefs.current[idx]?.focus();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, i: number) => {
+    switch (e.key) {
+      case "ArrowRight":
+      case "ArrowDown":
+        e.preventDefault();
+        focusAndSelect(i + 1);
+        break;
+      case "ArrowLeft":
+      case "ArrowUp":
+        e.preventDefault();
+        focusAndSelect(i - 1);
+        break;
+      case "Home":
+        e.preventDefault();
+        focusAndSelect(0);
+        break;
+      case "End":
+        e.preventDefault();
+        focusAndSelect(options.length - 1);
+        break;
+      case " ":
+      case "Enter":
+        e.preventDefault();
+        select(i);
+        break;
+    }
+  };
+
   return (
     <div
-      role="group"
+      role="radiogroup"
       aria-label={ariaLabel}
       className={cn(
         lg
@@ -219,20 +277,20 @@ export function Segmented<T extends string>({
           : undefined
       }
     >
-      {options.map((o) => {
+      {options.map((o, i) => {
         const active = o.value === value;
         return (
           <button
             key={o.value}
-            type="button"
-            aria-pressed={active}
-            onClick={() => {
-              if (active) {
-                if (allowClear) onChange(undefined);
-                return;
-              }
-              onChange(o.value);
+            ref={(el) => {
+              btnRefs.current[i] = el;
             }}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            tabIndex={i === tabStopIndex ? 0 : -1}
+            onClick={() => select(i)}
+            onKeyDown={(e) => handleKeyDown(e, i)}
             className={cn(
               "rounded-lg font-semibold transition-colors whitespace-nowrap",
               lg

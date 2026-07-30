@@ -2,36 +2,51 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { Route } from "next";
+import { Trash2 } from "lucide-react";
 import {
   COSTING_ROUTES,
   COSTING_ROUTE_LABELS,
   COSTING_LOGICS,
   COSTING_LOGIC_LABELS,
 } from "@/db/enums";
-import { CreateCostingSchema, type CreateCostingInput } from "@/lib/validators/costing";
+import {
+  CreateCostingSchema,
+  type CreateCostingInput,
+  type VendorQuoteInput,
+} from "@/lib/validators/costing";
 import { saveCosting } from "@/app/(app)/costings/actions";
 import {
   computeInhouseCosting,
-  computeBoCosting,
+  vendorLandedCost,
+  compareVendors,
   type InhouseInput,
+  type VendorQuoteLike,
+  type VendorComparison,
 } from "@/lib/costing/compute";
+import type { VendorOption } from "@/lib/queries/vendors";
 import { formatInr } from "@/lib/format";
 import { fireToast } from "@/lib/toast";
 import { useFormDraft } from "@/components/drafts/use-form-draft";
+import { useKeyboardForm } from "@/components/forms/use-keyboard-form";
+import { MoneyInput } from "@/components/ui/money-input";
+import { Select } from "@/components/ui/select";
 import {
   Field,
   MiniField,
   SectionCard,
   Segmented,
+  GroupHeader,
 } from "@/components/inquiries/form-field";
 
 interface Props {
   inquiryItemId: string;
   inquiryId: string;
   productCaption: string;
+  /** Active vendors for the Bought-Out matrix picker (auto-fills credit / terms). */
+  vendorOptions?: VendorOption[];
   /** Create-mode only: enable auto-saving this form as a draft. */
   enableDrafts?: boolean;
   /** When resuming a draft, its id (auto-save continues into the same draft). */
@@ -39,6 +54,26 @@ interface Props {
   /** Prefill values (used when resuming a saved draft). */
   initialValues?: Partial<CreateCostingInput>;
 }
+
+/** Hard cap on competing vendor quotes in the BO matrix (schema-enforced too). */
+const MAX_VENDOR_QUOTES = 5;
+
+/**
+ * One fresh, empty vendor-quote row. unitPrice defaults to "" (not undefined) so
+ * an untouched row coerces to 0 and passes the zod resolver — truly-empty rows
+ * are stripped on submit. Everything else is optional / blank.
+ */
+const EMPTY_QUOTE = {
+  vendorId: undefined,
+  vendorNameSnapshot: "",
+  unitPrice: "",
+  leadTimeDays: undefined,
+  creditPeriodDays: undefined,
+  freightCost: undefined,
+  vendorOhPct: undefined,
+  developmentCost: undefined,
+  notes: "",
+} as const;
 
 const ROUTE_OPTIONS = COSTING_ROUTES.map((r) => ({
   value: r,
@@ -65,30 +100,6 @@ function toNum(v: unknown): number | undefined {
 
 /** Number register that discards empty/NaN inputs instead of leaving "" in state. */
 const numRegister = { setValueAs: (v: unknown) => toNum(v) };
-
-/** Rs-prefixed money input, same as quotation-form.tsx. */
-const MoneyInput = React.forwardRef<
-  HTMLInputElement,
-  React.InputHTMLAttributes<HTMLInputElement>
->(function MoneyInput(props, ref) {
-  return (
-    <div className="relative w-full">
-      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[14px] font-semibold text-ink-subtle">
-        &#8377;
-      </span>
-      <input
-        ref={ref}
-        type="number"
-        inputMode="decimal"
-        min={0}
-        step="any"
-        className="nt-input w-full pl-7 tabular-nums"
-        placeholder="0"
-        {...props}
-      />
-    </div>
-  );
-});
 
 /** Read-only output chip - label + formatted value. */
 function OutputRow({ label, value }: { label: string; value: string }) {
@@ -126,6 +137,7 @@ export function CostingForm({
   inquiryItemId,
   inquiryId,
   productCaption,
+  vendorOptions = [],
   enableDrafts,
   resumeDraftId,
   initialValues,
@@ -141,6 +153,7 @@ export function CostingForm({
     handleSubmit,
     watch,
     getValues,
+    setValue,
     formState: { errors },
   } = useForm<CreateCostingInput>({
     resolver: zodResolver(CreateCostingSchema),
@@ -160,6 +173,7 @@ export function CostingForm({
       vendorOhPct: undefined,
       outsourcedVendorCost: undefined,
       developmentCost: undefined,
+      vendorQuotes: [],
       // A resumed draft prefills over the base defaults.
       ...initialValues,
       // Route identity stays authoritative even when resuming a draft.
@@ -167,6 +181,8 @@ export function CostingForm({
       inquiryId,
     },
   });
+
+  const { formProps } = useKeyboardForm();
 
   const { discard } = useFormDraft<CreateCostingInput>({
     kind: "costing",
@@ -176,12 +192,81 @@ export function CostingForm({
     getValues,
   });
 
+  // BO multi-vendor matrix (up to 5 competing quotes).
+  const {
+    fields: quoteFields,
+    append: appendQuote,
+    remove: removeQuote,
+  } = useFieldArray({ control, name: "vendorQuotes" });
+
+  // Keyboard-first: when a vendor row is added, move focus into its first data
+  // field (the vendor picker, or the ad-hoc name when no vendors exist) so the
+  // user never has to reach for the mouse after "+ Add vendor".
+  const quotesRef = React.useRef<HTMLDivElement | null>(null);
+  const focusNewRow = React.useRef(false);
+
+  React.useEffect(() => {
+    if (!focusNewRow.current) return;
+    focusNewRow.current = false;
+    const container = quotesRef.current;
+    if (!container) return;
+    const rows = container.querySelectorAll<HTMLElement>("[data-quote-row]");
+    const last = rows[rows.length - 1];
+    if (!last) return;
+    // First real field in DOM order: the vendor Select trigger
+    // (aria-haspopup="listbox"), or the ad-hoc name input when it is disabled.
+    // The Remove button (a plain <button>) is deliberately skipped.
+    const first = last.querySelector<HTMLElement>(
+      'input:not([disabled]):not([type="hidden"]), [aria-haspopup="listbox"]:not([disabled]), textarea:not([disabled])',
+    );
+    first?.focus();
+  }, [quoteFields.length]);
+
+  const addQuote = React.useCallback(() => {
+    focusNewRow.current = true;
+    appendQuote({ ...EMPTY_QUOTE });
+  }, [appendQuote]);
+
+  const vendorSelectOptions = React.useMemo(
+    () =>
+      vendorOptions.map((o) => ({
+        value: o.id,
+        label: o.vendorCode ? `${o.name} · ${o.vendorCode}` : o.name,
+      })),
+    [vendorOptions],
+  );
+
+  /** On vendor pick: snapshot the name + auto-fill default credit days / terms.
+   *  (vendorId itself is owned by the row's Controller.) */
+  const onPickVendor = React.useCallback(
+    (index: number, vendorId: string) => {
+      const vend = vendorOptions.find((o) => o.id === vendorId);
+      if (!vend) return;
+      setValue(`vendorQuotes.${index}.vendorNameSnapshot`, vend.name, {
+        shouldDirty: true,
+      });
+      if (vend.defaultCreditDays != null) {
+        setValue(`vendorQuotes.${index}.creditPeriodDays`, vend.defaultCreditDays, {
+          shouldDirty: true,
+        });
+      }
+      const curNotes = getValues(`vendorQuotes.${index}.notes`);
+      if (!curNotes && vend.paymentTerms) {
+        setValue(`vendorQuotes.${index}.notes`, vend.paymentTerms, {
+          shouldDirty: true,
+        });
+      }
+    },
+    [vendorOptions, setValue, getValues],
+  );
+
   // Watch all values for live recompute
   const v = watch();
 
   // ── Live recompute ──────────────────────────────────────────────────────────
+  // In-house always computes (even in BO mode) so the make-vs-buy dual view has
+  // both sides to compare. The full in-house breakdown is only *shown* in-house.
   const inhouseOut = React.useMemo(() => {
-    if (v.costingType !== "inhouse") return null;
     const qty = toNum(v.qty) ?? 0;
     const weightUsed: InhouseInput["weightUsed"] =
       v.weightUsed === "pressing" ||
@@ -206,9 +291,7 @@ export function CostingForm({
       overheadPct: toNum(v.overheadPct) ?? 0.25,
       negotiationPct: toNum(v.negotiationPct) ?? 0.03,
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    v.costingType,
     v.qty,
     v.weightUsed,
     v.toolFlatCost,
@@ -226,30 +309,64 @@ export function CostingForm({
     v.negotiationPct,
   ]);
 
-  const boOut = React.useMemo(() => {
-    if (v.costingType !== "bought_out") return null;
-    return computeBoCosting({
-      qty: toNum(v.qty) ?? 0,
-      outsourcedVendorCost: toNum(v.outsourcedVendorCost) ?? 0,
-      vendorOhPct: toNum(v.vendorOhPct) ?? 0,
-      developmentCost: toNum(v.developmentCost) ?? 0,
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    v.costingType,
-    v.qty,
-    v.outsourcedVendorCost,
-    v.vendorOhPct,
-    v.developmentCost,
-  ]);
+  const isInhouse = v.costingType === "inhouse";
+  const boQty = toNum(v.qty) ?? 0;
 
-  const finalCost = inhouseOut?.finalCostPerPiece ?? boOut?.finalCostPerPiece ?? 0;
-  const quoteVal = inhouseOut?.quoteValue ?? boOut?.quoteValue ?? 0;
+  // ── BO vendor comparison (client-side, SAME engine as the server) ──
+  // Pair each field-array row (stable id) with its watched values; only rows
+  // with a real unitPrice > 0 rank (empty starter rows are ignored).
+  const rankableQuotes = React.useMemo(() => {
+    const rows = v.vendorQuotes ?? [];
+    return quoteFields
+      .map((f, i): VendorQuoteLike => {
+        const r: Partial<VendorQuoteInput> = rows[i] ?? {};
+        return {
+          id: f.id,
+          unitPrice: r.unitPrice as VendorQuoteLike["unitPrice"],
+          vendorOhPct: r.vendorOhPct as VendorQuoteLike["vendorOhPct"],
+          developmentCost: r.developmentCost as VendorQuoteLike["developmentCost"],
+          freightCost: r.freightCost as VendorQuoteLike["freightCost"],
+          leadTimeDays: (r.leadTimeDays as number | null | undefined) ?? null,
+          creditPeriodDays: (r.creditPeriodDays as number | null | undefined) ?? null,
+        };
+      })
+      .filter((q) => Number(q.unitPrice) > 0);
+  }, [quoteFields, v.vendorQuotes]);
+
+  const comparison = React.useMemo(
+    () => compareVendors(rankableQuotes, boQty),
+    [rankableQuotes, boQty],
+  );
+
+  const boCheapestLanded =
+    comparison.cheapestId != null ? comparison.byId[comparison.cheapestId] ?? 0 : 0;
+
+  const inhouseFinal = inhouseOut?.finalCostPerPiece ?? 0;
+
+  const finalCost = isInhouse ? inhouseFinal : boCheapestLanded;
+  const quoteVal = isInhouse
+    ? inhouseOut?.quoteValue ?? 0
+    : boCheapestLanded * boQty;
 
   const submit = handleSubmit((values) => {
     setServerError(null);
+    // Strip truly-empty vendor rows: keep a row only when it carries a vendor
+    // (picked or ad-hoc name) OR a real unit price. Server re-ranks regardless.
+    const cleanedQuotes = (values.vendorQuotes ?? []).filter(
+      (q) =>
+        Boolean(q.vendorId) ||
+        Boolean(q.vendorNameSnapshot && String(q.vendorNameSnapshot).trim()) ||
+        Number(q.unitPrice) > 0,
+    );
+    const payload: CreateCostingInput = {
+      ...values,
+      vendorQuotes:
+        values.costingType === "bought_out" && cleanedQuotes.length > 0
+          ? cleanedQuotes
+          : undefined,
+    };
     startTransition(async () => {
-      const res = await saveCosting(values);
+      const res = await saveCosting(payload);
       if (!res.ok) {
         setServerError(res.error);
         fireToast({ message: res.error, type: "error" });
@@ -263,10 +380,9 @@ export function CostingForm({
   });
 
   const firstFieldError = Object.values(errors)[0]?.message as string | undefined;
-  const isInhouse = v.costingType === "inhouse";
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-6" noValidate>
+    <form onSubmit={submit} onKeyDown={formProps.onKeyDown} className="flex flex-col gap-6" noValidate>
       {/* Hidden identity fields */}
       <input type="hidden" {...register("inquiryItemId")} />
       <input type="hidden" {...register("inquiryId")} />
@@ -627,77 +743,234 @@ export function CostingForm({
             </Field>
           </SectionCard>
 
-          {/* Vendor */}
+          {/* Vendor matrix - up to 5 competing quotes, ranked live. */}
           <SectionCard
-            title="Vendor"
+            title="Vendor Quotes"
             inlineHint
-            hint="Outsourced vendor cost and overhead percentage."
+            hint={`Add up to ${MAX_VENDOR_QUOTES} competing vendors. Landed cost / pc = unit price + OH + development + freight ÷ qty. Freight is per order.`}
           >
-            <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
-              <Field id="bo-vcost" label="Vendor Cost / pc">
-                <MoneyInput
-                  id="bo-vcost"
-                  aria-label="Outsourced vendor cost per piece"
-                  {...register("outsourcedVendorCost", numRegister)}
-                />
-              </Field>
-              <Field id="bo-voh" label="Vendor OH % (0.1 = 10%)">
-                <input
-                  id="bo-voh"
-                  type="number"
-                  inputMode="decimal"
-                  step="any"
-                  min={0}
-                  max={2}
-                  className="nt-input tabular-nums"
-                  placeholder="0.1"
-                  {...register("vendorOhPct", numRegister)}
-                />
-              </Field>
-              <Field id="bo-vnotes" label="Vendor Notes">
-                <input
-                  id="bo-vnotes"
-                  type="text"
-                  className="nt-input"
-                  placeholder="e.g. Vendor name, sourcing note"
-                  {...register("vendorNotes")}
-                />
-              </Field>
+            {quoteFields.length === 0 && (
+              <p className="text-[13px] text-ink-subtle">
+                No vendor quotes yet. Add a vendor to start comparing.
+              </p>
+            )}
+
+            <div ref={quotesRef} className="contents">
+            {quoteFields.map((qf, index) => {
+              const row: Partial<VendorQuoteInput> =
+                (v.vendorQuotes ?? [])[index] ?? {};
+              const priced = Number(row.unitPrice) > 0;
+              const landed = priced
+                ? vendorLandedCost(
+                    {
+                      unitPrice: row.unitPrice as VendorQuoteLike["unitPrice"],
+                      vendorOhPct: row.vendorOhPct as VendorQuoteLike["vendorOhPct"],
+                      developmentCost:
+                        row.developmentCost as VendorQuoteLike["developmentCost"],
+                      freightCost: row.freightCost as VendorQuoteLike["freightCost"],
+                    },
+                    boQty,
+                  )
+                : null;
+              const isCheapest = comparison.cheapestId === qf.id;
+              const isFastest = comparison.fastestId === qf.id;
+              const isBestCredit = comparison.bestCreditId === qf.id;
+
+              return (
+                <div
+                  key={qf.id}
+                  data-quote-row
+                  className="flex flex-col gap-4 rounded-section border p-5"
+                  style={{
+                    background: isCheapest
+                      ? "linear-gradient(135deg, #F5FBF6 0%, #ECF7EF 100%)"
+                      : "var(--color-surface-soft)",
+                    borderColor: isCheapest ? "#16a34a" : "var(--color-hairline)",
+                    boxShadow: isCheapest
+                      ? "0 2px 14px -6px rgba(22,163,74,0.35)"
+                      : undefined,
+                  }}
+                >
+                  <GroupHeader
+                    n={index + 1}
+                    label="Vendor"
+                    leftAction={
+                      <span className="flex flex-wrap items-center gap-1.5">
+                        {isCheapest && <RankChip tone="green" label="Cheapest" />}
+                        {isFastest && <RankChip tone="indigo" label="Fastest" />}
+                        {isBestCredit && <RankChip tone="amber" label="Best Credit" />}
+                        {landed != null && (
+                          <span className="ml-1 text-[12.5px] font-bold tabular-nums text-ink-strong">
+                            {inr(landed)}
+                            <span className="ml-1 text-[11px] font-semibold text-ink-subtle">
+                              / pc landed
+                            </span>
+                          </span>
+                        )}
+                      </span>
+                    }
+                    action={
+                      <button
+                        type="button"
+                        onClick={() => removeQuote(index)}
+                        className="inline-flex shrink-0 items-center gap-1.5 rounded-chip border border-hairline px-3 py-1.5 text-[12.5px] font-semibold text-ink-muted transition-colors hover:border-hairline-strong hover:text-ink-strong"
+                      >
+                        <Trash2 size={13} strokeWidth={2.4} />
+                        Remove
+                      </button>
+                    }
+                  />
+
+                  {/* Vendor identity - picker + ad-hoc name */}
+                  <div className="grid grid-cols-[2fr_1fr] gap-3 max-md:grid-cols-1">
+                    <Field
+                      id={`vq-${index}-vendor`}
+                      label="Vendor"
+                      labelOnly
+                    >
+                      <Controller
+                        control={control}
+                        name={`vendorQuotes.${index}.vendorId`}
+                        render={({ field }) => (
+                          <Select
+                            id={`vq-${index}-vendor`}
+                            ariaLabel="Vendor"
+                            value={field.value ?? ""}
+                            onValueChange={(val) => {
+                              field.onChange(val || undefined);
+                              if (val) onPickVendor(index, val);
+                            }}
+                            placeholder={
+                              vendorSelectOptions.length === 0
+                                ? "No vendors - type a name"
+                                : "Select a vendor"
+                            }
+                            disabled={vendorSelectOptions.length === 0}
+                            searchable
+                            searchPlaceholder="Search vendor / code"
+                            options={vendorSelectOptions}
+                          />
+                        )}
+                      />
+                    </Field>
+                    <Field id={`vq-${index}-name`} label="Vendor Name (ad-hoc)">
+                      <input
+                        id={`vq-${index}-name`}
+                        type="text"
+                        className="nt-input"
+                        placeholder="Or type a vendor name"
+                        {...register(`vendorQuotes.${index}.vendorNameSnapshot`)}
+                      />
+                    </Field>
+                  </div>
+
+                  {/* Price + timing + terms */}
+                  <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
+                    <MiniField label="Unit Price / pc">
+                      <MoneyInput
+                        aria-label="Unit price per piece"
+                        {...register(`vendorQuotes.${index}.unitPrice`)}
+                      />
+                    </MiniField>
+                    <MiniField label="Lead Time (days)">
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        step="1"
+                        min={0}
+                        className="nt-input tabular-nums"
+                        placeholder="e.g. 30"
+                        aria-label="Lead time in days"
+                        {...register(`vendorQuotes.${index}.leadTimeDays`, numRegister)}
+                      />
+                    </MiniField>
+                    <MiniField label="Credit Period (days)">
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        step="1"
+                        min={0}
+                        className="nt-input tabular-nums"
+                        placeholder="e.g. 45"
+                        aria-label="Credit period in days"
+                        {...register(`vendorQuotes.${index}.creditPeriodDays`, numRegister)}
+                      />
+                    </MiniField>
+                  </div>
+
+                  {/* Freight + OH + development */}
+                  <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
+                    <MiniField label="Freight (per order)">
+                      <MoneyInput
+                        aria-label="Freight cost per order"
+                        {...register(`vendorQuotes.${index}.freightCost`, numRegister)}
+                      />
+                    </MiniField>
+                    <MiniField label="OH % (0.1 = 10%)">
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        step="any"
+                        min={0}
+                        max={2}
+                        className="nt-input tabular-nums"
+                        placeholder="0.1"
+                        aria-label="Vendor overhead percentage"
+                        {...register(`vendorQuotes.${index}.vendorOhPct`, numRegister)}
+                      />
+                    </MiniField>
+                    <MiniField label="Development Cost / pc">
+                      <MoneyInput
+                        aria-label="Development cost per piece"
+                        {...register(`vendorQuotes.${index}.developmentCost`, numRegister)}
+                      />
+                    </MiniField>
+                  </div>
+
+                  <Field id={`vq-${index}-notes`} label="Notes">
+                    <input
+                      id={`vq-${index}-notes`}
+                      type="text"
+                      className="nt-input"
+                      placeholder="e.g. payment terms, sourcing note"
+                      {...register(`vendorQuotes.${index}.notes`)}
+                    />
+                  </Field>
+                </div>
+              );
+            })}
             </div>
+
+            {quoteFields.length < MAX_VENDOR_QUOTES && (
+              <div>
+                <button
+                  type="button"
+                  onClick={addQuote}
+                  className="inline-flex items-center gap-2 rounded-chip border border-brand bg-brand/8 px-4 py-2.5 text-[13px] font-semibold text-brand transition-colors hover:bg-brand/12"
+                >
+                  + Add vendor
+                </button>
+              </div>
+            )}
           </SectionCard>
 
-          {/* Development */}
-          <SectionCard
-            title="Development"
-            inlineHint
-            hint="Development cost and any technical or sourcing notes."
-          >
-            <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
-              <Field id="bo-dcost" label="Development Cost">
-                <MoneyInput
-                  id="bo-dcost"
-                  aria-label="Development cost"
-                  {...register("developmentCost", numRegister)}
-                />
-              </Field>
-              <Field id="bo-dnotes" label="Development Notes">
-                <input
-                  id="bo-dnotes"
-                  type="text"
-                  className="nt-input"
-                  {...register("developmentNotes")}
-                />
-              </Field>
-              <Field id="bo-tnotes" label="Technical Notes">
-                <input
-                  id="bo-tnotes"
-                  type="text"
-                  className="nt-input"
-                  {...register("technicalNotes")}
-                />
-              </Field>
-            </div>
-          </SectionCard>
+          {/* Comparison dashboard - live rankings across the entered quotes. */}
+          <ComparisonDashboard
+            quoteFields={quoteFields.map((f, i) => ({
+              id: f.id,
+              name: nameForQuote((v.vendorQuotes ?? [])[i], vendorOptions, i),
+            }))}
+            comparison={comparison}
+            watchRows={v.vendorQuotes ?? []}
+            qty={boQty}
+          />
+
+          {/* Dual view - make (in-house) vs buy (BO cheapest). */}
+          <DualView
+            inhouseFinal={inhouseFinal}
+            boCheapest={boCheapestLanded}
+            hasBoQuote={comparison.cheapestId != null}
+          />
         </>
       )}
 
@@ -749,6 +1022,9 @@ export function CostingForm({
         className="flex items-center justify-end gap-3 pt-2"
         style={{ borderTop: "1px solid var(--color-hairline)" }}
       >
+        <span className="text-[11px] text-ink-subtle">
+          Ctrl / &#8984; + Enter to save
+        </span>
         <button
           type="submit"
           disabled={pending}
@@ -766,5 +1042,310 @@ export function CostingForm({
         </button>
       </div>
     </form>
+  );
+}
+
+// ── BO comparison helpers ─────────────────────────────────────────────────────
+
+/** Coerce a possibly-unknown numeric form value to a finite number, else null. */
+function coerceNum(v: unknown): number | null {
+  if (v === "" || v === null || v === undefined) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Display name for a vendor quote row: ad-hoc name → master name → "Vendor N". */
+function nameForQuote(
+  row: VendorQuoteInput | undefined,
+  vendorOptions: VendorOption[],
+  index: number,
+): string {
+  const snap = row?.vendorNameSnapshot;
+  if (typeof snap === "string" && snap.trim()) return snap.trim();
+  if (row?.vendorId) {
+    const vend = vendorOptions.find((o) => o.id === row.vendorId);
+    if (vend) return vend.name;
+  }
+  return `Vendor ${index + 1}`;
+}
+
+const RANK_TONES = {
+  green: { bg: "#ECF7EF", border: "#16a34a", text: "#15803d" },
+  indigo: { bg: "#EEEEFF", border: "#3F3F94", text: "#3F3F94" },
+  amber: { bg: "#FEF6E7", border: "#d97706", text: "#b45309" },
+} as const;
+
+/** Small ranked tag chip (Cheapest / Fastest / Best Credit). */
+function RankChip({
+  tone,
+  label,
+}: {
+  tone: keyof typeof RANK_TONES;
+  label: string;
+}) {
+  const t = RANK_TONES[tone];
+  return (
+    <span
+      className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.06em]"
+      style={{ background: t.bg, borderColor: t.border, color: t.text }}
+    >
+      {label}
+    </span>
+  );
+}
+
+/** One headline "winner" card inside the comparison dashboard. */
+function WinnerCard({
+  tone,
+  label,
+  vendor,
+  value,
+}: {
+  tone: keyof typeof RANK_TONES;
+  label: string;
+  vendor: string | null;
+  value: string;
+}) {
+  const t = RANK_TONES[tone];
+  return (
+    <div
+      className="flex flex-col gap-1 rounded-section border p-4"
+      style={{ background: t.bg, borderColor: t.border }}
+    >
+      <span
+        className="text-[11px] font-bold uppercase tracking-[0.1em]"
+        style={{ color: t.text }}
+      >
+        {label}
+      </span>
+      {vendor ? (
+        <>
+          <span className="truncate text-[15px] font-extrabold text-ink-strong">
+            {vendor}
+          </span>
+          <span className="tabular-nums text-[13px] font-semibold text-ink-muted">
+            {value}
+          </span>
+        </>
+      ) : (
+        <span className="text-[13px] font-semibold text-ink-subtle">—</span>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Live comparison dashboard for the BO matrix — recomputes client-side via the
+ * SAME `compareVendors` engine the server ranks with. Shows the Cheapest /
+ * Fastest / Best-Credit winners plus every vendor's landed cost, cheapest first.
+ */
+function ComparisonDashboard({
+  quoteFields,
+  comparison,
+  watchRows,
+  qty,
+}: {
+  quoteFields: { id: string; name: string }[];
+  comparison: VendorComparison;
+  watchRows: readonly VendorQuoteInput[];
+  qty: number;
+}) {
+  const rows = quoteFields.map((qf, i) => {
+    const r = watchRows[i];
+    return {
+      id: qf.id,
+      name: qf.name,
+      landed: comparison.byId[qf.id],
+      lead: coerceNum(r?.leadTimeDays),
+      credit: coerceNum(r?.creditPeriodDays),
+      priced: coerceNum(r?.unitPrice) != null && (coerceNum(r?.unitPrice) ?? 0) > 0,
+    };
+  });
+  const ranked = rows
+    .filter((r) => r.priced && r.landed != null)
+    .sort((a, b) => (a.landed ?? 0) - (b.landed ?? 0));
+
+  const byId = (id: string | null) =>
+    id != null ? rows.find((r) => r.id === id) ?? null : null;
+  const cheapest = byId(comparison.cheapestId);
+  const fastest = byId(comparison.fastestId);
+  const bestCredit = byId(comparison.bestCreditId);
+
+  return (
+    <SectionCard
+      title="Vendor Comparison"
+      inlineHint
+      hint="Recommended = cheapest landed cost. Ranked live as you type."
+    >
+      {ranked.length === 0 ? (
+        <p className="text-[13px] text-ink-subtle">
+          Enter at least one vendor unit price to see the comparison.
+        </p>
+      ) : (
+        <>
+          <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
+            <WinnerCard
+              tone="green"
+              label="Cheapest"
+              vendor={cheapest?.name ?? null}
+              value={cheapest?.landed != null ? `${inr(cheapest.landed)} / pc` : ""}
+            />
+            <WinnerCard
+              tone="indigo"
+              label="Fastest"
+              vendor={fastest?.name ?? null}
+              value={fastest?.lead != null ? `${fastest.lead} days lead` : ""}
+            />
+            <WinnerCard
+              tone="amber"
+              label="Best Credit"
+              vendor={bestCredit?.name ?? null}
+              value={bestCredit?.credit != null ? `${bestCredit.credit} days credit` : ""}
+            />
+          </div>
+
+          {/* Landed-cost breakdown, cheapest first. */}
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[420px] border-collapse text-left">
+              <thead>
+                <tr className="border-b border-hairline">
+                  <th className="py-2 pr-3 text-[11px] font-bold uppercase tracking-[0.08em] text-ink-subtle">
+                    Vendor
+                  </th>
+                  <th className="py-2 px-3 text-right text-[11px] font-bold uppercase tracking-[0.08em] text-ink-subtle">
+                    Landed / pc
+                  </th>
+                  <th className="py-2 px-3 text-right text-[11px] font-bold uppercase tracking-[0.08em] text-ink-subtle">
+                    Lead
+                  </th>
+                  <th className="py-2 pl-3 text-right text-[11px] font-bold uppercase tracking-[0.08em] text-ink-subtle">
+                    Credit
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {ranked.map((r) => {
+                  const isCheapest = r.id === comparison.cheapestId;
+                  return (
+                    <tr
+                      key={r.id}
+                      className="border-b border-hairline last:border-0"
+                      style={isCheapest ? { background: "#F5FBF6" } : undefined}
+                    >
+                      <td className="py-2.5 pr-3">
+                        <span className="flex items-center gap-2">
+                          <span className="font-semibold text-ink-strong">
+                            {r.name}
+                          </span>
+                          {isCheapest && <RankChip tone="green" label="Recommended" />}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-bold tabular-nums text-ink-strong">
+                        {r.landed != null ? inr(r.landed) : "—"}
+                      </td>
+                      <td className="py-2.5 px-3 text-right tabular-nums text-ink-muted">
+                        {r.lead != null ? `${r.lead}d` : "—"}
+                      </td>
+                      <td className="py-2.5 pl-3 text-right tabular-nums text-ink-muted">
+                        {r.credit != null ? `${r.credit}d` : "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </SectionCard>
+  );
+}
+
+/**
+ * Make-vs-Buy dual view: the in-house final cost (from the in-house engine
+ * inputs) beside the cheapest bought-out landed cost, with the differential —
+ * so management sees the make-or-buy call at a glance. Display only; the
+ * approve / override / lock control is Phase 4.
+ */
+function DualView({
+  inhouseFinal,
+  boCheapest,
+  hasBoQuote,
+}: {
+  inhouseFinal: number;
+  boCheapest: number;
+  hasBoQuote: boolean;
+}) {
+  const diff = inhouseFinal - boCheapest;
+  const bothKnown = hasBoQuote;
+  const buyCheaper = diff > 0;
+  const equal = Math.abs(diff) < 0.005;
+
+  return (
+    <SectionCard
+      title="Make vs Buy"
+      inlineHint
+      hint="In-house (make) vs cheapest bought-out (buy), per piece. Recommendation is decided in the approval step."
+    >
+      <div className="flex flex-wrap items-stretch gap-4">
+        <div className="flex min-w-[160px] flex-1 flex-col gap-1 rounded-section border border-hairline bg-surface-soft p-4">
+          <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-subtle">
+            In-House (Make)
+          </span>
+          <span className="tabular-nums text-[24px] font-black text-ink-strong">
+            {inr(inhouseFinal)}
+          </span>
+        </div>
+        <div className="flex min-w-[160px] flex-1 flex-col gap-1 rounded-section border border-hairline bg-surface-soft p-4">
+          <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-subtle">
+            Bought-Out (Buy)
+          </span>
+          <span className="tabular-nums text-[24px] font-black text-ink-strong">
+            {hasBoQuote ? inr(boCheapest) : "—"}
+          </span>
+        </div>
+        <div
+          className="flex min-w-[180px] flex-1 flex-col gap-1 rounded-section border p-4"
+          style={{
+            background: bothKnown
+              ? equal
+                ? "var(--color-surface-soft)"
+                : buyCheaper
+                  ? "#ECF7EF"
+                  : "#EEEEFF"
+              : "var(--color-surface-soft)",
+            borderColor: bothKnown
+              ? equal
+                ? "var(--color-hairline)"
+                : buyCheaper
+                  ? "#16a34a"
+                  : "#3F3F94"
+              : "var(--color-hairline)",
+          }}
+        >
+          <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-subtle">
+            Differential
+          </span>
+          {bothKnown ? (
+            <>
+              <span className="tabular-nums text-[24px] font-black text-ink-strong">
+                {inr(Math.abs(diff))}
+              </span>
+              <span className="text-[12.5px] font-semibold text-ink-muted">
+                {equal
+                  ? "Make and buy are level"
+                  : buyCheaper
+                    ? "Buying is cheaper"
+                    : "Making is cheaper"}
+              </span>
+            </>
+          ) : (
+            <span className="text-[13px] font-semibold text-ink-subtle">
+              Add a vendor quote to compare
+            </span>
+          )}
+        </div>
+      </div>
+    </SectionCard>
   );
 }

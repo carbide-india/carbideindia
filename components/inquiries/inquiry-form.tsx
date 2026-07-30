@@ -34,6 +34,9 @@ import type { ShapeConfig } from "@/lib/masters/shape-config";
 import type { PickerMasters } from "@/components/erp/product-picker";
 import { InlineOptionAdd } from "@/components/clients/inline-option-add";
 import { addCustomOption } from "@/app/(app)/_actions/custom-lists";
+import { firstErrorMessage } from "@/lib/forms/first-error";
+import { useUnsavedGuard } from "@/lib/forms/use-unsaved-guard";
+import { useKeyboardForm } from "@/components/forms/use-keyboard-form";
 import { CURRENCY_CODES } from "@/lib/data/currencies";
 import { COUNTRIES } from "@/lib/data/geo";
 
@@ -70,6 +73,10 @@ interface Props {
   grades: MasterOptionItem[];
   tolerances: MasterOptionItem[];
   conditions: MasterOptionItem[];
+  /** 3-tier grades + production masters (migration 0062) for the product cards. */
+  externalGrades?: MasterOptionItem[];
+  internalProductionCodes?: MasterOptionItem[];
+  partNos?: MasterOptionItem[];
   /** Owning department options (master_options 'department'). */
   departments?: MasterOptionItem[];
   /** Per-shape dimension config keyed by shape name. */
@@ -129,6 +136,9 @@ export function InquiryForm({
   grades,
   tolerances,
   conditions,
+  externalGrades = [],
+  internalProductionCodes = [],
+  partNos = [],
   departments = [],
   shapeProfiles,
   pickerMasters,
@@ -175,7 +185,7 @@ export function InquiryForm({
     setValue,
     watch,
     getValues,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<InquiryFormValues, unknown, InquiryFormOutput>({
     resolver: zodResolver(CreateInquirySchema),
     defaultValues: {
@@ -219,6 +229,11 @@ export function InquiryForm({
           thickness: undefined,
           dimensionNotes: "",
           gradeId: undefined,
+          gradeCustomer: "",
+          gradeCustomerFacingId: undefined,
+          gradeInternalProductionId: undefined,
+          internalProductionCodeId: undefined,
+          partNoId: undefined,
           toleranceId: undefined,
           conditionId: undefined,
           quantityNos: undefined,
@@ -238,6 +253,18 @@ export function InquiryForm({
     append: appendContact,
     remove: removeContact,
   } = useFieldArray({ control, name: "extraContacts" });
+
+  // Keyboard-first array-row ergonomics: focus a freshly-added contact's first
+  // field, and recover focus to the Add button when a row is removed (so
+  // keyboard users never land in a focus black-hole).
+  const addContactBtnRef = React.useRef<HTMLButtonElement>(null);
+  const focusContactIdxRef = React.useRef<number | null>(null);
+  React.useEffect(() => {
+    const i = focusContactIdxRef.current;
+    if (i == null) return;
+    focusContactIdxRef.current = null;
+    document.getElementById(`extra-contact-${i}-first`)?.focus();
+  }, [extraContactFields.length]);
 
   // ── Draft auto-save (create mode only - silent, runs in background) ──
   const [draftId] = React.useState(() =>
@@ -346,12 +373,17 @@ export function InquiryForm({
     });
   });
 
-  const firstFieldError = Object.values(errors)[0]?.message as
-    | string
-    | undefined;
+  const firstFieldError = firstErrorMessage(errors);
+
+  // Warn before losing unsaved edits (refresh/close) - matters most in edit mode
+  // which has no draft autosave.
+  useUnsavedGuard(isDirty && !pending);
+
+  // Keyboard-first ergonomics: Enter advances to the next field; Ctrl/Cmd+Enter saves.
+  const { formProps } = useKeyboardForm();
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-6" noValidate>
+    <form onSubmit={submit} onKeyDown={formProps.onKeyDown} className="flex flex-col gap-6" noValidate>
       {/* ── 1 · Client ───────────────────────────────────────────────── */}
       <SectionCard>
         {/* Existing client (required) · New Client button · Company Name - one
@@ -699,7 +731,10 @@ export function InquiryForm({
                   action={
                     <button
                       type="button"
-                      onClick={() => removeContact(i)}
+                      onClick={() => {
+                        removeContact(i);
+                        requestAnimationFrame(() => addContactBtnRef.current?.focus());
+                      }}
                       aria-label={`Remove contact ${i + 2}`}
                       className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-hairline px-2.5 py-1.5 text-[12px] font-semibold text-ink-subtle transition hover:border-[#f0b4b4] hover:bg-[#fdf3f3] hover:text-[#d32f2f]"
                     >
@@ -710,7 +745,7 @@ export function InquiryForm({
                 />
                 <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
                   <Field label="First Name">
-                    <input type="text" className="nt-input" {...register(`extraContacts.${i}.firstName` as const)} />
+                    <input id={`extra-contact-${i}-first`} type="text" className="nt-input" {...register(`extraContacts.${i}.firstName` as const)} />
                   </Field>
                   <Field label="Last Name">
                     <input type="text" className="nt-input" {...register(`extraContacts.${i}.lastName` as const)} />
@@ -728,9 +763,13 @@ export function InquiryForm({
         )}
 
         <button
+          ref={addContactBtnRef}
           type="button"
-          onClick={() => appendContact({ firstName: "", lastName: "", contactNo: "", email: "" })}
-          className="inline-flex w-max items-center gap-1.5 rounded-lg border border-dashed border-[#c9c9ea] bg-[#f4f4fd] px-4 py-2.5 text-[13px] font-bold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#eeeefb]"
+          onClick={() => {
+            focusContactIdxRef.current = extraContactFields.length;
+            appendContact({ firstName: "", lastName: "", contactNo: "", email: "" });
+          }}
+          className="inline-flex w-max items-center gap-1.5 rounded-lg border border-[#c9c9ea] bg-[#f4f4fd] px-4 py-2.5 text-[13px] font-bold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#eeeefb]"
         >
           <Plus className="h-4 w-4" />
           Add Contact
@@ -800,6 +839,9 @@ export function InquiryForm({
           grades={grades}
           tolerances={tolerances}
           conditions={conditions}
+          externalGrades={externalGrades}
+          internalProductionCodes={internalProductionCodes}
+          partNos={partNos}
           shapeProfiles={shapeProfiles}
           pickerMasters={pickerMasters}
           unitOptions={unitOptions}
@@ -881,7 +923,7 @@ export function InquiryForm({
       )}
 
       <div
-        className="flex items-center justify-center gap-3 pt-5"
+        className="flex flex-col items-center justify-center gap-2 pt-5"
         style={{ borderTop: "1px solid var(--color-hairline)" }}
       >
         <button
@@ -905,6 +947,7 @@ export function InquiryForm({
               ? "Update Enquiry"
               : "Create Enquiry"}
         </button>
+        <p className="text-[11px] text-ink-subtle">Ctrl / ⌘ + Enter to save</p>
       </div>
     </form>
   );

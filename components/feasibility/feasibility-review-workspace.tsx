@@ -23,6 +23,7 @@ import { NotesField } from "@/components/ui/notes-field";
 import { Field, SectionCard } from "@/components/inquiries/form-field";
 import { Chip } from "@/components/inquiries/chip";
 import { FeasibilityChecksBoard } from "@/components/feasibility/feasibility-checks-board";
+import { useKeyboardForm } from "@/components/forms/use-keyboard-form";
 
 /* ── Option lists ──────────────────────────────────────────────────────── */
 const PRIORITY_OPTS = FEAS_PRIORITIES.map((v) => ({ value: v, label: FEAS_PRIORITY_LABELS[v] }));
@@ -179,8 +180,10 @@ export function FeasibilityReviewWorkspace({
     }
   }
 
+  const { containerProps } = useKeyboardForm({ onSubmit: onSave });
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6" onKeyDown={containerProps.onKeyDown}>
       {/* ── At-a-glance status banner ──────────────────────────────────── */}
       <div
         className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-section border-2 border-[#2b303b] bg-surface-card px-5 py-3"
@@ -326,6 +329,7 @@ export function FeasibilityReviewWorkspace({
           ) : null}
           {allDone ? "Approve · Proceed to Costing" : "Save Review"}
         </button>
+        <span className="w-full text-right text-[11px] text-ink-subtle">Ctrl / ⌘ + Enter to save</span>
       </div>
     </div>
   );
@@ -389,14 +393,14 @@ function AttachmentsField({
         type="button"
         onClick={() => ref.current?.click()}
         disabled={uploading > 0}
-        className="inline-flex min-h-[42px] w-full flex-1 items-center justify-center gap-2 rounded-lg border border-dashed border-[#c9c9ea] bg-white text-[13px] font-bold text-[#3f3f94] transition hover:border-brand disabled:opacity-60"
+        className="inline-flex min-h-[42px] w-full flex-1 items-center justify-center gap-2 rounded-lg border border-[#c9c9ea] bg-white text-[13px] font-bold text-[#3f3f94] transition hover:border-brand disabled:opacity-60"
       >
         {uploading > 0 ? (
           <Loader2 size={15} style={{ animation: "spinFast 0.8s linear infinite" }} />
         ) : (
           <UploadCloud size={16} />
         )}
-        {uploading > 0 ? `Uploading ${uploading}…` : "Add files"}
+        {uploading > 0 ? `Uploading ${uploading}…` : "Add Files"}
       </button>
     </div>
   );

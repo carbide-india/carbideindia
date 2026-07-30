@@ -11,6 +11,7 @@ import {
   getInquiryStageTabs,
   getInquiryItemFeasibility,
 } from "@/lib/queries/sm-workspace";
+import { getCostingDecision, type CostingDecision } from "@/lib/queries/costings";
 import { SmWorkspace } from "@/components/erp/sm-workspace";
 
 export const dynamic = "force-dynamic";
@@ -62,6 +63,14 @@ export default async function InquiryWorkspacePage({ params }: PageProps) {
     ]);
   if (!inquiry) notFound();
 
+  // Per-product costing-decision bundles (recommendation + lock state) for the
+  // Costing tab's approval panel. One bundle per product line.
+  const decisionList = await Promise.all(
+    products.map((p) => getCostingDecision(p.id)),
+  );
+  const costingDecisions: Record<string, CostingDecision> = {};
+  for (const d of decisionList) costingDecisions[d.inquiryItemId] = d;
+
   return (
     <SmWorkspace
       embedded
@@ -73,6 +82,7 @@ export default async function InquiryWorkspacePage({ params }: PageProps) {
       employees={employees}
       auditEntries={auditEntries}
       itemFeasibility={itemFeasibility}
+      costingDecisions={costingDecisions}
       isAdmin={me.isAdmin}
     />
   );

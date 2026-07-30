@@ -12,6 +12,7 @@ import {
   inquiryItems,
   jobCards,
   clients,
+  rmLots,
 } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth/current";
 import { recordAudit } from "@/lib/audit/record";
@@ -290,6 +291,12 @@ export async function deleteMasterOption(masterId: string): Promise<ActionResult
       db.$count(clients, sql`${clients.customerTypeIds} @> ARRAY[${id}]::uuid[]`),
       db.$count(clients, sql`${clients.industryTypeIds} @> ARRAY[${id}]::uuid[]`),
       db.$count(clients, sql`${clients.productTypeIds} @> ARRAY[${id}]::uuid[]`),
+      // department + grade FKs that are ON DELETE SET NULL - must be counted too,
+      // else deleting a referenced option silently NULLs live records (dept on
+      // clients/inquiries, and the 15-year rm_lots grade traceability link).
+      db.$count(clients, eq(clients.departmentId, id)),
+      db.$count(inquiries, eq(inquiries.departmentId, id)),
+      db.$count(rmLots, eq(rmLots.internalGradeId, id)),
     ]);
     refs = counts.reduce((sum, n) => sum + n, 0);
   } catch (err: unknown) {
