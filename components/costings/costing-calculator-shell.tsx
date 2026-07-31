@@ -30,7 +30,6 @@ import { Select } from "@/components/ui/select";
 import { NotesField } from "@/components/ui/notes-field";
 import {
   Field,
-  MiniField,
   SectionCard,
   Segmented,
 } from "@/components/inquiries/form-field";
@@ -81,6 +80,9 @@ interface Props {
   productCaption: string;
   /** Quantity pulled from the inquiry line (may be null / editable). */
   lineQty: number | null;
+  /** Auto/"From Data" header fields (read-only) shown on the spec panel. */
+  smNumber?: string | null;
+  enquiryDate?: Date | string | null;
   vendorOptions: VendorOption[];
   masters: CostingMasters;
   /** Customer's default payment-terms label (from the Client Master), if any. */
@@ -120,6 +122,8 @@ export function CostingCalculatorShell({
   inquiryId,
   productCaption,
   lineQty,
+  smNumber,
+  enquiryDate,
   vendorOptions,
   masters,
   defaultPaymentTerms,
@@ -337,6 +341,8 @@ export function CostingCalculatorShell({
         onChange={setSpecValue}
         baseline={spec?.feasibilityBaseline ?? null}
         masters={specMasters}
+        smNumber={smNumber ?? null}
+        enquiryDate={enquiryDate ?? null}
       />
 
       {/* 1. ENTRY ROUTING */}
@@ -345,13 +351,15 @@ export function CostingCalculatorShell({
         inlineHint
         hint={`Product: ${productCaption}. Choose how this line is costed.`}
       >
-        <div className="grid grid-cols-2 gap-5 max-md:grid-cols-1">
+        {/* Product Sold · Costing Type · Quantity — one line, small controls */}
+        <div className="grid grid-cols-1 items-end gap-5 md:grid-cols-3">
           <Field label="Product Sold / Made Before?" labelOnly>
             <Segmented
               options={SOLD_OPTIONS}
               value={soldBefore}
               onChange={(v) => setSoldBefore(v)}
               ariaLabel="Product sold or made before"
+              className="!border-2 !border-[#9aa0c8]"
             />
           </Field>
           <Field label="Costing Type" labelOnly>
@@ -361,22 +369,24 @@ export function CostingCalculatorShell({
               onChange={(v) => v && setMode(v)}
               allowClear={false}
               ariaLabel="Costing type"
+              className="!border-2 !border-[#9aa0c8]"
+            />
+          </Field>
+          <Field label="Quantity (from enquiry line)" labelOnly>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              step="any"
+              className="nt-input tabular-nums w-full"
+              style={{ borderWidth: 2, borderColor: "#9aa0c8" }}
+              placeholder="0"
+              aria-label="Quantity"
+              value={qty}
+              onChange={(e) => setQty(e.target.value === "" ? "" : Number(e.target.value))}
             />
           </Field>
         </div>
-        <MiniField label="Quantity (from enquiry line)" className="w-[220px]">
-          <input
-            type="number"
-            inputMode="numeric"
-            min={0}
-            step="any"
-            className="nt-input tabular-nums"
-            placeholder="0"
-            aria-label="Quantity"
-            value={qty}
-            onChange={(e) => setQty(e.target.value === "" ? "" : Number(e.target.value))}
-          />
-        </MiniField>
       </SectionCard>
 
       {!mode && (

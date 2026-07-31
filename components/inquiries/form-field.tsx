@@ -184,6 +184,8 @@ interface SegmentedProps<T extends string> {
   size?: "sm" | "lg";
   /** "brand" fills the active option with indigo + a prominent focus ring. */
   activeTone?: "default" | "brand";
+  /** Extra classes merged onto the container (e.g. a prominent border). */
+  className?: string;
 }
 
 /**
@@ -198,6 +200,7 @@ export function Segmented<T extends string>({
   ariaLabel,
   size = "sm",
   activeTone = "default",
+  className,
 }: SegmentedProps<T>) {
   const lg = size === "lg";
   const btnRefs = React.useRef<(HTMLButtonElement | null)[]>([]);
@@ -264,18 +267,11 @@ export function Segmented<T extends string>({
       aria-label={ariaLabel}
       className={cn(
         lg
-          ? "flex min-h-[54px] w-full items-stretch gap-1.5 rounded-[12px] border-[1.5px] border-[#c3c9db] p-1.5"
+          ? "flex w-full items-stretch gap-1 rounded-xl border-2 border-[#d9dcea] bg-[#f4f5fb] p-1"
           : "inline-flex items-center gap-1.5 rounded-chip border border-hairline bg-surface-soft p-1.5 self-start",
+        className,
       )}
-      style={
-        lg
-          ? {
-              background: "linear-gradient(180deg, #ffffff 0%, #f5f7fa 100%)",
-              boxShadow:
-                "inset 2px 0 0 rgba(63,63,148,0.32), 0 1px 2px rgba(15,23,42,0.05)",
-            }
-          : undefined
-      }
+      style={lg ? { boxShadow: "0 1px 2px rgba(15,23,42,0.04)" } : undefined}
     >
       {options.map((o, i) => {
         const active = o.value === value;
@@ -294,13 +290,15 @@ export function Segmented<T extends string>({
             className={cn(
               "rounded-lg font-semibold transition-colors whitespace-nowrap",
               lg
-                ? "flex-1 px-3 text-[14px]"
+                ? "flex-1 px-3 py-2.5 text-[14px]"
                 : "px-3 py-1.5 text-[13px]",
               active
                 ? activeTone === "brand"
                   ? "bg-brand text-white border-[1.5px] border-brand shadow-[0_0_0_3px_rgba(63,63,148,0.25)]"
-                  : "bg-brand text-white border border-brand shadow-sm"
-                : "text-ink-muted hover:text-ink-strong border border-transparent",
+                  : "bg-brand text-white shadow-sm"
+                : lg
+                  ? "text-ink-soft hover:bg-white hover:text-ink-strong hover:shadow-sm"
+                  : "text-ink-muted hover:text-ink-strong border border-transparent",
             )}
           >
             {o.label}

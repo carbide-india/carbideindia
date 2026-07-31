@@ -31,6 +31,14 @@ import { SectionCard } from "@/components/inquiries/form-field";
 
 const DIMENSION_UNITS = ["mm", "cm", "m", "inch"] as const;
 
+// Bare "table cell" field styling — no individual box; the value reads like the
+// Feasibility snapshot (bold dark text) and sits flush in the divided cell. The
+// SpecField cell provides a focus-within tint so keyboard nav stays visible.
+const CELL_INPUT =
+  "w-full border-0 bg-transparent p-0 text-[14px] font-bold leading-tight text-ink-strong outline-none placeholder:font-medium placeholder:text-[#aab0bd]";
+const CELL_SELECT =
+  "!h-auto !min-h-0 !gap-1 !rounded-none !border-0 !bg-transparent !p-0 !shadow-none text-[14px] font-bold text-ink-strong data-[state=open]:!border-0";
+
 /** Controlled value for the panel — the shell owns this state. All strings. */
 export interface CostingSpecValue {
   custProductName: string;
@@ -120,9 +128,31 @@ interface Props {
   /** Frozen PF baseline (null when the line was never locked → no variance UI). */
   baseline: SpecSnapshot | null;
   masters: SpecPanelMasters;
+  /** Auto/"From Data" header fields (read-only): SM number + enquiry date. */
+  smNumber?: string | null;
+  enquiryDate?: Date | string | null;
 }
 
-export function CostingSpecPanel({ value, onChange, baseline, masters }: Props) {
+/** "29 Jul 2026" — matches the enquiry-snapshot date format. */
+function fmtDate(d: Date | string | null | undefined): string {
+  if (!d) return "—";
+  const date = typeof d === "string" ? new Date(d) : d;
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+export function CostingSpecPanel({
+  value,
+  onChange,
+  baseline,
+  masters,
+  smNumber,
+  enquiryDate,
+}: Props) {
   const hasBaseline = baseline != null;
   const [showReport, setShowReport] = React.useState(false);
   const [warnDismissed, setWarnDismissed] = React.useState(false);
@@ -225,32 +255,45 @@ export function CostingSpecPanel({ value, onChange, baseline, masters }: Props) 
 
       {/* Spec table — bordered, divided cells for a clean, compact tabular read */}
       <div className="overflow-hidden rounded-xl border-2 border-[#b7bcd2] bg-white divide-y divide-[#e3e6f1]">
+      {/* Row 0 — SM No · Enquiry Date (auto, from the enquiry — read-only) */}
+      <div className="grid grid-cols-2 divide-x divide-[#eceef6] bg-[#f8f9fe]">
+        <SpecField label="SM No.">
+          <span className="text-[14px] font-black tabular-nums text-[#3f3f94]">
+            {smNumber ?? "—"}
+          </span>
+        </SpecField>
+        <SpecField label="Enquiry Date">
+          <span className="text-[14px] font-bold text-ink-strong">
+            {fmtDate(enquiryDate)}
+          </span>
+        </SpecField>
+      </div>
       {/* Row 1 — identity: Product Name · Drawing No · Revision No · Quantity · UOM */}
       <div className="grid grid-cols-2 divide-x divide-[#eceef6] md:grid-cols-12">
         <SpecField label="Product Name" className="col-span-2 md:col-span-4">
           <input
             type="text"
-            className="nt-input"
+            className={CELL_INPUT}
             placeholder="Product / part name"
             aria-label="Product name"
             value={value.custProductName}
             onChange={(e) => patch({ custProductName: e.target.value })}
           />
         </SpecField>
-        <SpecField label="Drawing No." className="md:col-span-3">
+        <SpecField label="Drawing No." className="md:col-span-2">
           <input
             type="text"
-            className="nt-input"
+            className={CELL_INPUT}
             placeholder="Drawing no."
             aria-label="Drawing number"
             value={value.custDrawingNo}
             onChange={(e) => patch({ custDrawingNo: e.target.value })}
           />
         </SpecField>
-        <SpecField label="Revision No." className="md:col-span-1">
+        <SpecField label="Revision No." className="md:col-span-2">
           <input
             type="text"
-            className="nt-input"
+            className={CELL_INPUT}
             placeholder="Rev."
             aria-label="Drawing revision number"
             value={value.drawingRevisionNo}
@@ -269,7 +312,7 @@ export function CostingSpecPanel({ value, onChange, baseline, masters }: Props) 
             inputMode="decimal"
             min={0}
             step="any"
-            className="nt-input tabular-nums"
+            className={cn(CELL_INPUT, "tabular-nums")}
             placeholder="0"
             aria-label="Quantity"
             value={value.quantityNos}
@@ -281,26 +324,28 @@ export function CostingSpecPanel({ value, onChange, baseline, masters }: Props) 
             ariaLabel="Quantity unit"
             value={value.quantityUom}
             onValueChange={(v) => patch({ quantityUom: v }, "quantity")}
+            className={CELL_SELECT}
             options={uomOptions}
           />
         </SpecField>
       </div>
 
-      {/* Row 2 — Shape · Dimension / Spec Notes */}
-      <div className="grid grid-cols-1 divide-x divide-[#eceef6] md:grid-cols-3">
+      {/* Row 2 — Shape (small, aligned above Outer Dia) · Dimension / Spec Notes */}
+      <div className="grid grid-cols-1 divide-x divide-[#eceef6] md:grid-cols-6">
         <SpecField label="Shape" fieldKey="shape" row={rowByField.get("shape")} pulse={pulse}>
           <Select
             ariaLabel="Shape"
             value={value.shape}
             onValueChange={(v) => patch({ shape: v }, "shape")}
+            className={cn(CELL_SELECT, "!w-fit max-w-full")}
             placeholder="Select shape"
             options={shapeOptions}
           />
         </SpecField>
-        <SpecField label="Dimension / Spec Notes" className="md:col-span-2">
+        <SpecField label="Dimension / Spec Notes" className="md:col-span-5">
           <input
             type="text"
-            className="nt-input"
+            className={CELL_INPUT}
             placeholder="Any dimensional notes or special instructions"
             aria-label="Dimension / spec notes"
             value={value.dimensionNotes}
@@ -351,6 +396,7 @@ export function CostingSpecPanel({ value, onChange, baseline, masters }: Props) 
             ariaLabel="Dimension unit"
             value={value.dimensionUnit}
             onValueChange={(v) => patch({ dimensionUnit: v })}
+            className={CELL_SELECT}
             options={unitOptions}
           />
         </SpecField>
@@ -366,7 +412,7 @@ export function CostingSpecPanel({ value, onChange, baseline, masters }: Props) 
         >
           <input
             type="text"
-            className="nt-input"
+            className={CELL_INPUT}
             placeholder="On the drawing"
             aria-label="Grade from customer"
             value={value.gradeCustomer}
@@ -434,9 +480,17 @@ export function CostingSpecPanel({ value, onChange, baseline, masters }: Props) 
       </div>
       </div>
 
-      {/* Variance action */}
-      <div className="flex items-center justify-between gap-3 border-t border-hairline pt-4">
-        <p className="text-[12px] text-ink-subtle">
+      {/* Variance action — status centered (red = differs / not locked, green =
+          matches) with the Variance button beside it. */}
+      <div className="flex flex-wrap items-center justify-center gap-3 border-t border-hairline pt-4 text-center">
+        <p
+          className={cn(
+            "inline-flex items-center rounded-lg border-2 px-4 py-2 text-[12.5px] font-bold",
+            hasBaseline && changedCount === 0
+              ? "border-[#16a34a] bg-[#eaf7ee] text-[#16a34a]"
+              : "border-[#d32f2f] bg-[#fdecea] text-[#d32f2f]",
+          )}
+        >
           {hasBaseline
             ? changedCount > 0
               ? `${changedCount} field${changedCount === 1 ? "" : "s"} differ from Primary Feasibility.`
@@ -496,7 +550,12 @@ function SpecField({
 }) {
   const pulsing = Boolean(fieldKey && pulse?.field === fieldKey && row?.changed);
   return (
-    <div className={cn("flex min-w-0 flex-col gap-1.5 px-3 py-2.5", className)}>
+    <div
+      className={cn(
+        "flex min-w-0 flex-col gap-1 px-3 py-2 transition-colors focus-within:bg-[#f6f7fd]",
+        className,
+      )}
+    >
       <span
         className="font-bold uppercase"
         style={{
@@ -550,7 +609,7 @@ function DimInput({
       inputMode="decimal"
       min={0}
       step="any"
-      className="nt-input tabular-nums"
+      className={cn(CELL_INPUT, "tabular-nums")}
       placeholder="0"
       aria-label={label}
       value={value}
@@ -576,6 +635,7 @@ function MasterSelect({
       ariaLabel={ariaLabel}
       value={value}
       onValueChange={onValueChange}
+      className={CELL_SELECT}
       placeholder={options.length === 0 ? "No options in master" : "Select"}
       disabled={options.length === 0}
       options={options.map((o) => ({ value: o.id, label: o.name }))}

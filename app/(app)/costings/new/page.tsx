@@ -80,6 +80,8 @@ export default async function NewCostingPage({ searchParams }: PageProps) {
           inquiryId={inquiryId}
           productCaption={context.productCaption}
           lineQty={context.lineQty}
+          smNumber={context.smNumber}
+          enquiryDate={context.enquiryDate}
           vendorOptions={vendorOptions}
           masters={{ toolingChart, machiningOp, quantityTolerance, paymentTerm }}
           defaultPaymentTerms={context.customerPaymentTerms}

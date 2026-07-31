@@ -404,7 +404,8 @@ export function InhouseCalculator({
         inlineHint
         hint="Pick a tooling chart (or develop a new tool), the tool type, and how the tool cost is levied."
       >
-        <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
+        {/* Tooling Chart · Tool Type · Levy Tool Cost — one line, all dropdowns */}
+        <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
           <Field label="Tooling Chart" labelOnly>
             <Select
               ariaLabel="Tooling chart"
@@ -421,12 +422,19 @@ export function InhouseCalculator({
             />
           </Field>
           <Field label="Tool Type" labelOnly>
-            <Segmented
-              options={TOOL_TYPE_OPTIONS}
-              value={value.toolType}
-              onChange={(v) => v && patch({ toolType: v })}
-              allowClear={false}
+            <Select
               ariaLabel="Tool type"
+              value={value.toolType}
+              onValueChange={(v) => v && patch({ toolType: v as CalcToolType })}
+              options={[...TOOL_TYPE_OPTIONS]}
+            />
+          </Field>
+          <Field label="Levy Tool Cost" labelOnly>
+            <Select
+              ariaLabel="Levy tool cost"
+              value={value.levyToolMode}
+              onValueChange={(v) => v && patch({ levyToolMode: v as LevyMode })}
+              options={[...LEVY_OPTIONS]}
             />
           </Field>
         </div>
@@ -444,28 +452,18 @@ export function InhouseCalculator({
           </p>
         )}
 
-        <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
-          <Field label="Levy Tool Cost" labelOnly>
-            <Segmented
-              options={LEVY_OPTIONS}
-              value={value.levyToolMode}
-              onChange={(v) => v && patch({ levyToolMode: v })}
-              allowClear={false}
-              ariaLabel="Levy tool cost"
+        {value.levyToolMode !== "none" && (
+          <MiniField
+            className="max-w-[320px]"
+            label={value.levyToolMode === "flat" ? "Flat Tool Cost (whole order)" : "Tool Cost / Piece"}
+          >
+            <MoneyField
+              aria-label="Levy tool amount"
+              value={value.levyToolAmount}
+              onChange={(v) => patch({ levyToolAmount: v })}
             />
-          </Field>
-          {value.levyToolMode !== "none" && (
-            <MiniField
-              label={value.levyToolMode === "flat" ? "Flat Tool Cost (whole order)" : "Tool Cost / Piece"}
-            >
-              <MoneyField
-                aria-label="Levy tool amount"
-                value={value.levyToolAmount}
-                onChange={(v) => patch({ levyToolAmount: v })}
-              />
-            </MiniField>
-          )}
-        </div>
+          </MiniField>
+        )}
       </SectionCard>
 
       {/* 4. WEIGHT SELECTION */}
@@ -474,19 +472,19 @@ export function InhouseCalculator({
         inlineHint
         hint="Choose the method, enter the weights, and the loss weight computes live."
       >
-        <Field label="Method" labelOnly>
-          <Segmented
-            options={WEIGHT_METHOD_OPTIONS}
-            value={String(value.weightMethod)}
-            onChange={(v) => v && patch({ weightMethod: Number(v) as CalcWeightMethod })}
-            allowClear={false}
-            ariaLabel="Weight method"
-          />
-        </Field>
-
-        <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
+        {/* Method + weights + Loss % — all six on one line */}
+        <div className="grid grid-cols-6 gap-3 max-lg:grid-cols-3 max-md:grid-cols-2">
+          <MiniField label="Method">
+            <Select
+              ariaLabel="Weight method"
+              value={String(value.weightMethod)}
+              onValueChange={(v) => v && patch({ weightMethod: Number(v) as CalcWeightMethod })}
+              options={[...WEIGHT_METHOD_OPTIONS]}
+            />
+          </MiniField>
           <MiniField label="Block Wt (gms)">
             <NumberInput
+              className="!border-2 !border-[#9aa0c8]"
               aria-label="Block weight in grams"
               value={value.blockWt}
               onChange={(v) => patch({ blockWt: v })}
@@ -496,6 +494,7 @@ export function InhouseCalculator({
           </MiniField>
           <MiniField label="Theoretical Wt (gms)">
             <NumberInput
+              className="!border-2 !border-[#9aa0c8]"
               aria-label="Theoretical weight in grams"
               value={value.theoreticalWt}
               onChange={(v) => patch({ theoreticalWt: v })}
@@ -505,6 +504,7 @@ export function InhouseCalculator({
           </MiniField>
           <MiniField label="Pressing Wt (gms)">
             <NumberInput
+              className="!border-2 !border-[#9aa0c8]"
               aria-label="Pressing weight in grams"
               value={value.pressingWt}
               onChange={(v) => patch({ pressingWt: v })}
@@ -514,6 +514,7 @@ export function InhouseCalculator({
           </MiniField>
           <MiniField label="Total Wt (gms)">
             <NumberInput
+              className="!border-2 !border-[#9aa0c8]"
               aria-label="Total weight in grams"
               value={value.totalWt}
               onChange={(v) => patch({ totalWt: v })}
@@ -521,11 +522,9 @@ export function InhouseCalculator({
               placeholder="0"
             />
           </MiniField>
-        </div>
-
-        <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
-          <MiniField label="Loss % (10–20)" className="w-[160px]">
+          <MiniField label="Loss % (10–20)">
             <NumberInput
+              className="!border-2 !border-[#9aa0c8]"
               aria-label="Loss percentage"
               value={value.lossPct}
               onChange={(v) => patch({ lossPct: v })}
@@ -534,17 +533,19 @@ export function InhouseCalculator({
               placeholder="15"
             />
           </MiniField>
-          <div className="flex flex-col gap-1 pb-1">
-            <span className="text-[11px] uppercase tracking-[0.1em] font-bold text-ink-subtle">
-              Loss Weight (live)
+        </div>
+
+        {/* Loss weight live readout */}
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] uppercase tracking-[0.1em] font-bold text-ink-subtle">
+            Loss Weight (live)
+          </span>
+          <span className="tabular-nums text-[15px] font-bold text-ink-strong">
+            {out.lossWtGms.toFixed(3)} gms
+            <span className="ml-2 text-[12px] font-semibold text-ink-subtle">
+              ({(out.effectiveLossPct * 100).toFixed(0)}% applied)
             </span>
-            <span className="tabular-nums text-[15px] font-bold text-ink-strong">
-              {out.lossWtGms.toFixed(3)} gms
-              <span className="ml-2 text-[12px] font-semibold text-ink-subtle">
-                ({(out.effectiveLossPct * 100).toFixed(0)}% applied)
-              </span>
-            </span>
-          </div>
+          </span>
         </div>
       </SectionCard>
 
@@ -554,7 +555,8 @@ export function InhouseCalculator({
         inlineHint
         hint="RM price per kg (Alok decides per batch). VA = 20–40% of RM, or ₹2000/kg — whichever is higher."
       >
-        <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
+        {/* RM Price · Batch Details · VA % · VA Floor — one line */}
+        <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
           <MiniField label="RM Price / kg">
             <MoneyField
               aria-label="RM price per kg"
@@ -572,8 +574,6 @@ export function InhouseCalculator({
               onChange={(e) => patch({ batchDetails: e.target.value })}
             />
           </MiniField>
-        </div>
-        <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
           <MiniField label="VA % (20–40)">
             <NumberInput
               aria-label="Value addition percentage"

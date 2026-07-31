@@ -43,6 +43,9 @@ export interface CostingContext {
   productCaption: string;
   lineQty: number | null;
   customerPaymentTerms: string | null;
+  /** Auto/"From Data" header fields shown read-only on the costing form. */
+  smNumber: string | null;
+  enquiryDate: Date | null;
 }
 
 export async function getCostingContext(
@@ -53,6 +56,8 @@ export async function getCostingContext(
       custProductName: inquiryItems.custProductName,
       quantityNos: inquiryItems.quantityNos,
       clientPaymentTerms: clients.paymentTerms,
+      smNumber: inquiries.smNumber,
+      enquiryDate: inquiries.enquiryDate,
     })
     .from(inquiryItems)
     .innerJoin(inquiries, eq(inquiryItems.inquiryId, inquiries.id))
@@ -65,6 +70,8 @@ export async function getCostingContext(
     productCaption: row?.custProductName ?? "Unknown product",
     lineQty: Number.isFinite(rawQty) ? rawQty : null,
     customerPaymentTerms: row?.clientPaymentTerms ?? null,
+    smNumber: row?.smNumber ?? null,
+    enquiryDate: row?.enquiryDate ?? null,
   };
 }
 
