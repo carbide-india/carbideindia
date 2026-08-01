@@ -9,7 +9,7 @@ import {
   verifyPasswordResetCode,
   confirmPasswordReset,
 } from "firebase/auth";
-import { firebaseAuth } from "@/lib/firebase/client";
+import { getFirebaseAuth } from "@/lib/firebase/client";
 
 /**
  * Client-side auth actions for the Firebase session-cookie flow. Every path that
@@ -48,7 +48,7 @@ export async function signInWithPassword(
   password: string,
 ): Promise<void> {
   const cred = await signInWithEmailAndPassword(
-    firebaseAuth,
+    getFirebaseAuth(),
     email.trim(),
     password,
   );
@@ -59,7 +59,7 @@ export async function signInWithPassword(
 /** Send a passwordless sign-in link (owners only — caller should gate on isPasswordlessEmail). */
 export async function sendOwnerSignInLink(email: string): Promise<void> {
   const url = `${window.location.origin}/login/finish`;
-  await sendSignInLinkToEmail(firebaseAuth, email.trim(), {
+  await sendSignInLinkToEmail(getFirebaseAuth(), email.trim(), {
     url,
     handleCodeInApp: true,
   });
@@ -68,7 +68,7 @@ export async function sendOwnerSignInLink(email: string): Promise<void> {
 
 /** True when the current URL is a Firebase email-link sign-in landing. */
 export function isEmailSignInLink(href: string): boolean {
-  return isSignInWithEmailLink(firebaseAuth, href);
+  return isSignInWithEmailLink(getFirebaseAuth(), href);
 }
 
 /** Complete an email-link sign-in from the landing URL → session cookie. Returns the signed-in email. */
@@ -78,7 +78,7 @@ export async function completeEmailLinkSignIn(href: string): Promise<string> {
     // Opened on a different device/browser — ask for the email to confirm.
     email = window.prompt("Confirm your email to finish signing in") ?? "";
   }
-  const cred = await signInWithEmailLink(firebaseAuth, email.trim(), href);
+  const cred = await signInWithEmailLink(getFirebaseAuth(), email.trim(), href);
   window.localStorage.removeItem(LINK_EMAIL_KEY);
   const idToken = await cred.user.getIdToken();
   await mintSessionCookie(idToken);
@@ -93,8 +93,8 @@ export async function completeOnboarding(
   oobCode: string,
   newPassword: string,
 ): Promise<string> {
-  const email = await verifyPasswordResetCode(firebaseAuth, oobCode);
-  await confirmPasswordReset(firebaseAuth, oobCode, newPassword);
+  const email = await verifyPasswordResetCode(getFirebaseAuth(), oobCode);
+  await confirmPasswordReset(getFirebaseAuth(), oobCode, newPassword);
   await signInWithPassword(email, newPassword);
   return email;
 }
@@ -102,7 +102,7 @@ export async function completeOnboarding(
 /** Clear the Firebase client session AND the server cookie, then hard-navigate to /login. */
 export async function signOutEverywhere(): Promise<void> {
   try {
-    await signOut(firebaseAuth);
+    await signOut(getFirebaseAuth());
   } catch {
     /* ignore — clear the cookie regardless */
   }

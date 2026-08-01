@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { verifyPasswordResetCode } from "firebase/auth";
-import { firebaseAuth } from "@/lib/firebase/client";
+import { getFirebaseAuth } from "@/lib/firebase/client";
 import { completeOnboarding } from "@/lib/firebase/session-client";
 import { ArrowRight, Eye, EyeOff, Loader2, ShieldCheck } from "lucide-react";
 
@@ -67,7 +67,7 @@ export function AcceptInviteCard({ oobCode }: { oobCode?: string }) {
     verified.current = true;
     (async () => {
       try {
-        const resolvedEmail = await verifyPasswordResetCode(firebaseAuth, oobCode);
+        const resolvedEmail = await verifyPasswordResetCode(getFirebaseAuth(), oobCode);
         setEmail(resolvedEmail);
         setPhase("set");
       } catch (err) {
