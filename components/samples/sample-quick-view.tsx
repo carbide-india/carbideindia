@@ -104,7 +104,7 @@ export function SampleQuickView({
             Full Record
           </Link>
           <Link
-            href={`/samples/${sampleId}` as Route}
+            href={`/samples/${sampleId}/edit` as Route}
             className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-[13px] font-semibold text-white hover:bg-brand-deep"
           >
             <Pencil size={14} strokeWidth={2.4} />

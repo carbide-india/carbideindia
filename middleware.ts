@@ -1,88 +1,90 @@
-import { NextResponse } from "next/server";
-import { clerkMiddleware, createRouteMatcher, clerkClient } from "@clerk/nextjs/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { clientIpFromHeaders, isIpAllowed, isBypassEmail } from "@/lib/ip-gate";
 
-const isPublicRoute = createRouteMatcher([
-  "/login(.*)",
-  "/access-denied",
-  "/welcome",
-  "/terms",
-  "/privacy",
-  "/api/health",
-  "/api/cron/(.*)", // authenticated by CRON_SECRET inside the route
-  "/manifest.json",
-  "/sw.js",
-]);
+// Public routes reachable without a session (and from any IP, so bypass users can
+// sign in remotely). /api/auth/session MUST be public — it mints the session
+// cookie during login, before any cookie exists.
+const PUBLIC_PATTERNS: RegExp[] = [
+  /^\/login(\/.*)?$/,
+  /^\/access-denied$/,
+  /^\/welcome$/,
+  /^\/terms$/,
+  /^\/privacy$/,
+  /^\/api\/health$/,
+  /^\/api\/cron\//, // authenticated by CRON_SECRET inside the route
+  /^\/api\/auth\//, // session mint/clear
+  /^\/manifest\.json$/,
+  /^\/sw\.js$/,
+];
 
-export default clerkMiddleware(async (auth, req) => {
+function isPublicRoute(pathname: string): boolean {
+  return PUBLIC_PATTERNS.some((re) => re.test(pathname));
+}
+
+/**
+ * Read the `email` claim from a Firebase session cookie WITHOUT verifying its
+ * signature. Edge middleware can't run the Admin SDK, and this value is used
+ * ONLY for the non-security-critical IP-bypass decision — the authoritative
+ * check (adminAuth.verifySessionCookie) happens server-side in getCurrentEmployee.
+ * A forged cookie could at most reach the login page from off-network; it can
+ * never authenticate. Fails closed (null) on any parse error.
+ */
+function emailFromSessionCookie(cookie: string | undefined): string | null {
+  if (!cookie) return null;
+  try {
+    const payload = cookie.split(".")[1];
+    if (!payload) return null;
+    const b64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const json = JSON.parse(atob(b64));
+    return typeof json.email === "string" ? json.email : null;
+  } catch {
+    return null;
+  }
+}
+
+export function middleware(req: NextRequest): NextResponse {
+  const { pathname } = req.nextUrl;
+  const session = req.cookies.get("__session")?.value;
+
   // ── IP gate: runs before auth, before everything ──────────────
   const ip = clientIpFromHeaders(req.headers);
   const ipOk = isIpAllowed(ip, process.env.ALLOWED_IPS);
 
   if (!ipOk) {
-    // Public/auth routes (login, etc.) stay reachable from ANY IP so that the
-    // bypass users can sign in remotely. Protected routes from a non-allowed
-    // IP are permitted ONLY for allowlisted bypass emails (owners working
-    // off-site); everyone else gets the branded denial page.
-    if (!isPublicRoute(req)) {
-      const { userId, sessionClaims } = await auth();
-      let bypass = false;
-      if (userId) {
-        // Fast path: if the (Clerk-signed) session token carries an email claim,
-        // decide with ZERO network calls. Configure this in the Clerk dashboard
-        // → Sessions → Customize token: {"email":"{{user.primary_email_address}}"}.
-        const claimEmail =
-          typeof (sessionClaims as { email?: unknown } | undefined)?.email === "string"
-            ? ((sessionClaims as { email?: string }).email ?? null)
-            : null;
-        if (claimEmail) {
-          bypass = isBypassEmail(claimEmail);
-        } else {
-          // Fallback: look the user up — but BOUNDED, so a slow/cold Clerk API
-          // call can never hang the gate (previously it could stall ~30s). On
-          // timeout or error we fail CLOSED (deny), never open; the user just
-          // retries and the warm call resolves.
-          try {
-            const client = await clerkClient();
-            const user = await Promise.race([
-              client.users.getUser(userId),
-              new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error("clerk getUser timeout")), 3500),
-              ),
-            ]);
-            const email =
-              user.primaryEmailAddress?.emailAddress ??
-              user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId)?.emailAddress ??
-              null;
-            bypass = isBypassEmail(email);
-          } catch {
-            bypass = false;
-          }
-        }
-      }
+    // Protected routes from a non-allowed IP are permitted ONLY for allowlisted
+    // bypass emails (owners working off-site); everyone else gets the denial page.
+    if (!isPublicRoute(pathname)) {
+      const email = emailFromSessionCookie(session);
+      const bypass = email ? isBypassEmail(email) : false;
       if (!bypass) {
-        if (req.nextUrl.pathname === "/access-denied") return NextResponse.next();
+        if (pathname === "/access-denied") return NextResponse.next();
         const url = req.nextUrl.clone();
         url.pathname = "/access-denied";
         return NextResponse.rewrite(url, { status: 403 });
       }
-      // bypass user → fall through to Clerk auth below
+      // bypass user → fall through to the auth check below
     }
     // public route from a blocked IP → allow through (so they can reach /login)
-  } else if (req.nextUrl.pathname === "/access-denied") {
+  } else if (pathname === "/access-denied") {
     // Allowed visitors never see the denial page.
     const url = req.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);
   }
 
-  // ── Clerk auth ─────────────────────────────────────────────────
-  if (!isPublicRoute(req)) {
-    await auth.protect({
-      unauthenticatedUrl: new URL("/login", req.url).toString(),
-    });
+  // ── Auth: protected routes require a session cookie ────────────
+  // Presence-check only (Edge can't verify); getCurrentEmployee does the
+  // authoritative Admin-SDK verification and treats an invalid cookie as
+  // signed-out (redirecting to /login), so a bad cookie can't reach data.
+  if (!isPublicRoute(pathname) && !session) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    url.search = "";
+    return NextResponse.redirect(url);
   }
-});
+
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: [

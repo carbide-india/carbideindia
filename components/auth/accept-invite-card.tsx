@@ -2,103 +2,102 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { useSignUp } from "@clerk/nextjs";
+import { verifyPasswordResetCode } from "firebase/auth";
+import { firebaseAuth } from "@/lib/firebase/client";
+import { completeOnboarding } from "@/lib/firebase/session-client";
 import { ArrowRight, Eye, EyeOff, Loader2, ShieldCheck } from "lucide-react";
 
 const NAVY = "#1E2447";
 const RED = "#D32F2F";
 const PAPER_LINE = "#E7E2DA";
 
-function clerkErrorMessage(err: unknown): string {
-  const e = err as {
-    message?: string;
-    errors?: Array<{ longMessage?: string; message?: string }>;
-  };
-  return (
-    e?.errors?.[0]?.longMessage ??
-    e?.errors?.[0]?.message ??
-    e?.message ??
-    "Something went wrong. Please try again."
-  );
+/** Map Firebase auth errors (and anything else) to a human message. */
+function firebaseErrorMessage(err: unknown): string {
+  const e = err as { code?: string; message?: string };
+  switch (e?.code) {
+    case "auth/expired-action-code":
+      return "This invitation link has expired. Ask an admin to resend your invite.";
+    case "auth/invalid-action-code":
+      return "This invitation link is invalid or has already been used. Ask an admin to resend your invite.";
+    case "auth/user-disabled":
+      return "This account has been disabled. Please contact an administrator.";
+    case "auth/user-not-found":
+      return "We couldn't find an account for this invitation. Ask an admin to resend your invite.";
+    case "auth/weak-password":
+      return "That password is too weak. Please use at least 8 characters.";
+    default:
+      return e?.message ?? "Something went wrong. Please try again.";
+  }
 }
 
 /**
- * Invitation acceptance card - the landing for a Clerk email invitation link.
+ * Invitation acceptance card — the landing for a Firebase onboarding link.
  *
- * Clerk redirects the clicked invite to `${siteUrl()}/login?__clerk_ticket=`;
- * the login page hands that ticket here. On mount we consume the ticket
- * (`signUp.ticket`) which attaches the already-verified invite email, then the
- * employee picks a password (`signUp.password`) and `signUp.finalize()` drops
- * them straight into an active session - no second sign-in step.
+ * The invite email links the employee here with an `oobCode` query param (a
+ * Firebase password-reset/onboarding action code). On mount we verify the code
+ * (`verifyPasswordResetCode`) to resolve the invited email and catch a bad /
+ * expired link early. The employee then picks a password (with confirmation)
+ * and `completeOnboarding(oobCode, password)` sets it, signs them in, and mints
+ * the `__session` cookie — dropping them straight into an active session.
  *
- * Mirrors the future-API shape and drafting-sheet styling of <SignInCard>.
+ * Mirrors the drafting-sheet styling of <SignInCard>.
  */
-export function AcceptInviteCard({ ticket }: { ticket: string }) {
+export function AcceptInviteCard({ oobCode }: { oobCode?: string }) {
   const router = useRouter();
-  const { signUp } = useSignUp();
 
-  // "validating" = consuming the ticket; "set" = ready for a password;
-  // "fatal" = the ticket is bad/expired and there's nothing to do here.
-  const [phase, setPhase] = React.useState<"validating" | "set" | "fatal">("validating");
+  // "validating" = verifying the code; "set" = ready for a password;
+  // "fatal" = the link is missing/bad/expired and there's nothing to do here.
+  const [phase, setPhase] = React.useState<"validating" | "set" | "fatal">(
+    oobCode ? "validating" : "fatal",
+  );
+  const [email, setEmail] = React.useState<string | null>(null);
   const [password, setPassword] = React.useState("");
+  const [confirm, setConfirm] = React.useState("");
   const [showPw, setShowPw] = React.useState(false);
   const [pending, setPending] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<string | null>(
+    oobCode ? null : "This invitation link is missing its code. Ask an admin to resend your invite.",
+  );
 
-  // Read live off the signal so the resolved invite email shows as soon as the
-  // ticket is consumed (a captured snapshot could be stale across the await).
-  const email = signUp?.emailAddress ?? null;
-
-  // Consume the ticket exactly once, as soon as Clerk is ready. The ref guard
+  // Verify the code exactly once, as soon as the card mounts. The ref guard
   // survives the double-invoke of React 19 strict-mode effects.
-  const consumed = React.useRef(false);
+  const verified = React.useRef(false);
   React.useEffect(() => {
-    if (!signUp || consumed.current) return;
-    consumed.current = true;
+    if (!oobCode || verified.current) return;
+    verified.current = true;
     (async () => {
       try {
-        const { error: ticketError } = await signUp.ticket({ ticket });
-        if (ticketError) {
-          setError(clerkErrorMessage(ticketError));
-          setPhase("fatal");
-          return;
-        }
-        // A passwordless instance can complete on the ticket alone - if so,
-        // skip straight to an active session.
-        if (signUp.status === "complete") {
-          await signUp.finalize();
-          router.push("/hub");
-          router.refresh();
-          return;
-        }
+        const resolvedEmail = await verifyPasswordResetCode(firebaseAuth, oobCode);
+        setEmail(resolvedEmail);
         setPhase("set");
       } catch (err) {
-        setError(clerkErrorMessage(err));
+        setError(firebaseErrorMessage(err));
         setPhase("fatal");
       }
     })();
-  }, [signUp, ticket, router]);
+  }, [oobCode]);
 
   async function submitPassword(e: React.FormEvent) {
     e.preventDefault();
-    if (!signUp || pending) return;
+    if (!oobCode || pending) return;
     setError(null);
+    if (password !== confirm) {
+      setError("Those passwords don't match. Please re-enter them.");
+      return;
+    }
     setPending(true);
     try {
-      const { error: pwError } = await signUp.password({ password });
-      if (pwError) {
-        setError(clerkErrorMessage(pwError));
-        return;
-      }
-      const { error: finError } = await signUp.finalize();
-      if (finError) {
-        setError(clerkErrorMessage(finError));
-        return;
-      }
-      router.push("/");
+      await completeOnboarding(oobCode, password);
+      router.push("/hub");
       router.refresh();
     } catch (err) {
-      setError(clerkErrorMessage(err));
+      const message = firebaseErrorMessage(err);
+      setError(message);
+      // An expired/invalid code can't be retried — send them back to sign in.
+      const code = (err as { code?: string })?.code;
+      if (code === "auth/expired-action-code" || code === "auth/invalid-action-code") {
+        setPhase("fatal");
+      }
     } finally {
       setPending(false);
     }
@@ -173,7 +172,7 @@ export function AcceptInviteCard({ ticket }: { ticket: string }) {
           </div>
         )}
 
-        {/* ── Validating the ticket ───────────────────────────────── */}
+        {/* ── Validating the code ─────────────────────────────────── */}
         {phase === "validating" && (
           <div className="mt-8 flex items-center gap-3 text-[14px]" style={{ color: "#57534E" }}>
             <Loader2 size={18} className="animate-spin" style={{ color: NAVY }} />
@@ -181,7 +180,7 @@ export function AcceptInviteCard({ ticket }: { ticket: string }) {
           </div>
         )}
 
-        {/* ── Fatal: bad / expired ticket ─────────────────────────── */}
+        {/* ── Fatal: missing / bad / expired code ─────────────────── */}
         {phase === "fatal" && (
           <a
             href="/login"
@@ -245,9 +244,30 @@ export function AcceptInviteCard({ ticket }: { ticket: string }) {
               </div>
             </div>
 
+            <div>
+              <label htmlFor="ai-confirm" className="block text-[10.5px]" style={mono}>
+                <span style={{ color: RED }}>03 /</span>{" "}
+                <span style={{ color: "#57534E" }}>Confirm password</span>
+              </label>
+              <input
+                id="ai-confirm"
+                type={showPw ? "text" : "password"}
+                required
+                minLength={8}
+                autoComplete="new-password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                placeholder="Re-enter your password"
+                className="mt-2 h-12 w-full rounded-lg px-4 text-[15px] outline-none transition-all duration-200"
+                style={{ background: "#F7F5F1", border: `1px solid ${PAPER_LINE}`, color: NAVY }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = "#3F3F94"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(63,63,148,0.15)"; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = PAPER_LINE; e.currentTarget.style.boxShadow = "none"; }}
+              />
+            </div>
+
             <button
               type="submit"
-              disabled={pending || !signUp}
+              disabled={pending}
               className="group relative flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-lg px-5 text-[12px] text-white transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60"
               style={{ ...mono, background: NAVY }}
             >

@@ -31,11 +31,13 @@ import { SectionCard } from "@/components/inquiries/form-field";
 
 const DIMENSION_UNITS = ["mm", "cm", "m", "inch"] as const;
 
-// Bare "table cell" field styling — no individual box; the value reads like the
-// Feasibility snapshot (bold dark text) and sits flush in the divided cell. The
-// SpecField cell provides a focus-within tint so keyboard nav stays visible.
+// Bare "table cell" field styling — the value reads like the Feasibility
+// snapshot (bold dark text), but a thin "fill-in" underline under each writable
+// input makes it obvious WHERE to type (plain text alone read as non-editable).
+// The underline turns indigo on focus; the SpecField cell adds a focus-within
+// tint so keyboard nav stays visible.
 const CELL_INPUT =
-  "w-full border-0 bg-transparent p-0 text-[14px] font-bold leading-tight text-ink-strong outline-none placeholder:font-medium placeholder:text-[#aab0bd]";
+  "w-full border-x-0 border-t-0 border-b border-solid border-[#c9cee0] bg-transparent p-0 pb-1 text-[14px] font-bold leading-tight text-ink-strong outline-none transition-colors focus:border-[#3f3f94] placeholder:font-medium placeholder:text-[#aab0bd]";
 const CELL_SELECT =
   "!h-auto !min-h-0 !gap-1 !rounded-none !border-0 !bg-transparent !p-0 !shadow-none text-[14px] font-bold text-ink-strong data-[state=open]:!border-0";
 
@@ -567,7 +569,11 @@ function SpecField({
       >
         {label}
       </span>
-      <div className="relative">
+      {/* mt-auto pins the input to the cell bottom. Grid stretches every cell in
+          a row to the tallest, so when a label wraps to two lines (last row) the
+          inputs still align on one baseline — with no added height where labels
+          are single-line. */}
+      <div className="relative mt-auto">
         {children}
         {pulsing && (
           <span

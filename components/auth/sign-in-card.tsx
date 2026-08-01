@@ -1,180 +1,98 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
-import { useSignIn } from "@clerk/nextjs";
-import { ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Loader2, Mail } from "lucide-react";
+import {
+  signInWithPassword,
+  isPasswordlessEmail,
+  sendOwnerSignInLink,
+} from "@/lib/firebase/session-client";
 
 const NAVY = "#1E2447";
 const RED = "#D32F2F";
 const PAPER_LINE = "#E7E2DA";
 
-type Mode = "signin" | "forgot" | "reset" | "trust";
+type Mode = "signin" | "linksent";
 
-function clerkErrorMessage(err: unknown): string {
-  const e = err as {
-    message?: string;
-    errors?: Array<{ longMessage?: string; message?: string }>;
-  };
-  return (
-    e?.errors?.[0]?.longMessage ??
-    e?.errors?.[0]?.message ??
-    e?.message ??
-    "Something went wrong. Please try again."
-  );
+/**
+ * Map a Firebase Auth error to a friendly, non-leaky message. Bad credentials
+ * (wrong password / unknown user / invalid email) all collapse to one line so
+ * we never reveal whether an address exists.
+ */
+function firebaseErrorMessage(err: unknown): string {
+  const code =
+    typeof err === "object" && err !== null && "code" in err
+      ? String((err as { code: unknown }).code)
+      : "";
+  switch (code) {
+    case "auth/wrong-password":
+    case "auth/user-not-found":
+    case "auth/invalid-credential":
+    case "auth/invalid-email":
+      return "Incorrect email or password.";
+    case "auth/user-disabled":
+      return "This account has been disabled. Contact your administrator.";
+    case "auth/too-many-requests":
+      return "Too many attempts. Please wait a moment and try again.";
+    case "auth/network-request-failed":
+      return "Network error. Check your connection and try again.";
+    default: {
+      const message =
+        typeof err === "object" && err !== null && "message" in err
+          ? String((err as { message: unknown }).message)
+          : "";
+      return message || "Something went wrong. Please try again.";
+    }
+  }
 }
 
 /**
- * Custom sign-in card on Clerk's headless API - drafting-sheet styling the
- * prebuilt widget can't do (numbered mono field labels, registration marks).
- * Email + password only; FORGOT? runs Clerk's reset-password-email-code flow
- * in the same card (send code → code + new password).
+ * Custom sign-in card on Firebase Auth - drafting-sheet styling the prebuilt
+ * widgets can't do (numbered mono field labels, registration marks). Email +
+ * password establishes the session cookie via signInWithPassword, then lands
+ * on "/". Owner accounts (alok@ / altus@) additionally get a passwordless
+ * "email me a sign-in link" action; non-owner emails never see it.
  */
 export function SignInCard() {
-  const router = useRouter();
-  const { signIn } = useSignIn();
-
   const [mode, setMode] = React.useState<Mode>("signin");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
-  const [code, setCode] = React.useState("");
-  const [newPassword, setNewPassword] = React.useState("");
   const [showPw, setShowPw] = React.useState(false);
   const [pending, setPending] = React.useState(false);
+  const [linkPending, setLinkPending] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [notice, setNotice] = React.useState<string | null>(null);
 
-  // Clerk v7 "future" sign-in API: methods return { error } values (no
-  // throwing), and finalize() activates the created session.
+  const ownerEmail = isPasswordlessEmail(email);
+
   async function submitSignIn(e: React.FormEvent) {
     e.preventDefault();
-    if (!signIn || pending) return;
+    if (pending) return;
     setError(null);
     setPending(true);
     try {
-      const { error: pwError } = await signIn.password({
-        identifier: email.trim(),
-        password,
-      });
-      if (pwError) {
-        setError(clerkErrorMessage(pwError));
-        return;
-      }
-      // password() succeeded - try to activate the session. finalize()
-      // THROWS (not a returned error) when no session exists yet, which is
-      // what Client Trust looks like: the password was right but the new
-      // browser must be verified by email code first.
-      let finalizeProblem: string | null = null;
-      try {
-        const { error: finError } = await signIn.finalize();
-        if (!finError) {
-          router.push("/hub");
-          router.refresh();
-          return;
-        }
-        finalizeProblem = clerkErrorMessage(finError);
-      } catch (err) {
-        finalizeProblem = clerkErrorMessage(err);
-      }
-      try {
-        const { error: mfaError } = await signIn.mfa.sendEmailCode();
-        if (!mfaError) {
-          setNotice(`New device - we emailed a verification code to ${email.trim()}.`);
-          setCode("");
-          setMode("trust");
-          return;
-        }
-      } catch {
-        // fall through to the finalize error below
-      }
-      setError(finalizeProblem);
+      await signInWithPassword(email.trim(), password);
+      // Hard navigation so the new session cookie is picked up by the server
+      // on the very next request (middleware + RSC read __session fresh).
+      // /hub is the post-login home (the launchpad), matching the login page's
+      // own redirect for already-signed-in users.
+      window.location.href = "/hub";
     } catch (err) {
-      setError(clerkErrorMessage(err));
-    } finally {
+      setError(firebaseErrorMessage(err));
       setPending(false);
     }
   }
 
-  async function submitForgot(e: React.FormEvent) {
-    e.preventDefault();
-    if (!signIn || pending) return;
+  async function sendLink() {
+    if (linkPending || !ownerEmail) return;
     setError(null);
-    setPending(true);
+    setLinkPending(true);
     try {
-      const { error: createError } = await signIn.create({ identifier: email.trim() });
-      if (createError) {
-        setError(clerkErrorMessage(createError));
-        return;
-      }
-      const { error: sendError } = await signIn.resetPasswordEmailCode.sendCode();
-      if (sendError) {
-        setError(clerkErrorMessage(sendError));
-        return;
-      }
-      setNotice(`A 6-digit code was sent to ${email.trim()}.`);
-      setMode("reset");
+      await sendOwnerSignInLink(email.trim());
+      setMode("linksent");
     } catch (err) {
-      setError(clerkErrorMessage(err));
+      setError(firebaseErrorMessage(err));
     } finally {
-      setPending(false);
-    }
-  }
-
-  async function submitReset(e: React.FormEvent) {
-    e.preventDefault();
-    if (!signIn || pending) return;
-    setError(null);
-    setPending(true);
-    try {
-      const { error: verifyError } = await signIn.resetPasswordEmailCode.verifyCode({
-        code: code.trim(),
-      });
-      if (verifyError) {
-        setError(clerkErrorMessage(verifyError));
-        return;
-      }
-      const { error: submitError } = await signIn.resetPasswordEmailCode.submitPassword({
-        password: newPassword,
-      });
-      if (submitError) {
-        setError(clerkErrorMessage(submitError));
-        return;
-      }
-      const { error: finError } = await signIn.finalize();
-      if (finError) {
-        setError(clerkErrorMessage(finError));
-        return;
-      }
-      router.push("/hub");
-    } catch (err) {
-      setError(clerkErrorMessage(err));
-    } finally {
-      setPending(false);
-    }
-  }
-
-  async function submitTrust(e: React.FormEvent) {
-    e.preventDefault();
-    if (!signIn || pending) return;
-    setError(null);
-    setPending(true);
-    try {
-      const { error: verifyError } = await signIn.mfa.verifyEmailCode({ code: code.trim() });
-      if (verifyError) {
-        setError(clerkErrorMessage(verifyError));
-        return;
-      }
-      const { error: finError } = await signIn.finalize();
-      if (finError) {
-        setError(clerkErrorMessage(finError));
-        return;
-      }
-      router.push("/hub");
-      router.refresh();
-    } catch (err) {
-      setError(clerkErrorMessage(err));
-    } finally {
-      setPending(false);
+      setLinkPending(false);
     }
   }
 
@@ -224,10 +142,6 @@ export function SignInCard() {
         >
           {mode === "signin" ? (
             <>Sign in to <span style={{ color: RED }}>WMS</span></>
-          ) : mode === "forgot" ? (
-            <>Reset <span style={{ color: RED }}>password</span></>
-          ) : mode === "trust" ? (
-            <>Verify this <span style={{ color: RED }}>device</span></>
           ) : (
             <>Check your <span style={{ color: RED }}>email</span></>
           )}
@@ -235,9 +149,7 @@ export function SignInCard() {
         <p className="mt-1.5 text-[14px]" style={{ color: "#78716C" }}>
           {mode === "signin"
             ? "Welcome back. Please sign in to continue."
-            : mode === "forgot"
-              ? "Enter your email and we'll send a reset code."
-              : notice ?? "Enter the code and your new password."}
+            : `We sent a one-time sign-in link to ${email.trim()}. Open it on this device to continue.`}
         </p>
 
         {error && (
@@ -284,14 +196,6 @@ export function SignInCard() {
                   <span style={{ color: RED }}>02 /</span>{" "}
                   <span style={{ color: "#57534E" }}>Password</span>
                 </label>
-                <button
-                  type="button"
-                  onClick={() => { setMode("forgot"); setError(null); }}
-                  className="cursor-pointer text-[10.5px] transition-colors duration-200 hover:opacity-70"
-                  style={{ ...mono, color: RED }}
-                >
-                  Forgot?
-                </button>
               </div>
               <div className="relative mt-2">
                 <input
@@ -321,7 +225,7 @@ export function SignInCard() {
 
             <button
               type="submit"
-              disabled={pending || !signIn}
+              disabled={pending}
               className="group relative flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-lg px-5 text-[12px] text-white transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60"
               style={{ ...mono, background: NAVY }}
             >
@@ -336,6 +240,24 @@ export function SignInCard() {
               </span>
             </button>
 
+            {/* Owner-only passwordless option. Only alok@ / altus@ ever see this. */}
+            {ownerEmail && (
+              <button
+                type="button"
+                onClick={sendLink}
+                disabled={linkPending}
+                className="flex h-11 w-full cursor-pointer items-center justify-center gap-2.5 rounded-lg px-5 text-[12px] transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60"
+                style={{ ...mono, background: "#F7F5F1", border: `1px solid ${PAPER_LINE}`, color: NAVY }}
+              >
+                {linkPending ? (
+                  <Loader2 size={15} className="animate-spin" />
+                ) : (
+                  <Mail size={15} style={{ color: RED }} />
+                )}
+                <span>{linkPending ? "Sending link" : "Email me a sign-in link"}</span>
+              </button>
+            )}
+
             <p className="text-center text-[10.5px]" style={{ ...mono, color: "#78716C" }}>
               No account?{" "}
               <a
@@ -349,37 +271,28 @@ export function SignInCard() {
           </form>
         )}
 
-        {/* ── Forgot: send code ───────────────────────────────────── */}
-        {mode === "forgot" && (
-          <form onSubmit={submitForgot} className="mt-6 flex flex-col gap-5">
-            <div>
-              <label htmlFor="fp-email" className="block text-[10.5px]" style={mono}>
-                <span style={{ color: RED }}>01 /</span>{" "}
-                <span style={{ color: "#57534E" }}>Email</span>
-              </label>
-              <input
-                id="fp-email"
-                type="email"
-                required
-                autoComplete="email"
-                autoFocus
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@carbideindia.com"
-                className="mt-2 h-12 w-full rounded-lg px-4 text-[15px] outline-none transition-all duration-200"
-                style={{ background: "#F7F5F1", border: `1px solid ${PAPER_LINE}`, color: NAVY }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = "#3F3F94"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(63,63,148,0.15)"; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = PAPER_LINE; e.currentTarget.style.boxShadow = "none"; }}
-              />
+        {/* ── Link sent: passwordless confirmation ────────────────── */}
+        {mode === "linksent" && (
+          <div className="mt-6 flex flex-col gap-5">
+            <div
+              className="flex items-center gap-3 rounded-lg px-4 py-3.5"
+              style={{ background: "#F7F5F1", border: `1px solid ${PAPER_LINE}` }}
+            >
+              <Mail size={18} style={{ color: RED }} />
+              <span className="text-[13px]" style={{ color: "#57534E" }}>
+                The link expires shortly. If it doesn&apos;t arrive, check spam
+                or send it again.
+              </span>
             </div>
             <button
-              type="submit"
-              disabled={pending || !signIn}
+              type="button"
+              onClick={sendLink}
+              disabled={linkPending}
               className="flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-lg px-5 text-[12px] text-white transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60"
               style={{ ...mono, background: NAVY }}
             >
-              <span>{pending ? "Sending" : "Send reset code"}</span>
-              {pending ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
+              <span>{linkPending ? "Sending" : "Resend link"}</span>
+              {linkPending ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
             </button>
             <button
               type="button"
@@ -389,111 +302,7 @@ export function SignInCard() {
             >
               Back to sign in
             </button>
-          </form>
-        )}
-
-        {/* ── Reset: code + new password ──────────────────────────── */}
-        {mode === "reset" && (
-          <form onSubmit={submitReset} className="mt-6 flex flex-col gap-5">
-            <div>
-              <label htmlFor="rp-code" className="block text-[10.5px]" style={mono}>
-                <span style={{ color: RED }}>01 /</span>{" "}
-                <span style={{ color: "#57534E" }}>Reset code</span>
-              </label>
-              <input
-                id="rp-code"
-                inputMode="numeric"
-                required
-                autoFocus
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder="123456"
-                className="mt-2 h-12 w-full rounded-lg px-4 text-[15px] tracking-[0.3em] outline-none transition-all duration-200"
-                style={{ background: "#F7F5F1", border: `1px solid ${PAPER_LINE}`, color: NAVY }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = "#3F3F94"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(63,63,148,0.15)"; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = PAPER_LINE; e.currentTarget.style.boxShadow = "none"; }}
-              />
-            </div>
-            <div>
-              <label htmlFor="rp-password" className="block text-[10.5px]" style={mono}>
-                <span style={{ color: RED }}>02 /</span>{" "}
-                <span style={{ color: "#57534E" }}>New password</span>
-              </label>
-              <input
-                id="rp-password"
-                type="password"
-                required
-                autoComplete="new-password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="••••••••"
-                className="mt-2 h-12 w-full rounded-lg px-4 text-[15px] outline-none transition-all duration-200"
-                style={{ background: "#F7F5F1", border: `1px solid ${PAPER_LINE}`, color: NAVY }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = "#3F3F94"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(63,63,148,0.15)"; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = PAPER_LINE; e.currentTarget.style.boxShadow = "none"; }}
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={pending || !signIn}
-              className="flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-lg px-5 text-[12px] text-white transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60"
-              style={{ ...mono, background: NAVY }}
-            >
-              <span>{pending ? "Resetting" : "Reset & sign in"}</span>
-              {pending ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
-            </button>
-            <button
-              type="button"
-              onClick={() => { setMode("signin"); setError(null); setNotice(null); }}
-              className="cursor-pointer text-center text-[10.5px] underline underline-offset-4 transition-opacity duration-200 hover:opacity-70"
-              style={{ ...mono, color: "#78716C" }}
-            >
-              Back to sign in
-            </button>
-          </form>
-        )}
-
-        {/* ── Client Trust: verify a new device by email code ─────── */}
-        {mode === "trust" && (
-          <form onSubmit={submitTrust} className="mt-6 flex flex-col gap-5">
-            <div>
-              <label htmlFor="ct-code" className="block text-[10.5px]" style={mono}>
-                <span style={{ color: RED }}>01 /</span>{" "}
-                <span style={{ color: "#57534E" }}>Verification code</span>
-              </label>
-              <input
-                id="ct-code"
-                inputMode="numeric"
-                required
-                autoFocus
-                autoComplete="one-time-code"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder="123456"
-                className="mt-2 h-12 w-full rounded-lg px-4 text-[15px] tracking-[0.3em] outline-none transition-all duration-200"
-                style={{ background: "#F7F5F1", border: `1px solid ${PAPER_LINE}`, color: NAVY }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = "#3F3F94"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(63,63,148,0.15)"; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = PAPER_LINE; e.currentTarget.style.boxShadow = "none"; }}
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={pending || !signIn}
-              className="flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-lg px-5 text-[12px] text-white transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60"
-              style={{ ...mono, background: NAVY }}
-            >
-              <span>{pending ? "Verifying" : "Verify device"}</span>
-              {pending ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
-            </button>
-            <button
-              type="button"
-              onClick={() => { setMode("signin"); setError(null); setNotice(null); }}
-              className="cursor-pointer text-center text-[10.5px] underline underline-offset-4 transition-opacity duration-200 hover:opacity-70"
-              style={{ ...mono, color: "#78716C" }}
-            >
-              Back to sign in
-            </button>
-          </form>
+          </div>
         )}
       </div>
     </div>

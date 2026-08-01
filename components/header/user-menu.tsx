@@ -1,7 +1,7 @@
 "use client";
 
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { useClerk } from "@clerk/nextjs";
+import { signOutEverywhere } from "@/lib/firebase/session-client";
 import Link from "next/link";
 import type { Route } from "next";
 import {
@@ -32,12 +32,6 @@ export function UserMenu({
   inboxUnread,
   archivedTasks,
 }: Props) {
-  const { signOut } = useClerk();
-
-  async function handleSignOut() {
-    await signOut({ redirectUrl: "/login" });
-  }
-
   const initials = name
     .split(" ")
     .map((p) => p[0])
@@ -296,7 +290,7 @@ export function UserMenu({
           <DropdownMenu.Separator className="my-1 h-px bg-[#E2E8F0]" />
 
           <DropdownMenu.Item
-            onSelect={handleSignOut}
+            onSelect={() => void signOutEverywhere()}
             className="flex items-center gap-2.5 px-3.5 py-2.5 text-[15px] rounded-lg cursor-pointer outline-none text-[#B71C1C] data-[highlighted]:bg-[#FEF2F2]"
           >
             <LogOut size={14} strokeWidth={2.2} style={{ color: "#B71C1C" }} />

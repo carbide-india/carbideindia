@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
-import { useClerk } from "@clerk/nextjs";
+import { signOutEverywhere } from "@/lib/firebase/session-client";
 import {
   LayoutGrid,
   Activity as ActivityIcon,
@@ -44,15 +44,10 @@ const NAV: ReadonlyArray<NavItem> = [
 
 export function AdminSidebar({ adminName, adminEmail, avatarUrl }: Props) {
   const pathname = usePathname();
-  const { signOut } = useClerk();
 
   function isActive(item: NavItem): boolean {
     if (item.exact) return pathname === item.href;
     return pathname === item.href || pathname.startsWith(`${item.href}/`);
-  }
-
-  async function handleSignOut() {
-    await signOut({ redirectUrl: "/login" });
   }
 
   const initials = adminName
@@ -233,7 +228,7 @@ export function AdminSidebar({ adminName, adminEmail, avatarUrl }: Props) {
           </Link>
           <button
             type="button"
-            onClick={handleSignOut}
+            onClick={() => void signOutEverywhere()}
             className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg text-[14px] text-white/75 hover:text-white hover:bg-white/[0.06] transition-colors text-left"
           >
             <LogOut size={16} strokeWidth={2.2} />

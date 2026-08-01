@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import type { Route } from "next";
 import Image from "next/image";
-import { auth } from "@clerk/nextjs/server";
+import { cookies } from "next/headers";
 import { getCurrentEmployee } from "@/lib/auth/current";
 import { SignInCard } from "@/components/auth/sign-in-card";
 import { AcceptInviteCard } from "@/components/auth/accept-invite-card";
@@ -58,19 +58,23 @@ function MonoLabel({
 }
 
 export default async function LoginPage({ searchParams }: PageProps) {
-  const { userId } = await auth();
   const me = await getCurrentEmployee();
   if (me && me.isActive) {
     // Post-login landing is the Hub launchpad (workflow: Login → Hub → module).
     redirect("/hub" as Route);
   }
-  const orphanedSession = Boolean(userId) && (!me || !me.isActive);
+  // A Firebase session cookie is present but resolves to no active employee row
+  // (unlinked / deactivated) - the "orphaned session" state. getCurrentEmployee
+  // already returned null/inactive above, so the cookie's mere presence is the tell.
+  const hasSession = Boolean((await cookies()).get("__session")?.value);
+  const orphanedSession = hasSession && (!me || !me.isActive);
 
   const sp = await searchParams;
   const reason = firstString(sp["reason"]);
-  // Clerk appends ?__clerk_ticket= when an invitation email link is clicked.
-  // Its presence flips this sheet into "activate your account" mode.
-  const inviteTicket = firstString(sp["__clerk_ticket"]);
+  // Firebase onboarding links arrive with ?oobCode= (the password-reset/
+  // onboarding action code). Its presence flips this sheet into
+  // "activate your account" mode.
+  const inviteCode = firstString(sp["oobCode"]);
   const year = new Date().getFullYear();
 
   return (
@@ -257,8 +261,8 @@ export default async function LoginPage({ searchParams }: PageProps) {
               </div>
             )}
 
-            {inviteTicket ? (
-              <AcceptInviteCard ticket={inviteTicket} />
+            {inviteCode ? (
+              <AcceptInviteCard oobCode={inviteCode} />
             ) : orphanedSession ? (
               <OrphanedSessionCard />
             ) : (

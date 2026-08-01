@@ -3,7 +3,8 @@
 import { revalidatePath, updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 import { eq, inArray, or, sql } from "drizzle-orm";
-import { clerkClient } from "@clerk/nextjs/server";
+import { adminAuth } from "@/lib/firebase/admin";
+import { sendInviteEmail } from "@/lib/email/resend";
 import { db } from "@/lib/db";
 import {
   departments,
@@ -26,63 +27,76 @@ import {
 import { siteUrl } from "@/lib/site-url";
 
 /**
- * Sends a Clerk email invitation. The invitee follows the emailed link,
- * sets a password with Clerk, and lands on /login; on their first
- * sign-in getCurrentEmployee() links the Clerk user to the employees
- * row by email and backfills clerk_user_id.
+ * Provisions/refreshes a Firebase account for `email` and emails the branded
+ * onboarding link. The invitee follows the emailed link to
+ * `/accept-invite?oobCode=…`, sets a password (completeOnboarding), and is
+ * signed in; on their first sign-in getCurrentEmployee() links the Firebase
+ * user to the employees row by verified email and backfills firebase_uid.
  *
- * `ignoreExisting` keeps re-invites idempotent - Clerk would otherwise
- * reject a second invitation for the same email while one is pending.
+ * Idempotent for re-invites: createUser is skipped when the account already
+ * exists, and a fresh password-reset (onboarding) link is minted either way.
  */
-async function sendClerkInvitation(email: string): Promise<void> {
-  const client = await clerkClient();
-  await client.invitations.createInvitation({
-    emailAddress: email,
-    redirectUrl: `${siteUrl()}/login`,
-    notify: true,
-    ignoreExisting: true,
+async function sendFirebaseInvitation(email: string, displayName: string): Promise<void> {
+  // 1. Ensure a Firebase account exists. A second invite for the same email
+  //    hits auth/email-already-exists — harmless, we just re-issue the link.
+  try {
+    await adminAuth.createUser({ email, emailVerified: false, displayName });
+  } catch (err) {
+    if (!isEmailAlreadyExists(err)) throw err;
+  }
+
+  // 2. Mint a password-reset link. Firebase returns its own action URL with an
+  //    `oobCode` query param; we parse that out and point the user at our own
+  //    accept-invite card, which consumes the code via completeOnboarding().
+  const rawLink = await adminAuth.generatePasswordResetLink(email, {
+    url: `${siteUrl()}/accept-invite`,
   });
+  const oobCode = new URL(rawLink).searchParams.get("oobCode");
+  if (!oobCode) {
+    throw new Error("Firebase did not return an onboarding code.");
+  }
+  const onboardingUrl = `${siteUrl()}/accept-invite?oobCode=${encodeURIComponent(oobCode)}`;
+
+  // 3. Deliver it via Resend (branded "Carbide India WMS" sender).
+  await sendInviteEmail(email, displayName, onboardingUrl);
 }
 
 /**
- * Best-effort revoke of any pending Clerk invitations addressed to `email`,
- * so the emailed invite link stops working once the employee is deactivated
- * or deleted before ever signing in. Failures are logged, never fatal -
- * the DB is already the source of truth and an unrevoked invitation can't
- * link to a row that is inactive or gone.
+ * Resolve the Firebase uid for an employee. Prefers the linked `firebase_uid`
+ * on the row; for invited-but-never-joined employees (row not yet linked) it
+ * falls back to an email lookup. Returns null when no Firebase account exists
+ * for the email (nothing to ban/delete), so callers can no-op cleanly.
  */
-async function revokePendingInvitations(email: string, logTag: string): Promise<void> {
-  const lower = email.toLowerCase();
+async function resolveFirebaseUid(
+  firebaseUid: string | null,
+  email: string,
+): Promise<string | null> {
+  if (firebaseUid) return firebaseUid;
   try {
-    const client = await clerkClient();
-    // `query` filters by email/id server-side; single page with a generous
-    // limit is plenty for a roster this size.
-    const { data } = await client.invitations.getInvitationList({
-      status: "pending",
-      query: lower,
-      limit: 100,
-    });
-    for (const inv of data) {
-      if (inv.emailAddress.toLowerCase() !== lower) continue;
-      try {
-        await client.invitations.revokeInvitation(inv.id);
-      } catch (err) {
-        console.error(`[${logTag}] revokeInvitation(${inv.id}) failed`, err);
-      }
-    }
+    const user = await adminAuth.getUserByEmail(email);
+    return user.uid;
   } catch (err) {
-    console.error(`[${logTag}] listing pending invitations failed`, err);
+    if (isUserNotFound(err)) return null;
+    throw err;
   }
 }
 
-function clerkErrorMessage(err: unknown): string {
-  const e = err as { errors?: Array<{ longMessage?: string; message?: string }>; message?: string };
-  return (
-    e?.errors?.[0]?.longMessage ??
-    e?.errors?.[0]?.message ??
-    e?.message ??
-    String(err)
-  );
+function isFirebaseCode(err: unknown, code: string): boolean {
+  const e = err as { code?: string; errorInfo?: { code?: string } };
+  return e?.code === code || e?.errorInfo?.code === code;
+}
+
+function isUserNotFound(err: unknown): boolean {
+  return isFirebaseCode(err, "auth/user-not-found");
+}
+
+function isEmailAlreadyExists(err: unknown): boolean {
+  return isFirebaseCode(err, "auth/email-already-exists");
+}
+
+function firebaseErrorMessage(err: unknown): string {
+  const e = err as { errorInfo?: { message?: string }; message?: string };
+  return e?.errorInfo?.message ?? e?.message ?? String(err);
 }
 
 /**
@@ -144,8 +158,8 @@ async function writeMemberships(
 export async function inviteEmployee(input: InviteEmployeeInput): Promise<{
   ok: boolean;
   id?: string;
-  /** Set when the row was created OK but the Clerk invitation email
-   *  failed to send. The admin can re-send from the row's overflow menu. */
+  /** Set when the row was created OK but the invitation email failed to
+   *  send. The admin can re-send from the row's overflow menu. */
   warning?: string;
   error?: string;
 }> {
@@ -169,8 +183,8 @@ export async function inviteEmployee(input: InviteEmployeeInput): Promise<{
     parsed.primaryDepartmentId,
   );
 
-  // 1. Insert employees row. clerk_user_id stays NULL until first sign-in:
-  // getCurrentEmployee() links the Clerk user to this row by email.
+  // 1. Insert employees row. firebase_uid stays NULL until first sign-in:
+  // getCurrentEmployee() links the Firebase user to this row by email.
   //
   // The pre-check above is not race-safe - two admins inviting the same
   // email at the same time both see "no existing row" and both reach this
@@ -210,15 +224,15 @@ export async function inviteEmployee(input: InviteEmployeeInput): Promise<{
     console.error("[inviteEmployee] writeMemberships failed", err);
   }
 
-  // 2. Send the Clerk invitation email. We DON'T roll back the row if
-  //    this fails - the admin can re-send from the row's overflow menu.
-  //    But we DO surface the failure to the caller via `warning`.
+  // 2. Provision the Firebase account + send the invitation email. We DON'T
+  //    roll back the row if this fails - the admin can re-send from the row's
+  //    overflow menu. But we DO surface the failure to the caller via `warning`.
   let emailWarning: string | undefined;
   try {
-    await sendClerkInvitation(parsed.email);
+    await sendFirebaseInvitation(parsed.email, parsed.name);
   } catch (err) {
-    emailWarning = `Created the employee but the invitation email failed: ${clerkErrorMessage(err)}. Use "Resend invite" to retry.`;
-    console.error("[inviteEmployee] Clerk invitation failed", err);
+    emailWarning = `Created the employee but the invitation email failed: ${firebaseErrorMessage(err)}. Use "Resend invite" to retry.`;
+    console.error("[inviteEmployee] Firebase invitation failed", err);
   }
 
   try {
@@ -335,7 +349,7 @@ export async function editEmployee(
   }
 
   // NOTE: admin status is derived entirely from the employees row - no
-  // Clerk metadata is written when isAdmin changes.
+  // auth-provider metadata is written when isAdmin changes.
 
   try {
     const fromValue: Record<string, unknown> = {};
@@ -376,9 +390,9 @@ export async function resendInvite(employeeId: string): Promise<{ ok: boolean; e
   if (!emp) return { ok: false, error: "Employee not found" };
   if (emp.joinedAt !== null) return { ok: false, error: "Employee has already joined." };
   try {
-    await sendClerkInvitation(emp.email);
+    await sendFirebaseInvitation(emp.email, emp.name);
   } catch (err) {
-    return { ok: false, error: clerkErrorMessage(err) };
+    return { ok: false, error: firebaseErrorMessage(err) };
   }
 
   try {
@@ -417,28 +431,23 @@ export async function deactivateEmployee(
     return { ok: false, error: `DB: ${err.message ?? err}` };
   }
 
-  // Ban the Clerk user (revokes sessions + blocks sign-in). Roll back the
-  // DB flag if Clerk rejects, so the two systems stay in sync.
-  if (emp.clerkUserId) {
-    try {
-      const client = await clerkClient();
-      await client.users.banUser(emp.clerkUserId);
-    } catch (err) {
-      await db
-        .update(employees)
-        .set({ isActive: true })
-        .where(eq(employees.id, emp.id))
-        .catch((rollbackErr) => {
-          console.error("[deactivateEmployee] rollback failed", rollbackErr);
-        });
-      return { ok: false, error: `Clerk: ${clerkErrorMessage(err)}` };
-    }
-  }
-
-  // Invited-but-never-joined: revoke any pending Clerk invitation so the
-  // emailed link stops working. Best-effort.
-  if (emp.joinedAt === null) {
-    await revokePendingInvitations(emp.email, "deactivateEmployee");
+  // Disable the Firebase user (revokes sessions + blocks sign-in). This also
+  // covers invited-but-never-joined accounts: a disabled account can't complete
+  // onboarding, so the emailed link stops working. Resolve the uid from the row,
+  // or fall back to an email lookup when the row isn't linked yet. Roll back the
+  // DB flag if Firebase rejects, so the two systems stay in sync.
+  try {
+    const uid = await resolveFirebaseUid(emp.firebaseUid, emp.email);
+    if (uid) await adminAuth.updateUser(uid, { disabled: true });
+  } catch (err) {
+    await db
+      .update(employees)
+      .set({ isActive: true })
+      .where(eq(employees.id, emp.id))
+      .catch((rollbackErr) => {
+        console.error("[deactivateEmployee] rollback failed", rollbackErr);
+      });
+    return { ok: false, error: `Firebase: ${firebaseErrorMessage(err)}` };
   }
 
   try {
@@ -476,20 +485,19 @@ export async function reactivateEmployee(
     return { ok: false, error: `DB: ${err.message ?? err}` };
   }
 
-  if (emp.clerkUserId) {
-    try {
-      const client = await clerkClient();
-      await client.users.unbanUser(emp.clerkUserId);
-    } catch (err) {
-      await db
-        .update(employees)
-        .set({ isActive: false })
-        .where(eq(employees.id, emp.id))
-        .catch((rollbackErr) => {
-          console.error("[reactivateEmployee] rollback failed", rollbackErr);
-        });
-      return { ok: false, error: `Clerk: ${clerkErrorMessage(err)}` };
-    }
+  // Re-enable the Firebase user. Roll back the DB flag if Firebase rejects.
+  try {
+    const uid = await resolveFirebaseUid(emp.firebaseUid, emp.email);
+    if (uid) await adminAuth.updateUser(uid, { disabled: false });
+  } catch (err) {
+    await db
+      .update(employees)
+      .set({ isActive: false })
+      .where(eq(employees.id, emp.id))
+      .catch((rollbackErr) => {
+        console.error("[reactivateEmployee] rollback failed", rollbackErr);
+      });
+    return { ok: false, error: `Firebase: ${firebaseErrorMessage(err)}` };
   }
 
   try {
@@ -512,7 +520,7 @@ export async function reactivateEmployee(
 // ---------------------------------------------------------------------------
 // Hard delete (admin power tool)
 //
-// Permanently removes the employees row, the Clerk user, and every row
+// Permanently removes the employees row, the Firebase user, and every row
 // that referenced them as doer/initiator/creator/actor. Audit history about
 // those tasks is destroyed by design - this is the GDPR right-to-erasure
 // shape, NOT the deactivate flow. The deletion itself is logged to
@@ -526,7 +534,7 @@ export async function reactivateEmployee(
 //   4. tasks owned by them       (RESTRICT chain on doer / initiator / created_by)
 //   5. employees row             (cascades notifications, push_subs, their own
 //                                  lifecycle employee_events)
-//   6. Clerk user
+//   6. Firebase user
 // ---------------------------------------------------------------------------
 
 export interface EmployeeDeletionImpact {
@@ -662,7 +670,7 @@ export async function deleteEmployee(
     email: emp.email,
     role: emp.role,
     department: emp.department,
-    clerkUserId: emp.clerkUserId,
+    firebaseUid: emp.firebaseUid,
   };
 
   let counts: {
@@ -725,23 +733,19 @@ export async function deleteEmployee(
     return { ok: false, error: `DB: ${err?.message ?? err}` };
   }
 
-  // 6. Clerk user. Best-effort - the DB is already consistent, so a
-  //    Clerk failure leaves at most an orphan account that can no longer
-  //    link to an employees row. Invited-but-never-joined employees have
-  //    no Clerk user yet, only a pending invitation - revoke it instead.
-  if (emp.joinedAt === null) {
-    await revokePendingInvitations(snapshot.email, "deleteEmployee");
-  }
-  if (snapshot.clerkUserId) {
-    try {
-      const client = await clerkClient();
-      await client.users.deleteUser(snapshot.clerkUserId);
-    } catch (err) {
-      console.warn(
-        `[deleteEmployee] Clerk deleteUser(${snapshot.clerkUserId}) failed - clean up manually`,
-        err,
-      );
-    }
+  // 6. Firebase user. Best-effort - the DB is already consistent, so a
+  //    Firebase failure leaves at most an orphan account that can no longer
+  //    link to an employees row. Invited-but-never-joined employees have a
+  //    Firebase account (created at invite time) but no firebase_uid on the
+  //    row yet, so resolve it by email when the link is missing.
+  try {
+    const uid = await resolveFirebaseUid(snapshot.firebaseUid, snapshot.email);
+    if (uid) await adminAuth.deleteUser(uid);
+  } catch (err) {
+    console.warn(
+      `[deleteEmployee] Firebase delete for ${snapshot.email} failed - clean up manually`,
+      err,
+    );
   }
 
   // 7. Audit the erasure itself under the deleting admin's actor_id. Scoped

@@ -99,6 +99,10 @@ export const employees = pgTable("employees", {
     .defaultNow(),
   // M2.0 additions (auth identity now lives in Clerk):
   clerkUserId: text("clerk_user_id").unique(),
+  // Firebase auth migration (Phase F1): links an employee row to its Firebase
+  // user. Nullable, and kept ALONGSIDE clerkUserId so Clerk stays a working
+  // rollback path until the cutover is verified.
+  firebaseUid: text("firebase_uid").unique(),
   isAdmin: boolean("is_admin").notNull().default(false),
   isActive: boolean("is_active").notNull().default(true),
   invitedAt: timestamp("invited_at", { withTimezone: true }),

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import type { Route } from "next";
-import { auth } from "@clerk/nextjs/server";
+import { getCurrentEmployee } from "@/lib/auth/current";
 
 interface PageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -26,8 +26,8 @@ function sanitizeNext(v: string | string[] | undefined): string {
  * the dashboard), signed-out users go to /login.
  */
 export default async function WelcomePage({ searchParams }: PageProps) {
-  const { userId } = await auth();
-  if (!userId) redirect("/login" as Route);
+  const me = await getCurrentEmployee();
+  if (!me) redirect("/login" as Route);
   const sp = await searchParams;
   redirect(sanitizeNext(sp["next"]) as Route);
 }

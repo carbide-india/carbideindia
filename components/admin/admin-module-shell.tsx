@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import type { Route } from "next";
-import { useClerk } from "@clerk/nextjs";
+import { signOutEverywhere } from "@/lib/firebase/session-client";
 import {
   Bell,
   HelpCircle,
@@ -117,7 +117,6 @@ export function AdminModuleShell({
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { signOut } = useClerk();
 
   const currentTab = searchParams.get("tab") ?? "general";
 
@@ -130,10 +129,6 @@ export function AdminModuleShell({
     }
     if (item.exact) return pathname === item.href;
     return pathname === item.href || pathname.startsWith(`${item.href}/`);
-  }
-
-  async function handleSignOut() {
-    await signOut({ redirectUrl: "/login" });
   }
 
   const overviewActive = pathname === "/admin";
@@ -295,7 +290,7 @@ export function AdminModuleShell({
             </span>
             <button
               type="button"
-              onClick={handleSignOut}
+              onClick={() => void signOutEverywhere()}
               className="flex h-[42px] items-center gap-3 rounded-lg px-3.5 text-left text-[13.5px] font-semibold text-[#6b7280] transition hover:bg-[#fbecec] hover:text-[#d32f2f]"
             >
               <LogOut className="h-[18px] w-[18px]" />

@@ -15,6 +15,7 @@ import { TransferredEmail } from "@/emails/notifications/Transferred";
 import { CancelledEmail } from "@/emails/notifications/Cancelled";
 import { CommentedEmail } from "@/emails/notifications/Commented";
 import { DailyDigestEmail } from "@/emails/notifications/DailyDigest";
+import { InviteEmployeeEmail } from "@/emails/InviteEmployee";
 import type {
   NotificationMeta,
   OverdueDigestTask,
@@ -103,6 +104,36 @@ function parseMeta(body: string | null): NotificationMeta {
     // not JSON - treat the whole body as a note string
   }
   return { note: trimmed };
+}
+
+/* ------------------------------------------------------------------ */
+/* Employee onboarding invite (Firebase auth)                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Sends the branded onboarding invitation carrying a Firebase password-reset
+ * (onboarding) link. Called from the employees Server Actions after the row is
+ * created and the link is minted.
+ *
+ * Like every sender in this module it is a no-op when `RESEND_API_KEY` is unset
+ * (dev without Resend) — the caller can't tell delivery apart from a skip, so a
+ * working `RESEND_API_KEY` is required in production for invites to actually go
+ * out. Throws on a genuine Resend API error so the caller can surface a warning.
+ */
+export async function sendInviteEmail(
+  to: string,
+  name: string,
+  onboardingUrl: string,
+): Promise<void> {
+  const resend = getResend();
+  if (!resend) return;
+  const { error } = await resend.emails.send({
+    from: FROM,
+    to,
+    subject: "Set up your Carbide India WMS account",
+    react: InviteEmployeeEmail({ name, onboardingUrl }),
+  });
+  if (error) throw new Error(error.message);
 }
 
 /* ------------------------------------------------------------------ */

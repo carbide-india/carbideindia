@@ -532,7 +532,7 @@ function RowMenu({ row, onQuickView }: { row: SampleListItem; onQuickView: () =>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild className="text-[14px]">
-          <Link href={`/samples/${row.id}` as Route} className="flex items-center gap-2.5">
+          <Link href={`/samples/${row.id}/edit` as Route} className="flex items-center gap-2.5">
             <Pencil size={15} strokeWidth={2.2} />
             Edit
           </Link>

@@ -5,7 +5,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
-import { useClerk } from "@clerk/nextjs";
+import { signOutEverywhere } from "@/lib/firebase/session-client";
 import {
   Menu,
   X,
@@ -53,16 +53,11 @@ const NAV: ReadonlyArray<NavItem> = [
  */
 export function AdminMobileBar({ adminName, adminEmail }: Props) {
   const pathname = usePathname();
-  const { signOut } = useClerk();
   const [open, setOpen] = React.useState(false);
 
   function isActive(item: NavItem): boolean {
     if (item.exact) return pathname === item.href;
     return pathname === item.href || pathname.startsWith(`${item.href}/`);
-  }
-
-  async function handleSignOut() {
-    await signOut({ redirectUrl: "/login" });
   }
 
   const initials = adminName
@@ -195,7 +190,7 @@ export function AdminMobileBar({ adminName, adminEmail }: Props) {
                 type="button"
                 onClick={() => {
                   setOpen(false);
-                  handleSignOut();
+                  void signOutEverywhere();
                 }}
                 className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-white/80 hover:bg-white/10 transition-colors text-left"
               >

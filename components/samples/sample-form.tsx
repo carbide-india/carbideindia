@@ -25,7 +25,7 @@ import {
   SAMPLE_REPORT_TYPES,
 } from "@/db/enums";
 import { CreateSampleSchema } from "@/lib/validators/sample";
-import { createSample } from "@/app/(app)/samples/actions";
+import { createSample, updateSample } from "@/app/(app)/samples/actions";
 import { useFormDraft } from "@/components/drafts/use-form-draft";
 import { useKeyboardForm } from "@/components/forms/use-keyboard-form";
 import { fireToast } from "@/lib/toast";
@@ -80,6 +80,9 @@ interface Props {
   enableDrafts?: boolean;
   /** When resuming a draft, its id (auto-save continues into the same draft). */
   resumeDraftId?: string;
+  /** When set, the form edits this existing sample (saves via updateSample and
+   *  routes back to the sample) instead of registering a new one. */
+  editSampleId?: string;
 }
 
 /** One labelled detail chip in the fetched-client summary strip. */
@@ -180,7 +183,9 @@ export function SampleForm({
   initialValues,
   enableDrafts,
   resumeDraftId,
+  editSampleId,
 }: Props) {
+  const isEdit = Boolean(editSampleId);
   const reportOptionList = reportOptions?.length ? reportOptions : [...SAMPLE_REPORT_TYPES];
   // Fetched KYC snapshot of the picked client (company / location / contact).
   const [client, setClient] = React.useState<ClientAutofill | null>(null);
@@ -199,7 +204,27 @@ export function SampleForm({
       /* non-blocking - the sample still saves */
     }
   }
-  const draftsOn = Boolean(enableDrafts);
+  // Editing never auto-saves to the Drafts inbox - drafts are a new-sample
+  // convenience only.
+  const draftsOn = Boolean(enableDrafts) && !isEdit;
+  // In edit mode, show the linked client's KYC summary strip on load (the
+  // clientId is prefilled but pickClient never ran to fetch it).
+  const initialClientId = (initialValues as { clientId?: string } | undefined)?.clientId;
+  React.useEffect(() => {
+    if (!isEdit || !initialClientId) return;
+    const seq = ++clientSeq.current;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/clients/${initialClientId}/autofill`);
+        if (!res.ok) return;
+        const data = (await res.json()) as ClientAutofill;
+        if (seq === clientSeq.current) setClient(data);
+      } catch {
+        /* non-blocking */
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEdit, initialClientId]);
   // Location option lists - editable via the Custom Dropdown Master, with the
   // built-in enum arrays as the fallback.
   const sampleLocations =
@@ -309,7 +334,7 @@ export function SampleForm({
   const submit = handleSubmit((values) => {
     setServerError(null);
     startTransition(async () => {
-      const res = await createSample({
+      const dated = {
         ...values,
         sampleDate: toIsoNoon(values.sampleDate),
         dimensionCompletedOn: toIsoNoon(values.dimensionCompletedOn),
@@ -317,6 +342,28 @@ export function SampleForm({
         drawingCompletedOn: toIsoNoon(values.drawingCompletedOn),
         costingCompletedOn: toIsoNoon(values.costingCompletedOn),
         processedDate: toIsoNoon(values.processedDate),
+      };
+
+      // ── Edit: patch the existing sample and route back to it. ──────────
+      if (editSampleId) {
+        // Send the full editable set (WYSIWYG) - the action strips undefined
+        // and no-ops empty patches. photoUrls carries the current tray so adds
+        // and removes both persist.
+        const res = await updateSample(editSampleId, { ...dated, photoUrls: photos });
+        if (!res.ok) {
+          setServerError(res.error);
+          fireToast({ message: res.error, type: "error" });
+          return;
+        }
+        fireToast({ message: "Sample saved.", type: "success" });
+        router.push(`/samples/${editSampleId}` as Route);
+        router.refresh();
+        return;
+      }
+
+      // ── Create: register a new sample. ─────────────────────────────────
+      const res = await createSample({
+        ...dated,
         photoUrls: photos.length ? photos : undefined,
       });
       if (!res.ok) {
@@ -728,7 +775,15 @@ export function SampleForm({
             letterSpacing: "0.005em",
           }}
         >
-          {uploadingCount > 0 ? "Uploading…" : pending ? "Registering" : "Register Sample"}
+          {uploadingCount > 0
+            ? "Uploading…"
+            : pending
+              ? isEdit
+                ? "Saving"
+                : "Registering"
+              : isEdit
+                ? "Save Changes"
+                : "Register Sample"}
         </button>
       </div>
     </form>

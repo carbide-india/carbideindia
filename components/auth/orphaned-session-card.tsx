@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useClerk } from "@clerk/nextjs";
+import { signOutEverywhere } from "@/lib/firebase/session-client";
 
 const NAVY = "#1E2447";
 
@@ -18,14 +18,13 @@ const NAVY = "#1E2447";
  * always lands on a working sign-in form, never a loop.
  */
 export function OrphanedSessionCard() {
-  const { signOut } = useClerk();
   const [busy, setBusy] = useState(false);
 
   async function clearAndReload() {
     if (busy) return;
     setBusy(true);
     try {
-      await signOut();
+      await signOutEverywhere();
     } catch {
       /* ignore — the hard reload below re-reads the (now cleared) session */
     } finally {
