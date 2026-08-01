@@ -4,6 +4,11 @@
   "private": true,
   "description": "Work-management system for Carbide India (Yogeshwar Engineering Pvt Ltd)",
   "packageManager": "pnpm@10.33.0",
+  "pnpm": {
+    "overrides": {
+      "jose": "^5"
+    }
+  },
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
