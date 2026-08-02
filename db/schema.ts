@@ -38,6 +38,7 @@ import {
   STAGE_STATUSES,
   COSTING_DONE_STATUSES,
   NEGOTIATION_STATUSES,
+  NEGOTIATION_STAGES,
   MEETING_PURPOSES,
   COSTING_TYPES,
   ITEM_STATUSES,
@@ -758,12 +759,41 @@ export const inquiryItems = pgTable(
     lockedById: uuid("locked_by_id").references(() => employees.id, { onDelete: "set null" }),
     lockedAt: timestamp("locked_at", { withTimezone: true }),
     feasibilityBaseline: jsonb("feasibility_baseline"),
+    // ── Feasibility Confirmed gate (per-item, AFTER Lock Dimensions) ──
+    // Confirming REQUIRES the line to be locked first (Lock = the Secondary/
+    // Technical stage). Only confirmed lines can be costed — this is the strong
+    // per-item costing gate that replaces the inquiry-level proceed_to_costing gate.
+    // Unlocking a line clears these (a line can't stay confirmed once unlocked).
+    feasibilityConfirmed: boolean("feasibility_confirmed").notNull().default(false),
+    feasibilityConfirmedById: uuid("feasibility_confirmed_by_id").references(() => employees.id, { onDelete: "set null" }),
+    feasibilityConfirmedAt: timestamp("feasibility_confirmed_at", { withTimezone: true }),
     // Grade we give the customer (external_grade master) — distinct from gradeId/gradeCustomer.
     gradeCustomerFacingId: uuid("grade_customer_facing_id").references(() => masterOptions.id, { onDelete: "set null" }),
     // Internal shop-floor production grade (internal_grade master), hidden from customer quotes.
     gradeInternalProductionId: uuid("grade_internal_production_id").references(() => masterOptions.id, { onDelete: "set null" }),
     internalProductionCodeId: uuid("internal_production_code_id").references(() => masterOptions.id, { onDelete: "set null" }),
     partNoId: uuid("part_no_id").references(() => masterOptions.id, { onDelete: "set null" }),
+    // ── Secondary / Technical Feasibility (per-item detailed technical spec) ──
+    // Sits between Primary Feasibility (the 5-check review + Lock Dimensions) and
+    // Confirm. text (not pg enums) for verdict/availability so this stays a clean
+    // ADD COLUMN set. Availability fields hold: available / to_be_made / to_procure / na.
+    // Verdict holds: feasible / not_feasible / needs_info.
+    outerDiaTol: text("outer_dia_tol"),
+    innerDiaTol: text("inner_dia_tol"),
+    lengthTol: text("length_tol"),
+    widthTol: text("width_tol"),
+    thicknessTol: text("thickness_tol"),
+    secBlockWt: numeric("sec_block_wt"),
+    secNetWt: numeric("sec_net_wt"),
+    secMaterialWt: numeric("sec_material_wt"),
+    secProcessRoute: text("sec_process_route"),
+    secToolingAvailability: text("sec_tooling_availability"),
+    secMaterialAvailability: text("sec_material_availability"),
+    secVerdict: text("sec_verdict"),
+    secNotes: text("sec_notes"),
+    secondaryFeasibilityDone: boolean("secondary_feasibility_done").notNull().default(false),
+    secondaryFeasibilityAt: timestamp("secondary_feasibility_at", { withTimezone: true }),
+    secondaryFeasibilityById: uuid("secondary_feasibility_by_id").references(() => employees.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -1104,6 +1134,7 @@ export type NewSample = typeof samples.$inferInsert;
 // ── Quotation / Negotiation / Sales Order (Phase 4) ─────────────
 export const costingDoneStatusEnum = pgEnum("costing_done_status", COSTING_DONE_STATUSES);
 export const negotiationStatusEnum = pgEnum("negotiation_status", NEGOTIATION_STATUSES);
+export const negotiationStageEnum = pgEnum("negotiation_stage", NEGOTIATION_STAGES);
 
 // ── Costing module (Phase C) ────────────────────────────────────
 export const costingRouteEnum = pgEnum("costing_route", COSTING_ROUTES);
@@ -1377,6 +1408,19 @@ export const negotiations = pgTable("negotiations", {
   quotationLink: text("quotation_link"),
   negotiationStatus: negotiationStatusEnum("negotiation_status").notNull().default("to_start"),
   negotiationNotes: text("negotiation_notes"),
+  // Proforma Invoice pipeline (2026-08-02). `negotiationStage` is the linear PI
+  // lifecycle (Quote Send → PI Issued → Negotiation Awarded → Customer PO
+  // Received); `piIterationCount` tracks how many PIs have been issued so the
+  // next PI number is `<SM>-PI##`. The customerPo* columns capture the received
+  // customer purchase order; `poMatchStatus` records the PI↔PO reconciliation
+  // (matched | mismatch | unchecked, nullable).
+  negotiationStage: negotiationStageEnum("negotiation_stage").notNull().default("quote_send"),
+  piIterationCount: integer("pi_iteration_count").notNull().default(0),
+  customerPoNo: text("customer_po_no"),
+  customerPoDate: timestamp("customer_po_date", { withTimezone: true }),
+  customerPoLink: text("customer_po_link"),
+  customerPoRemarks: text("customer_po_remarks"),
+  poMatchStatus: text("po_match_status"),
   createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -1423,6 +1467,66 @@ export const negotiationItems = pgTable(
 export type NegotiationItem = typeof negotiationItems.$inferSelect;
 export type NewNegotiationItem = typeof negotiationItems.$inferInsert;
 
+// ── Proforma Invoice (2026-08-02) ───────────────────────────────
+// A PI sits between negotiation and the customer PO. Each negotiation can issue
+// several PIs across revisions (`iteration`, numbered `<SM>-PI##`); the customer
+// signs off a PI, then sends their PO which is reconciled against it. `status`
+// is plain text (draft | issued | superseded | accepted) so the lifecycle can
+// flex without a schema change.
+export const proformaInvoices = pgTable(
+  "proforma_invoices",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    negotiationId: uuid("negotiation_id").notNull().references(() => negotiations.id, { onDelete: "cascade" }),
+    quotationId: uuid("quotation_id").references(() => quotations.id, { onDelete: "set null" }),
+    inquiryId: uuid("inquiry_id").notNull().references(() => inquiries.id, { onDelete: "cascade" }),
+    piNo: text("pi_no").unique(),
+    iteration: integer("iteration").notNull(),
+    issuedAt: timestamp("issued_at", { withTimezone: true }),
+    issuedById: uuid("issued_by_id").references(() => employees.id, { onDelete: "set null" }),
+    developmentTime: text("development_time"),
+    deliveryTime: text("delivery_time"),
+    validity: text("validity"),
+    revisedTotal: numeric("revised_total"),
+    notes: text("notes"),
+    pdfLink: text("pdf_link"),
+    status: text("status").notNull().default("draft"),
+    createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("proforma_invoices_negotiation_idx").on(t.negotiationId),
+    index("proforma_invoices_inquiry_idx").on(t.inquiryId),
+  ],
+);
+export type ProformaInvoice = typeof proformaInvoices.$inferSelect;
+export type NewProformaInvoice = typeof proformaInvoices.$inferInsert;
+
+export const proformaInvoiceItems = pgTable(
+  "proforma_invoice_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    proformaInvoiceId: uuid("proforma_invoice_id").notNull().references(() => proformaInvoices.id, { onDelete: "cascade" }),
+    negotiationItemId: uuid("negotiation_item_id").references(() => negotiationItems.id, { onDelete: "set null" }),
+    quotationItemId: uuid("quotation_item_id").references(() => quotationItems.id, { onDelete: "set null" }),
+    inquiryItemId: uuid("inquiry_item_id"),
+    itemId: uuid("item_id"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    custProductName: text("cust_product_name"),
+    qty: numeric("qty"),
+    partNo: text("part_no"),
+    revisedUnitPrice: numeric("revised_unit_price"),
+    revisedLineTotal: numeric("revised_line_total"),
+    notes: text("notes"),
+  },
+  (t) => [
+    index("proforma_invoice_items_pi_idx").on(t.proformaInvoiceId, t.sortOrder),
+  ],
+);
+export type ProformaInvoiceItem = typeof proformaInvoiceItems.$inferSelect;
+export type NewProformaInvoiceItem = typeof proformaInvoiceItems.$inferInsert;
+
 export const salesOrders = pgTable("sales_orders", {
   id: uuid("id").primaryKey().defaultRandom(),
   inquiryId: uuid("inquiry_id").notNull().references(() => inquiries.id, { onDelete: "cascade" }),
@@ -1450,6 +1554,9 @@ export const salesOrders = pgTable("sales_orders", {
   customerSoLink: text("customer_so_link"),
   customerSoSent: boolean("customer_so_sent").notNull().default(false),
   productionSoLink: text("production_so_link"),
+  // System-generated processing stamp (2026-08-02) — e.g. "Okay for processing"
+  // written when the SO is confirmed / handed to production.
+  systemRemark: text("system_remark"),
   createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

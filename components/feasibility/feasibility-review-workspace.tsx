@@ -110,8 +110,8 @@ export function FeasibilityReviewWorkspace({
   // Feasibility status is DERIVED from the five checks (auto-routes the review
   // into the right sidebar/Kanban column):
   //   any Not Feasible → Not Feasible · any Need Info → Need Info ·
-  //   any still Not Done → Not Started · all Done → Approved · Proceed to
-  //   Costing · otherwise (Done + Assumed) → Pending Approval.
+  //   any still Not Done → Not Started · all Done → Feasibility Confirmed
+  //   (proceed_to_costing) · otherwise (Done + Assumed) → Pending Approval.
   const checkValues = CHECKS.map((c) => checks[c.key].value);
   const allDone = checkValues.every((v) => v === "done");
   const doneCount = checkValues.filter((v) => v === "done").length;
@@ -219,7 +219,7 @@ export function FeasibilityReviewWorkspace({
       <SectionCard
         title="Sign-off & Routing"
         inlineHint
-        hint="Approved · Proceed to Costing unlocks the costing stage."
+        hint="Feasibility Confirmed unlocks the costing stage."
       >
         <div className="grid grid-cols-5 gap-3 max-lg:grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1">
           <Field label="Priority" labelOnly>
@@ -327,7 +327,7 @@ export function FeasibilityReviewWorkspace({
           ) : allDone ? (
             <CircleCheck size={16} />
           ) : null}
-          {allDone ? "Approve · Proceed to Costing" : "Save Review"}
+          {allDone ? "Confirm Feasibility" : "Save Review"}
         </button>
         <span className="w-full text-right text-[11px] text-ink-subtle">Ctrl / ⌘ + Enter to save</span>
       </div>

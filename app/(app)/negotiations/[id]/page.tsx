@@ -5,10 +5,14 @@ import { getNegotiationById, getNegotiationItems } from "@/lib/queries/negotiati
 import { getInquiryById } from "@/lib/queries/inquiries";
 import { listEmployeeOptions } from "@/lib/queries/employees";
 import { getInquiryItemSeeds } from "@/lib/queries/quotes";
+import { getQuotationById } from "@/lib/queries/quotations";
+import { listProformaInvoicesForNegotiation } from "@/lib/queries/proforma-invoices";
+import { getDocumentDownloadUrls } from "@/lib/storage/blob";
 import {
   NegotiationDetail,
   type NegotiationInquiryLink,
 } from "@/components/negotiations/negotiation-detail";
+import type { QuoteSendSummary } from "@/components/negotiations/quote-send-header";
 import { SyncProductsBanner } from "@/components/pipeline/sync-products-banner";
 import { syncProductsFromEnquiry } from "@/app/(app)/negotiations/actions";
 import { WorkflowStepper } from "@/components/workflow/workflow-stepper";
@@ -45,7 +49,9 @@ export default async function NegotiationDetailPage({ params }: PageProps) {
 
   // The linked enquiry (SM repo) supplies the header SM chip + number, and the
   // seed list lets us flag products added to the enquiry after this negotiation.
-  const [employees, inquiry, lines, seeds] = await Promise.all([
+  // The linked quotation drives the Quote Send anchor; the PI list feeds the
+  // iteration history + the customer-PO reconciliation.
+  const [employees, inquiry, lines, seeds, quotation, proformaInvoices] = await Promise.all([
     listEmployeeOptions(),
     negotiation.inquiryId
       ? getInquiryById(negotiation.inquiryId)
@@ -54,7 +60,34 @@ export default async function NegotiationDetailPage({ params }: PageProps) {
     negotiation.inquiryId
       ? getInquiryItemSeeds(negotiation.inquiryId)
       : Promise.resolve([]),
+    negotiation.quotationId
+      ? getQuotationById(negotiation.quotationId)
+      : Promise.resolve(null),
+    listProformaInvoicesForNegotiation(negotiation.id),
   ]);
+
+  // Quote Send summary — the source quote's identity, falling back to the
+  // negotiation's own snapshotted price/link when there is no linked quote.
+  const quoteSend: QuoteSendSummary = {
+    quoteNo: quotation?.quoteNo ?? null,
+    quotePrice: quotation?.quotePrice ?? negotiation.quotePrice ?? null,
+    quotationLink: quotation?.quotationLink ?? negotiation.quotationLink ?? null,
+    quoteSent: quotation?.quoteSent ?? false,
+  };
+
+  // Latest PI total (list is newest-iteration first) for PI↔PO reconciliation.
+  const latestPiTotal = proformaInvoices[0]?.revisedTotal ?? null;
+
+  // Presign the stored customer-PO document pathname for a working "view" link.
+  let poDownloadUrl: string | null = null;
+  if (negotiation.customerPoLink) {
+    try {
+      const urls = await getDocumentDownloadUrls([negotiation.customerPoLink]);
+      poDownloadUrl = urls.get(negotiation.customerPoLink) ?? null;
+    } catch {
+      poDownloadUrl = null;
+    }
+  }
 
   const inquiryLink: NegotiationInquiryLink | null = inquiry
     ? {
@@ -93,6 +126,10 @@ export default async function NegotiationDetailPage({ params }: PageProps) {
         employees={employees}
         inquiryLink={inquiryLink}
         lines={lines}
+        quoteSend={quoteSend}
+        proformaInvoices={proformaInvoices}
+        latestPiTotal={latestPiTotal}
+        poDownloadUrl={poDownloadUrl}
       />
     </main>
   );

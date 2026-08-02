@@ -15,6 +15,7 @@ import {
   CircleX,
   Clock3,
   CircleCheck,
+  BadgeCheck,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
@@ -26,8 +27,9 @@ import { cn } from "@/lib/utils";
 /**
  * Primary-Feasibility module shell — its own chrome (like the other form
  * modules). The sidebar is the review pipeline by status: All Reviews, Not
- * Started, Need Info, Not Feasible, Pending Approval, Approved · Costing. Each
- * status links the queue to `/feasibility?status=<value>`.
+ * Started, Need Info, Not Feasible, Pending Approval, Feasibility Confirmed. Each
+ * status links the queue to `/feasibility?status=<value>`. Below the pipeline a
+ * Registers group links standalone pages (Confirmed Feasibility register).
  */
 
 interface StatusNav {
@@ -44,7 +46,12 @@ const NAV: StatusNav[] = [
   { label: "Need Info", status: "need_info", Icon: CircleHelp, group: "pipeline" },
   { label: "Not Feasible", status: "not_feasible", Icon: CircleX, group: "pipeline" },
   { label: "Pending Approval", status: "pending_approval", Icon: Clock3, group: "pipeline" },
-  { label: "Approved · Proceed to Costing", status: "proceed_to_costing", Icon: CircleCheck, group: "pipeline" },
+  { label: "Feasibility Confirmed", status: "proceed_to_costing", Icon: CircleCheck, group: "pipeline" },
+];
+
+/** Registers under the pipeline — not status-filtered queue views. */
+const REGISTER_NAV = [
+  { label: "Confirmed Feasibility", href: "/feasibility/confirmed" as Route, Icon: BadgeCheck },
 ];
 
 function hrefFor(status: string): Route {
@@ -153,6 +160,30 @@ export function FeasibilityModuleShell({
                       {!collapsed && <span className="truncate">{n.label}</span>}
                     </Link>
                   </Fragment>
+                );
+              })}
+
+              <div className="my-2 h-[1.5px] rounded-full bg-[#c2c7d6]" />
+              {REGISTER_NAV.map((r) => {
+                const isActive = pathname === r.href;
+                const base = cn(
+                  "flex h-[42px] items-center rounded-lg text-[13.5px] transition",
+                  collapsed ? "justify-center px-0" : "gap-3 px-3.5",
+                );
+                return (
+                  <Link
+                    key={r.href}
+                    href={r.href}
+                    title={collapsed ? r.label : undefined}
+                    className={
+                      isActive
+                        ? `${base} bg-[#3f3f94] font-bold text-white shadow-[0_2px_8px_rgba(63,63,148,0.30)]`
+                        : `${base} font-semibold text-[#3a4152] hover:bg-[#efeffb] hover:text-[#3f3f94]`
+                    }
+                  >
+                    <r.Icon className="h-[18px] w-[18px] shrink-0" />
+                    {!collapsed && <span className="truncate">{r.label}</span>}
+                  </Link>
                 );
               })}
             </nav>

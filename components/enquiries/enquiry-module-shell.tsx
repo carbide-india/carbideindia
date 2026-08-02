@@ -14,6 +14,8 @@ import {
   LayoutDashboard,
   LayoutGrid,
   Contact,
+  Truck,
+  FileCheck2,
   SlidersHorizontal,
   ClipboardCheck,
   Trash2,
@@ -130,6 +132,8 @@ function navFor(pathname: string): NavDef[] {
             !p.startsWith(`${reg.href}/new`) &&
             !p.startsWith(`${reg.href}/drafts`) &&
             !p.startsWith(`${reg.href}/recycle-bin`) &&
+            !p.startsWith(`${reg.href}/vendors`) &&
+            !p.startsWith(`${reg.href}/po-register`) &&
             !p.startsWith(`${reg.href}/custom`)),
       };
     })(),
@@ -142,6 +146,34 @@ function navFor(pathname: string): NavDef[] {
             Icon: Contact,
             ready: true,
             active: (p: string) => p.startsWith("/contacts"),
+            group: "records" as const,
+          },
+        ] as NavDef[])
+      : []),
+    // Vendor Master - only in the Costing family. Lives under /costings/vendors
+    // so the Costing sidebar stays on every vendor page (records section).
+    ...(familySeg(pathname) === "costings"
+      ? ([
+          {
+            label: "Vendor Master",
+            href: "/costings/vendors" as Route,
+            Icon: Truck,
+            ready: true,
+            active: (p: string) => p.startsWith("/costings/vendors"),
+            group: "records" as const,
+          },
+        ] as NavDef[])
+      : []),
+    // Customer PO Register - only in the Negotiation family. Lives under
+    // /negotiations/po-register so the Negotiation sidebar stays on it (records).
+    ...(familySeg(pathname) === "negotiations"
+      ? ([
+          {
+            label: "Customer PO Register",
+            href: "/negotiations/po-register" as Route,
+            Icon: FileCheck2,
+            ready: true,
+            active: (p: string) => p.startsWith("/negotiations/po-register"),
             group: "records" as const,
           },
         ] as NavDef[])

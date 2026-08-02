@@ -53,7 +53,7 @@ export default async function FeasibilityDashboardPage({
         <StatMini label="Not Started" value={notStarted} accent="#64748b" />
         <StatMini label="In Review" value={inReview} accent="#2563eb" />
         <StatMini label="Need Info" value={needInfo} accent="#d97706" />
-        <StatMini label="Approved · Costing" value={approved} accent="#16a34a" />
+        <StatMini label="Feasibility Confirmed" value={approved} accent="#16a34a" />
         <StatMini label="Not Feasible" value={notFeasible} accent="#dc2626" />
       </div>
 

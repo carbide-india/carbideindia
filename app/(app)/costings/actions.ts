@@ -25,7 +25,7 @@ import {
   type InhouseCalculatorValue,
 } from "@/lib/costing/inhouse-master";
 import { getCostingDecision } from "@/lib/queries/costings";
-import { isFeasibilityApproved } from "@/lib/queries/feasibility";
+import { isItemFeasibilityConfirmed } from "@/lib/queries/feasibility";
 import type { CostingRoute } from "@/db/enums";
 
 type SaveCostingResult =
@@ -87,13 +87,15 @@ export async function saveCosting(
     };
   }
 
-  // ── Hard gate: costing is blocked until Primary Feasibility is approved ──
-  // (feasibility status = proceed_to_costing). Enforces the professional
-  // pipeline; a not-feasible or pending review cannot be costed.
-  if (!(await isFeasibilityApproved(v.inquiryId))) {
+  // ── Hard gate: costing is blocked until this line's feasibility is CONFIRMED ──
+  // The strong per-item gate (feasibility_confirmed = true, set after Lock
+  // Dimensions in Primary Feasibility). Enforces the professional pipeline; an
+  // unconfirmed / not-feasible / pending line cannot be costed.
+  if (!(await isItemFeasibilityConfirmed(v.inquiryItemId))) {
     return {
       ok: false,
-      error: "Primary Feasibility must be approved before this enquiry can be costed.",
+      error:
+        "This product line's feasibility is not confirmed yet - confirm it in Primary Feasibility before costing.",
     };
   }
 
@@ -375,11 +377,12 @@ export async function approveCostingDecision(
     return { ok: false, error: "Product line not found." };
   }
 
-  // ── Hard gate: feasibility must be approved before a decision can lock ──
-  if (!(await isFeasibilityApproved(ownItem.inquiryId))) {
+  // ── Hard gate: this line's feasibility must be CONFIRMED before a decision locks ──
+  if (!(await isItemFeasibilityConfirmed(inquiryItemId))) {
     return {
       ok: false,
-      error: "Primary Feasibility must be approved before this enquiry can be costed.",
+      error:
+        "This product line's feasibility is not confirmed yet - confirm it in Primary Feasibility before costing.",
     };
   }
 
@@ -821,11 +824,12 @@ export async function saveCostingMaster(
     };
   }
 
-  // ── Hard gate: Primary Feasibility must be approved ──
-  if (!(await isFeasibilityApproved(v.inquiryId))) {
+  // ── Hard gate: this line's feasibility must be CONFIRMED (per-item) ──
+  if (!(await isItemFeasibilityConfirmed(v.inquiryItemId))) {
     return {
       ok: false,
-      error: "Primary Feasibility must be approved before this enquiry can be costed.",
+      error:
+        "This product line's feasibility is not confirmed yet - confirm it in Primary Feasibility before costing.",
     };
   }
 

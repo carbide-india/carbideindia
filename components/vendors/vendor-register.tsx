@@ -57,7 +57,7 @@ export function VendorRegister({ rows, isAdmin }: Props) {
         exportValue: (r) => r.vendorCode ?? "",
         cell: (r) => (
           <Link
-            href={`/vendors/${r.id}` as Route}
+            href={`/costings/vendors/${r.id}` as Route}
             className="font-semibold text-ink-strong hover:underline"
             style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}
           >
@@ -164,13 +164,13 @@ export function VendorRegister({ rows, isAdmin }: Props) {
           key: "record",
           label: "Full Record",
           Icon: FileText,
-          href: `/vendors/${row.id}` as Route,
+          href: `/costings/vendors/${row.id}` as Route,
         },
         {
           key: "edit",
           label: "Edit",
           Icon: Pencil,
-          href: `/vendors/${row.id}/edit` as Route,
+          href: `/costings/vendors/${row.id}/edit` as Route,
         },
       ];
       if (isAdmin) {
@@ -195,8 +195,8 @@ export function VendorRegister({ rows, isAdmin }: Props) {
       rows={rows}
       getRowId={(r) => r.id}
       columns={columns}
-      getOpenHref={(r) => `/vendors/${r.id}` as Route}
-      getEditHref={(r) => `/vendors/${r.id}/edit` as Route}
+      getOpenHref={(r) => `/costings/vendors/${r.id}` as Route}
+      getEditHref={(r) => `/costings/vendors/${r.id}/edit` as Route}
       filters={filters}
       exportFilename="vendors"
       showExport={false}

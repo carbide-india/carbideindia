@@ -157,7 +157,7 @@ export function EnquiryLaunchpad() {
             <Link
               key={f.key}
               href={f.href}
-              className="group relative flex flex-col items-center overflow-hidden rounded-2xl border-2 border-[#2b303b] bg-white p-4 text-center transition-all duration-200 hover:-translate-y-1 hover:border-[#3f3f94] hover:shadow-[0_18px_36px_-16px_rgba(63,63,148,0.4)]"
+              className="group relative flex flex-col items-center overflow-hidden rounded-2xl border border-[#e3e5ec] bg-white p-4 text-center transition-all duration-200 hover:-translate-y-1 hover:border-[#3f3f94] hover:shadow-[0_18px_36px_-16px_rgba(63,63,148,0.4)]"
             >
               {/* Stage number - corner badge. */}
               <span

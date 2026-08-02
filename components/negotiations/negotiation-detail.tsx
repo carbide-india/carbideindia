@@ -13,6 +13,7 @@ import {
 } from "@/db/enums";
 import type { Negotiation } from "@/db/schema";
 import type { NegotiationLineWithSpec } from "@/lib/queries/negotiations";
+import type { ProformaInvoiceWithItems } from "@/lib/queries/proforma-invoices";
 import {
   setNegotiationStatus,
   updateNegotiation,
@@ -24,6 +25,12 @@ import { fireToast } from "@/lib/toast";
 import { Field, MiniField, SectionCard } from "@/components/inquiries/form-field";
 import { StatusPicker } from "@/components/inquiries/status-picker";
 import { MoneyInput } from "@/components/ui/money-input";
+import {
+  QuoteSendHeader,
+  type QuoteSendSummary,
+} from "@/components/negotiations/quote-send-header";
+import { PiHistory } from "@/components/negotiations/pi-history";
+import { CustomerPoCard } from "@/components/negotiations/customer-po-card";
 
 /** Slim link block for the header - resolved server-side from inquiryId. */
 export interface NegotiationInquiryLink {
@@ -37,6 +44,14 @@ interface Props {
   employees: EmployeeOption[];
   inquiryLink: NegotiationInquiryLink | null;
   lines: NegotiationLineWithSpec[];
+  /** Source-quote identity for the Quote Send anchor. */
+  quoteSend: QuoteSendSummary;
+  /** Every PI issued against this negotiation, newest iteration first. */
+  proformaInvoices: ProformaInvoiceWithItems[];
+  /** Revised total of the latest PI (for the customer-PO reconciliation). */
+  latestPiTotal: string | null;
+  /** Presigned download URL for an already-uploaded customer-PO document. */
+  poDownloadUrl: string | null;
 }
 
 /** numeric-string → ₹, em-dash when unset/unparseable. */
@@ -91,7 +106,16 @@ const NUMERIC_KEYS = new Set<keyof NegotiationEditValues>([
  * person, Created/by, Open Register), read cards for Pricing + Timeline + Notes
  * plus ONE dirty-only edit form (mirrors the quotation detail).
  */
-export function NegotiationDetail({ negotiation, employees, inquiryLink, lines }: Props) {
+export function NegotiationDetail({
+  negotiation,
+  employees,
+  inquiryLink,
+  lines,
+  quoteSend,
+  proformaInvoices,
+  latestPiTotal,
+  poDownloadUrl,
+}: Props) {
   const router = useRouter();
 
   const salesPerson =
@@ -224,6 +248,40 @@ export function NegotiationDetail({ negotiation, employees, inquiryLink, lines }
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr] items-start">
         {/* ── Main column ───────────────────────────────────────────── */}
         <div className="flex flex-col gap-6 min-w-0">
+          {/* Quote Send anchor + PI progress strip + Issue PI trigger */}
+          <QuoteSendHeader
+            negotiationId={negotiation.id}
+            stage={negotiation.negotiationStage}
+            piCount={negotiation.piIterationCount}
+            quoteSend={quoteSend}
+            lines={lines}
+            defaultTerms={{
+              developmentTime: negotiation.developmentTime,
+              deliveryTime: negotiation.deliveryTime,
+              validity: negotiation.validity,
+            }}
+          />
+
+          {/* PI iteration history */}
+          <PiHistory invoices={proformaInvoices} />
+
+          {/* Customer PO (award → capture → accept) — shown once a PI is issued */}
+          {negotiation.negotiationStage !== "quote_send" && (
+            <CustomerPoCard
+              negotiationId={negotiation.id}
+              stage={negotiation.negotiationStage}
+              po={{
+                customerPoNo: negotiation.customerPoNo,
+                customerPoDate: negotiation.customerPoDate,
+                customerPoLink: negotiation.customerPoLink,
+                customerPoRemarks: negotiation.customerPoRemarks,
+                poMatchStatus: negotiation.poMatchStatus,
+              }}
+              latestPiTotal={latestPiTotal}
+              poDownloadUrl={poDownloadUrl}
+            />
+          )}
+
           {/* Pricing (read) */}
           <SectionCard title="Pricing">
             <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">

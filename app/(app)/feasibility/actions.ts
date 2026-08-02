@@ -110,6 +110,88 @@ export async function setFeasibilityStatus(
 }
 
 /**
+ * Save the Secondary / Technical Feasibility for one product line — the detailed
+ * technical-spec stage that sits between Primary Feasibility (the 5-check review +
+ * Lock Dimensions) and Confirm. Writes per-dimension tolerances, secondary weights,
+ * manufacturability (process route + tooling/material availability), the technical
+ * verdict and notes. When `markDone` is passed it stamps the line as done
+ * (secondaryFeasibilityDone + at + by), which unlocks the Confirm step. Any user
+ * may save.
+ */
+export async function saveSecondaryFeasibility(input: {
+  inquiryItemId: string;
+  outerDiaTol?: string | null;
+  innerDiaTol?: string | null;
+  lengthTol?: string | null;
+  widthTol?: string | null;
+  thicknessTol?: string | null;
+  secBlockWt?: string | null;
+  secNetWt?: string | null;
+  secMaterialWt?: string | null;
+  gradeInternalProductionId?: string | null;
+  conditionId?: string | null;
+  secProcessRoute?: string | null;
+  secToolingAvailability?: string | null;
+  secMaterialAvailability?: string | null;
+  secVerdict?: string | null;
+  secNotes?: string | null;
+  markDone?: boolean;
+}): Promise<Result> {
+  const me = await requireUser();
+  const { inquiryItemId, markDone, ...fields } = input;
+  if (!UUID_RE.test(inquiryItemId)) return { ok: false, error: "Invalid product line." };
+
+  const [item] = await db
+    .select({ inquiryId: inquiryItems.inquiryId })
+    .from(inquiryItems)
+    .where(eq(inquiryItems.id, inquiryItemId))
+    .limit(1);
+  if (!item) return { ok: false, error: "Product line not found." };
+
+  const now = new Date();
+  const patch = clean({
+    outerDiaTol: fields.outerDiaTol,
+    innerDiaTol: fields.innerDiaTol,
+    lengthTol: fields.lengthTol,
+    widthTol: fields.widthTol,
+    thicknessTol: fields.thicknessTol,
+    secBlockWt: fields.secBlockWt,
+    secNetWt: fields.secNetWt,
+    secMaterialWt: fields.secMaterialWt,
+    // Internal production grade + condition/finish reuse the existing spine
+    // columns (also captured in the lock baseline snapshot).
+    gradeInternalProductionId: fields.gradeInternalProductionId,
+    conditionId: fields.conditionId,
+    secProcessRoute: fields.secProcessRoute,
+    secToolingAvailability: fields.secToolingAvailability,
+    secMaterialAvailability: fields.secMaterialAvailability,
+    secVerdict: fields.secVerdict,
+    secNotes: fields.secNotes,
+    ...(markDone
+      ? {
+          secondaryFeasibilityDone: true,
+          secondaryFeasibilityAt: now,
+          secondaryFeasibilityById: me.id,
+        }
+      : {}),
+    updatedAt: now,
+  });
+
+  try {
+    await db
+      .update(inquiryItems)
+      .set(patch)
+      .where(eq(inquiryItems.id, inquiryItemId));
+  } catch {
+    return { ok: false, error: "Could not save Secondary Feasibility - please try again." };
+  }
+
+  revalidatePath(`/feasibility/${item.inquiryId}`);
+  revalidatePath(`/enquiries/register/${item.inquiryId}`);
+  return { ok: true };
+}
+
+/**
  * Lock one product line's dimensions & specifications (Form 04 → Form 05 gate,
  * migration 0062). Freezes a JSON snapshot of the live spec fields into
  * `feasibility_baseline` — the frozen PF baseline the PF-vs-Costing variance
@@ -126,6 +208,11 @@ export async function lockItemDimensions(inquiryItemId: string): Promise<Result>
     .where(eq(inquiryItems.id, inquiryItemId))
     .limit(1);
   if (!item) return { ok: false, error: "Product line not found." };
+
+  // Gate: Secondary / Technical Feasibility must be completed before Confirm (lock).
+  if (item.secondaryFeasibilityDone !== true) {
+    return { ok: false, error: "Complete Secondary Feasibility before confirming." };
+  }
 
   const now = new Date();
   // Frozen snapshot of the LIVE spec columns at lock time (baseline for variance).
@@ -194,6 +281,11 @@ export async function unlockItemDimensions(inquiryItemId: string): Promise<Resul
         isDimensionsLocked: false,
         lockedById: null,
         lockedAt: null,
+        // A line can't stay feasibility-confirmed once its dimensions are unlocked
+        // (confirmation requires a lock) — clear the confirmed fields too.
+        feasibilityConfirmed: false,
+        feasibilityConfirmedById: null,
+        feasibilityConfirmedAt: null,
         updatedAt: new Date(),
       })
       .where(eq(inquiryItems.id, inquiryItemId));
@@ -202,6 +294,90 @@ export async function unlockItemDimensions(inquiryItemId: string): Promise<Resul
   }
 
   revalidatePath(`/feasibility/${item.inquiryId}`);
+  revalidatePath(`/feasibility/confirmed`);
+  revalidatePath(`/costings/new`);
+  revalidatePath(`/enquiries/register/${item.inquiryId}`);
+  return { ok: true };
+}
+
+/**
+ * Confirm one product line's feasibility — the per-item step AFTER Lock
+ * Dimensions. Confirming REQUIRES the line to be locked first (Lock = the
+ * Secondary/Technical stage). Only confirmed lines flow to Costing (the strong
+ * per-item costing gate). Any user may confirm.
+ */
+export async function confirmItemFeasibility(inquiryItemId: string): Promise<Result> {
+  const me = await requireUser();
+  if (!UUID_RE.test(inquiryItemId)) return { ok: false, error: "Invalid product line." };
+
+  const [item] = await db
+    .select({
+      inquiryId: inquiryItems.inquiryId,
+      isDimensionsLocked: inquiryItems.isDimensionsLocked,
+    })
+    .from(inquiryItems)
+    .where(eq(inquiryItems.id, inquiryItemId))
+    .limit(1);
+  if (!item) return { ok: false, error: "Product line not found." };
+  if (!item.isDimensionsLocked) {
+    return { ok: false, error: "Lock the dimensions before confirming feasibility." };
+  }
+
+  const now = new Date();
+  try {
+    await db
+      .update(inquiryItems)
+      .set({
+        feasibilityConfirmed: true,
+        feasibilityConfirmedById: me.id,
+        feasibilityConfirmedAt: now,
+        updatedAt: now,
+      })
+      .where(eq(inquiryItems.id, inquiryItemId));
+  } catch {
+    return { ok: false, error: "Could not confirm the feasibility - please try again." };
+  }
+
+  revalidatePath(`/feasibility/${item.inquiryId}`);
+  revalidatePath(`/feasibility/confirmed`);
+  revalidatePath(`/costings/new`);
+  revalidatePath(`/enquiries/register/${item.inquiryId}`);
+  return { ok: true };
+}
+
+/**
+ * Un-confirm one product line (admin-only, reversible). Clears the confirmed
+ * flag + who/when so the line drops out of the Confirmed Feasibility Register
+ * and can no longer be costed until re-confirmed.
+ */
+export async function unconfirmItemFeasibility(inquiryItemId: string): Promise<Result> {
+  await requireAdmin();
+  if (!UUID_RE.test(inquiryItemId)) return { ok: false, error: "Invalid product line." };
+
+  const [item] = await db
+    .select({ inquiryId: inquiryItems.inquiryId })
+    .from(inquiryItems)
+    .where(eq(inquiryItems.id, inquiryItemId))
+    .limit(1);
+  if (!item) return { ok: false, error: "Product line not found." };
+
+  try {
+    await db
+      .update(inquiryItems)
+      .set({
+        feasibilityConfirmed: false,
+        feasibilityConfirmedById: null,
+        feasibilityConfirmedAt: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(inquiryItems.id, inquiryItemId));
+  } catch {
+    return { ok: false, error: "Could not un-confirm the feasibility." };
+  }
+
+  revalidatePath(`/feasibility/${item.inquiryId}`);
+  revalidatePath(`/feasibility/confirmed`);
+  revalidatePath(`/costings/new`);
   revalidatePath(`/enquiries/register/${item.inquiryId}`);
   return { ok: true };
 }

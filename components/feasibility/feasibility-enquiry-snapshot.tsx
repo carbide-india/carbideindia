@@ -59,23 +59,47 @@ export function FeasibilityEnquirySnapshot({
   const docs = (inquiry.docsGiven ?? []) as string[];
   const gridClass = "grid grid-cols-2 divide-x divide-y divide-[#c6cbdd] sm:grid-cols-3 lg:grid-cols-4";
 
+  // Dimensions: a measurement box is only shown when it has a value — so
+  // dims that don't apply to the shape (e.g. Width/Thickness on a Cylinder)
+  // drop off the screen instead of showing a bare "-". Shape + the spec fields
+  // (grade/tolerance/condition) always show. All visible boxes sit on one line.
+  const has = (v: string | number | null | undefined): boolean =>
+    v != null && String(v).trim() !== "";
+  const outerDia = product?.outerDia ?? inquiry.outerDia;
+  const innerDia = product?.innerDia ?? inquiry.innerDia;
+  const length = product?.length ?? inquiry.length;
+  const width = product?.width ?? inquiry.width;
+  const thickness = product?.thickness ?? inquiry.thickness;
+  const dimCells: { label: string; value: React.ReactNode }[] = [
+    { label: "Shape", value: dash(product?.shapeName ?? inquiry.shape) },
+    ...(has(outerDia) ? [{ label: "Outer Dia", value: dim(outerDia) }] : []),
+    ...(has(innerDia) ? [{ label: "Inner Dia", value: dim(innerDia) }] : []),
+    ...(has(length) ? [{ label: "Length", value: dim(length) }] : []),
+    ...(has(width) ? [{ label: "Width", value: dim(width) }] : []),
+    ...(has(thickness) ? [{ label: "Thickness", value: dim(thickness) }] : []),
+    { label: "Grade (Customer)", value: dash(product?.gradeCustomer ?? product?.gradeName) },
+    { label: "Tolerance", value: dash(product?.toleranceName) },
+    { label: "Condition", value: dash(product?.conditionName) },
+  ];
+
   return (
     <div className="overflow-hidden rounded-section border-2 border-[#b7bcd2] bg-surface-card">
       <Band title="Enquiry & Customer" />
       <div className={gridClass}>
-        <Cell label="Sr No" value={dash(null)} />
         <Cell label="Enquiry Date" value={fmtDate(inquiry.enquiryDate)} />
         <Cell label="SM Number" value={dash(inquiry.smNumber)} />
         <Cell label="Company Name" value={dash(inquiry.companyName)} />
-        <Cell label="Country Name" value={dash(inquiry.country)} />
         <Cell label="Customer First Name" value={dash(inquiry.contactFirstName)} />
         <Cell label="Customer Last Name" value={dash(inquiry.contactLastName)} />
         <Cell label="Contact No" value={dash(inquiry.contactNo)} />
+        <Cell label="Country Name" value={dash(inquiry.country)} />
       </div>
 
       <Band title="Product & Quantity" />
-      <div className={gridClass}>
-        <div className="col-span-full">
+      <div className="grid grid-cols-2 divide-x divide-y divide-[#c6cbdd] sm:grid-cols-3 lg:grid-cols-6">
+        {/* Product description gets the extra width (spans 2) and wraps long
+            text; the four quantity fields share the rest of the same line. */}
+        <div className="col-span-2 sm:col-span-3 lg:col-span-2">
           <Cell label="Product Description (Detailed Note)" value={dash(inquiry.productDescription)} />
         </div>
         <Cell label="Quantity Status" value={check(inquiry.quantityStatus)} />
@@ -96,19 +120,17 @@ export function FeasibilityEnquirySnapshot({
       </div>
 
       <Band title="Dimensions & Specification" />
-      <div className={gridClass}>
-        <Cell label="Shape" value={dash(product?.shapeName ?? inquiry.shape)} />
-        <Cell label="Outer Dia" value={dim(product?.outerDia ?? inquiry.outerDia)} />
-        <Cell label="Inner Dia" value={dim(product?.innerDia ?? inquiry.innerDia)} />
-        <Cell label="Length" value={dim(product?.length ?? inquiry.length)} />
-        <Cell label="Width" value={dim(product?.width ?? inquiry.width)} />
-        <Cell label="Thickness" value={dim(product?.thickness ?? inquiry.thickness)} />
-        <Cell label="Grade (Customer)" value={dash(product?.gradeCustomer ?? product?.gradeName)} />
-        <Cell label="Tolerance" value={dash(product?.toleranceName)} />
-        <Cell label="Condition" value={dash(product?.conditionName)} />
-        <div className="col-span-full">
-          <Cell label="Dimension Notes" value={dash(inquiry.dimensionNotes)} />
-        </div>
+      {/* All applicable boxes on ONE line (equal widths on desktop); boxes that
+          don't apply to the shape are omitted entirely. Stacks on small screens. */}
+      <div className="flex flex-col divide-y divide-[#c6cbdd] lg:flex-row lg:divide-x lg:divide-y-0">
+        {dimCells.map((c) => (
+          <div key={c.label} className="lg:min-w-0 lg:flex-1">
+            <Cell label={c.label} value={c.value} />
+          </div>
+        ))}
+      </div>
+      <div className="border-t border-[#c6cbdd]">
+        <Cell label="Dimension Notes" value={dash(inquiry.dimensionNotes)} />
       </div>
 
       <Band title="Links & Notes" />

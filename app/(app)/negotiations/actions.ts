@@ -1,9 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, count, eq, inArray } from "drizzle-orm";
+import { and, count, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { negotiations, negotiationItems, type NewNegotiation } from "@/db/schema";
+import {
+  negotiations,
+  negotiationItems,
+  proformaInvoices,
+  proformaInvoiceItems,
+  salesOrders,
+  inquiries,
+  type NewNegotiation,
+} from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
 import { negotiationLineRows, negotiationLineInsert } from "@/lib/negotiations/line-rows";
 import {
@@ -12,7 +20,9 @@ import {
   getInquiryItemSeeds,
   type QuoteLineSeed,
 } from "@/lib/queries/quotes";
-import { NEGOTIATION_STATUSES, type NegotiationStatus } from "@/db/enums";
+import { getNegotiationItems } from "@/lib/queries/negotiations";
+import { provisionSalesOrderFromNegotiation } from "@/lib/workflow/provision";
+import { NEGOTIATION_STATUSES, NEGOTIATION_STAGES, type NegotiationStatus } from "@/db/enums";
 import {
   CreateNegotiationSchema,
   UpdateNegotiationSchema,
@@ -343,4 +353,342 @@ export async function setNegotiationStatusBulk(
   }
   revalidatePath("/negotiations");
   return { ok: true };
+}
+
+// ── Proforma Invoice pipeline (2026-08-02) ──────────────────────────────────
+// A negotiation walks a linear stage: Quote Send → PI Issued → Negotiation
+// Awarded → Customer PO Received → (Sales Order). The actions below drive that
+// stage, distinct from the day-to-day negotiation_status pill.
+
+/** One line of a proforma invoice — references its source negotiation line. */
+export interface IssuePiItemInput {
+  negotiationItemId?: string;
+  inquiryItemId?: string;
+  revisedUnitPrice: number;
+  qty: number;
+  notes?: string;
+}
+
+export interface IssuePiInput {
+  negotiationId: string;
+  items: IssuePiItemInput[];
+  developmentTime?: string;
+  deliveryTime?: string;
+  validity?: string;
+  notes?: string;
+}
+
+type PiResult = { ok: true; id: string } | { ok: false; error: string };
+
+/**
+ * Issue the next Proforma Invoice for a negotiation. Allocates the per-SM PI
+ * number `<SM>-PI##` off `piIterationCount`, snapshots the priced lines
+ * (revisedLineTotal = revisedUnitPrice × qty; revisedTotal = Σ), sets the stage
+ * to `pi_issued` and bumps the iteration counter — all in one transaction.
+ */
+export async function issueProformaInvoice(
+  input: IssuePiInput,
+): Promise<PiResult> {
+  const me = await requireUser();
+  const { negotiationId } = input;
+  if (!isUuid(negotiationId)) return { ok: false, error: "Invalid negotiation id." };
+  if (!Array.isArray(input.items) || input.items.length === 0) {
+    return { ok: false, error: "Add at least one line to the proforma invoice." };
+  }
+
+  // Negotiation head + its SM number (the PI number prefix).
+  const [neg] = await db
+    .select({
+      id: negotiations.id,
+      inquiryId: negotiations.inquiryId,
+      quotationId: negotiations.quotationId,
+      piIterationCount: negotiations.piIterationCount,
+      smNumber: inquiries.smNumber,
+    })
+    .from(negotiations)
+    .leftJoin(inquiries, eq(negotiations.inquiryId, inquiries.id))
+    .where(eq(negotiations.id, negotiationId))
+    .limit(1);
+  if (!neg) return { ok: false, error: "Negotiation not found." };
+
+  // Resolve product name / part no / provenance read-through from the neg lines.
+  const negLines = await getNegotiationItems(negotiationId);
+  const byNegItem = new Map(negLines.map((l) => [l.id, l]));
+  const byInqItem = new Map(
+    negLines
+      .filter((l) => l.inquiryItemId)
+      .map((l) => [l.inquiryItemId as string, l]),
+  );
+
+  const toNum = (v: number | undefined | null): number =>
+    typeof v === "number" && Number.isFinite(v) ? v : 0;
+
+  let revisedTotal = 0;
+  const lineRows = input.items.map((it, i) => {
+    const line =
+      (it.negotiationItemId ? byNegItem.get(it.negotiationItemId) : undefined) ??
+      (it.inquiryItemId ? byInqItem.get(it.inquiryItemId) : undefined);
+    const unit = toNum(it.revisedUnitPrice);
+    const qty = toNum(it.qty);
+    const lineTotal = unit * qty;
+    revisedTotal += lineTotal;
+    return {
+      negotiationItemId: it.negotiationItemId ?? line?.id ?? null,
+      quotationItemId: line?.quotationItemId ?? null,
+      inquiryItemId: it.inquiryItemId ?? line?.inquiryItemId ?? null,
+      itemId: line?.itemId ?? null,
+      sortOrder: line?.sortOrder ?? i,
+      custProductName:
+        line?.ask.custProductName ??
+        line?.spec.gradeNameForCust ??
+        line?.spec.itemCode ??
+        null,
+      partNo: line?.spec.partNo ?? null,
+      qty: String(qty),
+      revisedUnitPrice: String(unit),
+      revisedLineTotal: String(lineTotal),
+      notes: it.notes ?? null,
+    };
+  });
+
+  const sm = neg.smNumber ?? "SM";
+  const baseIter = (neg.piIterationCount ?? 0) + 1;
+
+  for (let attempt = 0; attempt < MAX_NO_TRIES; attempt++) {
+    const iteration = baseIter + attempt;
+    const piNo = `${sm}-PI${String(iteration).padStart(2, "0")}`;
+    try {
+      const id = await db.transaction(async (tx) => {
+        const now = new Date();
+        const [head] = await tx
+          .insert(proformaInvoices)
+          .values({
+            negotiationId,
+            quotationId: neg.quotationId,
+            inquiryId: neg.inquiryId,
+            piNo,
+            iteration,
+            issuedAt: now,
+            issuedById: me.id,
+            developmentTime: input.developmentTime,
+            deliveryTime: input.deliveryTime,
+            validity: input.validity,
+            revisedTotal: String(revisedTotal),
+            notes: input.notes,
+            status: "issued",
+            createdById: me.id,
+          })
+          .returning({ id: proformaInvoices.id });
+        if (!head) throw new Error("proforma_invoices insert returned no row");
+        await tx
+          .insert(proformaInvoiceItems)
+          .values(lineRows.map((r) => ({ proformaInvoiceId: head.id, ...r })));
+        await tx
+          .update(negotiations)
+          .set({
+            negotiationStage: "pi_issued",
+            piIterationCount: iteration,
+            updatedAt: now,
+          })
+          .where(eq(negotiations.id, negotiationId));
+        return head.id;
+      });
+      revalidatePath("/negotiations");
+      revalidatePath(`/negotiations/${negotiationId}`);
+      revalidatePath("/proforma-invoices");
+      return { ok: true, id };
+    } catch (err: unknown) {
+      const e = err as { code?: string; constraint?: string };
+      if (
+        e?.code === "23505" &&
+        e?.constraint === "proforma_invoices_pi_no_unique"
+      ) {
+        continue;
+      }
+      console.error("[issueProformaInvoice] failed", err);
+      return { ok: false, error: "Could not issue the proforma invoice. Please try again." };
+    }
+  }
+  return { ok: false, error: "Could not allocate a unique PI number. Please try again." };
+}
+
+/**
+ * Mark a negotiation awarded (stage → negotiation_awarded). Only allowed once a
+ * PI has been issued (stage is pi_issued or later) — you cannot award straight
+ * off the quote.
+ */
+export async function markNegotiationAwarded(
+  negotiationId: string,
+): Promise<ActionResult> {
+  await requireUser();
+  if (!isUuid(negotiationId)) return { ok: false, error: "Invalid negotiation id." };
+  try {
+    const [neg] = await db
+      .select({ stage: negotiations.negotiationStage })
+      .from(negotiations)
+      .where(eq(negotiations.id, negotiationId))
+      .limit(1);
+    if (!neg) return { ok: false, error: "Negotiation not found." };
+    const minIdx = NEGOTIATION_STAGES.indexOf("pi_issued");
+    if (NEGOTIATION_STAGES.indexOf(neg.stage) < minIdx) {
+      return {
+        ok: false,
+        error: "Issue a proforma invoice before marking the negotiation awarded.",
+      };
+    }
+    await db
+      .update(negotiations)
+      .set({ negotiationStage: "negotiation_awarded", updatedAt: new Date() })
+      .where(eq(negotiations.id, negotiationId));
+  } catch (err) {
+    console.error("[markNegotiationAwarded] failed", err);
+    return { ok: false, error: "Could not update the negotiation. Please try again." };
+  }
+  revalidatePath("/negotiations");
+  revalidatePath(`/negotiations/${negotiationId}`);
+  return { ok: true };
+}
+
+export interface SaveCustomerPoInput {
+  negotiationId: string;
+  customerPoNo?: string;
+  customerPoDate?: string;
+  customerPoLink?: string;
+  customerPoRemarks?: string;
+  /** Optional PO total — when given, reconciled against the latest PI total. */
+  poTotal?: number;
+}
+
+/**
+ * Persist the received customer PO (number / date / link / remarks) and advance
+ * the stage to customer_po_received. When a PO total is supplied it is
+ * reconciled against the latest PI's revised total → poMatchStatus
+ * (matched | mismatch); otherwise 'unchecked'. The Blob upload happens
+ * client-side via /api/documents/upload — this only persists the resulting URL.
+ */
+export async function saveCustomerPo(
+  input: SaveCustomerPoInput,
+): Promise<ActionResult> {
+  await requireUser();
+  const { negotiationId } = input;
+  if (!isUuid(negotiationId)) return { ok: false, error: "Invalid negotiation id." };
+  if (!input.customerPoNo && !input.customerPoLink) {
+    return { ok: false, error: "Enter a PO number or attach the PO document." };
+  }
+  try {
+    let poMatchStatus = "unchecked";
+    if (typeof input.poTotal === "number" && Number.isFinite(input.poTotal)) {
+      const [latestPi] = await db
+        .select({ revisedTotal: proformaInvoices.revisedTotal })
+        .from(proformaInvoices)
+        .where(eq(proformaInvoices.negotiationId, negotiationId))
+        .orderBy(desc(proformaInvoices.iteration))
+        .limit(1);
+      const piTotal = Number(latestPi?.revisedTotal ?? NaN);
+      if (Number.isFinite(piTotal)) {
+        poMatchStatus =
+          Math.abs(piTotal - input.poTotal) < 0.01 ? "matched" : "mismatch";
+      }
+    }
+    const poDate = input.customerPoDate ? new Date(input.customerPoDate) : null;
+    await db
+      .update(negotiations)
+      .set({
+        customerPoNo: input.customerPoNo ?? null,
+        customerPoDate:
+          poDate && !Number.isNaN(poDate.getTime()) ? poDate : null,
+        customerPoLink: input.customerPoLink ?? null,
+        customerPoRemarks: input.customerPoRemarks ?? null,
+        poMatchStatus,
+        negotiationStage: "customer_po_received",
+        updatedAt: new Date(),
+      })
+      .where(eq(negotiations.id, negotiationId));
+  } catch (err) {
+    console.error("[saveCustomerPo] failed", err);
+    return { ok: false, error: "Could not save the customer PO. Please try again." };
+  }
+  revalidatePath("/negotiations");
+  revalidatePath(`/negotiations/${negotiationId}`);
+  revalidatePath("/proforma-invoices");
+  return { ok: true };
+}
+
+/**
+ * Accept the customer PO and convert the negotiation into a Sales Order. GATE: a
+ * customer PO must be present and the stage must be customer_po_received. Reuses
+ * the canonical negotiation→SO conversion (provisionSalesOrderFromNegotiation —
+ * idempotent, copies the lines by reference, no duplicated freeze logic), carries
+ * the customer PO fields onto the SO, stamps systemRemark = "Okay for
+ * processing", and marks the negotiation order_won. Returns the sales order id.
+ */
+export async function acceptAndConvertToSalesOrder(
+  negotiationId: string,
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const me = await requireUser();
+  if (!isUuid(negotiationId)) return { ok: false, error: "Invalid negotiation id." };
+
+  const [neg] = await db
+    .select({
+      id: negotiations.id,
+      inquiryId: negotiations.inquiryId,
+      quotationId: negotiations.quotationId,
+      stage: negotiations.negotiationStage,
+      customerPoNo: negotiations.customerPoNo,
+      customerPoDate: negotiations.customerPoDate,
+      customerPoLink: negotiations.customerPoLink,
+      smNumber: inquiries.smNumber,
+    })
+    .from(negotiations)
+    .leftJoin(inquiries, eq(negotiations.inquiryId, inquiries.id))
+    .where(eq(negotiations.id, negotiationId))
+    .limit(1);
+  if (!neg) return { ok: false, error: "Negotiation not found." };
+
+  // GATE: a customer PO must be present and the stage must be at PO received.
+  if (!neg.customerPoLink && !neg.customerPoNo) {
+    return { ok: false, error: "Record the customer PO before converting to a sales order." };
+  }
+  if (neg.stage !== "customer_po_received") {
+    return { ok: false, error: "The negotiation must be at Customer PO Received to convert." };
+  }
+
+  try {
+    const soId = await db.transaction(async (tx) => {
+      // Reuse the canonical negotiation→SO conversion (idempotent; copies lines
+      // by reference — no duplicated freeze logic).
+      const prov = await provisionSalesOrderFromNegotiation(tx, {
+        negotiationId,
+        quotationId: neg.quotationId,
+        inquiryId: neg.inquiryId,
+        smNumber: neg.smNumber ?? "SM",
+        createdById: me.id,
+      });
+      const now = new Date();
+      // Carry the customer PO onto the SO + stamp the processing remark.
+      await tx
+        .update(salesOrders)
+        .set({
+          customerPoNo: neg.customerPoNo,
+          customerPoDate: neg.customerPoDate,
+          customerPoLink: neg.customerPoLink,
+          systemRemark: "Okay for processing",
+          updatedAt: now,
+        })
+        .where(eq(salesOrders.id, prov.id));
+      // Mark the negotiation won.
+      await tx
+        .update(negotiations)
+        .set({ negotiationStatus: "order_won", updatedAt: now })
+        .where(eq(negotiations.id, negotiationId));
+      return prov.id;
+    });
+    revalidatePath("/negotiations");
+    revalidatePath(`/negotiations/${negotiationId}`);
+    revalidatePath("/sales-orders");
+    return { ok: true, id: soId };
+  } catch (err) {
+    console.error("[acceptAndConvertToSalesOrder] failed", err);
+    return { ok: false, error: "Could not convert to a sales order. Please try again." };
+  }
 }

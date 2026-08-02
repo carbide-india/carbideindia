@@ -5,6 +5,8 @@ export {
   compareVendors,
   type VendorQuoteLike,
   type VendorComparison,
+  type VendorRanks,
+  type CriterionRank,
 } from "@/lib/costing/compare";
 
 export interface InhouseInput {

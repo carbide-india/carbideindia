@@ -367,7 +367,7 @@ export const FEASIBILITY_STATUSES = ["not_started", "initiated", "need_info", "n
 export type FeasibilityStatus = (typeof FEASIBILITY_STATUSES)[number];
 export const FEASIBILITY_STATUS_LABELS: Record<FeasibilityStatus, string> = {
   not_started: "Not Started", initiated: "Initiated", need_info: "Need Info", need_help: "Need Help",
-  primary_feasibility_done: "Primary Feasibility Done", proceed_to_costing: "Approved · Proceed to Costing",
+  primary_feasibility_done: "Primary Feasibility Done", proceed_to_costing: "Feasibility Confirmed",
   in_review: "In Review", pending_approval: "Pending Approval", not_feasible: "Not Feasible",
 };
 export const FEASIBILITY_STATUS_COLORS: Record<FeasibilityStatus, string> = {
@@ -486,6 +486,22 @@ export const NEGOTIATION_STATUS_COLORS: Record<NegotiationStatus, string> = {
   to_start: "slate", follow_up: "blue", revision: "amber", verbal_yes: "purple",
   order_won: "green", order_lost: "red", order_abandoned: "stone",
   need_help: "red", on_hold: "stone",
+};
+
+// Negotiation STAGE (Proforma Invoice lifecycle) — the linear pipeline a
+// negotiation walks through: Quote Send → PI Issued → Negotiation Awarded →
+// Customer PO Received. Distinct from `negotiation_status` (the day-to-day
+// outcome pill above); stored on negotiations.negotiation_stage as a pgEnum.
+export const NEGOTIATION_STAGES = [
+  "quote_send", "pi_issued", "negotiation_awarded", "customer_po_received",
+] as const;
+export type NegotiationStage = (typeof NEGOTIATION_STAGES)[number];
+export const NEGOTIATION_STAGE_LABELS: Record<NegotiationStage, string> = {
+  quote_send: "Quote Send", pi_issued: "PI Issued",
+  negotiation_awarded: "Negotiation Awarded", customer_po_received: "Customer PO Received",
+};
+export const NEGOTIATION_STAGE_COLORS: Record<NegotiationStage, string> = {
+  quote_send: "slate", pi_issued: "blue", negotiation_awarded: "purple", customer_po_received: "green",
 };
 
 // ── Daily Client Meeting Feedback ──

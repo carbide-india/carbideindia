@@ -81,7 +81,7 @@ export function VendorForm({ editVendorId, vendorCode, initialValues }: Props) {
         type: "success",
       });
       const id = "id" in res ? res.id : editVendorId;
-      router.push((id ? `/vendors/${id}` : "/vendors") as Route);
+      router.push((id ? `/costings/vendors/${id}` : "/costings/vendors") as Route);
       router.refresh();
     });
   });

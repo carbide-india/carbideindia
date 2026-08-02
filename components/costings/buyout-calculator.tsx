@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Check, Gauge, Plus, Trash2, Truck, Wallet, X } from "lucide-react";
-import type { VendorOption } from "@/lib/queries/vendors";
-import { compareVendors, type VendorQuoteLike } from "@/lib/costing/compare";
+import { Check, Gauge, History, Plus, Trash2, Truck, Wallet, X } from "lucide-react";
+import type { VendorOption, VendorHistory } from "@/lib/queries/vendors";
+import { compareVendors, type VendorQuoteLike, type CriterionRank } from "@/lib/costing/compare";
 import { Select, type SelectOption } from "@/components/ui/select";
 import { MoneyInput } from "@/components/ui/money-input";
 import { NotesField } from "@/components/ui/notes-field";
@@ -175,6 +175,56 @@ const money = (v: number | null | undefined): string =>
         currency: "INR",
         maximumFractionDigits: 2,
       }).format(v);
+
+/** Per-rank chip styling. L1 = indigo solid, L2 = indigo tint, L3 = subtle outline. */
+const RANK_CHIP: Record<1 | 2 | 3, string> = {
+  1: "bg-[#3f3f94] text-white",
+  2: "bg-[#e7e9f6] text-[#3f3f94]",
+  3: "border border-[#c6cbdd] text-ink-subtle",
+};
+
+/**
+ * A tiny L1/L2/L3 tag marking a vendor's top-3 placement on one criterion.
+ * Renders nothing when the vendor is outside that criterion's top 3.
+ */
+function RankChip({ rank }: { rank: CriterionRank }) {
+  if (rank == null) return null;
+  return (
+    <span
+      className={cn(
+        "ml-1 inline-flex items-center rounded px-1 py-px align-middle text-[9.5px] font-bold leading-none tabular-nums",
+        RANK_CHIP[rank],
+      )}
+      title={`Ranks L${rank} on this criterion`}
+    >
+      L{rank}
+    </span>
+  );
+}
+
+/**
+ * Per-vendor composite badge: "N/3" = how many of the three criteria (cost /
+ * delivery / credit) the vendor places top-3 in. 3/3 is a strong all-round pick
+ * (green), 2/3 is notable (amber); 0–1/3 is hidden to avoid clutter. Decision
+ * support only — it never changes the auto-suggested (cheapest) pick.
+ */
+function CompositeBadge({ score }: { score: number }) {
+  if (score >= 3) {
+    return (
+      <span className="inline-flex items-center rounded-full bg-[#e3f4e8] px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.04em] text-[#2e7d46]">
+        3/3 · all-round
+      </span>
+    );
+  }
+  if (score === 2) {
+    return (
+      <span className="inline-flex items-center rounded-full bg-[#fdf1dd] px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.04em] text-[#9a6a12]">
+        2/3
+      </span>
+    );
+  }
+  return null;
+}
 
 export function BuyoutCalculator({ value, onChange, vendorOptions }: Props) {
   const { vendors, selectedKey } = value;
@@ -378,6 +428,8 @@ export function BuyoutCalculator({ value, onChange, vendorOptions }: Props) {
                 const landed = comparison.byId[r.key];
                 const cheapest = comparison.cheapestId === r.key;
                 const isSel = selectedKey === r.key;
+                const ranks = comparison.ranks[r.key];
+                const score = comparison.topThreeScore[r.key] ?? 0;
                 return (
                   <tr
                     key={r.key}
@@ -396,7 +448,7 @@ export function BuyoutCalculator({ value, onChange, vendorOptions }: Props) {
                       </label>
                     </td>
                     <td className="px-3 py-2.5">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <span className="font-semibold text-ink-strong">
                           {r.vendorName || `Vendor ${i + 1}`}
                         </span>
@@ -405,6 +457,7 @@ export function BuyoutCalculator({ value, onChange, vendorOptions }: Props) {
                             Cheapest
                           </span>
                         )}
+                        <CompositeBadge score={score} />
                       </div>
                     </td>
                     <td className="px-3 py-2.5 text-right tabular-nums text-ink-strong">
@@ -422,15 +475,24 @@ export function BuyoutCalculator({ value, onChange, vendorOptions }: Props) {
                         cheapest && hasCost(r) ? "text-[#2e7d46]" : "text-ink-strong",
                       )}
                     >
-                      {hasCost(r) ? money(landed) : "—"}
+                      <span className="whitespace-nowrap">
+                        {hasCost(r) ? money(landed) : "—"}
+                        <RankChip rank={ranks?.costRank ?? null} />
+                      </span>
                     </td>
                     <td className="px-3 py-2.5 text-right tabular-nums text-ink-muted">
-                      {intOrNull(r.leadTimeDays) == null ? "—" : `${intOrNull(r.leadTimeDays)}d`}
+                      <span className="whitespace-nowrap">
+                        {intOrNull(r.leadTimeDays) == null ? "—" : `${intOrNull(r.leadTimeDays)}d`}
+                        <RankChip rank={ranks?.deliveryRank ?? null} />
+                      </span>
                     </td>
                     <td className="px-3 py-2.5 text-right tabular-nums text-ink-muted">
-                      {intOrNull(r.creditPeriodDays) == null
-                        ? "—"
-                        : `${intOrNull(r.creditPeriodDays)}d`}
+                      <span className="whitespace-nowrap">
+                        {intOrNull(r.creditPeriodDays) == null
+                          ? "—"
+                          : `${intOrNull(r.creditPeriodDays)}d`}
+                        <RankChip rank={ranks?.creditRank ?? null} />
+                      </span>
                     </td>
                   </tr>
                 );
@@ -526,6 +588,14 @@ export function BuyoutCalculator({ value, onChange, vendorOptions }: Props) {
                     />
                   </Field>
                 </div>
+
+                {/* Historical quoting metrics for the picked vendor (derived from
+                    past BO quotes; hidden when the vendor is new / unquoted). */}
+                {r.vendorId && (
+                  <VendorHistoryLine
+                    history={vendorById.get(r.vendorId)?.history ?? null}
+                  />
+                )}
 
                 {/* Cost / OH / Dev */}
                 <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
@@ -657,6 +727,40 @@ export function BuyoutCalculator({ value, onChange, vendorOptions }: Props) {
         onClose={() => setModalRowKey(null)}
         onCreated={onVendorCreated}
       />
+    </div>
+  );
+}
+
+/**
+ * Subtle one-line history readout for a picked vendor — "Quoted N× · last ₹X ·
+ * avg ₹Y", derived up front from past BO quotes (VendorOption.history). Renders
+ * nothing when there's no history yet, so it never clutters a first-time vendor.
+ */
+function VendorHistoryLine({ history }: { history: VendorHistory | null }) {
+  if (!history || history.timesQuoted <= 0) return null;
+  const { timesQuoted, lastUnitPrice, avgUnitPrice } = history;
+  return (
+    <div className="-mt-1.5 flex items-center gap-1.5 text-[11.5px] text-ink-subtle">
+      <History size={12} strokeWidth={2.2} className="shrink-0 text-ink-subtle" />
+      <span className="tabular-nums">
+        Quoted{" "}
+        <span className="font-semibold text-ink-muted">
+          {timesQuoted}
+          {"×"}
+        </span>
+        {lastUnitPrice != null && (
+          <>
+            {" · last "}
+            <span className="font-semibold text-ink-muted">{money(lastUnitPrice)}</span>
+          </>
+        )}
+        {avgUnitPrice != null && (
+          <>
+            {" · avg "}
+            <span className="font-semibold text-ink-muted">{money(avgUnitPrice)}</span>
+          </>
+        )}
+      </span>
     </div>
   );
 }

@@ -7,12 +7,18 @@ import { requireUser } from "@/lib/auth/current";
 import { getInquiryWorkspaceHeader, getInquiryProducts } from "@/lib/queries/sm-workspace";
 import { getInquiryById } from "@/lib/queries/inquiries";
 import { listEmployeeOptions } from "@/lib/queries/employees";
-import { listItemLockStates, getInquiryVarianceRows } from "@/lib/queries/feasibility";
+import {
+  listItemLockStates,
+  getInquiryVarianceRows,
+  listSecondaryFeasibilityStates,
+} from "@/lib/queries/feasibility";
+import { listMasterOptions } from "@/lib/queries/masters";
 import { INQUIRY_PRIORITY_LABELS } from "@/db/enums";
 import { Chip, PRIORITY_TONES } from "@/components/inquiries/chip";
 import { FeasibilityEnquirySnapshot } from "@/components/feasibility/feasibility-enquiry-snapshot";
 import { FeasibilityReviewWorkspace } from "@/components/feasibility/feasibility-review-workspace";
 import { LockDimensionsControl } from "@/components/feasibility/lock-dimensions-control";
+import { SecondaryFeasibilitySection } from "@/components/feasibility/secondary-feasibility-section";
 
 export const dynamic = "force-dynamic";
 
@@ -31,13 +37,26 @@ export default async function FeasibilityReviewPage({
   const { id } = await params;
   if (!UUID_RE.test(id)) notFound();
 
-  const [header, products, inquiry, employees, lockStates, varianceByItem] = await Promise.all([
+  const [
+    header,
+    products,
+    inquiry,
+    employees,
+    lockStates,
+    varianceByItem,
+    secondaryStates,
+    gradeOptions,
+    conditionOptions,
+  ] = await Promise.all([
     getInquiryWorkspaceHeader(id),
     getInquiryProducts(id),
     getInquiryById(id),
     listEmployeeOptions(),
     listItemLockStates(id),
     getInquiryVarianceRows(id),
+    listSecondaryFeasibilityStates(id),
+    listMasterOptions("internal_grade"),
+    listMasterOptions("condition"),
   ]);
   if (!header || !inquiry) notFound();
 
@@ -113,6 +132,32 @@ export default async function FeasibilityReviewPage({
                 lineNumber={i + 1}
                 isAdmin={me.isAdmin}
                 varianceRows={varianceByItem[line.inquiryItemId] ?? null}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Secondary / Technical Feasibility (Primary → Confirm) ─────────── */}
+      {secondaryStates.length > 0 && (
+        <section className="mb-5 overflow-hidden rounded-section border-2 border-[#b7bcd2] bg-surface-card">
+          <div className="flex flex-wrap items-center gap-2.5 border-b-2 border-[#d6d9ea] bg-[#e7e9f6] px-4 py-2.5">
+            <span className="h-4 w-1.5 shrink-0 rounded-full bg-[#3f3f94]" />
+            <span className="text-[13.5px] font-black uppercase tracking-[0.1em] text-[#3f3f94]">
+              Secondary / Technical Feasibility
+            </span>
+            <span className="ml-auto text-[11.5px] font-semibold text-ink-subtle">
+              Detailed technical spec per line — required before Confirm.
+            </span>
+          </div>
+          <div className="flex flex-col gap-4 p-4">
+            {secondaryStates.map((line, i) => (
+              <SecondaryFeasibilitySection
+                key={line.inquiryItemId}
+                line={line}
+                lineNumber={i + 1}
+                gradeOptions={gradeOptions}
+                conditionOptions={conditionOptions}
               />
             ))}
           </div>

@@ -237,11 +237,13 @@ export async function listCostings(): Promise<CostingListItem[]> {
 }
 
 /**
- * Product lines that are ELIGIBLE to be costed - i.e. their parent inquiry has
- * passed Primary Feasibility (feasibilityStatus = proceed_to_costing). Powers
- * the picker shown when /costings/new is opened without a target line (e.g. the
- * Forms launcher "Costing" tile or the register's "New Costing" button). Flags
- * lines that already carry a chosen costing so the picker can badge them.
+ * Product lines that are ELIGIBLE to be costed - i.e. the line's per-item
+ * feasibility has been CONFIRMED (inquiry_items.feasibility_confirmed = true, the
+ * step after Lock Dimensions). This is the strong per-item gate that replaces the
+ * old inquiry-level proceed_to_costing filter. Powers the picker shown when
+ * /costings/new is opened without a target line (e.g. the Forms launcher
+ * "Costing" tile or the register's "New Costing" button). Flags lines that
+ * already carry a chosen costing so the picker can badge them.
  */
 export interface CostableInquiryItem {
   inquiryItemId: string;
@@ -265,7 +267,7 @@ export async function listCostableInquiryItems(): Promise<CostableInquiryItem[]>
     })
     .from(inquiryItems)
     .innerJoin(inquiries, eq(inquiryItems.inquiryId, inquiries.id))
-    .where(eq(inquiries.feasibilityStatus, "proceed_to_costing"))
+    .where(eq(inquiryItems.feasibilityConfirmed, true))
     .orderBy(desc(inquiries.createdAt), asc(inquiryItems.sortOrder));
 
   if (rows.length === 0) return [];

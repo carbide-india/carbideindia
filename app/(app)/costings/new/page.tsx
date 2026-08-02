@@ -6,7 +6,7 @@ import {
   getCostingSpecForItem,
   listCostableInquiryItems,
 } from "@/lib/queries/costings";
-import { listVendorOptions } from "@/lib/queries/vendors";
+import { listVendorOptions, getVendorHistories } from "@/lib/queries/vendors";
 import { listMasterOptions } from "@/lib/queries/masters";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
 import { UserMenuServer } from "@/components/header/user-menu-server";
@@ -72,6 +72,15 @@ export default async function NewCostingPage({ searchParams }: PageProps) {
     listMasterOptions("part_no"),
   ]);
 
+  // Hydrate each vendor option with its historical quoting metrics (derived from
+  // past BO vendor quotes) so the Buy-Out matrix can show a subtle history chip
+  // on vendor selection — no per-keystroke or per-selection fetch needed.
+  const histories = await getVendorHistories(vendorOptions.map((v) => v.id));
+  const vendorOptionsWithHistory = vendorOptions.map((v) => ({
+    ...v,
+    history: histories.get(v.id) ?? null,
+  }));
+
   return (
     <EnquiryModuleShell title="Costing Master" userMenu={<UserMenuServer />}>
       <div className="w-full">
@@ -82,7 +91,7 @@ export default async function NewCostingPage({ searchParams }: PageProps) {
           lineQty={context.lineQty}
           smNumber={context.smNumber}
           enquiryDate={context.enquiryDate}
-          vendorOptions={vendorOptions}
+          vendorOptions={vendorOptionsWithHistory}
           masters={{ toolingChart, machiningOp, quantityTolerance, paymentTerm }}
           defaultPaymentTerms={context.customerPaymentTerms}
           spec={spec}

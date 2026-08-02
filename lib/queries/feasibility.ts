@@ -1,5 +1,6 @@
 import "server-only";
 import { asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/lib/db";
 import { inquiries, inquiryItems, employees, masterOptions } from "@/db/schema";
 import type {
@@ -112,6 +113,20 @@ export async function isFeasibilityApproved(inquiryId: string): Promise<boolean>
   return (await getFeasibilityStatus(inquiryId)) === "proceed_to_costing";
 }
 
+/**
+ * True once a single product line's feasibility has been CONFIRMED (the strong
+ * per-item costing gate that replaces the inquiry-level proceed_to_costing gate).
+ * A confirmed line is always locked (confirming requires a lock first).
+ */
+export async function isItemFeasibilityConfirmed(inquiryItemId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ confirmed: inquiryItems.feasibilityConfirmed })
+    .from(inquiryItems)
+    .where(eq(inquiryItems.id, inquiryItemId))
+    .limit(1);
+  return row?.confirmed === true;
+}
+
 /* ── Dimensions & specifications lock gate (Form 04 → Form 05, migration 0062) ── */
 
 /**
@@ -138,10 +153,15 @@ export interface ItemLockState {
   lockedById: string | null;
   lockedByName: string | null;
   lockedAt: Date | null;
+  /** Per-item Feasibility Confirmed state (the step AFTER lock; the costing gate). */
+  feasibilityConfirmed: boolean;
+  confirmedByName: string | null;
+  confirmedAt: Date | null;
 }
 
 /** Lock state for every product line on one SM, ordered by the line sort order. */
 export async function listItemLockStates(inquiryId: string): Promise<ItemLockState[]> {
+  const confirmer = alias(employees, "confirmer");
   const rows = await db
     .select({
       inquiryItemId: inquiryItems.id,
@@ -161,9 +181,13 @@ export async function listItemLockStates(inquiryId: string): Promise<ItemLockSta
       lockedById: inquiryItems.lockedById,
       lockedByName: employees.name,
       lockedAt: inquiryItems.lockedAt,
+      feasibilityConfirmed: inquiryItems.feasibilityConfirmed,
+      confirmedByName: confirmer.name,
+      confirmedAt: inquiryItems.feasibilityConfirmedAt,
     })
     .from(inquiryItems)
     .leftJoin(employees, eq(employees.id, inquiryItems.lockedById))
+    .leftJoin(confirmer, eq(confirmer.id, inquiryItems.feasibilityConfirmedById))
     .where(eq(inquiryItems.inquiryId, inquiryId))
     .orderBy(asc(inquiryItems.sortOrder));
 
@@ -185,7 +209,275 @@ export async function listItemLockStates(inquiryId: string): Promise<ItemLockSta
     lockedById: r.lockedById ?? null,
     lockedByName: r.lockedByName ?? null,
     lockedAt: r.lockedAt ?? null,
+    feasibilityConfirmed: r.feasibilityConfirmed,
+    confirmedByName: r.confirmedByName ?? null,
+    confirmedAt: r.confirmedAt ?? null,
   }));
+}
+
+/* ── Secondary / Technical Feasibility (per-item detailed technical spec) ── */
+
+/**
+ * The per-product-line Secondary / Technical Feasibility state shown on the
+ * feasibility review surface — the detailed technical-spec stage that sits
+ * between Primary Feasibility (5-check review + Lock Dimensions) and Confirm.
+ * Carries the live confirmed dimensions (so the section can render a tolerance
+ * box only for dims that have a value) plus every saved secondary field and the
+ * done stamp (who/when).
+ */
+export interface SecondaryFeasibilityState {
+  inquiryItemId: string;
+  sortOrder: number;
+  custProductName: string | null;
+  gradeCustomer: string | null;
+  shape: string | null;
+  outerDia: string | null;
+  innerDia: string | null;
+  length: string | null;
+  width: string | null;
+  thickness: string | null;
+  dimensionUnit: string | null;
+  quantityNos: string | null;
+  quantityUom: string;
+  /** Per-dimension tolerances (± text, free form e.g. "±0.05"). */
+  outerDiaTol: string | null;
+  innerDiaTol: string | null;
+  lengthTol: string | null;
+  widthTol: string | null;
+  thicknessTol: string | null;
+  secBlockWt: string | null;
+  secNetWt: string | null;
+  secMaterialWt: string | null;
+  gradeInternalProductionId: string | null;
+  conditionId: string | null;
+  secProcessRoute: string | null;
+  secToolingAvailability: string | null;
+  secMaterialAvailability: string | null;
+  secVerdict: string | null;
+  secNotes: string | null;
+  secondaryFeasibilityDone: boolean;
+  secondaryFeasibilityAt: Date | null;
+  secondaryByName: string | null;
+  /** A confirmed line's specs are frozen — the section renders read-only. */
+  feasibilityConfirmed: boolean;
+}
+
+/** Secondary/Technical Feasibility state for every line on one SM, in sort order. */
+export async function listSecondaryFeasibilityStates(
+  inquiryId: string,
+): Promise<SecondaryFeasibilityState[]> {
+  const rows = await db
+    .select({
+      inquiryItemId: inquiryItems.id,
+      sortOrder: inquiryItems.sortOrder,
+      custProductName: inquiryItems.custProductName,
+      gradeCustomer: inquiryItems.gradeCustomer,
+      shape: inquiryItems.shape,
+      outerDia: inquiryItems.outerDia,
+      innerDia: inquiryItems.innerDia,
+      length: inquiryItems.length,
+      width: inquiryItems.width,
+      thickness: inquiryItems.thickness,
+      dimensionUnit: inquiryItems.dimensionUnit,
+      quantityNos: inquiryItems.quantityNos,
+      quantityUom: inquiryItems.quantityUom,
+      outerDiaTol: inquiryItems.outerDiaTol,
+      innerDiaTol: inquiryItems.innerDiaTol,
+      lengthTol: inquiryItems.lengthTol,
+      widthTol: inquiryItems.widthTol,
+      thicknessTol: inquiryItems.thicknessTol,
+      secBlockWt: inquiryItems.secBlockWt,
+      secNetWt: inquiryItems.secNetWt,
+      secMaterialWt: inquiryItems.secMaterialWt,
+      gradeInternalProductionId: inquiryItems.gradeInternalProductionId,
+      conditionId: inquiryItems.conditionId,
+      secProcessRoute: inquiryItems.secProcessRoute,
+      secToolingAvailability: inquiryItems.secToolingAvailability,
+      secMaterialAvailability: inquiryItems.secMaterialAvailability,
+      secVerdict: inquiryItems.secVerdict,
+      secNotes: inquiryItems.secNotes,
+      secondaryFeasibilityDone: inquiryItems.secondaryFeasibilityDone,
+      secondaryFeasibilityAt: inquiryItems.secondaryFeasibilityAt,
+      secondaryByName: employees.name,
+      feasibilityConfirmed: inquiryItems.feasibilityConfirmed,
+    })
+    .from(inquiryItems)
+    .leftJoin(employees, eq(employees.id, inquiryItems.secondaryFeasibilityById))
+    .where(eq(inquiryItems.inquiryId, inquiryId))
+    .orderBy(asc(inquiryItems.sortOrder));
+
+  return rows.map((r) => ({
+    inquiryItemId: r.inquiryItemId,
+    sortOrder: r.sortOrder,
+    custProductName: r.custProductName,
+    gradeCustomer: r.gradeCustomer,
+    shape: r.shape,
+    outerDia: r.outerDia,
+    innerDia: r.innerDia,
+    length: r.length,
+    width: r.width,
+    thickness: r.thickness,
+    dimensionUnit: r.dimensionUnit,
+    quantityNos: r.quantityNos,
+    quantityUom: r.quantityUom,
+    outerDiaTol: r.outerDiaTol,
+    innerDiaTol: r.innerDiaTol,
+    lengthTol: r.lengthTol,
+    widthTol: r.widthTol,
+    thicknessTol: r.thicknessTol,
+    secBlockWt: r.secBlockWt,
+    secNetWt: r.secNetWt,
+    secMaterialWt: r.secMaterialWt,
+    gradeInternalProductionId: r.gradeInternalProductionId,
+    conditionId: r.conditionId,
+    secProcessRoute: r.secProcessRoute,
+    secToolingAvailability: r.secToolingAvailability,
+    secMaterialAvailability: r.secMaterialAvailability,
+    secVerdict: r.secVerdict,
+    secNotes: r.secNotes,
+    secondaryFeasibilityDone: r.secondaryFeasibilityDone,
+    secondaryFeasibilityAt: r.secondaryFeasibilityAt ?? null,
+    secondaryByName: r.secondaryByName ?? null,
+    feasibilityConfirmed: r.feasibilityConfirmed,
+  }));
+}
+
+/**
+ * The Confirmed Feasibility Register: every product line whose feasibility has
+ * been confirmed (across all SMs), newest confirmation first. These are the
+ * ONLY lines eligible for Costing.
+ */
+export interface ConfirmedFeasibilityItem {
+  inquiryItemId: string;
+  inquiryId: string;
+  smNumber: string;
+  companyName: string;
+  custProductName: string | null;
+  confirmedByName: string | null;
+  confirmedAt: Date | null;
+  isLocked: boolean;
+}
+
+export async function listConfirmedFeasibilityItems(): Promise<ConfirmedFeasibilityItem[]> {
+  const confirmer = alias(employees, "confirmer");
+  const rows = await db
+    .select({
+      inquiryItemId: inquiryItems.id,
+      inquiryId: inquiryItems.inquiryId,
+      smNumber: inquiries.smNumber,
+      companyName: inquiries.companyName,
+      custProductName: inquiryItems.custProductName,
+      confirmedByName: confirmer.name,
+      confirmedAt: inquiryItems.feasibilityConfirmedAt,
+      isLocked: inquiryItems.isDimensionsLocked,
+    })
+    .from(inquiryItems)
+    .innerJoin(inquiries, eq(inquiryItems.inquiryId, inquiries.id))
+    .leftJoin(confirmer, eq(confirmer.id, inquiryItems.feasibilityConfirmedById))
+    .where(eq(inquiryItems.feasibilityConfirmed, true))
+    .orderBy(desc(inquiryItems.feasibilityConfirmedAt));
+
+  return rows.map((r) => ({
+    inquiryItemId: r.inquiryItemId,
+    inquiryId: r.inquiryId,
+    smNumber: r.smNumber,
+    companyName: r.companyName,
+    custProductName: r.custProductName,
+    confirmedByName: r.confirmedByName ?? null,
+    confirmedAt: r.confirmedAt ?? null,
+    isLocked: r.isLocked,
+  }));
+}
+
+/**
+ * The Confirmed Feasibility Register (inquiry level): every enquiry whose
+ * Primary Feasibility landed on `proceed_to_costing` — i.e. Feasibility
+ * Confirmed and ready for Costing. Newest-confirmed first (updatedAt proxy — the
+ * inquiry has no dedicated approval timestamp). Two queries total (no N+1): the
+ * confirmed inquiries, then all their product lines reduced to count + first
+ * line description.
+ */
+/**
+ * Aggregated Secondary/Technical Feasibility eligibility across an inquiry's
+ * lines: "done" (all lines' Secondary done), "partial" (some), "pending"
+ * (none / no lines).
+ */
+export type SecondaryEligibility = "done" | "partial" | "pending";
+
+export interface ConfirmedFeasibilityRow {
+  id: string;
+  smNumber: string;
+  companyName: string;
+  /** First product line's name/description (or null when the SM has no lines). */
+  productDesc: string | null;
+  productCount: number;
+  /** No inquiry-level approval timestamp exists — falls back to updatedAt. */
+  confirmedAt: Date;
+  /** Aggregated Secondary/Technical Feasibility state across the SM's lines. */
+  secondaryEligibility: SecondaryEligibility;
+  /** How many lines have Secondary done (for the "2/3" chip subtext). */
+  secondaryDoneCount: number;
+}
+
+export async function listConfirmedFeasibility(): Promise<ConfirmedFeasibilityRow[]> {
+  const rows = await db
+    .select({
+      id: inquiries.id,
+      smNumber: inquiries.smNumber,
+      companyName: inquiries.companyName,
+      confirmedAt: inquiries.updatedAt,
+    })
+    .from(inquiries)
+    .where(
+      sql`${inquiries.feasibilityStatus} = 'proceed_to_costing' and ${inquiries.isArchived} = false`,
+    )
+    .orderBy(desc(inquiries.updatedAt));
+
+  const ids = rows.map((r) => r.id);
+  const items = ids.length
+    ? await db
+        .select({
+          inquiryId: inquiryItems.inquiryId,
+          sortOrder: inquiryItems.sortOrder,
+          custProductName: inquiryItems.custProductName,
+          description: inquiryItems.description,
+          secondaryFeasibilityDone: inquiryItems.secondaryFeasibilityDone,
+        })
+        .from(inquiryItems)
+        .where(inArray(inquiryItems.inquiryId, ids))
+        .orderBy(asc(inquiryItems.sortOrder))
+    : [];
+
+  const countBy = new Map<string, number>();
+  const secDoneBy = new Map<string, number>();
+  const firstDescBy = new Map<string, string>();
+  for (const it of items) {
+    countBy.set(it.inquiryId, (countBy.get(it.inquiryId) ?? 0) + 1);
+    if (it.secondaryFeasibilityDone) {
+      secDoneBy.set(it.inquiryId, (secDoneBy.get(it.inquiryId) ?? 0) + 1);
+    }
+    if (!firstDescBy.has(it.inquiryId)) {
+      const desc = (it.custProductName ?? it.description ?? "").trim();
+      if (desc) firstDescBy.set(it.inquiryId, desc);
+    }
+  }
+
+  return rows.map((r) => {
+    const total = countBy.get(r.id) ?? 0;
+    const secDone = secDoneBy.get(r.id) ?? 0;
+    const secondaryEligibility: SecondaryEligibility =
+      total > 0 && secDone >= total ? "done" : secDone > 0 ? "partial" : "pending";
+    return {
+      id: r.id,
+      smNumber: r.smNumber,
+      companyName: r.companyName,
+      productDesc: firstDescBy.get(r.id) ?? null,
+      productCount: total,
+      confirmedAt: r.confirmedAt,
+      secondaryEligibility,
+      secondaryDoneCount: secDone,
+    };
+  });
 }
 
 /**

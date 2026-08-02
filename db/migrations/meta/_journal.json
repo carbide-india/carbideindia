@@ -456,6 +456,27 @@
       "when": 1785557612718,
       "tag": "0065_burly_stingray",
       "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1785650095709,
+      "tag": "0066_panoramic_puck",
+      "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1785665715108,
+      "tag": "0067_certain_genesis",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1785668457269,
+      "tag": "0068_fearless_masked_marvel",
+      "breakpoints": true
     }
   ]
 }
