@@ -243,22 +243,26 @@ export function SecondaryFeasibilitySection({
       </div>
 
       <div className="flex flex-col gap-5 p-4">
-        {/* ── Confirmed dimensions + per-dim tolerances ─────────────────── */}
+        {/* ── Confirmed dimensions + per-dim tolerances + weights ───────────
+            Each dim gets its own value box + ± tol box, and the three weights
+            follow — all on ONE flex-wrap line (equal-width, wraps on narrow
+            screens) so nothing gets cramped/clipped. */}
         <div>
-          <SubHead icon={<FlaskConical size={13} strokeWidth={2.4} />} label="Confirmed Dimensions & Tolerances" />
-          {activeDims.length === 0 ? (
-            <p className="text-[12.5px] text-ink-subtle">No dimensions captured on this line.</p>
-          ) : (
-            <div className="grid grid-cols-3 gap-3 max-md:grid-cols-2 max-sm:grid-cols-1">
-              {activeDims.map((d) => (
-                <MiniField key={d.key} label={`${d.label} (${unit})`}>
-                  <div className="flex items-center gap-2">
-                    <span className="nt-input flex min-w-0 flex-1 items-center bg-[#f4f5fb] tabular-nums text-ink-strong">
+          <SubHead icon={<FlaskConical size={13} strokeWidth={2.4} />} label="Confirmed Dimensions, Tolerances & Weights" />
+          <div className="flex flex-wrap items-end gap-2.5">
+            {activeDims.map((d) => (
+              <React.Fragment key={d.key}>
+                <div className="min-w-[80px] flex-1">
+                  <MiniField label={`${d.label} (${unit})`}>
+                    <span className="nt-input flex w-full items-center bg-[#f4f5fb] tabular-nums text-ink-strong">
                       {d.value}
                     </span>
-                    <span className="text-[13px] font-black text-ink-subtle">±</span>
+                  </MiniField>
+                </div>
+                <div className="min-w-[76px] flex-1">
+                  <MiniField label="± Tol">
                     <input
-                      className="nt-input w-[92px] tabular-nums"
+                      className="nt-input w-full tabular-nums"
                       inputMode="decimal"
                       placeholder="Tol"
                       aria-label={`${d.label} tolerance`}
@@ -266,51 +270,53 @@ export function SecondaryFeasibilitySection({
                       value={state[d.tolKey]}
                       onChange={(e) => set(d.tolKey, e.target.value)}
                     />
-                  </div>
-                </MiniField>
-              ))}
+                  </MiniField>
+                </div>
+              </React.Fragment>
+            ))}
+            <div className="min-w-[92px] flex-1">
+              <MiniField label="Block Wt (g)">
+                <input
+                  className="nt-input w-full tabular-nums"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  aria-label="Block weight"
+                  disabled={readOnly}
+                  value={state.secBlockWt}
+                  onChange={(e) => set("secBlockWt", e.target.value)}
+                />
+              </MiniField>
             </div>
-          )}
-        </div>
-
-        {/* ── Weights ───────────────────────────────────────────────────── */}
-        <div>
-          <SubHead label="Weights (g)" />
-          <div className="grid grid-cols-3 gap-3 max-sm:grid-cols-1">
-            <MiniField label="Block Weight">
-              <input
-                className="nt-input tabular-nums"
-                inputMode="decimal"
-                placeholder="0.00"
-                aria-label="Block weight"
-                disabled={readOnly}
-                value={state.secBlockWt}
-                onChange={(e) => set("secBlockWt", e.target.value)}
-              />
-            </MiniField>
-            <MiniField label="Net Weight">
-              <input
-                className="nt-input tabular-nums"
-                inputMode="decimal"
-                placeholder="0.00"
-                aria-label="Net weight"
-                disabled={readOnly}
-                value={state.secNetWt}
-                onChange={(e) => set("secNetWt", e.target.value)}
-              />
-            </MiniField>
-            <MiniField label="Material Weight">
-              <input
-                className="nt-input tabular-nums"
-                inputMode="decimal"
-                placeholder="0.00"
-                aria-label="Material weight"
-                disabled={readOnly}
-                value={state.secMaterialWt}
-                onChange={(e) => set("secMaterialWt", e.target.value)}
-              />
-            </MiniField>
+            <div className="min-w-[92px] flex-1">
+              <MiniField label="Net Wt (g)">
+                <input
+                  className="nt-input w-full tabular-nums"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  aria-label="Net weight"
+                  disabled={readOnly}
+                  value={state.secNetWt}
+                  onChange={(e) => set("secNetWt", e.target.value)}
+                />
+              </MiniField>
+            </div>
+            <div className="min-w-[92px] flex-1">
+              <MiniField label="Material Wt (g)">
+                <input
+                  className="nt-input w-full tabular-nums"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  aria-label="Material weight"
+                  disabled={readOnly}
+                  value={state.secMaterialWt}
+                  onChange={(e) => set("secMaterialWt", e.target.value)}
+                />
+              </MiniField>
+            </div>
           </div>
+          {activeDims.length === 0 && (
+            <p className="mt-1.5 text-[12.5px] text-ink-subtle">No dimensions captured on this line — weights only.</p>
+          )}
         </div>
 
         {/* ── Grade / Condition ─────────────────────────────────────────── */}

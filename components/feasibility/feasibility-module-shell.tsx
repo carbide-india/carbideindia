@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Fragment, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { Route } from "next";
 import {
   HelpCircle,
@@ -16,6 +16,7 @@ import {
   Clock3,
   CircleCheck,
   BadgeCheck,
+  Layers,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
@@ -25,36 +26,31 @@ import { NotificationBell } from "@/components/notifications/notification-bell";
 import { cn } from "@/lib/utils";
 
 /**
- * Primary-Feasibility module shell — its own chrome (like the other form
- * modules). The sidebar is the review pipeline by status: All Reviews, Not
- * Started, Need Info, Not Feasible, Pending Approval, Feasibility Confirmed. Each
- * status links the queue to `/feasibility?status=<value>`. Below the pipeline a
- * Registers group links standalone pages (Confirmed Feasibility register).
+ * Feasibility module shell — its own chrome (like the other form modules). The
+ * sidebar has THREE clear top-level destinations, each a distinct route:
+ *   • Primary Feasibility   → /feasibility          (the 5-check DFM queue)
+ *   • Secondary Feasibility → /feasibility/secondary (per-line technical queue)
+ *   • Confirmed Feasibility → /feasibility/confirmed (the confirmed register)
+ * The Primary status filters (Not Started / Need Info / …) are nested UNDER the
+ * Primary destination and link the queue to `/feasibility?status=<value>`.
  */
 
+/** A status filter nested under the Primary Feasibility destination. */
 interface StatusNav {
   label: string;
-  /** "" = all reviews (no status filter). */
   status: string;
   Icon: typeof Circle;
-  group: "overview" | "pipeline";
 }
 
-const NAV: StatusNav[] = [
-  { label: "All Reviews", status: "", Icon: ClipboardList, group: "overview" },
-  { label: "Not Started", status: "not_started", Icon: Circle, group: "pipeline" },
-  { label: "Need Info", status: "need_info", Icon: CircleHelp, group: "pipeline" },
-  { label: "Not Feasible", status: "not_feasible", Icon: CircleX, group: "pipeline" },
-  { label: "Pending Approval", status: "pending_approval", Icon: Clock3, group: "pipeline" },
-  { label: "Feasibility Confirmed", status: "proceed_to_costing", Icon: CircleCheck, group: "pipeline" },
+const PRIMARY_STATUS_NAV: StatusNav[] = [
+  { label: "Not Started", status: "not_started", Icon: Circle },
+  { label: "Need Info", status: "need_info", Icon: CircleHelp },
+  { label: "Not Feasible", status: "not_feasible", Icon: CircleX },
+  { label: "Pending Approval", status: "pending_approval", Icon: Clock3 },
+  { label: "Feasibility Confirmed", status: "proceed_to_costing", Icon: CircleCheck },
 ];
 
-/** Registers under the pipeline — not status-filtered queue views. */
-const REGISTER_NAV = [
-  { label: "Confirmed Feasibility", href: "/feasibility/confirmed" as Route, Icon: BadgeCheck },
-];
-
-function hrefFor(status: string): Route {
+function primaryHrefFor(status: string): Route {
   return (status ? `/feasibility?status=${status}` : "/feasibility") as Route;
 }
 
@@ -136,56 +132,74 @@ export function FeasibilityModuleShell({
             </Link>
 
             <nav className="mt-4 flex w-full flex-col gap-1.5">
-              {NAV.map((n, i) => {
-                const prev = NAV[i - 1];
-                const showDivider = i > 0 && !!prev && n.group !== prev.group;
-                const isActive = onQueue && activeStatus === n.status;
+              {(() => {
                 const base = cn(
                   "flex h-[42px] items-center rounded-lg text-[13.5px] transition",
                   collapsed ? "justify-center px-0" : "gap-3 px-3.5",
                 );
+                const activeCls = `${base} bg-[#3f3f94] font-bold text-white shadow-[0_2px_8px_rgba(63,63,148,0.30)]`;
+                const idleCls = `${base} font-semibold text-[#3a4152] hover:bg-[#efeffb] hover:text-[#3f3f94]`;
+                // The three top-level destinations must each match ONLY their own
+                // route — Primary (exact /feasibility) must not stay active on the
+                // Secondary or Confirmed routes.
+                const onSecondary = pathname === "/feasibility/secondary";
+                const onConfirmed = pathname === "/feasibility/confirmed";
+                const primaryActive = onQueue; // any /feasibility?status=… view
                 return (
-                  <Fragment key={n.label}>
-                    {showDivider && <div className="my-2 h-[1.5px] rounded-full bg-[#c2c7d6]" />}
+                  <>
+                    {/* Destination 1 — Primary Feasibility (+ nested status filters). */}
                     <Link
-                      href={hrefFor(n.status)}
-                      title={collapsed ? n.label : undefined}
-                      className={
-                        isActive
-                          ? `${base} bg-[#3f3f94] font-bold text-white shadow-[0_2px_8px_rgba(63,63,148,0.30)]`
-                          : `${base} font-semibold text-[#3a4152] hover:bg-[#efeffb] hover:text-[#3f3f94]`
-                      }
+                      href={primaryHrefFor("")}
+                      title={collapsed ? "Primary Feasibility" : undefined}
+                      className={primaryActive && activeStatus === "" ? activeCls : idleCls}
                     >
-                      <n.Icon className="h-[18px] w-[18px] shrink-0" />
-                      {!collapsed && <span className="truncate">{n.label}</span>}
+                      <ClipboardList className="h-[18px] w-[18px] shrink-0" />
+                      {!collapsed && <span className="truncate">Primary Feasibility</span>}
                     </Link>
-                  </Fragment>
-                );
-              })}
+                    <div className={cn("flex flex-col gap-1", collapsed ? "" : "ml-3 border-l border-[#e5e7eb] pl-2")}>
+                      {PRIMARY_STATUS_NAV.map((n) => {
+                        const isActive = primaryActive && activeStatus === n.status;
+                        return (
+                          <Link
+                            key={n.status}
+                            href={primaryHrefFor(n.status)}
+                            title={collapsed ? n.label : undefined}
+                            className={cn(
+                              isActive ? activeCls : idleCls,
+                              !collapsed && "h-[38px] text-[13px]",
+                            )}
+                          >
+                            <n.Icon className="h-[17px] w-[17px] shrink-0" />
+                            {!collapsed && <span className="truncate">{n.label}</span>}
+                          </Link>
+                        );
+                      })}
+                    </div>
 
-              <div className="my-2 h-[1.5px] rounded-full bg-[#c2c7d6]" />
-              {REGISTER_NAV.map((r) => {
-                const isActive = pathname === r.href;
-                const base = cn(
-                  "flex h-[42px] items-center rounded-lg text-[13.5px] transition",
-                  collapsed ? "justify-center px-0" : "gap-3 px-3.5",
+                    <div className="my-2 h-[1.5px] rounded-full bg-[#c2c7d6]" />
+
+                    {/* Destination 2 — Secondary Feasibility. */}
+                    <Link
+                      href={"/feasibility/secondary" as Route}
+                      title={collapsed ? "Secondary Feasibility" : undefined}
+                      className={onSecondary ? activeCls : idleCls}
+                    >
+                      <Layers className="h-[18px] w-[18px] shrink-0" />
+                      {!collapsed && <span className="truncate">Secondary Feasibility</span>}
+                    </Link>
+
+                    {/* Destination 3 — Confirmed Feasibility register. */}
+                    <Link
+                      href={"/feasibility/confirmed" as Route}
+                      title={collapsed ? "Confirmed Feasibility" : undefined}
+                      className={onConfirmed ? activeCls : idleCls}
+                    >
+                      <BadgeCheck className="h-[18px] w-[18px] shrink-0" />
+                      {!collapsed && <span className="truncate">Confirmed Feasibility</span>}
+                    </Link>
+                  </>
                 );
-                return (
-                  <Link
-                    key={r.href}
-                    href={r.href}
-                    title={collapsed ? r.label : undefined}
-                    className={
-                      isActive
-                        ? `${base} bg-[#3f3f94] font-bold text-white shadow-[0_2px_8px_rgba(63,63,148,0.30)]`
-                        : `${base} font-semibold text-[#3a4152] hover:bg-[#efeffb] hover:text-[#3f3f94]`
-                    }
-                  >
-                    <r.Icon className="h-[18px] w-[18px] shrink-0" />
-                    {!collapsed && <span className="truncate">{r.label}</span>}
-                  </Link>
-                );
-              })}
+              })()}
             </nav>
 
             <div className="mt-auto flex w-full flex-col gap-1.5">

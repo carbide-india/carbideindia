@@ -22,6 +22,43 @@ function clean<T extends Record<string, unknown>>(o: T): Partial<T> {
   return out as Partial<T>;
 }
 
+type InquiryItemRow = typeof inquiryItems.$inferSelect;
+
+/**
+ * Build the frozen PF baseline snapshot from a live inquiry_item row — the exact
+ * object `lockItemDimensions` freezes into `feasibility_baseline` (the variance
+ * baseline). Shared by lock and by the Secondary-done → confirm path so both
+ * produce an identically-shaped snapshot. Shape MUST NOT change (variance report
+ * reads these keys).
+ */
+function buildFeasibilityBaseline(
+  item: InquiryItemRow,
+  lockedById: string,
+  now: Date,
+) {
+  return {
+    shape: item.shape,
+    outerDia: item.outerDia,
+    innerDia: item.innerDia,
+    length: item.length,
+    width: item.width,
+    thickness: item.thickness,
+    dimensionUnit: item.dimensionUnit,
+    dimensionNotes: item.dimensionNotes,
+    gradeCustomer: item.gradeCustomer,
+    gradeCustomerFacingId: item.gradeCustomerFacingId,
+    gradeInternalProductionId: item.gradeInternalProductionId,
+    toleranceId: item.toleranceId,
+    conditionId: item.conditionId,
+    internalProductionCodeId: item.internalProductionCodeId,
+    partNoId: item.partNoId,
+    quantityNos: item.quantityNos,
+    quantityUom: item.quantityUom,
+    lockedAt: now.toISOString(),
+    lockedById,
+  };
+}
+
 /**
  * Save the Primary-Feasibility review for one enquiry (client-sheet model):
  * the five checks + notes, priority, export, actions list, who checked it, the
@@ -115,8 +152,11 @@ export async function setFeasibilityStatus(
  * Lock Dimensions) and Confirm. Writes per-dimension tolerances, secondary weights,
  * manufacturability (process route + tooling/material availability), the technical
  * verdict and notes. When `markDone` is passed it stamps the line as done
- * (secondaryFeasibilityDone + at + by), which unlocks the Confirm step. Any user
- * may save.
+ * (secondaryFeasibilityDone + at + by) AND — unless the verdict is not_feasible —
+ * atomically locks the dimensions (snapshotting the PF baseline) and confirms the
+ * line's feasibility, so a done Secondary line flows straight to Costing. If every
+ * line of the enquiry is then confirmed, the enquiry rolls to proceed_to_costing.
+ * Any user may save.
  */
 export async function saveSecondaryFeasibility(input: {
   inquiryItemId: string;
@@ -136,19 +176,27 @@ export async function saveSecondaryFeasibility(input: {
   secVerdict?: string | null;
   secNotes?: string | null;
   markDone?: boolean;
-}): Promise<Result> {
+}): Promise<{ ok: true; note?: string } | { ok: false; error: string }> {
   const me = await requireUser();
   const { inquiryItemId, markDone, ...fields } = input;
   if (!UUID_RE.test(inquiryItemId)) return { ok: false, error: "Invalid product line." };
 
   const [item] = await db
-    .select({ inquiryId: inquiryItems.inquiryId })
+    .select()
     .from(inquiryItems)
     .where(eq(inquiryItems.id, inquiryItemId))
     .limit(1);
   if (!item) return { ok: false, error: "Product line not found." };
 
   const now = new Date();
+
+  // Verdict effective after this save (the incoming value, else what's on file).
+  const effVerdict = fields.secVerdict !== undefined ? fields.secVerdict : item.secVerdict;
+  // Marking Secondary done confirms the line (locks + confirms) UNLESS the verdict
+  // is not_feasible — a not-feasible line is stamped done but never confirmed.
+  const notFeasible = markDone === true && effVerdict === "not_feasible";
+  const willConfirm = markDone === true && !notFeasible;
+
   const patch = clean({
     outerDiaTol: fields.outerDiaTol,
     innerDiaTol: fields.innerDiaTol,
@@ -175,19 +223,74 @@ export async function saveSecondaryFeasibility(input: {
         }
       : {}),
     updatedAt: now,
-  });
+  }) as Record<string, unknown>;
+
+  if (willConfirm) {
+    // Baseline reflects the spec AFTER this secondary save — the only spec columns
+    // secondary touches are gradeInternalProductionId + conditionId, so merge those.
+    const merged: InquiryItemRow = {
+      ...item,
+      gradeInternalProductionId:
+        fields.gradeInternalProductionId !== undefined
+          ? fields.gradeInternalProductionId
+          : item.gradeInternalProductionId,
+      conditionId:
+        fields.conditionId !== undefined ? fields.conditionId : item.conditionId,
+    };
+    Object.assign(patch, {
+      // Lock the baseline (Secondary-done IS the lock step).
+      isDimensionsLocked: true,
+      lockedById: me.id,
+      lockedAt: now,
+      feasibilityBaseline: buildFeasibilityBaseline(merged, me.id, now),
+      // Confirm the line so it becomes costable.
+      feasibilityConfirmed: true,
+      feasibilityConfirmedById: me.id,
+      feasibilityConfirmedAt: now,
+    });
+  }
 
   try {
-    await db
-      .update(inquiryItems)
-      .set(patch)
-      .where(eq(inquiryItems.id, inquiryItemId));
+    await db.transaction(async (tx) => {
+      await tx
+        .update(inquiryItems)
+        .set(patch)
+        .where(eq(inquiryItems.id, inquiryItemId));
+
+      if (willConfirm) {
+        // Roll the enquiry to proceed_to_costing once ALL its lines are confirmed
+        // (keeps the queue label + Confirmed register + costing gate consistent).
+        const siblings = await tx
+          .select({ feasibilityConfirmed: inquiryItems.feasibilityConfirmed })
+          .from(inquiryItems)
+          .where(eq(inquiryItems.inquiryId, item.inquiryId));
+        const allConfirmed =
+          siblings.length > 0 && siblings.every((s) => s.feasibilityConfirmed === true);
+        if (allConfirmed) {
+          await tx
+            .update(inquiries)
+            .set({ feasibilityStatus: "proceed_to_costing", updatedAt: now })
+            .where(eq(inquiries.id, item.inquiryId));
+        }
+      }
+    });
   } catch {
     return { ok: false, error: "Could not save Secondary Feasibility - please try again." };
   }
 
+  revalidatePath("/feasibility");
   revalidatePath(`/feasibility/${item.inquiryId}`);
+  revalidatePath("/feasibility/confirmed");
+  revalidatePath("/feasibility/secondary");
+  revalidatePath("/costings/new");
   revalidatePath(`/enquiries/register/${item.inquiryId}`);
+
+  if (notFeasible) {
+    return {
+      ok: true,
+      note: "Marked done as not feasible — line was not confirmed for costing.",
+    };
+  }
   return { ok: true };
 }
 
@@ -216,27 +319,7 @@ export async function lockItemDimensions(inquiryItemId: string): Promise<Result>
 
   const now = new Date();
   // Frozen snapshot of the LIVE spec columns at lock time (baseline for variance).
-  const baseline = {
-    shape: item.shape,
-    outerDia: item.outerDia,
-    innerDia: item.innerDia,
-    length: item.length,
-    width: item.width,
-    thickness: item.thickness,
-    dimensionUnit: item.dimensionUnit,
-    dimensionNotes: item.dimensionNotes,
-    gradeCustomer: item.gradeCustomer,
-    gradeCustomerFacingId: item.gradeCustomerFacingId,
-    gradeInternalProductionId: item.gradeInternalProductionId,
-    toleranceId: item.toleranceId,
-    conditionId: item.conditionId,
-    internalProductionCodeId: item.internalProductionCodeId,
-    partNoId: item.partNoId,
-    quantityNos: item.quantityNos,
-    quantityUom: item.quantityUom,
-    lockedAt: now.toISOString(),
-    lockedById: me.id,
-  };
+  const baseline = buildFeasibilityBaseline(item, me.id, now);
 
   try {
     await db

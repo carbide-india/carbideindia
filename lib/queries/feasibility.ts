@@ -1,5 +1,5 @@
 import "server-only";
-import { asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/lib/db";
 import { inquiries, inquiryItems, employees, masterOptions } from "@/db/schema";
@@ -339,6 +339,74 @@ export async function listSecondaryFeasibilityStates(
     secondaryFeasibilityAt: r.secondaryFeasibilityAt ?? null,
     secondaryByName: r.secondaryByName ?? null,
     feasibilityConfirmed: r.feasibilityConfirmed,
+  }));
+}
+
+/* ── Secondary / Technical Feasibility queue (product lines past Primary) ── */
+
+/**
+ * A single product LINE that has cleared Primary Feasibility and therefore needs
+ * (or already has) its Secondary / Technical Feasibility done. `inquiryId` links
+ * the row to `/feasibility/[inquiryId]` where the Secondary section lives.
+ */
+export interface SecondaryFeasibilityQueueRow {
+  inquiryItemId: string;
+  inquiryId: string;
+  smNumber: string;
+  companyName: string;
+  productName: string | null;
+  /** "Done" once the line's Secondary/Technical Feasibility is stamped. */
+  secondaryDone: boolean;
+  secVerdict: string | null;
+  feasibilityConfirmed: boolean;
+  createdAt: Date;
+}
+
+/**
+ * The Secondary / Technical Feasibility queue: every product line whose parent
+ * enquiry has CLEARED Primary Feasibility. "Cleared primary" = the inquiry's
+ * `feasibilityStatus` is post-primary — `in_review`, `pending_approval`, or
+ * `proceed_to_costing` (Feasibility Confirmed). Lines still `not_started`,
+ * `need_info`, or `not_feasible`, and archived enquiries, are excluded.
+ * Newest-enquiry first.
+ */
+export async function listSecondaryFeasibilityQueue(): Promise<SecondaryFeasibilityQueueRow[]> {
+  const primaryCleared: FeasibilityStatus[] = ["in_review", "pending_approval", "proceed_to_costing"];
+  const rows = await db
+    .select({
+      inquiryItemId: inquiryItems.id,
+      inquiryId: inquiryItems.inquiryId,
+      smNumber: inquiries.smNumber,
+      companyName: inquiries.companyName,
+      custProductName: inquiryItems.custProductName,
+      description: inquiryItems.description,
+      secondaryDone: inquiryItems.secondaryFeasibilityDone,
+      secVerdict: inquiryItems.secVerdict,
+      feasibilityConfirmed: inquiryItems.feasibilityConfirmed,
+      enquiryDate: inquiries.enquiryDate,
+      createdAt: inquiryItems.createdAt,
+      sortOrder: inquiryItems.sortOrder,
+    })
+    .from(inquiryItems)
+    .innerJoin(inquiries, eq(inquiryItems.inquiryId, inquiries.id))
+    .where(
+      and(
+        eq(inquiries.isArchived, false),
+        inArray(inquiries.feasibilityStatus, primaryCleared),
+      ),
+    )
+    .orderBy(desc(inquiries.enquiryDate), desc(inquiries.createdAt), asc(inquiryItems.sortOrder));
+
+  return rows.map((r) => ({
+    inquiryItemId: r.inquiryItemId,
+    inquiryId: r.inquiryId,
+    smNumber: r.smNumber,
+    companyName: r.companyName,
+    productName: (r.custProductName ?? r.description ?? "").trim() || null,
+    secondaryDone: r.secondaryDone,
+    secVerdict: r.secVerdict,
+    feasibilityConfirmed: r.feasibilityConfirmed,
+    createdAt: r.createdAt,
   }));
 }
 
