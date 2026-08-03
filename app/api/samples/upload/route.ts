@@ -25,8 +25,6 @@ const SAMPLES_PATHNAME_PREFIX = "samples/";
  * them with plain <img> tags, same access model as avatars.
  */
 export async function POST(request: Request): Promise<NextResponse> {
-  await requireUser();
-
   const body = (await request.json()) as HandleUploadBody;
 
   try {
@@ -34,6 +32,10 @@ export async function POST(request: Request): Promise<NextResponse> {
       request,
       body,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
+        // Auth the token-mint here; the Blob completion callback (no session)
+        // skips this hook and is verified by the signed token. The route is
+        // public in middleware so that callback can reach it.
+        await requireUser();
         if (!pathname.startsWith(SAMPLES_PATHNAME_PREFIX)) {
           throw new Error("Sample photos must be uploaded under samples/.");
         }

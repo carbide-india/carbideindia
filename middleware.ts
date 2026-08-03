@@ -13,6 +13,16 @@ const PUBLIC_PATTERNS: RegExp[] = [
   /^\/api\/health$/,
   /^\/api\/cron\//, // authenticated by CRON_SECRET inside the route
   /^\/api\/auth\//, // session mint/clear
+  // Vercel Blob client-upload token routes. These MUST be public so Blob's
+  // server-to-server `onUploadCompleted` webhook (no session cookie, non-office
+  // IP) can reach them — otherwise the IP gate / auth redirect blocks the
+  // callback and the browser upload hangs forever. Auth for the token-mint step
+  // is enforced inside each route's onBeforeGenerateToken, and Blob verifies the
+  // completion callback via the signed token.
+  /^\/api\/documents\/upload$/,
+  /^\/api\/samples\/upload$/,
+  /^\/api\/feasibility\/upload$/,
+  /^\/api\/clients\/business-card\/upload$/,
   /^\/manifest\.json$/,
   /^\/sw\.js$/,
 ];

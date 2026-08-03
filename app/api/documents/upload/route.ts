@@ -34,12 +34,6 @@ export const runtime = "nodejs";
  * third-party leaks.
  */
 export async function POST(request: Request): Promise<NextResponse> {
-  // Auth: documents are open to all signed-in employees (same rule as
-  // listDocuments). Clerk middleware already protects this route; requireUser
-  // re-checks and additionally rejects deactivated employees (redirect throw
-  // surfaces as a non-2xx to the uploader, which fails the upload).
-  await requireUser();
-
   const body = (await request.json()) as HandleUploadBody;
 
   try {
@@ -47,6 +41,13 @@ export async function POST(request: Request): Promise<NextResponse> {
       request,
       body,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
+        // Auth: documents are open to all signed-in employees (same rule as
+        // listDocuments); requireUser rejects deactivated employees too. Done
+        // HERE (not at the top) so the Blob `blob.upload-completed` callback —
+        // which carries no session cookie and skips this hook — isn't blocked;
+        // Blob verifies that callback via its signed token. The route is public
+        // in middleware so the callback can reach it at all.
+        await requireUser();
         if (!pathname.startsWith(DOCUMENTS_PATHNAME_PREFIX)) {
           throw new Error("Documents must be uploaded under documents/.");
         }

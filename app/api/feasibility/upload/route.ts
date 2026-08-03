@@ -16,8 +16,6 @@ const FEAS_PATHNAME_PREFIX = "feasibility/";
  * cap, and a random suffix. Public blobs, downloaded via plain links.
  */
 export async function POST(request: Request): Promise<NextResponse> {
-  await requireUser();
-
   const body = (await request.json()) as HandleUploadBody;
 
   try {
@@ -25,6 +23,10 @@ export async function POST(request: Request): Promise<NextResponse> {
       request,
       body,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
+        // Auth the token-mint here; the Blob completion callback (no session)
+        // skips this hook and is verified by the signed token. The route is
+        // public in middleware so that callback can reach it.
+        await requireUser();
         if (!pathname.startsWith(FEAS_PATHNAME_PREFIX)) {
           throw new Error("Feasibility attachments must be uploaded under feasibility/.");
         }

@@ -36,8 +36,6 @@ const MAX_BUSINESS_CARD_BYTES = 25 * 1024 * 1024;
  * with plain <img> tags, same access model as avatars / sample photos.
  */
 export async function POST(request: Request): Promise<NextResponse> {
-  await requireUser();
-
   const body = (await request.json()) as HandleUploadBody;
 
   try {
@@ -45,6 +43,11 @@ export async function POST(request: Request): Promise<NextResponse> {
       request,
       body,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
+        // Auth the token-mint here (browser request carries the session cookie).
+        // The `blob.upload-completed` callback skips this hook and is verified by
+        // Blob's signed token, so it succeeds without a session (the route is
+        // public in middleware for exactly that callback).
+        await requireUser();
         if (!pathname.startsWith(BUSINESS_CARDS_PATHNAME_PREFIX)) {
           throw new Error(
             "Business cards must be uploaded under business-cards/.",
