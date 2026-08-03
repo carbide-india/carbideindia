@@ -23,7 +23,7 @@ export function SecondaryFeasibilityQueueTable({
   rows: SecondaryFeasibilityQueueRow[];
 }) {
   const hrefFor = React.useCallback(
-    (inquiryId: string): Route => `/feasibility/${inquiryId}` as Route,
+    (inquiryId: string): Route => `/feasibility/secondary/${inquiryId}` as Route,
     [],
   );
 

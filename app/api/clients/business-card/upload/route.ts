@@ -81,6 +81,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     });
     return NextResponse.json(result);
   } catch (err) {
+    // Surface the real reason in the function logs (token/config/content-type)
+    // — the 400 body message alone isn't captured by log search.
+    console.error("[business-cards] upload token error:", err);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Upload failed" },
       { status: 400 },

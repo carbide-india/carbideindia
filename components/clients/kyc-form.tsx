@@ -681,12 +681,15 @@ export function KycForm({
         side === "front" ? "businessCardFrontUrl" : "businessCardBackUrl",
         blob.url,
       );
-    } catch {
+    } catch (err) {
       // Missing BLOB_READ_WRITE_TOKEN (or a Blob outage) lands here - the
-      // card is skipped, the form still saves without it.
+      // card is skipped, the form still saves without it. Surface the real
+      // server reason so config issues are diagnosable, not a vague message.
+      const reason = err instanceof Error ? err.message : "";
       fireToast({
-        message:
-          "Business card upload unavailable - check storage configuration.",
+        message: reason
+          ? `Business card upload failed: ${reason}`
+          : "Business card upload unavailable - check storage configuration.",
         type: "error",
       });
     } finally {

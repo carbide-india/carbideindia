@@ -109,8 +109,17 @@ const ClientKycFieldsSchema = z.object({
     notes: OptionalText(2000),
   })).optional(),
   // ── Credit & banking ──
-  creditDays: z.coerce.number().int().nonnegative().optional(),
-  creditLimit: z.coerce.number().nonnegative().optional(),
+  // Empty number inputs arrive as "" or NaN (RHF valueAsNumber) — treat those
+  // as "not provided" so an untouched field doesn't fail with
+  // "expected number, received NaN".
+  creditDays: z.preprocess(
+    (v) => (v === "" || v == null || (typeof v === "number" && Number.isNaN(v)) ? undefined : v),
+    z.coerce.number().int().nonnegative().optional(),
+  ),
+  creditLimit: z.preprocess(
+    (v) => (v === "" || v == null || (typeof v === "number" && Number.isNaN(v)) ? undefined : v),
+    z.coerce.number().nonnegative().optional(),
+  ),
   bankName: OptionalText(120), bankAccountNo: OptionalText(60),
   bankIfsc: OptionalText(20), bankBranch: OptionalText(120),
   bankAccountHolder: OptionalText(120),
