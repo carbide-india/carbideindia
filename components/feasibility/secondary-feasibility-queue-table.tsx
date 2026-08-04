@@ -14,8 +14,9 @@ import type { SecondaryFeasibilityQueueRow } from "@/lib/queries/feasibility";
 /**
  * Secondary / Technical Feasibility queue — every product LINE whose parent
  * enquiry has cleared Primary Feasibility. Each row links to
- * `/feasibility/[inquiryId]`, where the Secondary/Technical Feasibility section
- * lives. Status is a simple Pending/Done readout of the line's Secondary stamp.
+ * `/secondary-feasibility/[inquiryId]`, where the Secondary/Technical
+ * Feasibility section lives. Status is a simple Pending/Done readout of the
+ * line's Secondary stamp.
  */
 export function SecondaryFeasibilityQueueTable({
   rows,
@@ -23,7 +24,7 @@ export function SecondaryFeasibilityQueueTable({
   rows: SecondaryFeasibilityQueueRow[];
 }) {
   const hrefFor = React.useCallback(
-    (inquiryId: string): Route => `/feasibility/secondary/${inquiryId}` as Route,
+    (inquiryId: string): Route => `/secondary-feasibility/${inquiryId}` as Route,
     [],
   );
 

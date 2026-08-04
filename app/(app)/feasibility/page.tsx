@@ -1,4 +1,4 @@
-import { requireUser } from "@/lib/auth/current";
+import { requireAdmin } from "@/lib/auth/current";
 import { listFeasibilityQueue } from "@/lib/queries/feasibility";
 import { FeasibilityQueueTable } from "@/components/feasibility/feasibility-queue-table";
 import { FEASIBILITY_STATUSES, FEASIBILITY_STATUS_LABELS, type FeasibilityStatus } from "@/db/enums";
@@ -14,7 +14,7 @@ export default async function FeasibilityDashboardPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
-  await requireUser();
+  await requireAdmin();
   const all = await listFeasibilityQueue();
 
   const sp = await searchParams;
@@ -43,9 +43,6 @@ export default async function FeasibilityDashboardPage({
             </span>
           )}
         </h1>
-        <p className="mt-1.5 text-[14px] text-ink-subtle">
-          Technical DFM review &amp; sign-off — verify each enquiry can be manufactured before it is costed.
-        </p>
       </header>
 
       <div className="mb-5 grid grid-cols-3 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { inquiries, inquiryItems } from "@/db/schema";
-import { requireAdmin, requireUser } from "@/lib/auth/current";
+import { requireAdmin } from "@/lib/auth/current";
 import { FEASIBILITY_STATUSES, type FeasibilityStatus } from "@/db/enums";
 import {
   SaveFeasibilityChecklistSchema,
@@ -68,7 +68,7 @@ export async function saveFeasibilityChecklist(
   inquiryId: string,
   input: unknown,
 ): Promise<Result> {
-  await requireUser();
+  await requireAdmin();
   if (!UUID_RE.test(inquiryId)) return { ok: false, error: "Invalid enquiry." };
 
   const parsed = SaveFeasibilityChecklistSchema.safeParse(input);
@@ -126,7 +126,7 @@ export async function setFeasibilityStatus(
   inquiryId: string,
   status: string,
 ): Promise<Result> {
-  await requireUser();
+  await requireAdmin();
   const parsed = SetFeasibilityStatusSchema.safeParse({ status });
   if (!parsed.success || !UUID_RE.test(inquiryId)) {
     return { ok: false, error: "Invalid status." };
@@ -177,7 +177,7 @@ export async function saveSecondaryFeasibility(input: {
   secNotes?: string | null;
   markDone?: boolean;
 }): Promise<{ ok: true; note?: string } | { ok: false; error: string }> {
-  const me = await requireUser();
+  const me = await requireAdmin();
   const { inquiryItemId, markDone, ...fields } = input;
   if (!UUID_RE.test(inquiryItemId)) return { ok: false, error: "Invalid product line." };
 
@@ -280,8 +280,9 @@ export async function saveSecondaryFeasibility(input: {
 
   revalidatePath("/feasibility");
   revalidatePath(`/feasibility/${item.inquiryId}`);
-  revalidatePath("/feasibility/confirmed");
-  revalidatePath("/feasibility/secondary");
+  revalidatePath("/secondary-feasibility/confirmed");
+  revalidatePath("/secondary-feasibility");
+  revalidatePath(`/secondary-feasibility/${item.inquiryId}`);
   revalidatePath("/costings/new");
   revalidatePath(`/enquiries/register/${item.inquiryId}`);
 
@@ -302,7 +303,7 @@ export async function saveSecondaryFeasibility(input: {
  * unlocked line simply re-snapshots the current values. Any user may lock.
  */
 export async function lockItemDimensions(inquiryItemId: string): Promise<Result> {
-  const me = await requireUser();
+  const me = await requireAdmin();
   if (!UUID_RE.test(inquiryItemId)) return { ok: false, error: "Invalid product line." };
 
   const [item] = await db
@@ -337,6 +338,8 @@ export async function lockItemDimensions(inquiryItemId: string): Promise<Result>
   }
 
   revalidatePath(`/feasibility/${item.inquiryId}`);
+  revalidatePath(`/secondary-feasibility/${item.inquiryId}`);
+  revalidatePath("/secondary-feasibility");
   revalidatePath(`/enquiries/register/${item.inquiryId}`);
   return { ok: true };
 }
@@ -377,7 +380,9 @@ export async function unlockItemDimensions(inquiryItemId: string): Promise<Resul
   }
 
   revalidatePath(`/feasibility/${item.inquiryId}`);
-  revalidatePath(`/feasibility/confirmed`);
+  revalidatePath(`/secondary-feasibility/${item.inquiryId}`);
+  revalidatePath(`/secondary-feasibility`);
+  revalidatePath(`/secondary-feasibility/confirmed`);
   revalidatePath(`/costings/new`);
   revalidatePath(`/enquiries/register/${item.inquiryId}`);
   return { ok: true };
@@ -390,7 +395,7 @@ export async function unlockItemDimensions(inquiryItemId: string): Promise<Resul
  * per-item costing gate). Any user may confirm.
  */
 export async function confirmItemFeasibility(inquiryItemId: string): Promise<Result> {
-  const me = await requireUser();
+  const me = await requireAdmin();
   if (!UUID_RE.test(inquiryItemId)) return { ok: false, error: "Invalid product line." };
 
   const [item] = await db
@@ -422,7 +427,9 @@ export async function confirmItemFeasibility(inquiryItemId: string): Promise<Res
   }
 
   revalidatePath(`/feasibility/${item.inquiryId}`);
-  revalidatePath(`/feasibility/confirmed`);
+  revalidatePath(`/secondary-feasibility/${item.inquiryId}`);
+  revalidatePath(`/secondary-feasibility`);
+  revalidatePath(`/secondary-feasibility/confirmed`);
   revalidatePath(`/costings/new`);
   revalidatePath(`/enquiries/register/${item.inquiryId}`);
   return { ok: true };
@@ -459,7 +466,9 @@ export async function unconfirmItemFeasibility(inquiryItemId: string): Promise<R
   }
 
   revalidatePath(`/feasibility/${item.inquiryId}`);
-  revalidatePath(`/feasibility/confirmed`);
+  revalidatePath(`/secondary-feasibility/${item.inquiryId}`);
+  revalidatePath(`/secondary-feasibility`);
+  revalidatePath(`/secondary-feasibility/confirmed`);
   revalidatePath(`/costings/new`);
   revalidatePath(`/enquiries/register/${item.inquiryId}`);
   return { ok: true };
@@ -470,7 +479,7 @@ export async function setFeasibilityStatusBulk(
   ids: string[],
   status: string,
 ): Promise<Result> {
-  await requireUser();
+  await requireAdmin();
   if (!Array.isArray(ids) || ids.length === 0) return { ok: false, error: "No rows selected." };
   if (!ids.every((id) => UUID_RE.test(id))) return { ok: false, error: "Invalid selection." };
   if (!FEASIBILITY_STATUSES.includes(status as FeasibilityStatus)) {

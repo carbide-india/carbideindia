@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { notFound } from "next/navigation";
 import { ArrowLeft, FlaskConical } from "lucide-react";
-import { requireUser } from "@/lib/auth/current";
+import { requireAdmin } from "@/lib/auth/current";
 import { getInquiryWorkspaceHeader, getInquiryProducts } from "@/lib/queries/sm-workspace";
 import { getInquiryById } from "@/lib/queries/inquiries";
 import { listEmployeeOptions } from "@/lib/queries/employees";
@@ -23,7 +23,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 /**
  * Primary Feasibility review — the 5-check DFM sign-off ONLY. The detailed
  * technical-spec stage (Secondary / Technical Feasibility) + the Lock/baseline
- * live on their own page at /feasibility/secondary/[id], reached from the
+ * live in their own module at /secondary-feasibility/[id], reached from the
  * Secondary Feasibility queue (and the cross-link below).
  */
 export default async function FeasibilityReviewPage({
@@ -31,7 +31,7 @@ export default async function FeasibilityReviewPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireUser();
+  await requireAdmin();
   const { id } = await params;
   if (!UUID_RE.test(id)) notFound();
 
@@ -90,7 +90,7 @@ export default async function FeasibilityReviewPage({
           {header.salesPersonName && <span className="text-ink-subtle">· {header.salesPersonName}</span>}
           {/* Cross-link to the separate Secondary / Technical Feasibility review. */}
           <Link
-            href={`/feasibility/secondary/${id}` as Route}
+            href={`/secondary-feasibility/${id}` as Route}
             className="inline-flex items-center gap-1.5 rounded-lg border border-[#c7cae6] px-2.5 py-1 text-[12px] font-bold text-[#3f3f94] transition-colors hover:border-brand hover:bg-[#f3f3fb]"
           >
             <FlaskConical className="h-[13px] w-[13px]" strokeWidth={2.4} /> Secondary Review

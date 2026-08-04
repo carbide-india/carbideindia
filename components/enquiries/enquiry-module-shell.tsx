@@ -18,6 +18,7 @@ import {
   FileCheck2,
   SlidersHorizontal,
   ClipboardCheck,
+  Layers,
   Trash2,
   PanelLeftClose,
   PanelLeftOpen,
@@ -40,6 +41,8 @@ interface NavDef {
   active?: (path: string) => boolean;
   /** Section key - a greyed divider is drawn where this changes. */
   group?: "overview" | "create" | "records" | "config";
+  /** Hidden from non-admins (the target route is admin-gated server-side). */
+  adminOnly?: boolean;
 }
 
 // "Create New Form" opens the CURRENT form family's own new page - each form
@@ -206,8 +209,9 @@ function navFor(pathname: string): NavDef[] {
         ] as NavDef[])
       : []),
   ];
-  // Primary Feasibility is now its own Hub module - keep a cross-link launcher
-  // in the enquiry family (opens the standalone /feasibility module).
+  // Primary and Secondary Feasibility are each their own module - keep
+  // cross-link launchers in the enquiry family (they open the standalone
+  // /feasibility and /secondary-feasibility modules).
   const fam = familySeg(pathname);
   if (fam === "enquiries" || fam === "inquiries") {
     items.push({
@@ -217,6 +221,16 @@ function navFor(pathname: string): NavDef[] {
       ready: true,
       active: (p) => p.startsWith("/feasibility"),
       group: "records",
+      adminOnly: true,
+    });
+    items.push({
+      label: "Secondary Feasibility",
+      href: "/secondary-feasibility" as Route,
+      Icon: Layers,
+      ready: true,
+      active: (p) => p.startsWith("/secondary-feasibility"),
+      group: "records",
+      adminOnly: true,
     });
   }
   // Forms with their own "Custom" dropdown lists get a Custom editor entry.
@@ -245,6 +259,7 @@ export function EnquiryModuleShell({
   userMenu,
   bulkUpload,
   title,
+  isAdmin = false,
 }: {
   children: ReactNode;
   userMenu?: ReactNode;
@@ -252,6 +267,9 @@ export function EnquiryModuleShell({
   /** Header title. When omitted it's derived from the route (enquiry pages).
    *  Pass it explicitly to reuse this shell for any other form (KYC, Sample…). */
   title?: string;
+  /** Gates `adminOnly` nav entries. Defaults to false — a shell that doesn't
+   *  pass it simply never shows admin-only links (fail closed). */
+  isAdmin?: boolean;
 }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
@@ -273,7 +291,7 @@ export function EnquiryModuleShell({
         : title ?? "Forms";
   // Sidebar is hidden entirely on the launchpad (form selection).
   const showSidebar = pathname !== "/enquiries";
-  const nav = navFor(pathname);
+  const nav = navFor(pathname).filter((n) => !n.adminOnly || isAdmin);
 
   return (
     <div className="flex min-h-screen flex-col bg-[#f4f5f7]">

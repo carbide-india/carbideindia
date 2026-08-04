@@ -65,7 +65,7 @@ export const MODULES: ModuleDef[] = [
     key: "enquiries",
     label: "Enquiries",
     home: "/inquiries",
-    match: ["/inquiries", "/quotations", "/negotiations", "/sales-orders", "/samples", "/meetings", "/costings", "/feasibility"],
+    match: ["/inquiries", "/quotations", "/negotiations", "/sales-orders", "/samples", "/meetings", "/costings", "/feasibility", "/secondary-feasibility"],
     hasForms: true,
     items: [
       { href: "/samples" as Route, label: "Samples", Icon: FlaskConical },

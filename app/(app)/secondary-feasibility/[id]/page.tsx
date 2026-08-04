@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ClipboardList } from "lucide-react";
-import { requireUser } from "@/lib/auth/current";
+import { requireAdmin } from "@/lib/auth/current";
 import { getInquiryWorkspaceHeader, getInquiryProducts } from "@/lib/queries/sm-workspace";
 import { getInquiryById } from "@/lib/queries/inquiries";
 import {
@@ -11,10 +11,10 @@ import {
   getInquiryVarianceRows,
   listSecondaryFeasibilityStates,
 } from "@/lib/queries/feasibility";
-import { listMasterOptions } from "@/lib/queries/masters";
+import { getShapeProfiles, listMasterOptions } from "@/lib/queries/masters";
 import { INQUIRY_PRIORITY_LABELS } from "@/db/enums";
 import { Chip, PRIORITY_TONES } from "@/components/inquiries/chip";
-import { FeasibilityEnquirySnapshot } from "@/components/feasibility/feasibility-enquiry-snapshot";
+import { SecondaryProductDetailsPanel } from "@/components/feasibility/secondary-product-details-panel";
 import { LockDimensionsControl } from "@/components/feasibility/lock-dimensions-control";
 import { SecondaryFeasibilitySection } from "@/components/feasibility/secondary-feasibility-section";
 
@@ -27,19 +27,19 @@ export const metadata: Metadata = {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * Secondary / Technical Feasibility review — a distinct page from the Primary
- * (5-check DFM) review. Reached from the Secondary Feasibility queue. Holds the
- * detailed technical-spec capture per line (dimensions + tolerances, weights,
- * grade/condition, manufacturability, verdict) plus the Lock/baseline + variance.
- * Marking Secondary done confirms the line (→ costable). The Primary review lives
- * separately at /feasibility/[id].
+ * Secondary / Technical Feasibility review — its own module page, separate from
+ * the Primary (5-check DFM) review. Reached from the Secondary Feasibility queue.
+ * Holds the detailed technical-spec capture per line (dimensions + tolerances,
+ * weights, grade/condition, manufacturability, verdict) plus the Lock/baseline +
+ * variance. Marking Secondary done confirms the line (→ costable). The Primary
+ * review lives in its own module at /feasibility/[id].
  */
 export default async function SecondaryFeasibilityReviewPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const me = await requireUser();
+  const me = await requireAdmin();
   const { id } = await params;
   if (!UUID_RE.test(id)) notFound();
 
@@ -52,6 +52,8 @@ export default async function SecondaryFeasibilityReviewPage({
     secondaryStates,
     gradeOptions,
     conditionOptions,
+    toleranceOptions,
+    shapeProfiles,
   ] = await Promise.all([
     getInquiryWorkspaceHeader(id),
     getInquiryProducts(id),
@@ -61,8 +63,15 @@ export default async function SecondaryFeasibilityReviewPage({
     listSecondaryFeasibilityStates(id),
     listMasterOptions("internal_grade"),
     listMasterOptions("condition"),
+    listMasterOptions("tolerance"),
+    getShapeProfiles(),
   ]);
   if (!header || !inquiry) notFound();
+
+  // The editable spec band edits product line 1 — frozen once that line is
+  // locked / confirmed (the PF baseline must not move under Costing).
+  const firstLock = lockStates[0] ?? null;
+  const specLocked = Boolean(firstLock?.isLocked || firstLock?.feasibilityConfirmed);
 
   return (
     <div className="mx-auto w-full max-w-[1400px]">
@@ -71,14 +80,14 @@ export default async function SecondaryFeasibilityReviewPage({
         style={{ boxShadow: "0 6px 20px -10px rgba(15,23,42,0.22)" }}
       >
         <Link
-          href={"/feasibility/secondary" as Route}
+          href={"/secondary-feasibility" as Route}
           className="group absolute left-5 top-1/2 hidden -translate-y-1/2 items-center gap-2 rounded-xl border-2 border-[#c7cae6] bg-surface-card px-[18px] py-2.5 text-[14.5px] font-extrabold text-ink-soft shadow-sm transition-all hover:-translate-y-1/2 hover:border-brand hover:text-brand hover:shadow-md lg:inline-flex"
         >
           <ArrowLeft className="h-[18px] w-[18px] transition-transform group-hover:-translate-x-0.5" strokeWidth={2.6} />
           Secondary Queue
         </Link>
         <Link
-          href={"/feasibility/secondary" as Route}
+          href={"/secondary-feasibility" as Route}
           className="mb-2 inline-flex items-center gap-1.5 text-[13px] font-bold text-ink-subtle transition-colors hover:text-brand lg:hidden"
         >
           <ArrowLeft className="h-[15px] w-[15px]" strokeWidth={2.6} /> Secondary Queue
@@ -112,9 +121,18 @@ export default async function SecondaryFeasibilityReviewPage({
         </div>
       </header>
 
-      {/* Read-only enquiry context so the reviewer has the full picture here too. */}
+      {/* Enquiry context — customer/checks/links read-only, but the two product
+          bands are editable here so a reviewer can correct the spec in place. */}
       <div className="mb-5">
-        <FeasibilityEnquirySnapshot inquiry={inquiry} product={products[0] ?? null} />
+        <SecondaryProductDetailsPanel
+          inquiry={inquiry}
+          product={products[0] ?? null}
+          line={secondaryStates[0] ?? null}
+          lineCount={secondaryStates.length}
+          specLocked={specLocked}
+          toleranceOptions={toleranceOptions}
+          shapeProfiles={shapeProfiles}
+        />
       </div>
 
       {/* ── Secondary / Technical Feasibility (detailed spec → confirm) ─────── */}

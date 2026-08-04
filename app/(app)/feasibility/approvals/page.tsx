@@ -1,5 +1,5 @@
 import { BadgeCheck } from "lucide-react";
-import { requireUser } from "@/lib/auth/current";
+import { requireAdmin } from "@/lib/auth/current";
 import { listFeasibilityQueue } from "@/lib/queries/feasibility";
 import { FeasibilityQueueTable } from "@/components/feasibility/feasibility-queue-table";
 
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
  * need info, or not feasible).
  */
 export default async function FeasibilityApprovalsPage() {
-  await requireUser();
+  await requireAdmin();
   const rows = (await listFeasibilityQueue()).filter(
     (r) => r.status === "pending_approval" || r.status === "in_review",
   );

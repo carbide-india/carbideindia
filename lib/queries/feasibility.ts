@@ -250,6 +250,7 @@ export interface SecondaryFeasibilityState {
   secMaterialWt: string | null;
   gradeInternalProductionId: string | null;
   conditionId: string | null;
+  toleranceId: string | null;
   secProcessRoute: string | null;
   secToolingAvailability: string | null;
   secMaterialAvailability: string | null;
@@ -291,6 +292,7 @@ export async function listSecondaryFeasibilityStates(
       secMaterialWt: inquiryItems.secMaterialWt,
       gradeInternalProductionId: inquiryItems.gradeInternalProductionId,
       conditionId: inquiryItems.conditionId,
+      toleranceId: inquiryItems.toleranceId,
       secProcessRoute: inquiryItems.secProcessRoute,
       secToolingAvailability: inquiryItems.secToolingAvailability,
       secMaterialAvailability: inquiryItems.secMaterialAvailability,
@@ -330,6 +332,7 @@ export async function listSecondaryFeasibilityStates(
     secMaterialWt: r.secMaterialWt,
     gradeInternalProductionId: r.gradeInternalProductionId,
     conditionId: r.conditionId,
+    toleranceId: r.toleranceId,
     secProcessRoute: r.secProcessRoute,
     secToolingAvailability: r.secToolingAvailability,
     secMaterialAvailability: r.secMaterialAvailability,

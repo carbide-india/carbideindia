@@ -1,17 +1,19 @@
 import { CircleCheck } from "lucide-react";
-import { requireUser } from "@/lib/auth/current";
+import { requireAdmin } from "@/lib/auth/current";
 import { listConfirmedFeasibility } from "@/lib/queries/feasibility";
 import { ConfirmedFeasibilityTable } from "@/components/feasibility/confirmed-feasibility-table";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Confirmed Feasibility Register — every enquiry whose Primary Feasibility is
- * confirmed (feasibilityStatus = proceed_to_costing) and therefore ready for
- * Costing. Each row links back to its feasibility review.
+ * Confirmed Feasibility Register — every enquiry whose feasibility is confirmed
+ * (feasibilityStatus = proceed_to_costing) and therefore ready for Costing.
+ * It lives in the Secondary Feasibility module because marking a line's
+ * Secondary / Technical Feasibility done IS what confirms it. Each row links
+ * back to its feasibility review.
  */
 export default async function ConfirmedFeasibilityPage() {
-  await requireUser();
+  await requireAdmin();
   const rows = await listConfirmedFeasibility();
 
   return (

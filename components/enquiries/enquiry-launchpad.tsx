@@ -13,6 +13,7 @@ import {
   PackageCheck,
   CalendarCheck,
   ClipboardCheck,
+  Layers,
   Truck,
 } from "lucide-react";
 
@@ -21,7 +22,16 @@ const CARD_GRAD = "linear-gradient(135deg,#4a4ab5 0%,#2f2f6f 100%)";
 
 // OUR forms - the real Carbide sales-pipeline forms. Each card deep-links to the
 // live form route.
-const FORMS: { key: string; title: string; desc: string; tag: string; href: Route; Icon: typeof FileText }[] = [
+const FORMS: {
+  key: string;
+  title: string;
+  desc: string;
+  tag: string;
+  href: Route;
+  Icon: typeof FileText;
+  /** Hidden from non-admins — the route itself is admin-gated server-side. */
+  adminOnly?: boolean;
+}[] = [
   {
     key: "kyc",
     title: "Client KYC",
@@ -53,6 +63,16 @@ const FORMS: { key: string; title: string; desc: string; tag: string; href: Rout
     tag: "Feasibility",
     href: "/feasibility" as Route,
     Icon: ClipboardCheck,
+    adminOnly: true,
+  },
+  {
+    key: "secondary-feasibility",
+    title: "Secondary Feasibility",
+    desc: "Detailed technical review per product line - confirmed dimensions, weights, grade, and verdict.",
+    tag: "Feasibility",
+    href: "/secondary-feasibility" as Route,
+    Icon: Layers,
+    adminOnly: true,
   },
   {
     key: "costing",
@@ -104,7 +124,10 @@ const FORMS: { key: string; title: string; desc: string; tag: string; href: Rout
   },
 ];
 
-export function EnquiryLaunchpad() {
+export function EnquiryLaunchpad({ isAdmin = false }: { isAdmin?: boolean }) {
+  // Admin-only forms (both Feasibility modules) are hidden rather than shown
+  // and then refused — the routes fail closed server-side either way.
+  const forms = FORMS.filter((f) => !f.adminOnly || isAdmin);
   return (
     <div>
       {/* ── Hero - a big logo card on the left, a gap, then a narrower purple
@@ -160,7 +183,7 @@ export function EnquiryLaunchpad() {
 
       {/* ── Card grid - compact, centred, prominently outlined so all 8 fit. ── */}
       <div className="mx-auto mt-5 grid max-w-[1120px] grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {FORMS.map((f, i) => {
+        {forms.map((f, i) => {
           const n = String(i + 1).padStart(2, "0");
           return (
             <Link

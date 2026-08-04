@@ -9,12 +9,13 @@ import {
   LifeBuoy,
   ArrowLeft,
   LayoutGrid,
-  ClipboardList,
+  Layers,
   Circle,
   CircleHelp,
   CircleX,
   Clock3,
   CircleCheck,
+  BadgeCheck,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
@@ -24,35 +25,39 @@ import { NotificationBell } from "@/components/notifications/notification-bell";
 import { cn } from "@/lib/utils";
 
 /**
- * Primary Feasibility module shell — its own chrome (like the other form
- * modules). The sidebar is the single Primary destination (`/feasibility`, the
- * 5-check DFM queue) with its status filters (Not Started / Need Info / …)
- * nested under it, linking the queue to `/feasibility?status=<value>`.
- * Secondary Feasibility and the Confirmed Feasibility register are a SEPARATE
- * module at /secondary-feasibility with its own shell and Forms launchpad card
- * — confirming a line IS the Secondary-done step, so the register belongs there.
+ * Secondary Feasibility module shell — its OWN chrome, separate from the Primary
+ * Feasibility module (which no longer carries either destination below). Reached
+ * from its own Forms launchpad card. Two top-level destinations:
+ *   • Secondary Feasibility → /secondary-feasibility           (the line queue,
+ *     with Pending / Done nested under it as `?status=<value>` filters)
+ *   • Confirmed Feasibility → /secondary-feasibility/confirmed (the register —
+ *     marking Secondary done IS what confirms a line, so it belongs here)
  */
 
-/** A status filter nested under the Primary Feasibility destination. */
 interface StatusNav {
   label: string;
   status: string;
   Icon: typeof Circle;
 }
 
-const PRIMARY_STATUS_NAV: StatusNav[] = [
+/**
+ * The Secondary queue's status filters — the same five-slot rhythm (and icons)
+ * as the Primary sidebar, mapped onto what a Secondary LINE actually carries:
+ * its technical verdict and its Secondary-done / confirmed stamps.
+ */
+const SECONDARY_STATUS_NAV: StatusNav[] = [
   { label: "Not Started", status: "not_started", Icon: Circle },
   { label: "Need Info", status: "need_info", Icon: CircleHelp },
   { label: "Not Feasible", status: "not_feasible", Icon: CircleX },
-  { label: "Pending Approval", status: "pending_approval", Icon: Clock3 },
-  { label: "Feasibility Confirmed", status: "proceed_to_costing", Icon: CircleCheck },
+  { label: "Pending", status: "pending", Icon: Clock3 },
+  { label: "Done", status: "done", Icon: CircleCheck },
 ];
 
-function primaryHrefFor(status: string): Route {
-  return (status ? `/feasibility?status=${status}` : "/feasibility") as Route;
+function queueHrefFor(status: string): Route {
+  return (status ? `/secondary-feasibility?status=${status}` : "/secondary-feasibility") as Route;
 }
 
-export function FeasibilityModuleShell({
+export function SecondaryFeasibilityModuleShell({
   children,
   userMenu,
 }: {
@@ -62,7 +67,7 @@ export function FeasibilityModuleShell({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeStatus = searchParams.get("status") ?? "";
-  const onQueue = pathname === "/feasibility";
+  const onQueue = pathname === "/secondary-feasibility";
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -103,7 +108,7 @@ export function FeasibilityModuleShell({
 
         {/* Module title - centered in the gap between the search and the icons. */}
         <div className="flex flex-1 items-center justify-center">
-          <ModuleTitleBadge title="Primary Feasibility" align="start" />
+          <ModuleTitleBadge title="Secondary Feasibility" align="start" />
         </div>
 
         <div className="flex shrink-0 items-center justify-end gap-2.5">
@@ -137,25 +142,26 @@ export function FeasibilityModuleShell({
                 );
                 const activeCls = `${base} bg-[#3f3f94] font-bold text-white shadow-[0_2px_8px_rgba(63,63,148,0.30)]`;
                 const idleCls = `${base} font-semibold text-[#3a4152] hover:bg-[#efeffb] hover:text-[#3f3f94]`;
-                const primaryActive = onQueue; // any /feasibility?status=… view
+                // Each destination matches ONLY its own route — the queue (exact
+                // /secondary-feasibility) must not stay active on Confirmed.
+                const onConfirmed = pathname === "/secondary-feasibility/confirmed";
                 return (
                   <>
-                    {/* Destination 1 — Primary Feasibility (+ nested status filters). */}
                     <Link
-                      href={primaryHrefFor("")}
-                      title={collapsed ? "Primary Feasibility" : undefined}
-                      className={primaryActive && activeStatus === "" ? activeCls : idleCls}
+                      href={queueHrefFor("")}
+                      title={collapsed ? "Secondary Feasibility" : undefined}
+                      className={onQueue && activeStatus === "" ? activeCls : idleCls}
                     >
-                      <ClipboardList className="h-[18px] w-[18px] shrink-0" />
-                      {!collapsed && <span className="truncate">Primary Feasibility</span>}
+                      <Layers className="h-[18px] w-[18px] shrink-0" />
+                      {!collapsed && <span className="truncate">Secondary Feasibility</span>}
                     </Link>
                     <div className={cn("flex flex-col gap-1", collapsed ? "" : "ml-3 border-l border-[#e5e7eb] pl-2")}>
-                      {PRIMARY_STATUS_NAV.map((n) => {
-                        const isActive = primaryActive && activeStatus === n.status;
+                      {SECONDARY_STATUS_NAV.map((n) => {
+                        const isActive = onQueue && activeStatus === n.status;
                         return (
                           <Link
                             key={n.status}
-                            href={primaryHrefFor(n.status)}
+                            href={queueHrefFor(n.status)}
                             title={collapsed ? n.label : undefined}
                             className={cn(
                               isActive ? activeCls : idleCls,
@@ -168,6 +174,18 @@ export function FeasibilityModuleShell({
                         );
                       })}
                     </div>
+
+                    <div className="my-2 h-[1.5px] rounded-full bg-[#c2c7d6]" />
+
+                    {/* Destination 2 — Confirmed Feasibility register. */}
+                    <Link
+                      href={"/secondary-feasibility/confirmed" as Route}
+                      title={collapsed ? "Confirmed Feasibility" : undefined}
+                      className={onConfirmed ? activeCls : idleCls}
+                    >
+                      <BadgeCheck className="h-[18px] w-[18px] shrink-0" />
+                      {!collapsed && <span className="truncate">Confirmed Feasibility</span>}
+                    </Link>
                   </>
                 );
               })()}

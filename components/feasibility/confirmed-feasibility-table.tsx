@@ -82,7 +82,7 @@ export function ConfirmedFeasibilityTable({ rows }: { rows: ConfirmedFeasibility
       {
         id: "productCount",
         header: "Items",
-        width: "62px",
+        width: "96px",
         align: "right",
         sortValue: (r) => r.productCount,
         cell: (r) => (
@@ -92,7 +92,7 @@ export function ConfirmedFeasibilityTable({ rows }: { rows: ConfirmedFeasibility
       {
         id: "primaryEligibility",
         header: "Primary Eligibility",
-        width: "134px",
+        width: "200px",
         enableSorting: false,
         exportValue: () => "Done",
         // These rows are confirmed enquiries — Primary Feasibility is by
@@ -102,7 +102,7 @@ export function ConfirmedFeasibilityTable({ rows }: { rows: ConfirmedFeasibility
       {
         id: "secondaryEligibility",
         header: "Secondary Eligibility",
-        width: "148px",
+        width: "224px",
         sortValue: (r) => SECONDARY_RANK[r.secondaryEligibility],
         exportValue: (r) =>
           r.secondaryEligibility === "partial"
@@ -125,7 +125,7 @@ export function ConfirmedFeasibilityTable({ rows }: { rows: ConfirmedFeasibility
       {
         id: "confirmedEligibility",
         header: "Confirmed Eligibility",
-        width: "184px",
+        width: "224px",
         sortValue: (r) => r.confirmedAt,
         exportValue: (r) => `Confirmed · ${formatDate(r.confirmedAt)}`,
         cell: (r) => (

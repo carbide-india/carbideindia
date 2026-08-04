@@ -25,7 +25,7 @@ export default async function EnquiriesModuleLayout({ children }: { children: Re
     ) : null;
 
   return (
-    <EnquiryModuleShell userMenu={<UserMenuServer />} bulkUpload={bulkUpload}>
+    <EnquiryModuleShell userMenu={<UserMenuServer />} bulkUpload={bulkUpload} isAdmin={isAdmin}>
       {children}
     </EnquiryModuleShell>
   );
