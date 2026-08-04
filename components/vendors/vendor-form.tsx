@@ -33,8 +33,8 @@ interface Props {
   vendorCode?: string | null;
   /** Prefill for edit mode. */
   initialValues?: Partial<VendorFormValues>;
-  /** Route prefix for the post-save redirect — lets the form live at
-   *  /costings/vendors (Costing shell) or /vendors (Forms module). */
+  /** Route prefix for the post-save redirect. Vendors are maintained under the
+   *  Forms module at /vendors (the old /costings/vendors routes were removed). */
   basePath?: string;
   /** Payment Terms master options ("already set" values) for the dropdown. The
    *  selected LABEL is stored as text — the BO matrix matches it back to a
@@ -51,7 +51,7 @@ export function VendorForm({
   editVendorId,
   vendorCode,
   initialValues,
-  basePath = "/costings/vendors",
+  basePath = "/vendors",
   paymentTermsOptions = [],
 }: Props) {
   const isEdit = Boolean(editVendorId);

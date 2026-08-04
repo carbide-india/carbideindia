@@ -18,8 +18,8 @@ import type { VendorRegisterRow } from "@/lib/queries/vendors";
 interface Props {
   rows: VendorRegisterRow[];
   isAdmin: boolean;
-  /** Route prefix for all row links — lets the same register live at
-   *  /costings/vendors (Costing shell) or /vendors (Forms module). */
+  /** Route prefix for all row links. Vendors are maintained under the Forms
+   *  module at /vendors (the old /costings/vendors routes were removed). */
   basePath?: string;
 }
 
@@ -34,7 +34,7 @@ interface Props {
 export function VendorRegister({
   rows,
   isAdmin,
-  basePath = "/costings/vendors",
+  basePath = "/vendors",
 }: Props) {
   const router = useRouter();
 

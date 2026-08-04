@@ -6,7 +6,6 @@ import type { VendorOption, VendorHistory } from "@/lib/queries/vendors";
 import { compareVendors, type VendorQuoteLike, type CriterionRank } from "@/lib/costing/compare";
 import { Select, type SelectOption } from "@/components/ui/select";
 import { MoneyInput } from "@/components/ui/money-input";
-import { NotesField } from "@/components/ui/notes-field";
 import { Field, GroupHeader, Segmented } from "@/components/inquiries/form-field";
 import { VendorQuickCreateModal } from "@/components/costings/vendor-quick-create-modal";
 import { useKeyboardForm } from "@/components/forms/use-keyboard-form";
@@ -616,44 +615,32 @@ export function BuyoutCalculator({
                 </div>
               </div>
 
-              {/* Per-vendor final cost (Technical/Commercial notes are shared below). */}
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
-                <div
-                  className="flex shrink-0 flex-col justify-center rounded-[12px] px-4 py-3 sm:w-[240px]"
-                  style={{
-                    border: `2px solid ${INDIGO}`,
-                    background: hasCost(r)
-                      ? "linear-gradient(135deg,#eef1fb 0%,#e2e6f8 100%)"
-                      : "#f4f6fd",
-                    boxShadow: hasCost(r)
-                      ? "0 6px 18px -8px rgba(63,63,148,0.5)"
-                      : "none",
-                  }}
+              {/* Per-vendor final cost. Notes live once per costing at the
+                  bottom (shared Technical + Commercial), not per vendor. */}
+              <div
+                className="flex flex-col justify-center rounded-[12px] px-4 py-3 sm:w-[240px]"
+                style={{
+                  border: `2px solid ${INDIGO}`,
+                  background: hasCost(r)
+                    ? "linear-gradient(135deg,#eef1fb 0%,#e2e6f8 100%)"
+                    : "#f4f6fd",
+                  boxShadow: hasCost(r)
+                    ? "0 6px 18px -8px rgba(63,63,148,0.5)"
+                    : "none",
+                }}
+              >
+                <span
+                  className="text-[11px] font-black uppercase tracking-[0.07em]"
+                  style={{ color: INDIGO }}
                 >
-                  <span
-                    className="text-[11px] font-black uppercase tracking-[0.07em]"
-                    style={{ color: INDIGO }}
-                  >
-                    Final Cost / piece
-                  </span>
-                  <span
-                    className="mt-1 font-mono text-[22px] font-black tabular-nums"
-                    style={{ color: INDIGO }}
-                  >
-                    {hasCost(r) ? money(buyoutFinalCost(r)) : "—"}
-                  </span>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <Field id={`bo-notes-${r.key}`} label="Notes">
-                    <NotesField
-                      id={`bo-notes-${r.key}`}
-                      rows={2}
-                      value={r.notes}
-                      onChange={(val) => patchRow(r.key, { notes: val })}
-                      placeholder="Anything worth remembering about this quote"
-                    />
-                  </Field>
-                </div>
+                  Final Cost / piece
+                </span>
+                <span
+                  className="mt-1 font-mono text-[22px] font-black tabular-nums"
+                  style={{ color: INDIGO }}
+                >
+                  {hasCost(r) ? money(buyoutFinalCost(r)) : "—"}
+                </span>
               </div>
             </div>
           </section>

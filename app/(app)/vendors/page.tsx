@@ -13,8 +13,7 @@ export const dynamic = "force-dynamic";
  * Vendors — the Forms-module home for supplier records. Lives under /vendors so
  * the Forms/Enquiry shell renders its sidebar (Create New Vendor / Vendor
  * Register). Reuses the shared VendorRegister with basePath="/vendors" so all
- * row links stay within this module (the same register also serves the Costing
- * shell under /costings/vendors).
+ * row links stay within this module — the single home for vendor management.
  */
 export default async function VendorsPage() {
   const me = await requireUser();

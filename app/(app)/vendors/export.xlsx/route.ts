@@ -5,9 +5,9 @@ import { listVendors } from "@/lib/queries/vendors";
 /**
  * GET /vendors/export.xlsx
  *
- * XLSX export of the full Vendor Master (Forms-module entry point — mirrors
- * /costings/vendors/export.xlsx). Columns are humanized (Active/Inactive,
- * YYYY-MM-DD dates). Sheet name: "Vendors". Filename: vendor-master.xlsx.
+ * XLSX export of the full Vendor Master (Forms-module Vendors area). Columns
+ * are humanized (Active/Inactive, YYYY-MM-DD dates). Sheet name: "Vendors".
+ * Filename: vendor-master.xlsx.
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

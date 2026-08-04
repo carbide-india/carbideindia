@@ -13,6 +13,7 @@ import {
   Inbox,
   FileText,
   Archive,
+  Database,
 } from "lucide-react";
 
 type Props = {
@@ -207,6 +208,23 @@ export function UserMenu({
                   strokeWidth={2.2}
                   style={{ color: "#64748B" }}
                 />
+              </Link>
+            </DropdownMenu.Item>
+          )}
+
+          {/* Masters — core system data. Admin-only (the /masters route is
+              requireAdmin-gated), sits alongside the Admin panel entry. */}
+          {isAdmin && (
+            <DropdownMenu.Item asChild>
+              <Link
+                href={"/masters" as Route}
+                className="flex items-center justify-between gap-2.5 px-3.5 py-2.5 text-[15px] rounded-lg cursor-pointer outline-none text-[#0F172A] data-[highlighted]:bg-[#F1F5F9]"
+              >
+                <span className="inline-flex items-center gap-2">
+                  <Database size={14} strokeWidth={2.2} style={{ color: "#475569" }} />
+                  <span className="font-medium">Masters</span>
+                </span>
+                <ChevronRight size={14} strokeWidth={2.2} style={{ color: "#94A3B8" }} />
               </Link>
             </DropdownMenu.Item>
           )}

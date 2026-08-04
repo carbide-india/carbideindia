@@ -90,7 +90,7 @@ export async function createVendor(
   }
   if (!inserted) return { ok: false, error: "Could not save the vendor. Please try again." };
 
-  revalidatePath("/costings/vendors");
+  revalidatePath("/vendors");
   return { ok: true, id: inserted.id, vendorCode: inserted.vendorCode };
 }
 
@@ -160,9 +160,9 @@ export async function updateVendor(
     return { ok: false, error: "Could not save the vendor. Please try again." };
   }
 
-  revalidatePath("/costings/vendors");
-  revalidatePath(`/costings/vendors/${vendor.id}`);
-  revalidatePath(`/costings/vendors/${vendor.id}/edit`);
+  revalidatePath("/vendors");
+  revalidatePath(`/vendors/${vendor.id}`);
+  revalidatePath(`/vendors/${vendor.id}/edit`);
   return { ok: true };
 }
 
@@ -197,7 +197,7 @@ export async function deactivateVendor(vendorId: string): Promise<ActionResult> 
     return { ok: false, error: `DB: ${msg}` };
   }
 
-  revalidatePath("/costings/vendors");
+  revalidatePath("/vendors");
   return { ok: true };
 }
 
@@ -230,6 +230,6 @@ export async function reactivateVendor(vendorId: string): Promise<ActionResult> 
     return { ok: false, error: `DB: ${msg}` };
   }
 
-  revalidatePath("/costings/vendors");
+  revalidatePath("/vendors");
   return { ok: true };
 }

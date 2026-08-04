@@ -11,6 +11,7 @@ import {
   Users,
   Building2,
   Tag,
+  Database,
   Settings as SettingsIcon,
   ArrowLeft,
   LogOut,
@@ -39,6 +40,9 @@ const NAV: ReadonlyArray<NavItem> = [
   { href: "/admin/employees" as Route,   label: "Employees",   icon: Users },
   { href: "/admin/departments" as Route, label: "Departments", icon: Building2 },
   { href: "/admin/subjects" as Route,    label: "Subjects",    icon: Tag },
+  // Leaves the admin shell for the app-side Masters module (both nav entries
+  // point at /masters per request).
+  { href: "/masters" as Route,           label: "Masters",     icon: Database },
   { href: "/admin/settings" as Route,    label: "Settings",    icon: SettingsIcon },
 ];
 

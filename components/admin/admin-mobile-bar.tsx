@@ -41,7 +41,7 @@ const NAV: ReadonlyArray<NavItem> = [
   { href: "/admin/employees" as Route, label: "Employees", icon: Users },
   { href: "/admin/departments" as Route, label: "Departments", icon: Building2 },
   { href: "/admin/subjects" as Route, label: "Subjects", icon: Tag },
-  { href: "/admin/masters" as Route, label: "Masters", icon: Layers },
+  { href: "/masters" as Route, label: "Masters", icon: Layers },
   { href: "/admin/settings" as Route, label: "Settings", icon: SettingsIcon },
 ];
 

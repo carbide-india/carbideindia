@@ -163,16 +163,17 @@ function navFor(pathname: string): NavDef[] {
           },
         ] as NavDef[])
       : []),
-    // Vendor Master - only in the Costing family. Lives under /costings/vendors
-    // so the Costing sidebar stays on every vendor page (records section).
+    // Vendor Master - shown in the Costing family for convenience, but vendors
+    // are now maintained entirely in the Forms-module Vendors area (/vendors),
+    // so this jumps straight there (the /costings/vendors routes were removed).
     ...(familySeg(pathname) === "costings"
       ? ([
           {
             label: "Vendor Master",
-            href: "/costings/vendors" as Route,
+            href: "/vendors" as Route,
             Icon: Truck,
             ready: true,
-            active: (p: string) => p.startsWith("/costings/vendors"),
+            active: (p: string) => p.startsWith("/vendors"),
             group: "records" as const,
           },
         ] as NavDef[])
