@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { Loader2, Paperclip, X, UploadCloud, CircleCheck } from "lucide-react";
 import { upload } from "@vercel/blob/client";
 import {
@@ -54,8 +53,6 @@ export function FeasibilityReviewWorkspace({
   inquiry: Inquiry;
   employees: EmployeeOption[];
 }) {
-  const router = useRouter();
-
   const [checks, setChecks] = React.useState<Record<CheckKey, CheckState>>(() => ({
     sizeDrawing: { value: inquiry.feasSizeDrawingCheck ?? "not_done", notes: inquiry.feasSizeDrawingNotes ?? "" },
     tolerance: { value: inquiry.feasToleranceCheck ?? "not_done", notes: inquiry.feasToleranceNotes ?? "" },
@@ -125,62 +122,92 @@ export function FeasibilityReviewWorkspace({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [checks]);
 
-  const [saving, setSaving] = React.useState(false);
+  type SaveState = "idle" | "saving" | "saved" | "error";
+  const [saveState, setSaveState] = React.useState<SaveState>("idle");
 
   const employeeOpts = React.useMemo(
     () => employees.map((e) => ({ value: e.id, label: e.name })),
     [employees],
   );
 
-  async function onSave() {
-    setSaving(true);
-    try {
-      // Emit a check value only when it's non-default; a note whenever any
-      // option other than "Not Done" is selected.
-      const emit = (s: CheckState) => ({
-        value: s.value === "not_done" ? undefined : s.value,
-        notes: s.value !== "not_done" && s.notes.trim() ? s.notes.trim() : undefined,
-      });
-      const sd = emit(checks.sizeDrawing);
-      const tol = emit(checks.tolerance);
-      const grd = emit(checks.gradeApp);
-      const qty = emit(checks.quantity);
-      const cnd = emit(checks.condition);
+  // Build the full review payload from live state. Every check emits its REAL
+  // value — including "not_done" — so moving a check back to Not Done actually
+  // persists (the action's `clean()` drops only `undefined`; a real enum value
+  // always writes). The previous code sent `undefined` for Not Done, which the
+  // action skipped, so a check could never be reset from Done → the board kept
+  // reverting to Done on reload.
+  const buildPayload = React.useCallback(() => {
+    const emit = (s: CheckState) => ({
+      value: s.value,
+      notes: s.value !== "not_done" && s.notes.trim() ? s.notes.trim() : undefined,
+    });
+    const sd = emit(checks.sizeDrawing);
+    const tol = emit(checks.tolerance);
+    const grd = emit(checks.gradeApp);
+    const qty = emit(checks.quantity);
+    const cnd = emit(checks.condition);
 
-      const payload = {
-        sizeDrawingCheck: sd.value,
-        sizeDrawingNotes: sd.notes,
-        toleranceCheck: tol.value,
-        toleranceNotes: tol.notes,
-        gradeAppCheck: grd.value,
-        gradeAppNotes: grd.notes,
-        quantityCheck: qty.value,
-        quantityNotes: qty.notes,
-        conditionCheck: cnd.value,
-        conditionNotes: cnd.notes,
-        priority,
-        export: exportVal,
-        actionsList: actionsList.trim() ? actionsList.trim() : undefined,
-        notes: notes.trim() ? notes.trim() : undefined,
-        attachments,
-        feasibilityCheckedById: checkedById,
-        assignedSalesPersonId: salesPersonId,
-        status: derivedStatus,
-      };
+    return {
+      sizeDrawingCheck: sd.value,
+      sizeDrawingNotes: sd.notes,
+      toleranceCheck: tol.value,
+      toleranceNotes: tol.notes,
+      gradeAppCheck: grd.value,
+      gradeAppNotes: grd.notes,
+      quantityCheck: qty.value,
+      quantityNotes: qty.notes,
+      conditionCheck: cnd.value,
+      conditionNotes: cnd.notes,
+      priority,
+      export: exportVal,
+      actionsList: actionsList.trim() ? actionsList.trim() : undefined,
+      notes: notes.trim() ? notes.trim() : undefined,
+      attachments,
+      feasibilityCheckedById: checkedById,
+      assignedSalesPersonId: salesPersonId,
+      status: derivedStatus,
+    };
+  }, [
+    checks,
+    priority,
+    exportVal,
+    actionsList,
+    notes,
+    attachments,
+    checkedById,
+    salesPersonId,
+    derivedStatus,
+  ]);
 
-      const res = await saveFeasibilityChecklist(inquiry.id, payload);
-      if (res.ok) {
-        fireToast({ message: "Feasibility review saved." });
-        router.refresh();
-      } else {
-        fireToast({ type: "error", message: res.error });
-      }
-    } finally {
-      setSaving(false);
+  const doSave = React.useCallback(async () => {
+    setSaveState("saving");
+    const res = await saveFeasibilityChecklist(inquiry.id, buildPayload());
+    setSaveState(res.ok ? "saved" : "error");
+    if (!res.ok) fireToast({ type: "error", message: res.error });
+  }, [buildPayload, inquiry.id]);
+
+  // ── Autosave: persist ~700 ms after the last change. No manual Save button —
+  //   every edit (drag a check, pick a person, type a note, add a file) writes
+  //   on its own. A signature baseline is captured on the first run so merely
+  //   opening the review never writes back a derived status — and it stays
+  //   correct under React StrictMode's double-invoked effects (dev).
+  const lastSavedSig = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    const sig = JSON.stringify(buildPayload());
+    if (lastSavedSig.current === null) {
+      lastSavedSig.current = sig; // baseline — nothing to save on open
+      return;
     }
-  }
+    if (sig === lastSavedSig.current) return; // no real change
+    const t = setTimeout(() => {
+      lastSavedSig.current = sig;
+      void doSave();
+    }, 700);
+    return () => clearTimeout(t);
+  }, [buildPayload, doSave]);
 
-  const { containerProps } = useKeyboardForm({ onSubmit: onSave });
+  // Ctrl/⌘+Enter flushes an immediate save (skips the debounce).
+  const { containerProps } = useKeyboardForm({ onSubmit: () => void doSave() });
 
   return (
     <div className="flex flex-col gap-6" onKeyDown={containerProps.onKeyDown}>
@@ -303,35 +330,59 @@ export function FeasibilityReviewWorkspace({
         </div>
       </SectionCard>
 
-      {/* ── Footer ─────────────────────────────────────────────────────── */}
+      {/* ── Footer · autosave status (no manual Save button) ───────────── */}
       <div className="flex flex-wrap items-center justify-end gap-3 border-t border-hairline pt-4">
         {allDone && (
-          <span className="text-[12.5px] font-semibold text-[#16a34a]">
-            All checks Done — saving approves this enquiry for costing.
+          <span className="mr-auto text-[12.5px] font-semibold text-[#16a34a]">
+            All checks Done — this enquiry is approved for costing.
           </span>
         )}
-        <button
-          type="button"
-          onClick={onSave}
-          disabled={saving}
-          className="inline-flex items-center gap-2 rounded-pill px-5 py-2.5 text-[14px] text-white transition-opacity disabled:opacity-50"
-          style={{
-            background: allDone
-              ? "linear-gradient(135deg, #16a34a, #12813b)"
-              : "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
-            fontWeight: 800,
-          }}
-        >
-          {saving ? (
-            <Loader2 size={14} style={{ animation: "spinFast 0.8s linear infinite" }} />
-          ) : allDone ? (
-            <CircleCheck size={16} />
-          ) : null}
-          {allDone ? "Confirm Feasibility" : "Save Review"}
-        </button>
-        <span className="w-full text-right text-[11px] text-ink-subtle">Ctrl / ⌘ + Enter to save</span>
+        <AutosaveIndicator state={saveState} onRetry={() => void doSave()} />
       </div>
     </div>
+  );
+}
+
+/* ── Autosave status pill — replaces the old Save button ───────────────── */
+function AutosaveIndicator({
+  state,
+  onRetry,
+}: {
+  state: "idle" | "saving" | "saved" | "error";
+  onRetry: () => void;
+}) {
+  if (state === "error") {
+    return (
+      <button
+        type="button"
+        onClick={onRetry}
+        className="inline-flex items-center gap-1.5 rounded-pill border border-[#f0b4b4] bg-[#fdeeee] px-3.5 py-2 text-[12.5px] font-bold text-[#d32f2f] transition hover:bg-[#fbe3e3]"
+      >
+        <X size={14} strokeWidth={2.6} />
+        Save failed — retry
+      </button>
+    );
+  }
+  if (state === "saving") {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-ink-soft">
+        <Loader2 size={14} style={{ animation: "spinFast 0.8s linear infinite" }} />
+        Saving…
+      </span>
+    );
+  }
+  if (state === "saved") {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-[#16a34a]">
+        <CircleCheck size={15} />
+        All changes saved
+      </span>
+    );
+  }
+  return (
+    <span className="text-[11.5px] font-medium text-ink-subtle">
+      Changes save automatically
+    </span>
   );
 }
 

@@ -1264,7 +1264,18 @@ export const vendors = pgTable(
     contactPerson: text("contact_person"),
     contactNo: text("contact_no"),
     email: text("email"),
+    // Legacy free-text address (kept for back-compat with rows created before the
+    // structured fields below existed; the form no longer edits it directly).
     address: text("address"),
+    // Structured postal address (mirrors clients): four street lines + city +
+    // state (INDIAN_STATES) + PIN.
+    addressLine1: text("address_line_1"),
+    addressLine2: text("address_line_2"),
+    addressLine3: text("address_line_3"),
+    addressLine4: text("address_line_4"),
+    city: text("city"),
+    state: text("state"),
+    pinCode: text("pin_code"),
     // Default commercial terms the BO matrix pre-fills from.
     defaultCreditDays: integer("default_credit_days"),
     paymentTerms: text("payment_terms"),

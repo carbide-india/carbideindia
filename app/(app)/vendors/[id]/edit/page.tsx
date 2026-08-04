@@ -1,10 +1,8 @@
-import Link from "next/link";
-import type { Route } from "next";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import { VendorForm, type VendorFormValues } from "@/components/vendors/vendor-form";
 import { requireAdmin } from "@/lib/auth/current";
 import { getVendorById } from "@/lib/queries/vendors";
+import { listMasterOptions } from "@/lib/queries/masters";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
 import { UserMenuServer } from "@/components/header/user-menu-server";
 
@@ -22,8 +20,16 @@ export default async function EditVendorPage({
 }) {
   await requireAdmin();
   const { id } = await params;
-  const vendor = await getVendorById(id);
+  const [vendor, paymentTerms] = await Promise.all([
+    getVendorById(id),
+    listMasterOptions("payment_term"),
+  ]);
   if (!vendor) notFound();
+
+  const paymentTermsOptions = paymentTerms.map((o) => ({
+    value: o.name,
+    label: o.name,
+  }));
 
   const initialValues: Partial<VendorFormValues> = {
     name: vendor.name,
@@ -31,6 +37,13 @@ export default async function EditVendorPage({
     contactNo: vendor.contactNo ?? "",
     email: vendor.email ?? "",
     address: vendor.address ?? "",
+    addressLine1: vendor.addressLine1 ?? "",
+    addressLine2: vendor.addressLine2 ?? "",
+    addressLine3: vendor.addressLine3 ?? "",
+    addressLine4: vendor.addressLine4 ?? "",
+    city: vendor.city ?? "",
+    state: vendor.state ?? "",
+    pinCode: vendor.pinCode ?? "",
     defaultCreditDays: vendor.defaultCreditDays ?? undefined,
     paymentTerms: vendor.paymentTerms ?? "",
     isGstApplicable: vendor.isGstApplicable,
@@ -41,14 +54,7 @@ export default async function EditVendorPage({
     <EnquiryModuleShell title="Vendors" userMenu={<UserMenuServer />}>
       <div className="mx-auto w-full max-w-[900px]">
         <header className="mb-5">
-          <Link
-            href={`/vendors/${vendor.id}` as Route}
-            className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#6b7280] transition-colors hover:text-[#3f3f94]"
-          >
-            <ArrowLeft size={15} strokeWidth={2.4} />
-            {vendor.name}
-          </Link>
-          <h1 className="mt-2 text-[26px] font-black leading-none tracking-tight text-[#3f3f94]">
+          <h1 className="text-[26px] font-black leading-none tracking-tight text-[#3f3f94]">
             Edit Vendor
           </h1>
         </header>
@@ -58,6 +64,7 @@ export default async function EditVendorPage({
           vendorCode={vendor.vendorCode}
           initialValues={initialValues}
           basePath="/vendors"
+          paymentTermsOptions={paymentTermsOptions}
         />
       </div>
     </EnquiryModuleShell>

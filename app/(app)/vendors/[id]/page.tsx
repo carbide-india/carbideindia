@@ -54,6 +54,17 @@ export default async function VendorRecordPage({
   const vendor = await getVendorById(id);
   if (!vendor) notFound();
 
+  // Prefer the structured street lines; fall back to the legacy free-text field.
+  const streetLines =
+    [
+      vendor.addressLine1,
+      vendor.addressLine2,
+      vendor.addressLine3,
+      vendor.addressLine4,
+    ]
+      .filter(Boolean)
+      .join(", ") || vendor.address;
+
   const gridClass =
     "grid grid-cols-2 divide-x divide-y divide-[#c6cbdd] sm:grid-cols-3 lg:grid-cols-4";
 
@@ -132,8 +143,11 @@ export default async function VendorRecordPage({
               }
             />
             <div className="col-span-full">
-              <Cell label="Address" value={dash(vendor.address)} />
+              <Cell label="Address" value={dash(streetLines)} />
             </div>
+            <Cell label="City" value={dash(vendor.city)} />
+            <Cell label="State" value={dash(vendor.state)} />
+            <Cell label="Pincode" value={dash(vendor.pinCode)} />
           </div>
 
           <Band title="Default Terms" />

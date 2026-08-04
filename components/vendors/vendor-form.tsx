@@ -10,11 +10,16 @@ import { CreateVendorSchema } from "@/lib/validators/vendor";
 import { createVendor, updateVendor } from "@/app/(app)/vendors/actions";
 import { fireToast } from "@/lib/toast";
 import { NotesField } from "@/components/ui/notes-field";
+import { Select } from "@/components/ui/select";
+import { INDIAN_STATES } from "@/lib/data/geo";
 import { Field, SectionCard } from "@/components/inquiries/form-field";
 import {
   useKeyboardForm,
   useAutofocusFirstField,
 } from "@/components/forms/use-keyboard-form";
+
+/** Standard B2B credit periods, rendered as an "already set" dropdown. */
+const CREDIT_DAYS_PRESETS = [0, 7, 15, 30, 45, 60, 90, 120] as const;
 
 /** RHF holds the schema's input shape; zodResolver hands the parsed output
  *  (blank text folded to `undefined`) to the submit handler. */
@@ -31,6 +36,10 @@ interface Props {
   /** Route prefix for the post-save redirect — lets the form live at
    *  /costings/vendors (Costing shell) or /vendors (Forms module). */
   basePath?: string;
+  /** Payment Terms master options ("already set" values) for the dropdown. The
+   *  selected LABEL is stored as text — the BO matrix matches it back to a
+   *  master-option id when prefilling a vendor. */
+  paymentTermsOptions?: { value: string; label: string }[];
 }
 
 /**
@@ -43,11 +52,25 @@ export function VendorForm({
   vendorCode,
   initialValues,
   basePath = "/costings/vendors",
+  paymentTermsOptions = [],
 }: Props) {
   const isEdit = Boolean(editVendorId);
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
   const [serverError, setServerError] = React.useState<string | null>(null);
+
+  const stateOptions = React.useMemo(
+    () => INDIAN_STATES.map((s) => ({ value: s, label: s })),
+    [],
+  );
+  const creditDaysOptions = React.useMemo(
+    () =>
+      CREDIT_DAYS_PRESETS.map((n) => ({
+        value: String(n),
+        label: n === 0 ? "Advance (0 days)" : `${n} days`,
+      })),
+    [],
+  );
 
   const rootRef = React.useRef<HTMLFormElement>(null);
   useAutofocusFirstField(rootRef);
@@ -65,6 +88,13 @@ export function VendorForm({
       contactNo: "",
       email: "",
       address: "",
+      addressLine1: "",
+      addressLine2: "",
+      addressLine3: "",
+      addressLine4: "",
+      city: "",
+      state: "",
+      pinCode: "",
       defaultCreditDays: undefined,
       paymentTerms: "",
       notes: "",
@@ -158,21 +188,86 @@ export function VendorForm({
           </Field>
         </div>
 
-        <Field id="vendor-address" label="Address">
-          <Controller
-            control={control}
-            name="address"
-            render={({ field }) => (
-              <NotesField
-                id="vendor-address"
-                rows={2}
-                placeholder="Street, city, state, pin"
-                value={typeof field.value === "string" ? field.value : ""}
-                onChange={field.onChange}
-              />
-            )}
+        {/* Structured postal address. Legacy `address` free-text rides along as
+            a hidden field so an old vendor's value survives an edit. */}
+        <input type="hidden" {...register("address")} />
+
+        <Field id="vendor-addr-1" label="Address Line 1">
+          <input
+            id="vendor-addr-1"
+            type="text"
+            className="nt-input"
+            placeholder="e.g. Plot 12, Building / Premises"
+            {...register("addressLine1")}
           />
         </Field>
+        <Field id="vendor-addr-2" label="Address Line 2">
+          <input
+            id="vendor-addr-2"
+            type="text"
+            className="nt-input"
+            placeholder="e.g. Street / Road, Area"
+            {...register("addressLine2")}
+          />
+        </Field>
+        <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
+          <Field id="vendor-addr-3" label="Address Line 3">
+            <input
+              id="vendor-addr-3"
+              type="text"
+              className="nt-input"
+              placeholder="e.g. Landmark"
+              {...register("addressLine3")}
+            />
+          </Field>
+          <Field id="vendor-addr-4" label="Address Line 4">
+            <input
+              id="vendor-addr-4"
+              type="text"
+              className="nt-input"
+              placeholder="e.g. Locality"
+              {...register("addressLine4")}
+            />
+          </Field>
+        </div>
+        <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
+          <Field id="vendor-city" label="City">
+            <input
+              id="vendor-city"
+              type="text"
+              className="nt-input"
+              placeholder="e.g. Nashik"
+              {...register("city")}
+            />
+          </Field>
+          <Field id="vendor-state" label="State" labelOnly>
+            <Controller
+              control={control}
+              name="state"
+              render={({ field }) => (
+                <Select
+                  ariaLabel="State"
+                  value={typeof field.value === "string" ? field.value : ""}
+                  onValueChange={field.onChange}
+                  options={stateOptions}
+                  placeholder="Select state"
+                  searchable
+                  searchPlaceholder="Search state"
+                />
+              )}
+            />
+          </Field>
+          <Field id="vendor-pincode" label="Pincode">
+            <input
+              id="vendor-pincode"
+              type="text"
+              inputMode="numeric"
+              className="nt-input tabular-nums"
+              placeholder="e.g. 422010"
+              {...register("pinCode")}
+            />
+          </Field>
+        </div>
       </SectionCard>
 
       {/* ── 2 · Commercial terms ─────────────────────────────────────── */}
@@ -182,28 +277,43 @@ export function VendorForm({
         inlineHint
       >
         <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
-          <Field id="vendor-credit-days" label="Default Credit Days">
-            <input
-              id="vendor-credit-days"
-              type="number"
-              min={0}
-              max={3650}
-              step={1}
-              className="nt-input"
-              placeholder="e.g. 30"
-              {...register("defaultCreditDays", {
-                setValueAs: (v) =>
-                  v === "" || v == null ? undefined : Number(v),
-              })}
+          <Field id="vendor-credit-days" label="Default Credit Days" labelOnly>
+            <Controller
+              control={control}
+              name="defaultCreditDays"
+              render={({ field }) => (
+                <Select
+                  ariaLabel="Default credit days"
+                  value={field.value == null ? "" : String(field.value)}
+                  onValueChange={(v) =>
+                    field.onChange(v === "" ? undefined : Number(v))
+                  }
+                  options={creditDaysOptions}
+                  placeholder="Select credit period"
+                />
+              )}
             />
           </Field>
-          <Field id="vendor-payment-terms" label="Payment Terms">
-            <input
-              id="vendor-payment-terms"
-              type="text"
-              className="nt-input"
-              placeholder="e.g. 50% advance, balance on delivery"
-              {...register("paymentTerms")}
+          <Field id="vendor-payment-terms" label="Payment Terms" labelOnly>
+            <Controller
+              control={control}
+              name="paymentTerms"
+              render={({ field }) => (
+                <Select
+                  ariaLabel="Payment terms"
+                  value={typeof field.value === "string" ? field.value : ""}
+                  onValueChange={field.onChange}
+                  options={paymentTermsOptions}
+                  placeholder={
+                    paymentTermsOptions.length === 0
+                      ? "No payment terms in master"
+                      : "Select payment terms"
+                  }
+                  disabled={paymentTermsOptions.length === 0}
+                  searchable
+                  searchPlaceholder="Search payment terms"
+                />
+              )}
             />
           </Field>
         </div>

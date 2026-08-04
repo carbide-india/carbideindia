@@ -51,7 +51,15 @@ const VendorFields = {
   contactPerson: OptionalText(120, "Contact person is too long"),
   contactNo: OptionalText(40, "Contact number is too long"),
   email: OptionalEmail,
+  // Legacy free-text address (hidden round-trip); structured fields below.
   address: OptionalText(500, "Address is too long"),
+  addressLine1: OptionalText(200, "Address line is too long"),
+  addressLine2: OptionalText(200, "Address line is too long"),
+  addressLine3: OptionalText(200, "Address line is too long"),
+  addressLine4: OptionalText(200, "Address line is too long"),
+  city: OptionalText(120, "City is too long"),
+  state: OptionalText(120, "State is too long"),
+  pinCode: OptionalText(12, "PIN code is too long"),
   defaultCreditDays: OptionalCreditDays,
   paymentTerms: OptionalText(200, "Payment terms are too long"),
   // Toggle for non-GST vendors (migration 0062). Optional — omitted leaves it

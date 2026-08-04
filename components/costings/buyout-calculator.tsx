@@ -485,8 +485,8 @@ export function BuyoutCalculator({
                 />
               )}
 
-              {/* Cost / OH / Dev */}
-              <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
+              {/* Cost / OH / Dev / Lead / Credit / Quote — dense single line */}
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6 max-md:grid-cols-1">
                 <Field id={`bo-unit-${r.key}`} label="Vendor Cost / piece" required>
                   <MoneyInput
                     id={`bo-unit-${r.key}`}
@@ -520,13 +520,6 @@ export function BuyoutCalculator({
                     onChange={(e) => patchRow(r.key, { developmentCost: e.target.value })}
                   />
                 </Field>
-              </div>
-              <p className="-mt-1.5 text-[12px] text-ink-subtle">
-                Development cost is levied without overhead.
-              </p>
-
-              {/* Lead / credit / quote link */}
-              <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
                 <Field id={`bo-lead-${r.key}`} label="Lead Time (days)">
                   <input
                     id={`bo-lead-${r.key}`}
@@ -623,17 +616,28 @@ export function BuyoutCalculator({
                 </div>
               </div>
 
-              {/* Per-vendor final cost + quote notes */}
+              {/* Per-vendor final cost (Technical/Commercial notes are shared below). */}
               <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
                 <div
-                  className="flex shrink-0 flex-col justify-center rounded-[12px] px-4 py-3 sm:w-[220px]"
-                  style={{ border: `1.5px solid ${DIVIDE}`, background: "#f8f9fd" }}
+                  className="flex shrink-0 flex-col justify-center rounded-[12px] px-4 py-3 sm:w-[240px]"
+                  style={{
+                    border: `2px solid ${INDIGO}`,
+                    background: hasCost(r)
+                      ? "linear-gradient(135deg,#eef1fb 0%,#e2e6f8 100%)"
+                      : "#f4f6fd",
+                    boxShadow: hasCost(r)
+                      ? "0 6px 18px -8px rgba(63,63,148,0.5)"
+                      : "none",
+                  }}
                 >
-                  <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-ink-subtle">
+                  <span
+                    className="text-[11px] font-black uppercase tracking-[0.07em]"
+                    style={{ color: INDIGO }}
+                  >
                     Final Cost / piece
                   </span>
                   <span
-                    className="mt-1 font-mono text-[18px] font-bold tabular-nums"
+                    className="mt-1 font-mono text-[22px] font-black tabular-nums"
                     style={{ color: INDIGO }}
                   >
                     {hasCost(r) ? money(buyoutFinalCost(r)) : "—"}

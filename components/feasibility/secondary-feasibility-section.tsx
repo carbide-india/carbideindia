@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, ShieldCheck, TriangleAlert, FlaskConical, Lock } from "lucide-react";
+import { Loader2, ShieldCheck, TriangleAlert, FlaskConical, Lock, CircleCheck } from "lucide-react";
 import type { SecondaryFeasibilityState } from "@/lib/queries/feasibility";
 import type { MasterOptionItem } from "@/lib/queries/masters";
 import { saveSecondaryFeasibility } from "@/app/(app)/feasibility/actions";
@@ -118,6 +118,7 @@ export function SecondaryFeasibilitySection({
   const router = useRouter();
   const [state, setState] = React.useState<FormState>(() => initialState(line));
   const [pending, setPending] = React.useState<false | "save" | "done">(false);
+  const [saveState, setSaveState] = React.useState<"idle" | "saving" | "saved" | "error">("idle");
 
   const done = line.secondaryFeasibilityDone;
   const locked = line.feasibilityConfirmed; // a confirmed line's specs are frozen
@@ -198,6 +199,37 @@ export function SecondaryFeasibilitySection({
       setPending(false);
     }
   }
+
+  // ── Autosave field edits (markDone=false) ~700 ms after the last change.
+  //   Silent (no toast / no refresh) so typing isn't disrupted; the manual
+  //   "Mark Secondary Feasibility Done" stays an explicit action because it
+  //   locks the dimensions and confirms the line into Costing. Skips the mount
+  //   pass and any confirmed (read-only) line.
+  const autosave = React.useCallback(async () => {
+    if (readOnly) return;
+    setSaveState("saving");
+    const res = await saveSecondaryFeasibility(buildPayload(false));
+    setSaveState(res.ok ? "saved" : "error");
+    if (!res.ok) fireToast({ type: "error", message: res.error });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, readOnly, line.inquiryItemId]);
+
+  const lastSavedSig = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (readOnly) return;
+    const sig = JSON.stringify(buildPayload(false));
+    if (lastSavedSig.current === null) {
+      lastSavedSig.current = sig; // baseline on open (StrictMode-safe)
+      return;
+    }
+    if (sig === lastSavedSig.current) return; // no real change
+    const t = setTimeout(() => {
+      lastSavedSig.current = sig;
+      void autosave();
+    }, 700);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, readOnly]);
 
   return (
     <div
@@ -412,17 +444,33 @@ export function SecondaryFeasibilitySection({
         {/* ── Actions ───────────────────────────────────────────────────── */}
         {!readOnly && (
           <div className="flex flex-wrap items-center justify-end gap-3 border-t border-hairline pt-4">
-            <button
-              type="button"
-              onClick={() => void run(false)}
-              disabled={pending !== false}
-              className="inline-flex items-center gap-2 rounded-lg border-2 border-[#c7cae6] px-4 py-2 text-[13.5px] font-bold text-[#3f3f94] transition-colors hover:border-brand hover:bg-[#f3f3fb] disabled:opacity-50"
-            >
-              {pending === "save" && (
-                <Loader2 size={14} style={{ animation: "spinFast 0.8s linear infinite" }} />
+            <span className="mr-auto inline-flex items-center gap-1.5 text-[12.5px] font-semibold">
+              {saveState === "saving" ? (
+                <>
+                  <Loader2
+                    size={14}
+                    className="text-ink-soft"
+                    style={{ animation: "spinFast 0.8s linear infinite" }}
+                  />
+                  <span className="text-ink-soft">Saving…</span>
+                </>
+              ) : saveState === "saved" ? (
+                <>
+                  <CircleCheck size={15} className="text-[#16a34a]" />
+                  <span className="text-[#16a34a]">All changes saved</span>
+                </>
+              ) : saveState === "error" ? (
+                <button
+                  type="button"
+                  onClick={() => void autosave()}
+                  className="inline-flex items-center gap-1.5 rounded-pill border border-[#f0b4b4] bg-[#fdeeee] px-3 py-1.5 text-[12px] font-bold text-[#d32f2f]"
+                >
+                  Save failed — retry
+                </button>
+              ) : (
+                <span className="text-ink-subtle">Changes save automatically</span>
               )}
-              Save Draft
-            </button>
+            </span>
             <button
               type="button"
               onClick={() => void run(true)}
