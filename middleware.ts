@@ -22,7 +22,6 @@ const PUBLIC_PATTERNS: RegExp[] = [
   /^\/api\/documents\/upload$/,
   /^\/api\/samples\/upload$/,
   /^\/api\/feasibility\/upload$/,
-  /^\/api\/clients\/business-card\/upload$/,
   /^\/manifest\.json$/,
   /^\/sw\.js$/,
 ];

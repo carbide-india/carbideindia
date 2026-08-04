@@ -6,7 +6,6 @@ import type { Route } from "next";
 import { useForm, Controller, useFieldArray, useWatch, type Control } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
-import { upload } from "@vercel/blob/client";
 import { Check, Copy, FileText, ImagePlus, Loader2, Plus, X } from "lucide-react";
 import { CreateClientKycSchema } from "@/lib/validators/client-kyc";
 import { createClientKyc, fetchGstDetailsAction } from "@/app/(app)/clients/actions";
@@ -231,21 +230,22 @@ const COUNTRY_TO_CURRENCY: Record<string, string> = {
   Switzerland: "CHF",
 };
 
-function safeCardName(name: string): string {
-  return name.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 120) || "card";
-}
 
-/** Mirrors sample-form's photo upload, scoped to business-cards/: public
- *  blobs (rendered via plain <img>), images only, token minted by
- *  /api/clients/business-card/upload. */
-function uploadCardToBlob(file: File) {
-  const contentType = file.type;
-  return upload(`business-cards/${safeCardName(file.name)}`, file, {
-    access: "public",
-    handleUploadUrl: "/api/clients/business-card/upload",
-    contentType,
-    clientPayload: JSON.stringify({ contentType }),
+/** Server-side upload: POST the file to our route, which put()s it to Blob
+ *  server-to-server. Avoids the browser→Blob direct PUT that gets blocked
+ *  cross-origin (CORS / vercel.com/api/blob 400). Returns { url }. */
+async function uploadCardToBlob(file: File): Promise<{ url: string }> {
+  const fd = new FormData();
+  fd.append("file", file);
+  const res = await fetch("/api/clients/business-card/upload", {
+    method: "POST",
+    body: fd,
   });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(body?.error || `Upload failed (${res.status}).`);
+  }
+  return (await res.json()) as { url: string };
 }
 
 /**

@@ -1,18 +1,13 @@
 import { NextResponse } from "next/server";
-import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
+import { put } from "@vercel/blob";
 import { requireUser } from "@/lib/auth/current";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
-/** Every business-card scan blob lives under this pathname prefix. (Not
- *  exported - route files may only export Next.js route fields; the form
- *  hardcodes it.) */
-const BUSINESS_CARDS_PATHNAME_PREFIX = "business-cards/";
-
-/** Business-card scans + "Other" document tiles: images render via plain
- *  <img>; PDFs are allowed for the "Other" documents slot (shown as a file
- *  chip). Front/Back stay image-only via the form's own client-side gate. */
-const ALLOWED_IMAGE_TYPES = new Set([
+/** Business-card scans + "Other" document tiles: images render via <img>; PDFs
+ *  are allowed for the "Other" slot. */
+const ALLOWED_TYPES = new Set([
   "image/jpeg",
   "image/png",
   "image/webp",
@@ -20,73 +15,51 @@ const ALLOWED_IMAGE_TYPES = new Set([
   "application/pdf",
 ]);
 
-/** 25 MB - phone-camera shots of a business card, not large document scans. */
-const MAX_BUSINESS_CARD_BYTES = 25 * 1024 * 1024;
+/** 25 MB — phone-camera shots of a business card, not large document scans. */
+const MAX_BYTES = 25 * 1024 * 1024;
 
 /**
- * Token endpoint for client-direct business-card uploads (browser → Vercel
- * Blob) - same shape as /api/samples/upload, with a tighter contract:
+ * Business-card upload — SERVER-SIDE. The browser POSTs the file as multipart
+ * form-data to this route, and the route `put()`s it to Vercel Blob server-to-
+ * server. This replaced the previous client-direct `upload()` flow, which the
+ * browser blocked cross-origin (the PUT to vercel.com/api/blob returned 400 with
+ * no Access-Control-Allow-Origin → the SDK retried forever). A route handler
+ * accepts up to Vercel's 100 MB body limit, so a ≤25 MB image is fine.
  *
- *  - pathname must live under `business-cards/` (documents/avatars unreachable),
- *  - images only (jpeg/png/webp/heic), validated via clientPayload and pinned
- *    through allowedContentTypes (the Blob API enforces it on the PUT),
- *  - 25 MB cap, random suffix so pathnames are unguessable.
- *
- * Scans upload as PUBLIC blobs (unlike documents): the KYC form renders them
- * with plain <img> tags, same access model as avatars / sample photos.
+ * Scans are PUBLIC blobs (the KYC form renders them with plain <img>), same
+ * access model as avatars / sample photos.
  */
 export async function POST(request: Request): Promise<NextResponse> {
-  const body = (await request.json()) as HandleUploadBody;
+  await requireUser();
 
   try {
-    const result = await handleUpload({
-      request,
-      body,
-      onBeforeGenerateToken: async (pathname, clientPayload) => {
-        // Auth the token-mint here (browser request carries the session cookie).
-        // The `blob.upload-completed` callback skips this hook and is verified by
-        // Blob's signed token, so it succeeds without a session (the route is
-        // public in middleware for exactly that callback).
-        await requireUser();
-        if (!pathname.startsWith(BUSINESS_CARDS_PATHNAME_PREFIX)) {
-          throw new Error(
-            "Business cards must be uploaded under business-cards/.",
-          );
-        }
+    const form = await request.formData();
+    const file = form.get("file");
+    if (!(file instanceof File)) {
+      return NextResponse.json({ error: "No file provided." }, { status: 400 });
+    }
+    if (!ALLOWED_TYPES.has(file.type)) {
+      return NextResponse.json(
+        { error: "Only JPEG, PNG, WebP, HEIC images or PDF files are allowed." },
+        { status: 400 },
+      );
+    }
+    if (file.size > MAX_BYTES) {
+      return NextResponse.json({ error: "File exceeds 25 MB." }, { status: 400 });
+    }
 
-        // upload() does not forward the file's contentType to this endpoint,
-        // so the client sends it via clientPayload (same dance as documents).
-        let contentType = "";
-        if (clientPayload) {
-          try {
-            const parsed: unknown = JSON.parse(clientPayload);
-            const ct = (parsed as { contentType?: unknown } | null)?.contentType;
-            if (typeof ct === "string") contentType = ct;
-          } catch {
-            // Malformed payload - falls through to the allowlist rejection.
-          }
-        }
-        if (!ALLOWED_IMAGE_TYPES.has(contentType)) {
-          throw new Error("Only JPEG, PNG, WebP, HEIC images or PDF files are allowed.");
-        }
+    const safeName =
+      file.name.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 120) || "card";
 
-        return {
-          allowedContentTypes: [contentType],
-          maximumSizeInBytes: MAX_BUSINESS_CARD_BYTES,
-          addRandomSuffix: true,
-        };
-      },
-      onUploadCompleted: async ({ blob }) => {
-        // No-op by design: the URL is persisted by createClientKyc /
-        // updateClientKyc. Observability only - never fires on localhost.
-        console.log("[business-cards] blob upload completed", blob.pathname);
-      },
+    const blob = await put(`business-cards/${safeName}`, file, {
+      access: "public",
+      addRandomSuffix: true, // unguessable pathnames
+      contentType: file.type,
     });
-    return NextResponse.json(result);
+
+    return NextResponse.json({ url: blob.url });
   } catch (err) {
-    // Surface the real reason in the function logs (token/config/content-type)
-    // — the 400 body message alone isn't captured by log search.
-    console.error("[business-cards] upload token error:", err);
+    console.error("[business-cards] server upload error:", err);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Upload failed" },
       { status: 400 },
