@@ -13,6 +13,7 @@ import {
   PackageCheck,
   CalendarCheck,
   ClipboardCheck,
+  Truck,
 } from "lucide-react";
 
 const MONO = "var(--font-mono-display)";
@@ -92,6 +93,14 @@ const FORMS: { key: string; title: string; desc: string; tag: string; href: Rout
     tag: "Anytime",
     href: "/meetings/new" as Route,
     Icon: CalendarCheck,
+  },
+  {
+    key: "vendors",
+    title: "Vendors",
+    desc: "Maintain vendor records — codes, contacts, credit terms, GST applicability.",
+    tag: "Masters",
+    href: "/vendors" as Route,
+    Icon: Truck,
   },
 ];
 

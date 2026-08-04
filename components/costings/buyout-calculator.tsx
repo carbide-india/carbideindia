@@ -7,7 +7,7 @@ import { compareVendors, type VendorQuoteLike, type CriterionRank } from "@/lib/
 import { Select, type SelectOption } from "@/components/ui/select";
 import { MoneyInput } from "@/components/ui/money-input";
 import { NotesField } from "@/components/ui/notes-field";
-import { Field, GroupHeader } from "@/components/inquiries/form-field";
+import { Field, GroupHeader, Segmented } from "@/components/inquiries/form-field";
 import { VendorQuickCreateModal } from "@/components/costings/vendor-quick-create-modal";
 import { useKeyboardForm } from "@/components/forms/use-keyboard-form";
 import { cn } from "@/lib/utils";
@@ -16,10 +16,15 @@ import { cn } from "@/lib/utils";
  * Buy-Out (bought-out) costing calculator — self-contained, fully controlled.
  *
  * Single-vendor is the PRIMARY flow; a multi-vendor comparison layer (up to 5
- * competing quotes) sits on top. A prominent dashboard ranks the vendors on three
- * business scenarios — Standard (lowest landed cost), Urgency (fastest lead) and
- * Cash Crunch (best credit) — each with a one-click "Use this vendor". The
- * comparison + ranking is delegated to the pure `compareVendors` engine
+ * competing quotes) sits on top. Each competing vendor now carries its OWN set of
+ * commercial terms (Quantity Tolerance, Payment Terms, Delivery Time, Price
+ * Validity) — captured on the vendor's input card and persisted per quote. A
+ * prominent decision panel ranks the vendors on three business scenarios —
+ * Standard (lowest landed cost), Urgency (fastest lead) and Cash Crunch (best
+ * credit) — each with a one-click "Use this vendor". Because the vendor is chosen
+ * LAST, that decision panel ({@link BuyoutDecisionPanel}) is rendered at the very
+ * bottom of the Bought-Out flow (after the input cards + shared notes), not the
+ * top. The comparison + ranking is delegated to the pure `compareVendors` engine
  * (lib/costing/compare.ts), the single source of truth for the landed-cost
  * formula:  landed = unitPrice + unitPrice·OH + dev (+ freight/qty; no freight
  * input here, so that term is 0).
@@ -47,6 +52,13 @@ const NEW_VENDOR = "__new_vendor__";
 /** Hard cap on competing vendor quotes (spec §8: "up to 5 vendors"). */
 export const MAX_BUYOUT_VENDORS = 5;
 
+/** days / weeks unit choices for the per-vendor duration fields. */
+const DURATION_UNITS: readonly { value: DurationUnit; label: string }[] = [
+  { value: "days", label: "days" },
+  { value: "weeks", label: "weeks" },
+];
+type DurationUnit = "days" | "weeks";
+
 /**
  * A machining-option (Admin Master) shaped for a picker. Accepted as a prop for
  * contract symmetry with the In-House calculator; Buy-Out itself does not machine
@@ -55,6 +67,12 @@ export const MAX_BUYOUT_VENDORS = 5;
 export interface MachiningOption {
   id: string;
   label: string;
+}
+
+/** An Admin-Master option (Payment Terms / Quantity Tolerance) shaped for a picker. */
+export interface CommercialMasterOption {
+  id: string;
+  name: string;
 }
 
 /**
@@ -81,8 +99,20 @@ export interface BuyoutVendorRow {
   leadTimeDays: string;
   /** Credit period in days (autofilled from the vendor's default). */
   creditPeriodDays: string;
-  /** Payment terms autofilled from the master (carried for the quote). */
+  /** Payment terms label autofilled from the master (carried for the quote). */
   paymentTerms: string | null;
+  /** Payment Terms master-option id (per-vendor commercial term); "" = unset. */
+  paymentTermsId: string;
+  /** Quantity Tolerance master-option id (per-vendor commercial term); "" = unset. */
+  quantityToleranceId: string;
+  /** Delivery time amount (raw string); pairs with {@link deliveryTimeUnit}. */
+  deliveryTime: string;
+  /** Delivery time unit. */
+  deliveryTimeUnit: DurationUnit;
+  /** Price-validity amount (raw string); pairs with {@link validityUnit}. */
+  validity: string;
+  /** Price-validity unit. */
+  validityUnit: DurationUnit;
   /** URL to the vendor's uploaded quote. */
   quoteLink: string;
   /** Free-text notes for this quote. */
@@ -104,6 +134,10 @@ interface Props {
   vendorOptions: VendorOption[];
   /** Admin-Master machining options — accepted for contract symmetry, unused here. */
   machiningOptions?: MachiningOption[];
+  /** Payment Terms master options for the per-vendor dropdown. */
+  paymentTermOptions?: CommercialMasterOption[];
+  /** Quantity Tolerance master options for the per-vendor dropdown. */
+  quantityToleranceOptions?: CommercialMasterOption[];
 }
 
 let rowSeq = 0;
@@ -116,7 +150,7 @@ function newKey(): string {
   return `bo-${Date.now()}-${rowSeq}`;
 }
 
-/** A blank vendor row. */
+/** A blank vendor row (a fresh, empty per-vendor commercial-terms set included). */
 export function emptyBuyoutVendorRow(): BuyoutVendorRow {
   return {
     key: newKey(),
@@ -129,6 +163,12 @@ export function emptyBuyoutVendorRow(): BuyoutVendorRow {
     leadTimeDays: "",
     creditPeriodDays: "",
     paymentTerms: null,
+    paymentTermsId: "",
+    quantityToleranceId: "",
+    deliveryTime: "",
+    deliveryTimeUnit: "days",
+    validity: "",
+    validityUnit: "days",
     quoteLink: "",
     notes: "",
   };
@@ -226,7 +266,35 @@ function CompositeBadge({ score }: { score: number }) {
   return null;
 }
 
-export function BuyoutCalculator({ value, onChange, vendorOptions }: Props) {
+/**
+ * Build the pure-engine quote shape from the controlled rows. freight has no
+ * input here, so qty is immaterial — callers pass 1. Rows without a vendor cost
+ * are excluded from the cheapest axis by compareVendors itself.
+ */
+function toQuotes(vendors: BuyoutVendorRow[]): VendorQuoteLike[] {
+  return vendors.map((r) => ({
+    id: r.key,
+    unitPrice: hasCost(r) ? n(r.unitPrice) : null,
+    vendorOhPct: n(r.vendorOhPct) / 100,
+    developmentCost: n(r.developmentCost),
+    leadTimeDays: intOrNull(r.leadTimeDays),
+    creditPeriodDays: intOrNull(r.creditPeriodDays),
+  }));
+}
+
+/**
+ * The Buy-Out INPUT surface: the per-vendor cards (each with its own commercial
+ * terms) + the Add-vendor button + the vendor quick-create modal. The ranking /
+ * decision UI is a separate {@link BuyoutDecisionPanel} rendered at the bottom of
+ * the flow — the vendor is chosen LAST.
+ */
+export function BuyoutCalculator({
+  value,
+  onChange,
+  vendorOptions,
+  paymentTermOptions = [],
+  quantityToleranceOptions = [],
+}: Props) {
   const { vendors, selectedKey } = value;
 
   // Vendors created inline via the quick-create modal — merged into the picker
@@ -257,27 +325,20 @@ export function BuyoutCalculator({ value, onChange, vendorOptions }: Props) {
     [allVendorOptions],
   );
 
-  // ── Ranking (pure engine). freight has no input here, so qty is immaterial —
-  // pass 1. Rows without a vendor cost are excluded from the cheapest axis by
-  // compareVendors itself.
-  const quotes: VendorQuoteLike[] = React.useMemo(
-    () =>
-      vendors.map((r) => ({
-        id: r.key,
-        unitPrice: hasCost(r) ? n(r.unitPrice) : null,
-        vendorOhPct: n(r.vendorOhPct) / 100,
-        developmentCost: n(r.developmentCost),
-        leadTimeDays: intOrNull(r.leadTimeDays),
-        creditPeriodDays: intOrNull(r.creditPeriodDays),
-      })),
-    [vendors],
+  const paymentTermSelect: SelectOption[] = React.useMemo(
+    () => paymentTermOptions.map((o) => ({ value: o.id, label: o.name })),
+    [paymentTermOptions],
   );
-  const comparison = React.useMemo(() => compareVendors(quotes, 1), [quotes]);
-
-  const rowByKey = React.useCallback(
-    (k: string | null) => (k ? vendors.find((r) => r.key === k) ?? null : null),
-    [vendors],
+  const quantityToleranceSelect: SelectOption[] = React.useMemo(
+    () => quantityToleranceOptions.map((o) => ({ value: o.id, label: o.name })),
+    [quantityToleranceOptions],
   );
+  // Vendor's default payment-terms LABEL → master-option id, for the prefill.
+  const paymentTermIdByLabel = React.useMemo(() => {
+    const m = new Map<string, string>();
+    for (const o of paymentTermOptions) m.set(o.name.trim().toLowerCase(), o.id);
+    return m;
+  }, [paymentTermOptions]);
 
   // ── mutations ────────────────────────────────────────────────────────────
   const patchRow = (key: string, patch: Partial<BuyoutVendorRow>) => {
@@ -307,15 +368,24 @@ export function BuyoutCalculator({ value, onChange, vendorOptions }: Props) {
 
   const selectRow = (key: string) => onChange({ ...value, selectedKey: key });
 
-  /** Autofill a row from a picked vendor (code / credit / terms). */
-  const applyVendor = (key: string, v: VendorOption) =>
-    patchRow(key, {
+  /** Autofill a row from a picked vendor (code / credit / terms + payment-terms prefill). */
+  const applyVendor = (key: string, v: VendorOption) => {
+    const patch: Partial<BuyoutVendorRow> = {
       vendorId: v.id,
       vendorName: v.name,
       vendorCode: v.vendorCode,
       creditPeriodDays: v.defaultCreditDays != null ? String(v.defaultCreditDays) : "",
       paymentTerms: v.paymentTerms,
-    });
+    };
+    // Nice-to-have: prefill the Payment Terms dropdown from the vendor's default
+    // when that default matches a master option (only when we find a match, so a
+    // user's own selection is never cleared).
+    const ptId = v.paymentTerms
+      ? paymentTermIdByLabel.get(v.paymentTerms.trim().toLowerCase())
+      : undefined;
+    if (ptId) patch.paymentTermsId = ptId;
+    patchRow(key, patch);
+  };
 
   const onPickVendor = (key: string, optionValue: string) => {
     if (optionValue === NEW_VENDOR) {
@@ -334,11 +404,309 @@ export function BuyoutCalculator({ value, onChange, vendorOptions }: Props) {
 
   const { containerProps } = useKeyboardForm();
 
+  return (
+    <div className="flex flex-col gap-4" {...containerProps}>
+      {/* ── Per-vendor input cards (each with its own commercial terms) ──── */}
+      {vendors.map((r, i) => {
+        const isSel = selectedKey === r.key;
+        return (
+          <section
+            key={r.key}
+            className="rounded-section border-2 bg-surface-card p-5"
+            style={{ borderColor: isSel ? INDIGO : BORDER }}
+          >
+            <GroupHeader
+              n={i + 1}
+              label={r.vendorName || `Vendor ${i + 1}`}
+              leftAction={
+                isSel ? (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold text-white"
+                    style={{ background: INDIGO }}
+                  >
+                    <Check size={11} strokeWidth={3} /> Selected
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => selectRow(r.key)}
+                    className="rounded-full border px-2.5 py-0.5 text-[11.5px] font-bold text-ink-muted transition-colors hover:border-[#3f3f94] hover:text-[#3f3f94]"
+                    style={{ borderColor: DIVIDE }}
+                  >
+                    Use this vendor
+                  </button>
+                )
+              }
+              action={
+                vendors.length > 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => removeRow(r.key)}
+                    aria-label={`Remove ${r.vendorName || `Vendor ${i + 1}`}`}
+                    className="grid h-8 w-8 place-items-center rounded-lg text-ink-subtle transition-colors hover:bg-[#fdeaea] hover:text-[#D32F2F]"
+                  >
+                    <Trash2 size={16} strokeWidth={2.1} />
+                  </button>
+                ) : undefined
+              }
+            />
+
+            <div className="mt-4 flex flex-col gap-4">
+              {/* Vendor picker + code */}
+              <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
+                <Field id={`bo-vendor-${r.key}`} label="Vendor" labelOnly>
+                  <Select
+                    id={`bo-vendor-${r.key}`}
+                    value={r.vendorId ?? ""}
+                    onValueChange={(v) => onPickVendor(r.key, v)}
+                    options={pickerOptions}
+                    placeholder="Select or add a vendor"
+                    ariaLabel="Vendor"
+                  />
+                </Field>
+                <Field id={`bo-code-${r.key}`} label="Vendor Code">
+                  <input
+                    id={`bo-code-${r.key}`}
+                    type="text"
+                    readOnly
+                    value={r.vendorCode ?? ""}
+                    placeholder="Auto (VN-####)"
+                    className="nt-input bg-[#f6f7fb] text-ink-muted"
+                    aria-label="Vendor code"
+                  />
+                </Field>
+              </div>
+
+              {/* Historical quoting metrics for the picked vendor (derived from
+                  past BO quotes; hidden when the vendor is new / unquoted). */}
+              {r.vendorId && (
+                <VendorHistoryLine
+                  history={vendorById.get(r.vendorId)?.history ?? null}
+                />
+              )}
+
+              {/* Cost / OH / Dev */}
+              <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
+                <Field id={`bo-unit-${r.key}`} label="Vendor Cost / piece" required>
+                  <MoneyInput
+                    id={`bo-unit-${r.key}`}
+                    value={r.unitPrice}
+                    onChange={(e) => patchRow(r.key, { unitPrice: e.target.value })}
+                  />
+                </Field>
+                <Field id={`bo-oh-${r.key}`} label="Vendor Overhead %">
+                  <div className="relative w-full">
+                    <input
+                      id={`bo-oh-${r.key}`}
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step="any"
+                      value={r.vendorOhPct}
+                      onChange={(e) => patchRow(r.key, { vendorOhPct: e.target.value })}
+                      placeholder="e.g. 35"
+                      className="nt-input w-full tabular-nums"
+                      style={{ paddingRight: 30 }}
+                    />
+                    <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[14px] font-semibold text-ink-subtle">
+                      %
+                    </span>
+                  </div>
+                </Field>
+                <Field id={`bo-dev-${r.key}`} label="Development Cost / piece">
+                  <MoneyInput
+                    id={`bo-dev-${r.key}`}
+                    value={r.developmentCost}
+                    onChange={(e) => patchRow(r.key, { developmentCost: e.target.value })}
+                  />
+                </Field>
+              </div>
+              <p className="-mt-1.5 text-[12px] text-ink-subtle">
+                Development cost is levied without overhead.
+              </p>
+
+              {/* Lead / credit / quote link */}
+              <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
+                <Field id={`bo-lead-${r.key}`} label="Lead Time (days)">
+                  <input
+                    id={`bo-lead-${r.key}`}
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    step={1}
+                    value={r.leadTimeDays}
+                    onChange={(e) => patchRow(r.key, { leadTimeDays: e.target.value })}
+                    placeholder="e.g. 30"
+                    className="nt-input w-full tabular-nums"
+                  />
+                </Field>
+                <Field id={`bo-credit-${r.key}`} label="Credit Period (days)">
+                  <input
+                    id={`bo-credit-${r.key}`}
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    step={1}
+                    value={r.creditPeriodDays}
+                    onChange={(e) => patchRow(r.key, { creditPeriodDays: e.target.value })}
+                    placeholder="e.g. 45"
+                    className="nt-input w-full tabular-nums"
+                  />
+                </Field>
+                <Field id={`bo-link-${r.key}`} label="Vendor Quote Link">
+                  <input
+                    id={`bo-link-${r.key}`}
+                    type="url"
+                    value={r.quoteLink}
+                    onChange={(e) => patchRow(r.key, { quoteLink: e.target.value })}
+                    placeholder="https://"
+                    className="nt-input w-full"
+                  />
+                </Field>
+              </div>
+
+              {/* Per-vendor COMMERCIAL TERMS — each competing vendor has its own. */}
+              <div
+                className="flex flex-col gap-3 rounded-[12px] px-4 py-3.5"
+                style={{ border: `1.5px dashed ${DIVIDE}`, background: "#fafbff" }}
+              >
+                <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-ink-subtle">
+                  Commercial Terms · for this vendor
+                </span>
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-4 max-md:grid-cols-1">
+                  <Field id={`bo-qtol-${r.key}`} label="Quantity Tolerance" labelOnly>
+                    <Select
+                      ariaLabel="Quantity tolerance"
+                      value={r.quantityToleranceId}
+                      onValueChange={(v) => patchRow(r.key, { quantityToleranceId: v })}
+                      options={quantityToleranceSelect}
+                      placeholder={
+                        quantityToleranceSelect.length === 0
+                          ? "No options in master"
+                          : "Select tolerance"
+                      }
+                      disabled={quantityToleranceSelect.length === 0}
+                    />
+                  </Field>
+                  <Field id={`bo-pterm-${r.key}`} label="Payment Terms" labelOnly>
+                    <Select
+                      ariaLabel="Payment terms"
+                      value={r.paymentTermsId}
+                      onValueChange={(v) => patchRow(r.key, { paymentTermsId: v })}
+                      options={paymentTermSelect}
+                      placeholder={
+                        paymentTermSelect.length === 0
+                          ? "No options in master"
+                          : "Select payment terms"
+                      }
+                      disabled={paymentTermSelect.length === 0}
+                      searchable
+                      searchPlaceholder="Search payment terms"
+                    />
+                  </Field>
+                  <VendorDurationField
+                    label="Delivery Time"
+                    idBase={`bo-deliv-${r.key}`}
+                    amount={r.deliveryTime}
+                    unit={r.deliveryTimeUnit}
+                    onAmount={(deliveryTime) => patchRow(r.key, { deliveryTime })}
+                    onUnit={(deliveryTimeUnit) => patchRow(r.key, { deliveryTimeUnit })}
+                  />
+                  <VendorDurationField
+                    label="Price Validity"
+                    idBase={`bo-valid-${r.key}`}
+                    amount={r.validity}
+                    unit={r.validityUnit}
+                    onAmount={(validity) => patchRow(r.key, { validity })}
+                    onUnit={(validityUnit) => patchRow(r.key, { validityUnit })}
+                  />
+                </div>
+              </div>
+
+              {/* Per-vendor final cost + quote notes */}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
+                <div
+                  className="flex shrink-0 flex-col justify-center rounded-[12px] px-4 py-3 sm:w-[220px]"
+                  style={{ border: `1.5px solid ${DIVIDE}`, background: "#f8f9fd" }}
+                >
+                  <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-ink-subtle">
+                    Final Cost / piece
+                  </span>
+                  <span
+                    className="mt-1 font-mono text-[18px] font-bold tabular-nums"
+                    style={{ color: INDIGO }}
+                  >
+                    {hasCost(r) ? money(buyoutFinalCost(r)) : "—"}
+                  </span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <Field id={`bo-notes-${r.key}`} label="Notes">
+                    <NotesField
+                      id={`bo-notes-${r.key}`}
+                      rows={2}
+                      value={r.notes}
+                      onChange={(val) => patchRow(r.key, { notes: val })}
+                      placeholder="Anything worth remembering about this quote"
+                    />
+                  </Field>
+                </div>
+              </div>
+            </div>
+          </section>
+        );
+      })}
+
+      {vendors.length < MAX_BUYOUT_VENDORS && (
+        <button
+          type="button"
+          onClick={addRow}
+          className="inline-flex items-center justify-center gap-1.5 self-start rounded-pill border-2 border-dashed px-4 py-2.5 text-[13.5px] font-bold text-ink-muted transition-colors hover:border-[#3f3f94] hover:text-[#3f3f94]"
+          style={{ borderColor: DIVIDE }}
+        >
+          <Plus size={16} strokeWidth={2.4} /> Add vendor ({vendors.length}/{MAX_BUYOUT_VENDORS})
+        </button>
+      )}
+
+      <VendorQuickCreateModal
+        open={modalRowKey !== null}
+        onClose={() => setModalRowKey(null)}
+        onCreated={onVendorCreated}
+      />
+    </div>
+  );
+}
+
+/**
+ * The "WHICH VENDOR?" decision panel — the three scenario tiles (Standard /
+ * Urgency / Cash Crunch), the live landed-cost comparison table (L1–L3 ranks,
+ * N/3 composite badge, cheapest / fastest / best-credit) and the Selected Final
+ * Cost readout. Rendered at the BOTTOM of the Bought-Out flow, after the vendor
+ * input cards and the shared notes, since the vendor is chosen last. Operates on
+ * the same controlled {@link BuyoutValue} as {@link BuyoutCalculator}.
+ */
+export function BuyoutDecisionPanel({
+  value,
+  onChange,
+}: {
+  value: BuyoutValue;
+  onChange: (value: BuyoutValue) => void;
+}) {
+  const { vendors, selectedKey } = value;
+
+  const quotes = React.useMemo(() => toQuotes(vendors), [vendors]);
+  const comparison = React.useMemo(() => compareVendors(quotes, 1), [quotes]);
+
+  const rowByKey = React.useCallback(
+    (k: string | null) => (k ? vendors.find((r) => r.key === k) ?? null : null),
+    [vendors],
+  );
+  const selectRow = (key: string) => onChange({ ...value, selectedKey: key });
+
   const selectedRow = rowByKey(selectedKey);
   const selectedFinal = selectedRow ? buyoutFinalCost(selectedRow) : null;
 
   return (
-    <div className="flex flex-col gap-5" {...containerProps}>
+    <div className="flex flex-col gap-5">
       {/* ── Scenario dashboard ─────────────────────────────────────────── */}
       <div className="overflow-hidden rounded-section border-2 border-[#b7bcd2] bg-surface-card">
         <div
@@ -516,218 +884,50 @@ export function BuyoutCalculator({ value, onChange, vendorOptions }: Props) {
           </span>
         </div>
       </div>
-
-      {/* ── Per-vendor input cards ─────────────────────────────────────── */}
-      <div className="flex flex-col gap-4">
-        {vendors.map((r, i) => {
-          const isSel = selectedKey === r.key;
-          return (
-            <section
-              key={r.key}
-              className="rounded-section border-2 bg-surface-card p-5"
-              style={{ borderColor: isSel ? INDIGO : BORDER }}
-            >
-              <GroupHeader
-                n={i + 1}
-                label={r.vendorName || `Vendor ${i + 1}`}
-                leftAction={
-                  isSel ? (
-                    <span
-                      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold text-white"
-                      style={{ background: INDIGO }}
-                    >
-                      <Check size={11} strokeWidth={3} /> Selected
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => selectRow(r.key)}
-                      className="rounded-full border px-2.5 py-0.5 text-[11.5px] font-bold text-ink-muted transition-colors hover:border-[#3f3f94] hover:text-[#3f3f94]"
-                      style={{ borderColor: DIVIDE }}
-                    >
-                      Use this vendor
-                    </button>
-                  )
-                }
-                action={
-                  vendors.length > 1 ? (
-                    <button
-                      type="button"
-                      onClick={() => removeRow(r.key)}
-                      aria-label={`Remove ${r.vendorName || `Vendor ${i + 1}`}`}
-                      className="grid h-8 w-8 place-items-center rounded-lg text-ink-subtle transition-colors hover:bg-[#fdeaea] hover:text-[#D32F2F]"
-                    >
-                      <Trash2 size={16} strokeWidth={2.1} />
-                    </button>
-                  ) : undefined
-                }
-              />
-
-              <div className="mt-4 flex flex-col gap-4">
-                {/* Vendor picker + code */}
-                <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
-                  <Field id={`bo-vendor-${r.key}`} label="Vendor" labelOnly>
-                    <Select
-                      id={`bo-vendor-${r.key}`}
-                      value={r.vendorId ?? ""}
-                      onValueChange={(v) => onPickVendor(r.key, v)}
-                      options={pickerOptions}
-                      placeholder="Select or add a vendor"
-                      ariaLabel="Vendor"
-                    />
-                  </Field>
-                  <Field id={`bo-code-${r.key}`} label="Vendor Code">
-                    <input
-                      id={`bo-code-${r.key}`}
-                      type="text"
-                      readOnly
-                      value={r.vendorCode ?? ""}
-                      placeholder="Auto (VN-####)"
-                      className="nt-input bg-[#f6f7fb] text-ink-muted"
-                      aria-label="Vendor code"
-                    />
-                  </Field>
-                </div>
-
-                {/* Historical quoting metrics for the picked vendor (derived from
-                    past BO quotes; hidden when the vendor is new / unquoted). */}
-                {r.vendorId && (
-                  <VendorHistoryLine
-                    history={vendorById.get(r.vendorId)?.history ?? null}
-                  />
-                )}
-
-                {/* Cost / OH / Dev */}
-                <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
-                  <Field id={`bo-unit-${r.key}`} label="Vendor Cost / piece" required>
-                    <MoneyInput
-                      id={`bo-unit-${r.key}`}
-                      value={r.unitPrice}
-                      onChange={(e) => patchRow(r.key, { unitPrice: e.target.value })}
-                    />
-                  </Field>
-                  <Field id={`bo-oh-${r.key}`} label="Vendor Overhead %">
-                    <div className="relative w-full">
-                      <input
-                        id={`bo-oh-${r.key}`}
-                        type="number"
-                        inputMode="decimal"
-                        min={0}
-                        step="any"
-                        value={r.vendorOhPct}
-                        onChange={(e) => patchRow(r.key, { vendorOhPct: e.target.value })}
-                        placeholder="e.g. 35"
-                        className="nt-input w-full tabular-nums"
-                        style={{ paddingRight: 30 }}
-                      />
-                      <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[14px] font-semibold text-ink-subtle">
-                        %
-                      </span>
-                    </div>
-                  </Field>
-                  <Field id={`bo-dev-${r.key}`} label="Development Cost / piece">
-                    <MoneyInput
-                      id={`bo-dev-${r.key}`}
-                      value={r.developmentCost}
-                      onChange={(e) => patchRow(r.key, { developmentCost: e.target.value })}
-                    />
-                  </Field>
-                </div>
-                <p className="-mt-1.5 text-[12px] text-ink-subtle">
-                  Development cost is levied without overhead.
-                </p>
-
-                {/* Lead / credit / quote link */}
-                <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
-                  <Field id={`bo-lead-${r.key}`} label="Lead Time (days)">
-                    <input
-                      id={`bo-lead-${r.key}`}
-                      type="number"
-                      inputMode="numeric"
-                      min={0}
-                      step={1}
-                      value={r.leadTimeDays}
-                      onChange={(e) => patchRow(r.key, { leadTimeDays: e.target.value })}
-                      placeholder="e.g. 30"
-                      className="nt-input w-full tabular-nums"
-                    />
-                  </Field>
-                  <Field id={`bo-credit-${r.key}`} label="Credit Period (days)">
-                    <input
-                      id={`bo-credit-${r.key}`}
-                      type="number"
-                      inputMode="numeric"
-                      min={0}
-                      step={1}
-                      value={r.creditPeriodDays}
-                      onChange={(e) => patchRow(r.key, { creditPeriodDays: e.target.value })}
-                      placeholder="e.g. 45"
-                      className="nt-input w-full tabular-nums"
-                    />
-                  </Field>
-                  <Field id={`bo-link-${r.key}`} label="Vendor Quote Link">
-                    <input
-                      id={`bo-link-${r.key}`}
-                      type="url"
-                      value={r.quoteLink}
-                      onChange={(e) => patchRow(r.key, { quoteLink: e.target.value })}
-                      placeholder="https://"
-                      className="nt-input w-full"
-                    />
-                  </Field>
-                </div>
-
-                {/* Per-vendor final cost + notes */}
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
-                  <div
-                    className="flex shrink-0 flex-col justify-center rounded-[12px] px-4 py-3 sm:w-[220px]"
-                    style={{ border: `1.5px solid ${DIVIDE}`, background: "#f8f9fd" }}
-                  >
-                    <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-ink-subtle">
-                      Final Cost / piece
-                    </span>
-                    <span
-                      className="mt-1 font-mono text-[18px] font-bold tabular-nums"
-                      style={{ color: INDIGO }}
-                    >
-                      {hasCost(r) ? money(buyoutFinalCost(r)) : "—"}
-                    </span>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <Field id={`bo-notes-${r.key}`} label="Notes">
-                      <NotesField
-                        id={`bo-notes-${r.key}`}
-                        rows={2}
-                        value={r.notes}
-                        onChange={(val) => patchRow(r.key, { notes: val })}
-                        placeholder="Anything worth remembering about this quote"
-                      />
-                    </Field>
-                  </div>
-                </div>
-              </div>
-            </section>
-          );
-        })}
-
-        {vendors.length < MAX_BUYOUT_VENDORS && (
-          <button
-            type="button"
-            onClick={addRow}
-            className="inline-flex items-center justify-center gap-1.5 self-start rounded-pill border-2 border-dashed px-4 py-2.5 text-[13.5px] font-bold text-ink-muted transition-colors hover:border-[#3f3f94] hover:text-[#3f3f94]"
-            style={{ borderColor: DIVIDE }}
-          >
-            <Plus size={16} strokeWidth={2.4} /> Add vendor ({vendors.length}/{MAX_BUYOUT_VENDORS})
-          </button>
-        )}
-      </div>
-
-      <VendorQuickCreateModal
-        open={modalRowKey !== null}
-        onClose={() => setModalRowKey(null)}
-        onCreated={onVendorCreated}
-      />
     </div>
+  );
+}
+
+/** A number box + a days/weeks unit segmented control, for a per-vendor duration. */
+function VendorDurationField({
+  label,
+  idBase,
+  amount,
+  unit,
+  onAmount,
+  onUnit,
+}: {
+  label: string;
+  idBase: string;
+  amount: string;
+  unit: DurationUnit;
+  onAmount: (v: string) => void;
+  onUnit: (v: DurationUnit) => void;
+}) {
+  return (
+    <Field id={idBase} label={label} labelOnly>
+      <div className="flex items-stretch gap-2">
+        <input
+          id={idBase}
+          type="number"
+          inputMode="numeric"
+          min={0}
+          step="any"
+          className="nt-input w-full min-w-0 tabular-nums"
+          placeholder="0"
+          aria-label={`${label} amount`}
+          value={amount}
+          onChange={(e) => onAmount(e.target.value)}
+        />
+        <Segmented
+          options={DURATION_UNITS}
+          value={unit}
+          onChange={(v) => v && onUnit(v)}
+          allowClear={false}
+          ariaLabel={`${label} unit`}
+        />
+      </div>
+    </Field>
   );
 }
 
@@ -765,7 +965,7 @@ function VendorHistoryLine({ history }: { history: VendorHistory | null }) {
   );
 }
 
-/** One scenario tile in the top dashboard. */
+/** One scenario tile in the decision-panel dashboard. */
 function ScenarioChip({
   icon,
   title,

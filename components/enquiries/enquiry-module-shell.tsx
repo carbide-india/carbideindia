@@ -53,6 +53,7 @@ const NEW_FORM_ROUTES: Record<string, string> = {
   negotiations: "/negotiations/new",
   "sales-orders": "/sales-orders/new",
   meetings: "/meetings/new",
+  vendors: "/vendors/new",
 };
 // The Contact Person Address Book lives under /contacts but belongs to the
 // Client (KYC) family - so its sidebar reads Client Master, not New Enquiry.
@@ -77,6 +78,7 @@ const REGISTERS: Record<string, { label: string; href: string }> = {
   negotiations: { label: "Negotiation Register", href: "/negotiations" },
   "sales-orders": { label: "Sales Order Register", href: "/sales-orders" },
   meetings: { label: "Meeting Register", href: "/meetings" },
+  vendors: { label: "Vendor Register", href: "/vendors" },
 };
 function registerFor(pathname: string): { label: string; href: string } {
   return REGISTERS[familySeg(pathname)] ?? { label: "Enquiry Register", href: "/enquiries/register" };
@@ -98,7 +100,9 @@ function navFor(pathname: string): NavDef[] {
     ? `Create New ${FORM_DRAFT_META[draftKind].noun}`
     : familySeg(pathname) === "enquiries" || familySeg(pathname) === "inquiries"
       ? "Create New Enquiry"
-      : "Create New Form";
+      : familySeg(pathname) === "vendors"
+        ? "Create New Vendor"
+        : "Create New Form";
   const custom = customEditorForSegment(familySeg(pathname));
   const items: NavDef[] = [
     { label: "Dashboard", href: "/hub" as Route, Icon: LayoutDashboard, ready: false, group: "overview" },
@@ -110,14 +114,23 @@ function navFor(pathname: string): NavDef[] {
       active: (p) => p.startsWith(newForm),
       group: "create",
     },
-    {
-      label: "Drafts",
-      href: draftsRoute as Route,
-      Icon: Files,
-      ready: true,
-      active: (p) => p.startsWith(draftsRoute),
-      group: "create",
-    },
+    // Drafts — only for families that actually keep a draft store (any
+    // draftKind form, or the Enquiry family with its own store). The Vendors
+    // family has no auto-save draft, so it shows no Drafts item.
+    ...(draftKind ||
+    familySeg(pathname) === "enquiries" ||
+    familySeg(pathname) === "inquiries"
+      ? ([
+          {
+            label: "Drafts",
+            href: draftsRoute as Route,
+            Icon: Files,
+            ready: true,
+            active: (p: string) => p.startsWith(draftsRoute),
+            group: "create" as const,
+          },
+        ] as NavDef[])
+      : []),
     (() => {
       const reg = registerFor(pathname);
       return {

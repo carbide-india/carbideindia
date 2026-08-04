@@ -289,6 +289,13 @@ export async function saveCosting(
               vendorOhPct: q.vendorOhPct != null ? String(q.vendorOhPct) : null,
               developmentCost:
                 q.developmentCost != null ? String(q.developmentCost) : null,
+              // per-vendor commercial terms (notes stay shared)
+              paymentTermsId: q.paymentTermsId ?? null,
+              quantityToleranceId: q.quantityToleranceId ?? null,
+              deliveryTime: q.deliveryTime != null ? String(q.deliveryTime) : null,
+              deliveryTimeUnit: q.deliveryTimeUnit ?? null,
+              validity: q.validity != null ? String(q.validity) : null,
+              validityUnit: q.validityUnit ?? null,
               sortOrder: i,
               notes: q.notes ?? null,
             })),
@@ -768,6 +775,13 @@ function buyoutQuoteRows(b: BuyoutInput) {
       // vendorLandedCost (unit + unit*OH) matches the panel's landed figure.
       vendorOhPct: fracStr(totalNum(r.vendorOhPct)),
       developmentCost: numStr(totalNum(r.developmentCost)),
+      // Per-vendor commercial terms (each competing vendor carries its own set).
+      paymentTermsId: uuidOrNull(r.paymentTermsId ?? null),
+      quantityToleranceId: uuidOrNull(r.quantityToleranceId ?? null),
+      deliveryTime: numStr(totalNum(r.deliveryTime)),
+      deliveryTimeUnit: r.deliveryTimeUnit ?? null,
+      validity: numStr(totalNum(r.validity)),
+      validityUnit: r.validityUnit ?? null,
       sortOrder: i,
       notes: (r.notes ?? "").trim() || null,
     }));

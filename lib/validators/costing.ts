@@ -4,6 +4,16 @@ import { COSTING_ROUTES, COSTING_LOGICS } from "@/db/enums";
 const N = z.coerce.number().optional();
 const INT = z.coerce.number().int().optional();
 
+/** number | "" | null | NaN → number | undefined (same guard as OptNum below). */
+const VendorOptNum = z.preprocess(
+  (val) => {
+    if (val === "" || val === null || val === undefined) return undefined;
+    const n = typeof val === "string" ? Number(val) : val;
+    return typeof n === "number" && Number.isNaN(n) ? undefined : val;
+  },
+  z.coerce.number().optional(),
+);
+
 /**
  * One competing vendor quote under a BOUGHT_OUT costing (BO multi-vendor matrix).
  * unitPrice is the only required field; everything else is optional (freight is
@@ -19,6 +29,15 @@ export const VendorQuoteSchema = z.object({
   freightCost: N,
   vendorOhPct: N,
   developmentCost: N,
+  // Per-vendor commercial terms (moved off the costing level for BO). Master ids
+  // reference the payment_term / quantity_tolerance masters; delivery/validity are
+  // a number + a days|weeks unit. `notes` remains SHARED across the matrix.
+  paymentTermsId: z.string().uuid().optional(),
+  quantityToleranceId: z.string().uuid().optional(),
+  deliveryTime: VendorOptNum,
+  deliveryTimeUnit: z.enum(["days", "weeks"]).optional(),
+  validity: VendorOptNum,
+  validityUnit: z.enum(["days", "weeks"]).optional(),
   notes: z.string().optional(),
 });
 export type VendorQuoteInput = z.input<typeof VendorQuoteSchema>;
@@ -145,6 +164,15 @@ export const BuyoutRowSchema = z.object({
   leadTimeDays: OptNum,
   creditPeriodDays: OptNum,
   paymentTerms: z.string().nullish(),
+  // Per-vendor commercial terms (moved off the costing level for BO). Master-id
+  // fields arrive as loose strings ("" when unset) and are normalised with
+  // `uuidOrNull` server-side; delivery/validity are a number + a days|weeks unit.
+  paymentTermsId: z.string().optional(),
+  quantityToleranceId: z.string().optional(),
+  deliveryTime: OptNum,
+  deliveryTimeUnit: z.enum(["days", "weeks"]).optional(),
+  validity: OptNum,
+  validityUnit: z.enum(["days", "weeks"]).optional(),
   quoteLink: z.string().optional().default(""),
   notes: z.string().optional().default(""),
   /** Client row key, used only to resolve which row is `selected`. */

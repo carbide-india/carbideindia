@@ -20,6 +20,7 @@ import {
 } from "@/components/costings/inhouse-calculator";
 import {
   BuyoutCalculator,
+  BuyoutDecisionPanel,
   emptyBuyoutValue,
   type BuyoutValue,
 } from "@/components/costings/buyout-calculator";
@@ -266,6 +267,13 @@ export function CostingCalculatorShell({
             leadTimeDays: r.leadTimeDays,
             creditPeriodDays: r.creditPeriodDays,
             paymentTerms: r.paymentTerms,
+            // per-vendor commercial terms (moved off the costing level for BO)
+            paymentTermsId: r.paymentTermsId,
+            quantityToleranceId: r.quantityToleranceId,
+            deliveryTime: r.deliveryTime,
+            deliveryTimeUnit: r.deliveryTimeUnit,
+            validity: r.validity,
+            validityUnit: r.validityUnit,
             quoteLink: r.quoteLink,
             notes: r.notes,
             key: r.key,
@@ -408,7 +416,9 @@ export function CostingCalculatorShell({
         </div>
       )}
 
-      {/* 3. BUY-OUT PANEL */}
+      {/* 3. BUY-OUT PANEL — per-vendor input cards (the "which vendor?" decision
+          panel is rendered LAST, after the shared notes, since the vendor is
+          chosen last). */}
       {showBuyout && (
         <div className="flex flex-col gap-3">
           <PanelHeading label="Bought-Out (Vendor)" />
@@ -416,6 +426,8 @@ export function CostingCalculatorShell({
             value={buyout}
             onChange={setBuyout}
             vendorOptions={vendorOptions}
+            paymentTermOptions={masters.paymentTerm}
+            quantityToleranceOptions={masters.quantityTolerance}
           />
         </div>
       )}
@@ -429,60 +441,69 @@ export function CostingCalculatorShell({
         />
       )}
 
-      {/* 5. TERMINAL FIELDS */}
+      {/* 5. TERMINAL FIELDS. The structured commercial terms (Quantity Tolerance ·
+          Payment Terms · Delivery · Validity) now live PER-VENDOR on each Buy-Out
+          card, so this shared block carries them only for the in-house path; when
+          the costing is bought-out only, it collapses to just the shared notes. */}
       {mode && (
         <SectionCard
-          title="Commercial Terms"
+          title={showInhouse ? "Commercial Terms" : "Notes"}
           inlineHint
-          hint="Every dropdown is admin-managed. Delivery & validity use a number + unit."
+          hint={
+            showInhouse
+              ? "In-house commercial terms are admin-managed. Delivery & validity use a number + unit. Bought-out terms are set per vendor above."
+              : "Notes for this costing. Bought-out commercial terms are set per vendor above."
+          }
         >
-          {/* Quantity Tolerance · Payment Terms · Delivery Time · Price Validity — one line */}
-          <div className="grid grid-cols-2 gap-5 md:grid-cols-4">
-            <Field label="Quantity Tolerance" labelOnly>
-              <Select
-                ariaLabel="Quantity tolerance"
-                value={quantityToleranceId}
-                onValueChange={setQuantityToleranceId}
-                placeholder={
-                  masters.quantityTolerance.length === 0
-                    ? "No options in master"
-                    : "Select quantity tolerance"
-                }
-                disabled={masters.quantityTolerance.length === 0}
-                options={masters.quantityTolerance.map((o) => ({ value: o.id, label: o.name }))}
+          {showInhouse && (
+            /* Quantity Tolerance · Payment Terms · Delivery Time · Price Validity — one line */
+            <div className="grid grid-cols-2 gap-5 md:grid-cols-4">
+              <Field label="Quantity Tolerance" labelOnly>
+                <Select
+                  ariaLabel="Quantity tolerance"
+                  value={quantityToleranceId}
+                  onValueChange={setQuantityToleranceId}
+                  placeholder={
+                    masters.quantityTolerance.length === 0
+                      ? "No options in master"
+                      : "Select quantity tolerance"
+                  }
+                  disabled={masters.quantityTolerance.length === 0}
+                  options={masters.quantityTolerance.map((o) => ({ value: o.id, label: o.name }))}
+                />
+              </Field>
+              <Field label="Payment Terms" labelOnly>
+                <Select
+                  ariaLabel="Payment terms"
+                  value={paymentTermId}
+                  onValueChange={setPaymentTermId}
+                  placeholder={
+                    masters.paymentTerm.length === 0
+                      ? "No options in master"
+                      : "Select payment terms"
+                  }
+                  disabled={masters.paymentTerm.length === 0}
+                  searchable
+                  searchPlaceholder="Search payment terms"
+                  options={masters.paymentTerm.map((o) => ({ value: o.id, label: o.name }))}
+                />
+              </Field>
+              <DurationField
+                label="Delivery Time"
+                amount={deliveryAmt}
+                unit={deliveryUnit}
+                onAmount={setDeliveryAmt}
+                onUnit={setDeliveryUnit}
               />
-            </Field>
-            <Field label="Payment Terms" labelOnly>
-              <Select
-                ariaLabel="Payment terms"
-                value={paymentTermId}
-                onValueChange={setPaymentTermId}
-                placeholder={
-                  masters.paymentTerm.length === 0
-                    ? "No options in master"
-                    : "Select payment terms"
-                }
-                disabled={masters.paymentTerm.length === 0}
-                searchable
-                searchPlaceholder="Search payment terms"
-                options={masters.paymentTerm.map((o) => ({ value: o.id, label: o.name }))}
+              <DurationField
+                label="Price Validity"
+                amount={validityAmt}
+                unit={validityUnit}
+                onAmount={setValidityAmt}
+                onUnit={setValidityUnit}
               />
-            </Field>
-            <DurationField
-              label="Delivery Time"
-              amount={deliveryAmt}
-              unit={deliveryUnit}
-              onAmount={setDeliveryAmt}
-              onUnit={setDeliveryUnit}
-            />
-            <DurationField
-              label="Price Validity"
-              amount={validityAmt}
-              unit={validityUnit}
-              onAmount={setValidityAmt}
-              onUnit={setValidityUnit}
-            />
-          </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-5 max-md:grid-cols-1">
             <Field label="Technical Notes" labelOnly>
@@ -503,6 +524,17 @@ export function CostingCalculatorShell({
             </Field>
           </div>
         </SectionCard>
+      )}
+
+      {/* 6. WHICH VENDOR? — the Buy-Out decision panel (scenario tiles + landed-
+          cost comparison table + Selected Final Cost). Rendered LAST, just above
+          Save, because the vendor is chosen after every quote + its commercial
+          terms are entered. */}
+      {showBuyout && (
+        <div className="flex flex-col gap-3">
+          <PanelHeading label="Which vendor? — decide" />
+          <BuyoutDecisionPanel value={buyout} onChange={setBuyout} />
+        </div>
       )}
 
       {/* Errors */}

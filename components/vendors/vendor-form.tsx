@@ -28,6 +28,9 @@ interface Props {
   vendorCode?: string | null;
   /** Prefill for edit mode. */
   initialValues?: Partial<VendorFormValues>;
+  /** Route prefix for the post-save redirect — lets the form live at
+   *  /costings/vendors (Costing shell) or /vendors (Forms module). */
+  basePath?: string;
 }
 
 /**
@@ -35,7 +38,12 @@ interface Props {
  * useKeyboardForm; Ctrl/Cmd+Enter submits). Clones the enquiry form's visual
  * language (SectionCard + Field + nt-input), scaled to the vendor fields.
  */
-export function VendorForm({ editVendorId, vendorCode, initialValues }: Props) {
+export function VendorForm({
+  editVendorId,
+  vendorCode,
+  initialValues,
+  basePath = "/costings/vendors",
+}: Props) {
   const isEdit = Boolean(editVendorId);
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
@@ -81,7 +89,7 @@ export function VendorForm({ editVendorId, vendorCode, initialValues }: Props) {
         type: "success",
       });
       const id = "id" in res ? res.id : editVendorId;
-      router.push((id ? `/costings/vendors/${id}` : "/costings/vendors") as Route);
+      router.push((id ? `${basePath}/${id}` : basePath) as Route);
       router.refresh();
     });
   });

@@ -11,8 +11,9 @@ import { UserMenuServer } from "@/components/header/user-menu-server";
 export const dynamic = "force-dynamic";
 
 /**
- * Edit Vendor — admin-only. Loads the stored vendor and maps it onto the shared
- * VendorForm (edit mode), which saves via updateVendor and returns to the record.
+ * Edit Vendor (Forms module) — admin-only. Loads the stored vendor and maps it
+ * onto the shared VendorForm (edit mode) with basePath="/vendors" so it saves
+ * via updateVendor and returns to the Forms-module record.
  */
 export default async function EditVendorPage({
   params,
@@ -37,11 +38,11 @@ export default async function EditVendorPage({
   };
 
   return (
-    <EnquiryModuleShell title="Vendor Master" userMenu={<UserMenuServer />}>
+    <EnquiryModuleShell title="Vendors" userMenu={<UserMenuServer />}>
       <div className="mx-auto w-full max-w-[900px]">
         <header className="mb-5">
           <Link
-            href={`/costings/vendors/${vendor.id}` as Route}
+            href={`/vendors/${vendor.id}` as Route}
             className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#6b7280] transition-colors hover:text-[#3f3f94]"
           >
             <ArrowLeft size={15} strokeWidth={2.4} />
@@ -56,7 +57,7 @@ export default async function EditVendorPage({
           editVendorId={vendor.id}
           vendorCode={vendor.vendorCode}
           initialValues={initialValues}
-          basePath="/costings/vendors"
+          basePath="/vendors"
         />
       </div>
     </EnquiryModuleShell>

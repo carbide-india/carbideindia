@@ -18,6 +18,9 @@ import type { VendorRegisterRow } from "@/lib/queries/vendors";
 interface Props {
   rows: VendorRegisterRow[];
   isAdmin: boolean;
+  /** Route prefix for all row links — lets the same register live at
+   *  /costings/vendors (Costing shell) or /vendors (Forms module). */
+  basePath?: string;
 }
 
 /**
@@ -28,7 +31,11 @@ interface Props {
  * export ships as a dedicated server route from the page header, so the table's
  * own CSV export is disabled to avoid a duplicate.
  */
-export function VendorRegister({ rows, isAdmin }: Props) {
+export function VendorRegister({
+  rows,
+  isAdmin,
+  basePath = "/costings/vendors",
+}: Props) {
   const router = useRouter();
 
   async function toggleActive(row: VendorRegisterRow) {
@@ -57,7 +64,7 @@ export function VendorRegister({ rows, isAdmin }: Props) {
         exportValue: (r) => r.vendorCode ?? "",
         cell: (r) => (
           <Link
-            href={`/costings/vendors/${r.id}` as Route}
+            href={`${basePath}/${r.id}` as Route}
             className="font-semibold text-ink-strong hover:underline"
             style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}
           >
@@ -138,7 +145,7 @@ export function VendorRegister({ rows, isAdmin }: Props) {
           ),
       },
     ],
-    [],
+    [basePath],
   );
 
   const filters = React.useMemo<FilterConfig<VendorRegisterRow>[]>(
@@ -164,13 +171,13 @@ export function VendorRegister({ rows, isAdmin }: Props) {
           key: "record",
           label: "Full Record",
           Icon: FileText,
-          href: `/costings/vendors/${row.id}` as Route,
+          href: `${basePath}/${row.id}` as Route,
         },
         {
           key: "edit",
           label: "Edit",
           Icon: Pencil,
-          href: `/costings/vendors/${row.id}/edit` as Route,
+          href: `${basePath}/${row.id}/edit` as Route,
         },
       ];
       if (isAdmin) {
@@ -186,7 +193,7 @@ export function VendorRegister({ rows, isAdmin }: Props) {
     },
     // toggleActive is stable enough for this closure; isAdmin drives the menu.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isAdmin],
+    [isAdmin, basePath],
   );
 
   return (
@@ -195,8 +202,8 @@ export function VendorRegister({ rows, isAdmin }: Props) {
       rows={rows}
       getRowId={(r) => r.id}
       columns={columns}
-      getOpenHref={(r) => `/costings/vendors/${r.id}` as Route}
-      getEditHref={(r) => `/costings/vendors/${r.id}/edit` as Route}
+      getOpenHref={(r) => `${basePath}/${r.id}` as Route}
+      getEditHref={(r) => `${basePath}/${r.id}/edit` as Route}
       filters={filters}
       exportFilename="vendors"
       showExport={false}

@@ -1306,6 +1306,16 @@ export const costingVendorQuotes = pgTable(
     vendorOhPct: numeric("vendor_oh_pct"),
     developmentCost: numeric("development_cost"),
     // landed cost/pc = unitPrice + unitPrice*vendorOhPct + developmentCost + freightCost/qty
+    // Per-vendor commercial terms (previously held at the costing level for BO;
+    // now captured per competing vendor quote). Master-id fields point at the
+    // payment_term / quantity_tolerance masters; delivery/validity are a number +
+    // a days|weeks unit. `notes` above stays SHARED across the matrix.
+    paymentTermsId: uuid("payment_terms_id").references(() => masterOptions.id, { onDelete: "set null" }),
+    quantityToleranceId: uuid("quantity_tolerance_id").references(() => masterOptions.id, { onDelete: "set null" }),
+    deliveryTime: numeric("delivery_time"),
+    deliveryTimeUnit: text("delivery_time_unit"),   // days | weeks
+    validity: numeric("validity"),
+    validityUnit: text("validity_unit"),            // days | weeks
     sortOrder: integer("sort_order").notNull().default(0),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
