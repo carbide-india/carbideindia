@@ -62,8 +62,8 @@ const GROUPS: NavGroup[] = [
     items: [
       { label: "Employees", href: "/admin/employees" as Route, Icon: Users },
       { label: "Departments", href: "/admin/departments" as Route, Icon: Building2 },
-      { label: "Roles & Permissions", Icon: ShieldCheck },
-      { label: "Access Control", Icon: KeyRound },
+      { label: "Roles & Permissions", href: "/admin/roles" as Route, Icon: ShieldCheck },
+      { label: "Access Control", href: "/admin/access-control" as Route, Icon: KeyRound },
     ],
   },
   {
@@ -78,15 +78,15 @@ const GROUPS: NavGroup[] = [
     items: [
       { label: "Task Statuses", href: "/admin/settings?tab=statuses" as Route, Icon: ListChecks, tab: "statuses" },
       { label: "Subjects", href: "/admin/subjects" as Route, Icon: Tag },
-      { label: "Document Numbering", Icon: Hash },
-      { label: "Workflow Control", Icon: Workflow },
+      { label: "Document Numbering", href: "/admin/numbering" as Route, Icon: Hash },
+      { label: "Workflow Control", href: "/admin/workflow-control" as Route, Icon: Workflow },
     ],
   },
   {
     label: "FINANCE",
     items: [
-      { label: "Tax & GST", Icon: Percent },
-      { label: "Currency & Credit", Icon: Coins },
+      { label: "Tax & GST", href: "/admin/tax" as Route, Icon: Percent },
+      { label: "Currency & Credit", href: "/admin/currency" as Route, Icon: Coins },
     ],
   },
   {
@@ -94,16 +94,16 @@ const GROUPS: NavGroup[] = [
     items: [
       { label: "Notifications", href: "/admin/notifications" as Route, Icon: Bell },
       { label: "Integrations", href: "/admin/settings?tab=integrations" as Route, Icon: Plug, tab: "integrations" },
-      { label: "Templates", Icon: Mail },
+      { label: "Templates", href: "/admin/templates" as Route, Icon: Mail },
     ],
   },
   {
     label: "SYSTEM",
     items: [
       { label: "Activity Log", href: "/admin/activity" as Route, Icon: ActivityIcon },
-      { label: "Sessions", Icon: MonitorSmartphone },
-      { label: "Import / Export", Icon: ArrowLeftRight },
-      { label: "Danger Zone", Icon: AlertTriangle },
+      { label: "Sessions", href: "/admin/sessions" as Route, Icon: MonitorSmartphone },
+      { label: "Import / Export", href: "/admin/data" as Route, Icon: ArrowLeftRight },
+      { label: "Danger Zone", href: "/admin/danger-zone" as Route, Icon: AlertTriangle },
     ],
   },
 ];

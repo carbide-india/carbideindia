@@ -56,6 +56,12 @@ import {
   INVOICE_STATUSES,
   GST_SUPPLY_TYPES,
   PAYMENT_MODES,
+  type PermissionModule,
+  type DocNumberStrategy,
+  type TemplateChannel,
+  type DataJobDirection,
+  type DataJobFormat,
+  type DataJobStatus,
 } from "./enums";
 
 /**
@@ -2309,6 +2315,29 @@ export const orgSettings = pgTable(
       .notNull()
       .$type<Record<string, { prefix: string; next: number }>>()
       .default({}),
+    // Access Control (admin -> Access Control). The env `ALLOWED_IPS` gate in
+    // middleware.ts stays the outer fence; these knobs drive the DB-backed
+    // allowlist (`ip_allowlist_entries`) that complements it. Enforcement is OFF
+    // by default so adding the table changes nothing until an admin flips it.
+    ipAllowlistEnforced: boolean("ip_allowlist_enforced").notNull().default(false),
+    // Emails allowed to reach the app from ANY network (owners working off-site).
+    // Mirrors IP_BYPASS_EMAILS in lib/ip-gate.ts; empty = fall back to the code list.
+    ipBypassEmails: text("ip_bypass_emails")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    // Session policy. `idleTimeoutMinutes` above is the inactivity cut-off; this
+    // is the absolute cap on a single sign-in, regardless of activity.
+    sessionMaxHours: integer("session_max_hours").notNull().default(12),
+    // Require a fresh sign-in before an admin-only mutation (danger zone etc.).
+    requireAdminReauth: boolean("require_admin_reauth").notNull().default(false),
+    // Currency & Credit (admin -> Currency & Credit). `baseCurrencyCode` points
+    // at the `currencies` row flagged is_base; the credit defaults pre-fill new
+    // clients (clients.credit_days / credit_limit stay the per-client override).
+    baseCurrencyCode: text("base_currency_code").notNull().default("INR"),
+    defaultCreditDays: integer("default_credit_days").notNull().default(30),
+    defaultCreditLimit: numeric("default_credit_limit"),
+    defaultPaymentTerms: text("default_payment_terms"),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -3016,3 +3045,343 @@ export const docNumberSeries = pgTable(
 );
 export type DocNumberSeries = typeof docNumberSeries.$inferSelect;
 export type NewDocNumberSeries = typeof docNumberSeries.$inferInsert;
+
+// ── Admin control plane (Admin Console build) ───────────────────────────────
+// Backing tables for the ten admin features. Everything here follows the same
+// governance rules as the rest of the ERP: rows are DEACTIVATED (`is_active`),
+// never hard-deleted, and every mutation is expected to write `audit_log` /
+// `settings_events` from the server action that performs it.
+
+/**
+ * Permission catalogue — the stable string keys a role can be granted. Seeded
+ * from `PERMISSION_CATALOGUE` (db/enums.ts) by scripts/seed-defaults.ts; the
+ * admin UI may reorder/deactivate rows but never renames a `key`, because
+ * grants, exports and code all quote it. `module` buckets the row into a
+ * section on /admin/roles.
+ */
+export const permissions = pgTable(
+  "permissions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    key: text("key").notNull().unique(),
+    module: text("module").$type<PermissionModule>().notNull(),
+    label: text("label").notNull(),
+    description: text("description"),
+    sortOrder: integer("sort_order").notNull().default(100),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("permissions_module_sort_idx").on(t.module, t.sortOrder, t.key)],
+);
+export type Permission = typeof permissions.$inferSelect;
+export type NewPermission = typeof permissions.$inferInsert;
+
+/**
+ * Role → permission grants. Mirrors the `employee_roles` join style: presence of
+ * a row IS the grant, so revoking is a DELETE of the join row (the permission
+ * row itself is never removed). `admin` still short-circuits every check in
+ * lib/auth/roles.ts, so a role with zero grants degrades to today's behaviour.
+ */
+export const rolePermissions = pgTable(
+  "role_permissions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    roleId: uuid("role_id")
+      .notNull()
+      .references(() => roles.id, { onDelete: "cascade" }),
+    permissionId: uuid("permission_id")
+      .notNull()
+      .references(() => permissions.id, { onDelete: "cascade" }),
+    grantedById: uuid("granted_by_id").references(() => employees.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("role_permissions_role_permission_uidx").on(t.roleId, t.permissionId),
+    index("role_permissions_role_idx").on(t.roleId),
+    index("role_permissions_permission_idx").on(t.permissionId),
+  ],
+);
+export type RolePermission = typeof rolePermissions.$inferSelect;
+export type NewRolePermission = typeof rolePermissions.$inferInsert;
+
+/**
+ * DB-backed IP allowlist (admin -> Access Control). COMPLEMENTS the env
+ * `ALLOWED_IPS` gate in middleware.ts — it does not replace it: middleware runs
+ * on the edge and can't reach Postgres, so this table is the admin-editable
+ * register of what `ALLOWED_IPS` should contain, and is enforced server-side on
+ * protected pages when `org_settings.ip_allowlist_enforced` is on. `cidr` holds
+ * either a bare address ("203.0.113.7") or a CIDR block ("203.0.113.0/24").
+ * Entries are deactivated, never deleted, so the history of who could get in
+ * from where survives.
+ */
+export const ipAllowlistEntries = pgTable(
+  "ip_allowlist_entries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    label: text("label").notNull(),
+    cidr: text("cidr").notNull(),
+    note: text("note"),
+    isActive: boolean("is_active").notNull().default(true),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
+    createdById: uuid("created_by_id").references(() => employees.id, {
+      onDelete: "set null",
+    }),
+    updatedById: uuid("updated_by_id").references(() => employees.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("ip_allowlist_entries_cidr_uidx").on(t.cidr),
+    index("ip_allowlist_entries_active_idx").on(t.isActive, t.label),
+  ],
+);
+export type IpAllowlistEntry = typeof ipAllowlistEntries.$inferSelect;
+export type NewIpAllowlistEntry = typeof ipAllowlistEntries.$inferInsert;
+
+/**
+ * Document-number FORMATS (admin -> Document Numbering) — one row per document
+ * family the app numbers. This is the configuration; `doc_number_series` stays
+ * the per-FY COUNTER (a family has no counter row until its first allocation, so
+ * an admin needs somewhere to set the prefix/padding beforehand).
+ *
+ * `strategy` says where the number actually comes from (see DOC_NUMBER_STRATEGIES):
+ *   fy_series → lib/series/next-number.ts + doc_number_series[series_key]
+ *   sequence  → the Postgres SEQUENCE named in `sequence_name` (column DEFAULT)
+ *   sm_suffix → `<SM number>-<prefix><nn>` derived at insert time
+ * Seeded by scripts/seed-defaults.ts with every family that exists today.
+ */
+export const docNumberFormats = pgTable(
+  "doc_number_formats",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    seriesKey: text("series_key").notNull().unique(), // "invoice" | "sm_number" | "quotation" | ...
+    label: text("label").notNull(),
+    module: text("module").notNull(), // "sales" | "accounts" | "production" | ...
+    strategy: text("strategy").$type<DocNumberStrategy>().notNull().default("fy_series"),
+    prefix: text("prefix").notNull().default(""),
+    separator: text("separator").notNull().default("/"),
+    padTo: integer("pad_to").notNull().default(4),
+    includeFy: boolean("include_fy").notNull().default(true),
+    // Only for strategy = "sequence": the Postgres sequence backing the column
+    // DEFAULT (e.g. "inquiries_sm_number_seq"). NULL for the other strategies.
+    sequenceName: text("sequence_name"),
+    isActive: boolean("is_active").notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(100),
+    updatedById: uuid("updated_by_id").references(() => employees.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("doc_number_formats_module_sort_idx").on(t.module, t.sortOrder, t.seriesKey)],
+);
+export type DocNumberFormat = typeof docNumberFormats.$inferSelect;
+export type NewDocNumberFormat = typeof docNumberFormats.$inferInsert;
+
+/**
+ * GST / tax-rate master (admin -> Tax & GST). `ratePercent` is the total rate;
+ * the cgst/sgst/igst split is what lib/gst/compute.ts and invoice_lines carry
+ * (intra-state splits 50/50 into CGST+SGST, inter-state puts the whole rate on
+ * IGST). Exactly one row should carry `isDefault` — enforced in the server
+ * action (clear-then-set inside one transaction), not by a partial index, so a
+ * bad row can always be fixed. Deactivated, never deleted: historic invoices
+ * quote the rate they were raised at.
+ */
+export const taxRates = pgTable(
+  "tax_rates",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    label: text("label").notNull(),
+    ratePercent: numeric("rate_percent").notNull().default("0"),
+    cgstPercent: numeric("cgst_percent").notNull().default("0"),
+    sgstPercent: numeric("sgst_percent").notNull().default("0"),
+    igstPercent: numeric("igst_percent").notNull().default("0"),
+    isDefault: boolean("is_default").notNull().default(false),
+    isActive: boolean("is_active").notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(100),
+    updatedById: uuid("updated_by_id").references(() => employees.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("tax_rates_label_uidx").on(t.label),
+    index("tax_rates_active_sort_idx").on(t.isActive, t.sortOrder),
+  ],
+);
+export type TaxRate = typeof taxRates.$inferSelect;
+export type NewTaxRate = typeof taxRates.$inferInsert;
+
+/**
+ * HSN master (admin -> Tax & GST, second tab). Maps an HSN/SAC code to its
+ * default GST rate so `items.hsn_code` and `invoice_lines.hsn_code` resolve a
+ * rate without anyone typing 18 again. No FK from items — `items.hsn_code` stays
+ * free text (legacy rows may carry codes not in this master); the join is by
+ * code, and a missing row simply means "no default".
+ */
+export const hsnCodes = pgTable(
+  "hsn_codes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    code: text("code").notNull().unique(),
+    description: text("description"),
+    taxRateId: uuid("tax_rate_id").references(() => taxRates.id, {
+      onDelete: "set null",
+    }),
+    defaultUom: text("default_uom"),
+    isActive: boolean("is_active").notNull().default(true),
+    updatedById: uuid("updated_by_id").references(() => employees.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("hsn_codes_active_code_idx").on(t.isActive, t.code)],
+);
+export type HsnCode = typeof hsnCodes.$inferSelect;
+export type NewHsnCode = typeof hsnCodes.$inferInsert;
+
+/**
+ * Currency master (admin -> Currency & Credit). `exchangeRateToInr` is how many
+ * INR one unit buys (INR itself is 1.000000 and carries `isBase`); export
+ * quotations multiply by it to show an INR equivalent. Exactly one base row —
+ * enforced in the server action alongside `org_settings.base_currency_code`.
+ * `code` is ISO-4217 upper-case; the enquiry-form currency list (INQUIRY_CURRENCIES)
+ * remains the legacy free list and is NOT replaced by this table.
+ */
+export const currencies = pgTable(
+  "currencies",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    code: text("code").notNull().unique(), // "INR" | "USD" | ...
+    name: text("name").notNull(),
+    symbol: text("symbol").notNull().default(""),
+    exchangeRateToInr: numeric("exchange_rate_to_inr").notNull().default("1"),
+    rateUpdatedAt: timestamp("rate_updated_at", { withTimezone: true }),
+    isBase: boolean("is_base").notNull().default(false),
+    isActive: boolean("is_active").notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(100),
+    updatedById: uuid("updated_by_id").references(() => employees.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("currencies_active_sort_idx").on(t.isActive, t.sortOrder, t.code)],
+);
+export type Currency = typeof currencies.$inferSelect;
+export type NewCurrency = typeof currencies.$inferInsert;
+
+/**
+ * Message templates (admin -> Templates). One row per (notification kind ×
+ * channel): `kind` is a NOTIFICATION_KINDS value (or any future key), `channel`
+ * a TEMPLATE_CHANNELS value. `body` is the raw template; `{{token}}` placeholders
+ * are listed in `variables` so the editor can offer them. Rows are deactivated,
+ * never deleted — an inactive row means "fall back to the built-in react-email
+ * template in emails/", so switching a template off is always safe.
+ */
+export const messageTemplates = pgTable(
+  "message_templates",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    kind: text("kind").notNull(),
+    channel: text("channel").$type<TemplateChannel>().notNull(),
+    name: text("name").notNull(),
+    subject: text("subject"),
+    body: text("body").notNull().default(""),
+    variables: text("variables")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    isActive: boolean("is_active").notNull().default(true),
+    updatedById: uuid("updated_by_id").references(() => employees.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("message_templates_kind_channel_uidx").on(t.kind, t.channel),
+    index("message_templates_kind_idx").on(t.kind),
+  ],
+);
+export type MessageTemplate = typeof messageTemplates.$inferSelect;
+export type NewMessageTemplate = typeof messageTemplates.$inferInsert;
+
+/**
+ * Login/session audit (admin -> Sessions). Firebase owns the REAL session
+ * cookie; this is OUR view of it, so an admin can see who is signed in from
+ * where and force a sign-out. One row per sign-in: `sessionKey` is a hash of the
+ * session cookie (never the cookie itself), `lastSeenAt` is bumped by the
+ * activity ping, and `revokedAt` marks a session the admin killed — the app
+ * refuses a request whose session row is revoked. Append-only in spirit: rows
+ * are revoked, never deleted, so the trail survives.
+ */
+export const loginSessions = pgTable(
+  "login_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    employeeId: uuid("employee_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "cascade" }),
+    sessionKey: text("session_key"),
+    ip: text("ip"),
+    userAgent: text("user_agent"),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    revokedById: uuid("revoked_by_id").references(() => employees.id, {
+      onDelete: "set null",
+    }),
+    revokeReason: text("revoke_reason"),
+  },
+  (t) => [
+    uniqueIndex("login_sessions_session_key_uidx").on(t.sessionKey),
+    index("login_sessions_employee_last_seen_idx").on(t.employeeId, t.lastSeenAt),
+    index("login_sessions_last_seen_idx").on(t.lastSeenAt),
+  ],
+);
+export type LoginSession = typeof loginSessions.$inferSelect;
+export type NewLoginSession = typeof loginSessions.$inferInsert;
+
+/**
+ * Bulk import/export job log (admin -> Import / Export). Distinct from
+ * `audit_data_exports`, which is the personal "download my data" request queue
+ * on /profile — this one records ADMIN-run transfers of business registers
+ * (clients, items, enquiries, ...). `params` carries the filter/column choices
+ * the run was made with, `rowCount`/`errorCount` the outcome, so a bad import can
+ * be explained months later. Rows are never deleted.
+ */
+export const dataTransferJobs = pgTable(
+  "data_transfer_jobs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    direction: text("direction").$type<DataJobDirection>().notNull(),
+    entity: text("entity").notNull(), // "clients" | "items" | "enquiries" | ...
+    format: text("format").$type<DataJobFormat>().notNull().default("csv"),
+    status: text("status").$type<DataJobStatus>().notNull().default("pending"),
+    rowCount: integer("row_count").notNull().default(0),
+    errorCount: integer("error_count").notNull().default(0),
+    fileName: text("file_name"),
+    fileUrl: text("file_url"),
+    params: jsonb("params").notNull().default({}),
+    errorMessage: text("error_message"),
+    requestedById: uuid("requested_by_id").references(() => employees.id, {
+      onDelete: "set null",
+    }),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("data_transfer_jobs_started_idx").on(t.startedAt),
+    index("data_transfer_jobs_entity_started_idx").on(t.entity, t.startedAt),
+  ],
+);
+export type DataTransferJob = typeof dataTransferJobs.$inferSelect;
+export type NewDataTransferJob = typeof dataTransferJobs.$inferInsert;

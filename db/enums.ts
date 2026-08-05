@@ -699,3 +699,155 @@ export const WORKFLOW_FLAG_LABELS: Record<WorkflowFlagKey, string> = {
   dispatch: "Dispatch",
   invoice: "Invoice",
 };
+
+// ── Admin control-plane catalogues (Admin Console build) ─────────────────────
+// Ten admin features (Roles & Permissions, Access Control, Document Numbering,
+// Workflow Control, Tax & GST, Currency & Credit, Templates, Sessions,
+// Import/Export, Danger Zone) share these string catalogues. Same rule as the
+// task statuses: append only — a removed key orphans existing rows.
+
+/** Grouping buckets for the permission catalogue (one section each). */
+export const PERMISSION_MODULES = [
+  "sales",
+  "masters",
+  "production",
+  "quality",
+  "dispatch",
+  "accounts",
+  "admin",
+] as const;
+export type PermissionModule = (typeof PERMISSION_MODULES)[number];
+export const PERMISSION_MODULE_LABELS: Record<PermissionModule, string> = {
+  sales: "Sales",
+  masters: "Masters",
+  production: "Production",
+  quality: "Quality",
+  dispatch: "Dispatch",
+  accounts: "Accounts",
+  admin: "Administration",
+};
+
+/** One row of the permission catalogue as seeded into `permissions`. */
+export type PermissionSeed = {
+  key: string;
+  module: PermissionModule;
+  label: string;
+  description: string;
+};
+
+/**
+ * The canonical permission catalogue. `key` is the stable string a grant refers
+ * to — NEVER rename one. Shape is `<resource>.<action>`: `view` = read the
+ * register + detail, `manage` = create/edit/deactivate, `approve` = sign off a
+ * stage. Governance: there is deliberately NO `delete` permission anywhere —
+ * entities are deactivated, never hard-deleted.
+ */
+export const PERMISSION_CATALOGUE: readonly PermissionSeed[] = [
+  // Sales pipeline
+  { key: "clients.view", module: "sales", label: "View clients", description: "Read the client register and client workspaces." },
+  { key: "clients.manage", module: "sales", label: "Manage clients", description: "Create, edit and deactivate clients, contacts, addresses and bank details." },
+  { key: "samples.view", module: "sales", label: "View samples", description: "Read the sample register and sample detail pages." },
+  { key: "samples.manage", module: "sales", label: "Manage samples", description: "Log samples, move stages and attach reports." },
+  { key: "enquiries.view", module: "sales", label: "View enquiries", description: "Read enquiries (SM numbers) and their items." },
+  { key: "enquiries.manage", module: "sales", label: "Manage enquiries", description: "Create and edit enquiries, checklists and enquiry items." },
+  { key: "feasibility.view", module: "sales", label: "View feasibility", description: "Read primary and secondary feasibility checks." },
+  { key: "feasibility.manage", module: "sales", label: "Manage feasibility", description: "Fill and update feasibility checklists and verdicts." },
+  { key: "costing.view", module: "sales", label: "View costing", description: "Read in-house and bought-out costing sheets." },
+  { key: "costing.manage", module: "sales", label: "Manage costing", description: "Build and edit costing sheets and vendor quotes." },
+  { key: "costing.approve", module: "sales", label: "Approve costing", description: "Sign off a costing sheet so it can feed a quotation." },
+  { key: "quotations.view", module: "sales", label: "View quotations", description: "Read quotations and their PDFs." },
+  { key: "quotations.manage", module: "sales", label: "Manage quotations", description: "Create, edit and send quotations." },
+  { key: "quotations.approve", module: "sales", label: "Approve quotations", description: "Release a quotation to the customer." },
+  { key: "negotiations.view", module: "sales", label: "View negotiations", description: "Read negotiation rounds and proforma invoices." },
+  { key: "negotiations.manage", module: "sales", label: "Manage negotiations", description: "Record negotiation rounds and raise proforma invoices." },
+  { key: "sales_orders.view", module: "sales", label: "View sales orders", description: "Read sales orders and customer POs." },
+  { key: "sales_orders.manage", module: "sales", label: "Manage sales orders", description: "Create and edit sales orders." },
+  { key: "sales_orders.approve", module: "sales", label: "Approve sales orders", description: "Confirm a sales order into production." },
+  { key: "meetings.manage", module: "sales", label: "Manage meetings", description: "Log client meetings and follow-ups." },
+  // Masters
+  { key: "masters.view", module: "masters", label: "View masters", description: "Read the admin-managed master option lists." },
+  { key: "masters.manage", module: "masters", label: "Manage masters", description: "Add, rename, reorder and deactivate master options." },
+  { key: "items.view", module: "masters", label: "View item master", description: "Read the item master register." },
+  { key: "items.manage", module: "masters", label: "Manage item master", description: "Create and edit items, HSN, UoM and drawings." },
+  { key: "vendors.view", module: "masters", label: "View vendors", description: "Read the vendor register." },
+  { key: "vendors.manage", module: "masters", label: "Manage vendors", description: "Create, edit and deactivate vendors and their commercial terms." },
+  { key: "departments.manage", module: "masters", label: "Manage departments", description: "Maintain the department list." },
+  // Production
+  { key: "production.view", module: "production", label: "View production", description: "Read production orders and operations." },
+  { key: "production.manage", module: "production", label: "Manage production", description: "Release production orders and record operations." },
+  { key: "job_cards.view", module: "production", label: "View job cards", description: "Read job cards." },
+  { key: "job_cards.manage", module: "production", label: "Manage job cards", description: "Create and update job cards." },
+  { key: "rm_lots.manage", module: "production", label: "Manage RM lots", description: "Record raw-material lots and consumption." },
+  // Quality
+  { key: "qc.view", module: "quality", label: "View QC", description: "Read QC results and reports." },
+  { key: "qc.manage", module: "quality", label: "Manage QC", description: "Record QC inspections and pass/fail results." },
+  // Dispatch
+  { key: "dispatch.view", module: "dispatch", label: "View dispatch", description: "Read dispatches and delivery notes." },
+  { key: "dispatch.manage", module: "dispatch", label: "Manage dispatch", description: "Create dispatches and delivery notes." },
+  // Accounts
+  { key: "invoices.view", module: "accounts", label: "View invoices", description: "Read tax invoices and credit notes." },
+  { key: "invoices.manage", module: "accounts", label: "Manage invoices", description: "Raise invoices and credit notes." },
+  { key: "payments.view", module: "accounts", label: "View payments", description: "Read receipts and outstanding balances." },
+  { key: "payments.manage", module: "accounts", label: "Manage payments", description: "Record payments against invoices." },
+  // Administration
+  { key: "employees.view", module: "admin", label: "View employees", description: "Read the employee directory." },
+  { key: "employees.manage", module: "admin", label: "Manage employees", description: "Invite, edit and deactivate employees." },
+  { key: "roles.manage", module: "admin", label: "Manage roles", description: "Create roles and grant permissions to them." },
+  { key: "settings.manage", module: "admin", label: "Manage settings", description: "Edit organisation, company and notification settings." },
+  { key: "access_control.manage", module: "admin", label: "Manage access control", description: "Maintain the IP allowlist and the session policy." },
+  { key: "doc_numbering.manage", module: "admin", label: "Manage document numbering", description: "Edit document number formats and counters." },
+  { key: "workflow.manage", module: "admin", label: "Manage workflow control", description: "Turn enforced-workflow flags on and off." },
+  { key: "tax.manage", module: "admin", label: "Manage tax & GST", description: "Maintain GST rates and HSN defaults." },
+  { key: "currency.manage", module: "admin", label: "Manage currency & credit", description: "Maintain currencies, exchange rates and default credit terms." },
+  { key: "templates.manage", module: "admin", label: "Manage templates", description: "Edit notification and email message templates." },
+  { key: "sessions.view", module: "admin", label: "View sessions", description: "Read the login/session audit trail." },
+  { key: "sessions.revoke", module: "admin", label: "Revoke sessions", description: "Force-sign-out an active session." },
+  { key: "audit.view", module: "admin", label: "View audit trail", description: "Read the append-only audit log and activity feed." },
+  { key: "data.export", module: "admin", label: "Export data", description: "Run bulk exports of registers and masters." },
+  { key: "data.import", module: "admin", label: "Import data", description: "Run bulk imports into registers and masters." },
+  { key: "danger_zone.manage", module: "admin", label: "Danger zone", description: "Run destructive maintenance operations (bulk deactivate / purge staging data)." },
+];
+
+/**
+ * How a document family draws its next number.
+ *  - `fy_series` — gapless FY-scoped counter row in `doc_number_series`
+ *    (lib/series/next-number.ts). Invoices, delivery notes, credit notes.
+ *  - `sequence` — a Postgres SEQUENCE consumed by a column DEFAULT (SM numbers,
+ *    client/vendor codes, production-order numbers, task numbers, item serials).
+ *  - `sm_suffix` — derived from the parent SM number, e.g. `SM9601-Q01`
+ *    (quotations, negotiations, sales orders, proforma invoices).
+ */
+export const DOC_NUMBER_STRATEGIES = ["fy_series", "sequence", "sm_suffix"] as const;
+export type DocNumberStrategy = (typeof DOC_NUMBER_STRATEGIES)[number];
+export const DOC_NUMBER_STRATEGY_LABELS: Record<DocNumberStrategy, string> = {
+  fy_series: "FY series (gapless)",
+  sequence: "Postgres sequence",
+  sm_suffix: "SM-derived suffix",
+};
+
+/** Channels a message template can target. Mirrors the dispatch-log channels. */
+export const TEMPLATE_CHANNELS = ["email", "web_push", "inbox"] as const;
+export type TemplateChannel = (typeof TEMPLATE_CHANNELS)[number];
+export const TEMPLATE_CHANNEL_LABELS: Record<TemplateChannel, string> = {
+  email: "Email",
+  web_push: "Push",
+  inbox: "In-app inbox",
+};
+
+/** Import / Export job shape (data_transfer_jobs). */
+export const DATA_JOB_DIRECTIONS = ["import", "export"] as const;
+export type DataJobDirection = (typeof DATA_JOB_DIRECTIONS)[number];
+export const DATA_JOB_DIRECTION_LABELS: Record<DataJobDirection, string> = {
+  import: "Import",
+  export: "Export",
+};
+export const DATA_JOB_FORMATS = ["csv", "xlsx", "json"] as const;
+export type DataJobFormat = (typeof DATA_JOB_FORMATS)[number];
+export const DATA_JOB_STATUSES = ["pending", "running", "done", "failed"] as const;
+export type DataJobStatus = (typeof DATA_JOB_STATUSES)[number];
+export const DATA_JOB_STATUS_LABELS: Record<DataJobStatus, string> = {
+  pending: "Queued",
+  running: "Running",
+  done: "Completed",
+  failed: "Failed",
+};

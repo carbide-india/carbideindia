@@ -25,7 +25,13 @@
 // re-running is safe and never clobbers admin edits.
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { MASTER_KINDS, type MasterKind } from "@/db/enums";
+import {
+  MASTER_KINDS,
+  PERMISSION_CATALOGUE,
+  type MasterKind,
+  type DocNumberStrategy,
+} from "@/db/enums";
+import type { NotificationKind } from "@/db/schema";
 import { presetForShapeName } from "@/lib/masters/shape-config";
 import { FEASIBILITY_DIMENSIONS } from "@/lib/feasibility/dimensions";
 
@@ -345,6 +351,187 @@ async function seedFeasibilityDimensions(): Promise<void> {
   console.log(`feasibility_dimensions: seeded — ${rows[0]?.n ?? 0} rows present`);
 }
 
+/**
+ * Permission catalogue (Admin Console — migration 0071). Seeded from the code
+ * catalogue in db/enums.ts; idempotent on `key`, so re-running never clobbers a
+ * label edit or a deactivation done in the admin UI. Grants (role_permissions)
+ * are deliberately NOT seeded: `admin` short-circuits every check in
+ * lib/auth/roles.ts, so a fresh DB behaves exactly as before until an admin
+ * grants something.
+ */
+async function seedPermissions(): Promise<void> {
+  for (const [i, p] of PERMISSION_CATALOGUE.entries()) {
+    await db.execute(sql`
+      INSERT INTO permissions (key, module, label, description, sort_order)
+      VALUES (${p.key}, ${p.module}, ${p.label}, ${p.description}, ${(i + 1) * 10})
+      ON CONFLICT (key) DO NOTHING
+    `);
+  }
+  const rows = (await db.execute(
+    sql`SELECT count(*)::int AS n FROM permissions`,
+  )) as unknown as { n: number }[];
+  console.log(`permissions: seeded — ${rows[0]?.n ?? 0} rows present`);
+}
+
+// Document-number formats (Admin Console — migration 0071). One row per family
+// the app actually numbers today, read off the codebase:
+//   fy_series → lib/series/next-number.ts (SERIES_KEYS + SERIES_DEFAULTS)
+//   sequence  → the pgSequence column DEFAULTs in db/schema.ts
+//   sm_suffix → the `<SM>-Q01` derivations in the quotation/negotiation/SO/PI actions
+const DOC_FORMAT_SEEDS: {
+  seriesKey: string;
+  label: string;
+  module: string;
+  strategy: DocNumberStrategy;
+  prefix: string;
+  padTo: number;
+  includeFy: boolean;
+  sequenceName: string | null;
+}[] = [
+  { seriesKey: "invoice", label: "Tax Invoice", module: "accounts", strategy: "fy_series", prefix: "INV", padTo: 4, includeFy: true, sequenceName: null },
+  { seriesKey: "dn", label: "Delivery Note", module: "dispatch", strategy: "fy_series", prefix: "DN", padTo: 4, includeFy: true, sequenceName: null },
+  { seriesKey: "credit_note", label: "Credit Note", module: "accounts", strategy: "fy_series", prefix: "CN", padTo: 4, includeFy: true, sequenceName: null },
+  { seriesKey: "sm_number", label: "SM Number (Enquiry)", module: "sales", strategy: "sequence", prefix: "SM", padTo: 0, includeFy: false, sequenceName: "inquiries_sm_number_seq" },
+  { seriesKey: "client_code", label: "Client Code", module: "masters", strategy: "sequence", prefix: "CL-", padTo: 4, includeFy: false, sequenceName: "clients_client_code_seq" },
+  { seriesKey: "vendor_code", label: "Vendor Code", module: "masters", strategy: "sequence", prefix: "VN-", padTo: 4, includeFy: false, sequenceName: "vendors_vendor_code_seq" },
+  { seriesKey: "item_code", label: "Item Code", module: "masters", strategy: "sequence", prefix: "", padTo: 0, includeFy: false, sequenceName: "item_seq_seq" },
+  { seriesKey: "meeting_no", label: "Client Meeting", module: "sales", strategy: "sequence", prefix: "MTG", padTo: 0, includeFy: false, sequenceName: "client_meeting_no_seq" },
+  { seriesKey: "production_order_no", label: "Production Order", module: "production", strategy: "sequence", prefix: "PO-", padTo: 0, includeFy: false, sequenceName: "production_order_no_seq" },
+  { seriesKey: "task_no", label: "Task Number", module: "admin", strategy: "sequence", prefix: "#", padTo: 0, includeFy: false, sequenceName: "tasks_task_no_seq" },
+  { seriesKey: "quotation", label: "Quotation", module: "sales", strategy: "sm_suffix", prefix: "Q", padTo: 2, includeFy: false, sequenceName: null },
+  { seriesKey: "negotiation", label: "Negotiation", module: "sales", strategy: "sm_suffix", prefix: "N", padTo: 2, includeFy: false, sequenceName: null },
+  { seriesKey: "sales_order", label: "Sales Order", module: "sales", strategy: "sm_suffix", prefix: "SO", padTo: 2, includeFy: false, sequenceName: null },
+  { seriesKey: "proforma_invoice", label: "Proforma Invoice", module: "sales", strategy: "sm_suffix", prefix: "PI", padTo: 2, includeFy: false, sequenceName: null },
+];
+
+async function seedDocNumberFormats(): Promise<void> {
+  for (const [i, f] of DOC_FORMAT_SEEDS.entries()) {
+    await db.execute(sql`
+      INSERT INTO doc_number_formats
+        (series_key, label, module, strategy, prefix, pad_to, include_fy, sequence_name, sort_order)
+      VALUES (
+        ${f.seriesKey}, ${f.label}, ${f.module}, ${f.strategy}, ${f.prefix},
+        ${f.padTo}, ${f.includeFy}, ${f.sequenceName}, ${(i + 1) * 10}
+      )
+      ON CONFLICT (series_key) DO NOTHING
+    `);
+  }
+  const rows = (await db.execute(
+    sql`SELECT count(*)::int AS n FROM doc_number_formats`,
+  )) as unknown as { n: number }[];
+  console.log(`doc_number_formats: seeded — ${rows[0]?.n ?? 0} rows present`);
+}
+
+// GST slabs (Admin Console — migration 0071). Intra-state splits the rate 50/50
+// into CGST + SGST; inter-state puts the whole rate on IGST (lib/gst/compute.ts).
+// 18% is the default — Carbide India's carbide products sit in that slab.
+const TAX_RATE_SEEDS: { label: string; rate: string; isDefault: boolean }[] = [
+  { label: "GST 0%", rate: "0", isDefault: false },
+  { label: "GST 5%", rate: "5", isDefault: false },
+  { label: "GST 12%", rate: "12", isDefault: false },
+  { label: "GST 18%", rate: "18", isDefault: true },
+  { label: "GST 28%", rate: "28", isDefault: false },
+];
+
+async function seedTaxRates(): Promise<void> {
+  for (const [i, t] of TAX_RATE_SEEDS.entries()) {
+    const half = (Number(t.rate) / 2).toFixed(2);
+    await db.execute(sql`
+      INSERT INTO tax_rates
+        (label, rate_percent, cgst_percent, sgst_percent, igst_percent, is_default, sort_order)
+      VALUES (${t.label}, ${t.rate}, ${half}, ${half}, ${t.rate}, ${t.isDefault}, ${(i + 1) * 10})
+      ON CONFLICT (label) DO NOTHING
+    `);
+  }
+  // HSN defaults for the two headings Carbide India actually bills under.
+  // Idempotent on `code`; the tax_rate_id lookup is a no-op if the slab is gone.
+  await db.execute(sql`
+    INSERT INTO hsn_codes (code, description, tax_rate_id, default_uom)
+    SELECT v.code, v.descr, tr.id, v.uom
+    FROM (VALUES
+      ('8209', 'Plates, sticks, tips and the like for tools, unmounted, of cermets', 'Nos'),
+      ('8207', 'Interchangeable tools for hand tools or machine-tools', 'Nos')
+    ) AS v(code, descr, uom)
+    LEFT JOIN tax_rates tr ON tr.label = 'GST 18%'
+    ON CONFLICT (code) DO NOTHING
+  `);
+  const rows = (await db.execute(sql`
+    SELECT
+      (SELECT count(*)::int FROM tax_rates) AS rates,
+      (SELECT count(*)::int FROM hsn_codes) AS hsn
+  `)) as unknown as { rates: number; hsn: number }[];
+  console.log(
+    `tax_rates: seeded — ${rows[0]?.rates ?? 0} rows; hsn_codes: ${rows[0]?.hsn ?? 0} rows`,
+  );
+}
+
+// Currencies (Admin Console — migration 0071). INR is the base (rate 1.000000
+// and is_base); the rest ship deactivated-rate placeholders an admin refreshes
+// from Admin → Currency & Credit. Codes mirror the enquiry currency list.
+const CURRENCY_SEEDS: { code: string; name: string; symbol: string; isBase: boolean }[] = [
+  { code: "INR", name: "Indian Rupee", symbol: "₹", isBase: true },
+  { code: "USD", name: "US Dollar", symbol: "$", isBase: false },
+  { code: "EUR", name: "Euro", symbol: "€", isBase: false },
+  { code: "AUD", name: "Australian Dollar", symbol: "A$", isBase: false },
+  { code: "AED", name: "UAE Dirham", symbol: "AED", isBase: false },
+  { code: "RUB", name: "Russian Ruble", symbol: "₽", isBase: false },
+];
+
+async function seedCurrencies(): Promise<void> {
+  for (const [i, c] of CURRENCY_SEEDS.entries()) {
+    await db.execute(sql`
+      INSERT INTO currencies (code, name, symbol, exchange_rate_to_inr, is_base, sort_order)
+      VALUES (${c.code}, ${c.name}, ${c.symbol}, ${c.isBase ? "1" : "0"}, ${c.isBase}, ${(i + 1) * 10})
+      ON CONFLICT (code) DO NOTHING
+    `);
+  }
+  const rows = (await db.execute(
+    sql`SELECT count(*)::int AS n FROM currencies`,
+  )) as unknown as { n: number }[];
+  console.log(`currencies: seeded — ${rows[0]?.n ?? 0} rows present`);
+}
+
+// Message templates (Admin Console — migration 0071). One email template per
+// notification kind, seeded from the wording the react-email templates in
+// emails/ already use. `{{token}}` placeholders are listed in `variables` so the
+// editor can offer them. An inactive/absent row = fall back to the built-in
+// template, so these seeds change no behaviour on their own.
+const TEMPLATE_SEEDS: {
+  kind: NotificationKind;
+  name: string;
+  subject: string;
+  body: string;
+  variables: string[];
+}[] = [
+  { kind: "task_assigned", name: "Task assigned", subject: "New task: {{taskTitle}}", body: "Hi {{recipientName}},\n\n{{actorName}} assigned you \"{{taskTitle}}\" (#{{taskNo}}), due {{dueDate}}.\n\nOpen it: {{taskUrl}}", variables: ["recipientName", "actorName", "taskTitle", "taskNo", "dueDate", "taskUrl"] },
+  { kind: "task_initiated", name: "Task initiated", subject: "Task started: {{taskTitle}}", body: "Hi {{recipientName}},\n\n{{actorName}} started work on \"{{taskTitle}}\" (#{{taskNo}}).\n\nOpen it: {{taskUrl}}", variables: ["recipientName", "actorName", "taskTitle", "taskNo", "taskUrl"] },
+  { kind: "status_changed", name: "Status changed", subject: "{{taskTitle}} is now {{newStatus}}", body: "Hi {{recipientName}},\n\n{{actorName}} moved \"{{taskTitle}}\" (#{{taskNo}}) from {{oldStatus}} to {{newStatus}}.\n\nOpen it: {{taskUrl}}", variables: ["recipientName", "actorName", "taskTitle", "taskNo", "oldStatus", "newStatus", "taskUrl"] },
+  { kind: "approved", name: "Approved", subject: "Approved: {{taskTitle}}", body: "Hi {{recipientName}},\n\n{{actorName}} approved \"{{taskTitle}}\" (#{{taskNo}}).\n\nOpen it: {{taskUrl}}", variables: ["recipientName", "actorName", "taskTitle", "taskNo", "taskUrl"] },
+  { kind: "declined", name: "Not approved", subject: "Not approved: {{taskTitle}}", body: "Hi {{recipientName}},\n\n{{actorName}} did not approve \"{{taskTitle}}\" (#{{taskNo}}).\n\nReason: {{note}}\n\nOpen it: {{taskUrl}}", variables: ["recipientName", "actorName", "taskTitle", "taskNo", "note", "taskUrl"] },
+  { kind: "reassigned", name: "Reassigned", subject: "Reassigned to you: {{taskTitle}}", body: "Hi {{recipientName}},\n\n{{actorName}} reassigned \"{{taskTitle}}\" (#{{taskNo}}) to you.\n\nOpen it: {{taskUrl}}", variables: ["recipientName", "actorName", "taskTitle", "taskNo", "taskUrl"] },
+  { kind: "transferred", name: "Transferred", subject: "Transferred: {{taskTitle}}", body: "Hi {{recipientName}},\n\n{{actorName}} transferred \"{{taskTitle}}\" (#{{taskNo}}).\n\nOpen it: {{taskUrl}}", variables: ["recipientName", "actorName", "taskTitle", "taskNo", "taskUrl"] },
+  { kind: "cancelled", name: "Cancelled", subject: "Cancelled: {{taskTitle}}", body: "Hi {{recipientName}},\n\n{{actorName}} cancelled \"{{taskTitle}}\" (#{{taskNo}}).\n\nOpen it: {{taskUrl}}", variables: ["recipientName", "actorName", "taskTitle", "taskNo", "taskUrl"] },
+  { kind: "commented", name: "New comment", subject: "New comment on {{taskTitle}}", body: "Hi {{recipientName}},\n\n{{actorName}} commented on \"{{taskTitle}}\" (#{{taskNo}}):\n\n{{note}}\n\nOpen it: {{taskUrl}}", variables: ["recipientName", "actorName", "taskTitle", "taskNo", "note", "taskUrl"] },
+  { kind: "overdue_digest", name: "Overdue digest", subject: "{{overdueCount}} task(s) overdue", body: "Hi {{recipientName}},\n\nYou have {{overdueCount}} overdue task(s) as of {{digestDate}}.\n\nOpen your board: {{boardUrl}}", variables: ["recipientName", "overdueCount", "digestDate", "boardUrl"] },
+];
+
+async function seedMessageTemplates(): Promise<void> {
+  for (const t of TEMPLATE_SEEDS) {
+    await db.execute(sql`
+      INSERT INTO message_templates (kind, channel, name, subject, body, variables)
+      VALUES (
+        ${t.kind}, 'email', ${t.name}, ${t.subject}, ${t.body},
+        string_to_array(${t.variables.join(",")}, ',')
+      )
+      ON CONFLICT (kind, channel) DO NOTHING
+    `);
+  }
+  const rows = (await db.execute(
+    sql`SELECT count(*)::int AS n FROM message_templates`,
+  )) as unknown as { n: number }[];
+  console.log(`message_templates: seeded — ${rows[0]?.n ?? 0} rows present`);
+}
+
 async function main(): Promise<void> {
   await seedStatusSettings();
   await seedOrgSettings();
@@ -352,6 +539,11 @@ async function main(): Promise<void> {
   await seedShapeConfigs();
   await seedRoles();
   await seedFeasibilityDimensions();
+  await seedPermissions();
+  await seedDocNumberFormats();
+  await seedTaxRates();
+  await seedCurrencies();
+  await seedMessageTemplates();
   console.log("seed-defaults: done");
 }
 
