@@ -2,25 +2,21 @@
 
 import * as React from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { useRouter } from "next/navigation";
-import { Upload, X, FileSpreadsheet, Download, PencilLine, UploadCloud } from "lucide-react";
-import { ImportWorkbench } from "./import-workbench";
+import { Upload, X, FileSpreadsheet } from "lucide-react";
+import { BulkUploadSheet } from "./bulk-upload-sheet";
 import type { ImportSpec, Lookups, ImportRowPayload } from "@/lib/import/engine/spec";
 
 type CommitFn = (
   rows: ImportRowPayload[],
 ) => Promise<{ created: number; skipped: number; duplicates?: number; newMasters: number; errors: { row: number; reason: string }[] }>;
 
-const STEPS = [
-  { Icon: Download, label: "Download template", hint: "Pre-formatted .xlsx with dropdowns" },
-  { Icon: PencilLine, label: "Fill in Excel", hint: "One enquiry per row" },
-  { Icon: UploadCloud, label: "Upload & import", hint: "Fix flagged cells, then import" },
-];
-
 /**
- * Bulk-import as an animated modal (replaces the standalone /import page).
- * Wraps the proven ImportWorkbench - template download, parse, inline fix,
- * commit - and closes + refreshes on success via ImportWorkbench's onDone.
+ * Bulk upload as a near-full-viewport modal holding an in-app spreadsheet.
+ *
+ * Opens straight into an editable sheet — no Excel round trip needed — with the
+ * template download and file upload kept inside as assists. The modal is sized
+ * to carry the widest spec (Items is 28 columns) and scrolls the grid, never
+ * the page. Closing with typed rows asks for confirmation first.
  */
 export function BulkImportModal({
   spec,
@@ -37,10 +33,22 @@ export function BulkImportModal({
   triggerClassName?: string;
 }) {
   const [open, setOpen] = React.useState(false);
-  const router = useRouter();
+  const dirtyRef = React.useRef(false);
+
+  // Guard the close: a mis-click must not silently discard 200 pasted rows.
+  function onOpenChange(next: boolean) {
+    if (!next && dirtyRef.current) {
+      const ok = window.confirm(
+        "Discard the rows you've entered? They haven't been imported yet.",
+      );
+      if (!ok) return;
+    }
+    dirtyRef.current = false;
+    setOpen(next);
+  }
 
   return (
-    <Dialog.Root open={open} onOpenChange={setOpen}>
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Trigger asChild>
         <button
           type="button"
@@ -73,7 +81,7 @@ export function BulkImportModal({
         <Dialog.Overlay className="bulk-overlay fixed inset-0 z-[60] bg-[#0f172a]/45 backdrop-blur-[2px]" />
         <div className="fixed inset-0 z-[61] flex items-center justify-center p-4">
         <Dialog.Content
-          className="bulk-content flex max-h-[88vh] w-[min(920px,94vw)] flex-col overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-[0_30px_80px_rgba(15,23,42,0.35)]"
+          className="bulk-content flex h-[92vh] w-[96vw] flex-col overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-[0_30px_80px_rgba(15,23,42,0.35)]"
           aria-describedby="bulk-desc"
         >
           {/* Header */}
@@ -86,7 +94,7 @@ export function BulkImportModal({
                 Bulk Import - {spec.title === "enquiry" ? "Enquiries" : `${spec.title}s`}
               </Dialog.Title>
               <Dialog.Description id="bulk-desc" className="mt-0.5 text-[13.5px] font-medium text-[#6b7280]">
-                Download the template, fill it in Excel, upload, fix any flagged cells, then import - all here.
+                Type straight into the sheet or paste from Excel - flagged cells stay editable until they're right.
               </Dialog.Description>
             </div>
             <Dialog.Close asChild>
@@ -100,36 +108,20 @@ export function BulkImportModal({
             </Dialog.Close>
           </div>
 
-          {/* Step strip */}
-          <div className="grid grid-cols-1 gap-3 border-b border-[#eef0f3] bg-[#fafbfc] px-7 py-4 sm:grid-cols-3">
-            {STEPS.map((s, i) => (
-              <div
-                key={s.label}
-                className="bulk-step flex items-center gap-3 rounded-xl border border-[#eceef2] bg-white px-3.5 py-2.5"
-                style={{ animationDelay: `${0.08 + i * 0.08}s` }}
-              >
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#eef1fb] text-[#2b46b5]">
-                  <s.Icon className="h-[18px] w-[18px]" strokeWidth={2} />
-                </span>
-                <div className="min-w-0">
-                  <div className="text-[13px] font-bold text-[#1e2f66]">
-                    <span className="mr-1 text-[#9aa0ab]">{i + 1}.</span>
-                    {s.label}
-                  </div>
-                  <div className="truncate text-[11.5px] font-medium text-[#8a90a0]">{s.hint}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Workbench (scrollable) */}
-          <div className="min-h-0 flex-1 overflow-y-auto px-7 py-6">
-            <ImportWorkbench
+          {/* The sheet fills the rest of the dialog; only the grid scrolls. */}
+          <div className="flex min-h-0 flex-1 flex-col px-6 py-4">
+            <BulkUploadSheet
               spec={spec}
               lookups={lookups}
               isAdmin={isAdmin}
               commit={commit}
-              onDone={() => setOpen(false)}
+              onDirtyChange={(d) => {
+                dirtyRef.current = d;
+              }}
+              onDone={() => {
+                dirtyRef.current = false;
+                setOpen(false);
+              }}
             />
           </div>
         </Dialog.Content>

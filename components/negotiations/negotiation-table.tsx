@@ -3,6 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import type { Route } from "next";
+import { useRouter } from "next/navigation";
+import { ArrowUpRight, Trash2 } from "lucide-react";
 import {
   NEGOTIATION_STATUSES,
   NEGOTIATION_STATUS_LABELS,
@@ -14,8 +16,14 @@ import {
   RegisterDataTable,
   type RegisterColumn,
   type FilterConfig,
+  type RowMenuItem,
 } from "@/components/registers/register-data-table";
-import { setNegotiationStatusBulk } from "@/app/(app)/negotiations/actions";
+import { fireToast } from "@/lib/toast";
+import {
+  setNegotiationStatusBulk,
+  deleteNegotiation,
+  deleteNegotiationsBulk,
+} from "@/app/(app)/negotiations/actions";
 import type { NegotiationListItem } from "@/lib/queries/negotiations";
 
 export const NEW_NEGOTIATION_ROUTE: Route = "/negotiations/new";
@@ -47,6 +55,46 @@ function negotiationDate(r: NegotiationListItem): Date {
  * not the label alphabetical, so sorting reflects the negotiation lifecycle.
  */
 export function NegotiationTable({ rows }: Props) {
+  const router = useRouter();
+
+  // Per-row actions menu: Open + a destructive Delete. Delete is a HARD delete
+  // (negotiations have no record-level recycle bin), so it confirms first and
+  // the server action refuses when a proforma invoice was issued from it or a
+  // sales order was won off it.
+  const rowMenu = React.useCallback(
+    (r: NegotiationListItem): RowMenuItem<NegotiationListItem>[] => [
+      {
+        key: "open",
+        label: "Open",
+        Icon: ArrowUpRight,
+        href: `/negotiations/${r.id}` as Route,
+      },
+      {
+        key: "delete",
+        label: "Delete",
+        Icon: Trash2,
+        danger: true,
+        onSelect: async (row) => {
+          if (
+            !window.confirm(
+              `Delete negotiation ${row.negotiationNo}? This can't be undone.`,
+            )
+          ) {
+            return;
+          }
+          const res = await deleteNegotiation(row.id);
+          if (res.ok) {
+            fireToast({ message: `Deleted ${row.negotiationNo}.` });
+            router.refresh();
+          } else {
+            fireToast({ message: res.error, type: "error" });
+          }
+        },
+      },
+    ],
+    [router],
+  );
+
   const columns = React.useMemo<RegisterColumn<NegotiationListItem>[]>(
     () => [
       {
@@ -159,6 +207,7 @@ export function NegotiationTable({ rows }: Props) {
       getOpenHref={(r) => `/negotiations/${r.id}` as Route}
       filters={filters}
       exportFilename="negotiations"
+      rowMenu={rowMenu}
       bulkAction={{
         label: "Set status",
         options: NEGOTIATION_STATUSES.map((s) => ({
@@ -166,6 +215,32 @@ export function NegotiationTable({ rows }: Props) {
           label: NEGOTIATION_STATUS_LABELS[s],
         })),
         onApply: (ids, value) => setNegotiationStatusBulk(ids, value),
+      }}
+      bulkDelete={{
+        noun: { one: "negotiation", many: "negotiations" },
+        // The guard skips rows that already issued a PI or fed a sales order, so
+        // the outcome is reported honestly rather than as a blanket success:
+        // nothing removed -> an error naming why; a partial run -> an explicit
+        // "N removed, M skipped" toast alongside the refresh.
+        onDelete: (ids) =>
+          deleteNegotiationsBulk(ids).then((r) => {
+            if (!r.ok) return { ok: false, error: r.error };
+            if (r.deleted === 0) {
+              return {
+                ok: false,
+                error: `Couldn't delete ${r.failed} ${r.failed === 1 ? "negotiation" : "negotiations"} - in use by a proforma invoice / sales order.`,
+              };
+            }
+            if (r.failed > 0) {
+              // Report the real split via `message` — the bar's default toast
+              // counts the SELECTION and would claim the skipped rows too.
+              return {
+                ok: true,
+                message: `${r.deleted} deleted, ${r.failed} skipped (in use by a proforma invoice / sales order).`,
+              };
+            }
+            return { ok: true };
+          }),
       }}
       emptyTitle="No negotiations yet - start the first one."
       emptyHint="Price negotiations tracked from a quote to won, lost or abandoned appear here."

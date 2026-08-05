@@ -68,6 +68,22 @@ export async function listAllActivity(
     opts.actorIds && opts.actorIds.length > 0 ? opts.actorIds : null;
   const kinds = opts.kinds && opts.kinds.length > 0 ? opts.kinds : null;
 
+  /**
+   * A comma-separated parameter list for `in (…)`.
+   *
+   * `= ANY(${array})` cannot be used here: Drizzle interpolates a JS array as N
+   * separate parameters, so Postgres receives a row expression rather than an
+   * array and fails with "op ANY/ALL (array) requires array on right side" (or,
+   * for a single element, "malformed array literal"). Emitting an explicit
+   * `in (…)` list keeps every value a bound parameter. Callers must guard
+   * against an empty array — `in ()` is a syntax error.
+   */
+  const inList = (values: readonly string[]): SQL =>
+    sql.join(
+      values.map((v) => sql`${v}`),
+      sql`, `,
+    );
+
   // Per-arm filter fragment. Each arm references different column names so
   // we re-emit the WHERE list against the alias-qualified column names.
   const armFilter = (
@@ -78,8 +94,8 @@ export async function listAllActivity(
     ${beforeIso ? sql`AND ${sql.raw(createdCol)} < ${beforeIso}::timestamptz` : sql``}
     ${fromIso ? sql`AND ${sql.raw(createdCol)} >= ${fromIso}::timestamptz` : sql``}
     ${toIso ? sql`AND ${sql.raw(createdCol)} <= ${toIso}::timestamptz` : sql``}
-    ${actorIds ? sql`AND ${sql.raw(actorCol)} = ANY(${actorIds})` : sql``}
-    ${kinds ? sql`AND ${sql.raw(kindCol)} = ANY(${kinds})` : sql``}
+    ${actorIds?.length ? sql`AND ${sql.raw(actorCol)} in (${inList(actorIds)})` : sql``}
+    ${kinds?.length ? sql`AND ${sql.raw(kindCol)} in (${inList(kinds)})` : sql``}
   `;
 
   const taskArm: SQL | null = source.includes("task")

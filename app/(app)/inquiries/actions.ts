@@ -647,6 +647,73 @@ export async function archiveInquiry(id: string): Promise<ActionResult> {
   return { ok: true };
 }
 
+/**
+ * Bulk-archive the selected enquiries (the register's bulk bar). ARCHIVE, NOT
+ * DELETE - deliberately, and this must stay that way.
+ *
+ * An `inquiries` row is the spine of the entire sales pipeline. These FK to it
+ * ON DELETE CASCADE and would be destroyed outright by a hard delete:
+ *   inquiry_items, inquiry_feasibility, inquiry_feasibility_scores, costings,
+ *   quotations, negotiations, proforma_invoices, sales_orders
+ * plus everything transitively under those (quotation_items, negotiation_items,
+ * sales_order_items, costing_vendor_quotes). These FK ON DELETE SET NULL and
+ * would be silently blanked: items.inquiry_id, items.origin_inquiry_id,
+ * samples.inquiry_id. One checked box would therefore wipe a whole
+ * enquiry -> feasibility -> costing -> quotation -> negotiation -> PI ->
+ * sales-order chain.
+ *
+ * Setting `is_archived = true` makes the row leave the register exactly like a
+ * delete would (the list query filters `is_archived = false`) while touching
+ * none of the above, and `unarchiveInquiry` puts it back. `deleteInquiry`
+ * remains the admin-only, single-row, explicitly destructive escape hatch and
+ * is NOT the bulk verb.
+ *
+ * Per-row guard: an id that no longer resolves to an inquiry row is skipped and
+ * counted in `failed` instead of being reported as archived. No row is ever
+ * skipped for being "in use" - archiving is safe for every dependent listed
+ * above, which is precisely why this is an archive and not a delete.
+ *
+ * The result field is `archived`, not `deleted`, on purpose: nothing here is
+ * deleted and the caller must not tell the user otherwise.
+ */
+export async function archiveInquiriesBulk(
+  ids: string[],
+): Promise<
+  | { ok: true; archived: number; failed: number }
+  | { ok: false; error: string }
+> {
+  await requireUser();
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { ok: false, error: "No rows selected." };
+  }
+  if (!ids.every(isUuid)) return { ok: false, error: "Invalid inquiry id." };
+
+  // Dedupe so `failed` can't be inflated by a repeated id.
+  const unique = [...new Set(ids)];
+
+  try {
+    const existing = await db
+      .select({ id: inquiries.id })
+      .from(inquiries)
+      .where(inArray(inquiries.id, unique));
+    const found = existing.map((r) => r.id);
+
+    if (found.length > 0) {
+      await db
+        .update(inquiries)
+        .set({ isArchived: true, updatedAt: new Date() })
+        .where(inArray(inquiries.id, found));
+    }
+
+    revalidatePath("/inquiries");
+    revalidatePath("/enquiries/register");
+    return { ok: true, archived: found.length, failed: unique.length - found.length };
+  } catch (err) {
+    console.error("[archiveInquiriesBulk] failed", err);
+    return { ok: false, error: "Could not archive the enquiries. Please try again." };
+  }
+}
+
 /** Restore an archived enquiry back onto the register. */
 export async function unarchiveInquiry(id: string): Promise<ActionResult> {
   await requireUser();

@@ -33,6 +33,7 @@ import {
 } from "@/db/enums";
 import type { NotificationKind } from "@/db/schema";
 import { presetForShapeName } from "@/lib/masters/shape-config";
+import { MESSAGE_TEMPLATE_SEEDS } from "@/lib/templates/seeds";
 import { FEASIBILITY_DIMENSIONS } from "@/lib/feasibility/dimensions";
 
 async function seedStatusSettings(): Promise<void> {
@@ -496,31 +497,15 @@ async function seedCurrencies(): Promise<void> {
 // emails/ already use. `{{token}}` placeholders are listed in `variables` so the
 // editor can offer them. An inactive/absent row = fall back to the built-in
 // template, so these seeds change no behaviour on their own.
-const TEMPLATE_SEEDS: {
-  kind: NotificationKind;
-  name: string;
-  subject: string;
-  body: string;
-  variables: string[];
-}[] = [
-  { kind: "task_assigned", name: "Task assigned", subject: "New task: {{taskTitle}}", body: "Hi {{recipientName}},\n\n{{actorName}} assigned you \"{{taskTitle}}\" (#{{taskNo}}), due {{dueDate}}.\n\nOpen it: {{taskUrl}}", variables: ["recipientName", "actorName", "taskTitle", "taskNo", "dueDate", "taskUrl"] },
-  { kind: "task_initiated", name: "Task initiated", subject: "Task started: {{taskTitle}}", body: "Hi {{recipientName}},\n\n{{actorName}} started work on \"{{taskTitle}}\" (#{{taskNo}}).\n\nOpen it: {{taskUrl}}", variables: ["recipientName", "actorName", "taskTitle", "taskNo", "taskUrl"] },
-  { kind: "status_changed", name: "Status changed", subject: "{{taskTitle}} is now {{newStatus}}", body: "Hi {{recipientName}},\n\n{{actorName}} moved \"{{taskTitle}}\" (#{{taskNo}}) from {{oldStatus}} to {{newStatus}}.\n\nOpen it: {{taskUrl}}", variables: ["recipientName", "actorName", "taskTitle", "taskNo", "oldStatus", "newStatus", "taskUrl"] },
-  { kind: "approved", name: "Approved", subject: "Approved: {{taskTitle}}", body: "Hi {{recipientName}},\n\n{{actorName}} approved \"{{taskTitle}}\" (#{{taskNo}}).\n\nOpen it: {{taskUrl}}", variables: ["recipientName", "actorName", "taskTitle", "taskNo", "taskUrl"] },
-  { kind: "declined", name: "Not approved", subject: "Not approved: {{taskTitle}}", body: "Hi {{recipientName}},\n\n{{actorName}} did not approve \"{{taskTitle}}\" (#{{taskNo}}).\n\nReason: {{note}}\n\nOpen it: {{taskUrl}}", variables: ["recipientName", "actorName", "taskTitle", "taskNo", "note", "taskUrl"] },
-  { kind: "reassigned", name: "Reassigned", subject: "Reassigned to you: {{taskTitle}}", body: "Hi {{recipientName}},\n\n{{actorName}} reassigned \"{{taskTitle}}\" (#{{taskNo}}) to you.\n\nOpen it: {{taskUrl}}", variables: ["recipientName", "actorName", "taskTitle", "taskNo", "taskUrl"] },
-  { kind: "transferred", name: "Transferred", subject: "Transferred: {{taskTitle}}", body: "Hi {{recipientName}},\n\n{{actorName}} transferred \"{{taskTitle}}\" (#{{taskNo}}).\n\nOpen it: {{taskUrl}}", variables: ["recipientName", "actorName", "taskTitle", "taskNo", "taskUrl"] },
-  { kind: "cancelled", name: "Cancelled", subject: "Cancelled: {{taskTitle}}", body: "Hi {{recipientName}},\n\n{{actorName}} cancelled \"{{taskTitle}}\" (#{{taskNo}}).\n\nOpen it: {{taskUrl}}", variables: ["recipientName", "actorName", "taskTitle", "taskNo", "taskUrl"] },
-  { kind: "commented", name: "New comment", subject: "New comment on {{taskTitle}}", body: "Hi {{recipientName}},\n\n{{actorName}} commented on \"{{taskTitle}}\" (#{{taskNo}}):\n\n{{note}}\n\nOpen it: {{taskUrl}}", variables: ["recipientName", "actorName", "taskTitle", "taskNo", "note", "taskUrl"] },
-  { kind: "overdue_digest", name: "Overdue digest", subject: "{{overdueCount}} task(s) overdue", body: "Hi {{recipientName}},\n\nYou have {{overdueCount}} overdue task(s) as of {{digestDate}}.\n\nOpen your board: {{boardUrl}}", variables: ["recipientName", "overdueCount", "digestDate", "boardUrl"] },
-];
 
 async function seedMessageTemplates(): Promise<void> {
-  for (const t of TEMPLATE_SEEDS) {
+  // Every (kind, channel) slot, not email only — push and inbox previously fell
+  // back to the built-in component forever because nothing was ever seeded.
+  for (const t of MESSAGE_TEMPLATE_SEEDS) {
     await db.execute(sql`
       INSERT INTO message_templates (kind, channel, name, subject, body, variables)
       VALUES (
-        ${t.kind}, 'email', ${t.name}, ${t.subject}, ${t.body},
+        ${t.kind}, ${t.channel}, ${t.name}, ${t.subject}, ${t.body},
         string_to_array(${t.variables.join(",")}, ',')
       )
       ON CONFLICT (kind, channel) DO NOTHING

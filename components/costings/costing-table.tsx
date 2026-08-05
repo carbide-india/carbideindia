@@ -3,6 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import type { Route } from "next";
+import { useRouter } from "next/navigation";
+import { ArrowUpRight, Trash2 } from "lucide-react";
 // Route used for typed href in columns
 import {
   COSTING_ROUTE_LABELS,
@@ -16,12 +18,18 @@ import {
   RegisterDataTable,
   type RegisterColumn,
   type FilterConfig,
+  type RowMenuItem,
 } from "@/components/registers/register-data-table";
+import { fireToast } from "@/lib/toast";
+import { deleteCosting, deleteCostingsBulk } from "@/app/(app)/costings/actions";
 import type { CostingListItem } from "@/lib/queries/costings";
 
 interface Props {
   rows: CostingListItem[];
 }
+
+/** Deleting a costing is admin-only (`requireAdmin` throws for everyone else). */
+const FORBIDDEN_MESSAGE = "Admins only - ask an admin to delete this costing.";
 
 function moneyText(value: string | null): string {
   if (value == null || value === "") return "-";
@@ -40,6 +48,77 @@ function moneyNumber(value: string | null): number {
  * Columns: SM, Product, Route, Final Cost/pc, Quote Value, Status, Date.
  */
 export function CostingTable({ rows }: Props) {
+  const router = useRouter();
+
+  // Per-row actions menu: Open + a destructive Delete. `costings` has no
+  // recycle bin / archived flag, so this is a HARD delete: it confirms first and
+  // the server action refuses when the costing is approved & locked or a
+  // production order was built against it.
+  const rowMenu = React.useCallback(
+    (r: CostingListItem): RowMenuItem<CostingListItem>[] => [
+      {
+        key: "open",
+        label: "Open",
+        Icon: ArrowUpRight,
+        href: `/costings/${r.id}` as Route,
+      },
+      {
+        key: "delete",
+        label: "Delete",
+        Icon: Trash2,
+        danger: true,
+        onSelect: async (row) => {
+          const name = row.smNumber ?? row.custProductName ?? "this costing";
+          if (
+            !window.confirm(`Delete the costing for ${name}? This can't be undone.`)
+          ) {
+            return;
+          }
+          try {
+            const res = await deleteCosting(row.id);
+            if (res.ok) {
+              fireToast({ message: `Deleted the costing for ${name}.` });
+              router.refresh();
+            } else {
+              fireToast({ message: res.error, type: "error" });
+            }
+          } catch {
+            // requireAdmin throws for non-admins; the menu handler is
+            // fire-and-forget, so swallow it into an honest toast.
+            fireToast({ message: FORBIDDEN_MESSAGE, type: "error" });
+          }
+        },
+      },
+    ],
+    [router],
+  );
+
+  // Bulk delete. A PARTIAL outcome (rows the server guard refused) is reported
+  // with the real split via `message`, never the bar's default toast - that one
+  // counts the SELECTION and would claim rows the guard actually kept. Nothing
+  // deleted at all is an error, not a success.
+  const onBulkDelete = React.useCallback(
+    async (
+      ids: string[],
+    ): Promise<{ ok: boolean; error?: string; message?: string }> => {
+      let res: Awaited<ReturnType<typeof deleteCostingsBulk>>;
+      try {
+        res = await deleteCostingsBulk(ids);
+      } catch {
+        return { ok: false, error: FORBIDDEN_MESSAGE };
+      }
+      if (!res.ok) return { ok: false, error: res.error };
+      if (res.failed > 0) {
+        const why = "skipped (approved & locked, or used by a production order)";
+        return res.deleted === 0
+          ? { ok: false, error: `Nothing deleted - ${res.failed} ${why}.` }
+          : { ok: true, message: `${res.deleted} deleted, ${res.failed} ${why}.` };
+      }
+      return { ok: true };
+    },
+    [],
+  );
+
   const columns = React.useMemo<RegisterColumn<CostingListItem>[]>(
     () => [
       {
@@ -186,6 +265,11 @@ export function CostingTable({ rows }: Props) {
       getOpenHref={(r) => `/costings/${r.id}` as Route}
       filters={filters}
       exportFilename="costings"
+      rowMenu={rowMenu}
+      bulkDelete={{
+        noun: { one: "costing", many: "costings" },
+        onDelete: onBulkDelete,
+      }}
       emptyTitle="No costings yet -- run the first one."
       emptyHint="In-house and bought-out costings appear here with their SM, product, route and final cost per piece."
     />

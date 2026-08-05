@@ -118,6 +118,44 @@ export interface RegisterColumn<TRow> {
   pinnedLeft?: boolean;
 }
 
+/**
+ * Wording + behaviour for the bulk bar's destructive button.
+ *
+ * The verb/noun are NOT cosmetic. Registers deliberately mix hard delete
+ * (quotations, costings), archive (enquiries) and deactivate (vendors), so the
+ * confirm prompt, the pending label and the success toast must say what the
+ * server action actually does. Leaving them at the defaults on an archive or
+ * deactivate register makes the UI claim a permanent delete that never happened.
+ */
+export interface BulkDeleteConfig {
+  /**
+   * Runs the action. Return `message` to override the success toast — required
+   * whenever the server skipped rows, because the bar's default toast counts the
+   * SELECTION, not the rows that actually went through, and would over-report a
+   * partial run ("Deleted 5 quotations." when the guard only released 3).
+   */
+  onDelete: (
+    ids: string[],
+  ) => Promise<{ ok: boolean; error?: string; message?: string }>;
+  /** Button label. Default "Delete selected". */
+  label?: string;
+  /** Row noun for the confirm + success toast. Default row/rows. */
+  noun?: { one: string; many: string };
+  /**
+   * Verb forms: `infinitive` drives the confirm ("Delete 3 quotations?") and the
+   * failure toast ("Couldn't delete."), `progressive` the in-flight button label,
+   * `past` the success toast. Default delete / Deleting / Deleted.
+   */
+  verb?: { infinitive: string; progressive: string; past: string };
+  /**
+   * Appends "This can't be undone." to the confirm. Default true — set false for
+   * reversible actions (archive / deactivate), which can be put back.
+   */
+  irreversible?: boolean;
+  /** Button icon. Defaults to a trash can; pass another for non-delete verbs. */
+  Icon?: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
+}
+
 /** One entry in a row's three-dot actions menu. */
 export interface RowMenuItem<TRow> {
   key: string;
@@ -228,12 +266,11 @@ export interface RegisterDataTableProps<TRow> {
    * When provided, the bulk bar gains a DESTRUCTIVE "Delete selected (N)"
    * button. It confirms, then calls `onDelete(ids)`; on `ok` it clears the
    * selection + refreshes + toasts success, otherwise toasts the error. Purely
-   * additive — registers that don't pass this are unaffected.
+   * additive — registers that don't pass this are unaffected. Registers whose
+   * action archives or deactivates instead of deleting MUST override the
+   * wording (see `BulkDeleteConfig`).
    */
-  bulkDelete?: {
-    onDelete: (ids: string[]) => Promise<{ ok: boolean; error?: string }>;
-    label?: string;
-  };
+  bulkDelete?: BulkDeleteConfig;
   /**
    * When provided, each row shows a three-dot menu of these actions instead of
    * the default hover open/edit icons. `rowMenuPlacement` controls whether the
@@ -1265,10 +1302,7 @@ function BulkBar({
   count: number;
   ids: string[];
   bulkActions: BulkActionConfig[];
-  bulkDelete?: {
-    onDelete: (ids: string[]) => Promise<{ ok: boolean; error?: string }>;
-    label?: string;
-  };
+  bulkDelete?: BulkDeleteConfig;
   onExportSelected: () => void;
   onClear: () => void;
   onApplied: () => void;
@@ -1304,8 +1338,7 @@ function BulkBar({
         <BulkDeleteButton
           count={count}
           ids={ids}
-          onDelete={bulkDelete.onDelete}
-          label={bulkDelete.label}
+          config={bulkDelete}
           onDeleted={onApplied}
         />
       )}
@@ -1405,40 +1438,60 @@ function BulkActionGroup({
  * the outcome; on failure toasts the returned error. Owns its own pending state
  * so a slow delete never blocks the other bulk-action groups.
  */
+const DEFAULT_BULK_DELETE_NOUN = { one: "row", many: "rows" } as const;
+const DEFAULT_BULK_DELETE_VERB = {
+  infinitive: "delete",
+  progressive: "Deleting",
+  past: "Deleted",
+} as const;
+
+/**
+ * The bulk bar's destructive button. All user-facing wording comes from the
+ * caller's `BulkDeleteConfig` — the confirm, the pending label, the success and
+ * failure toasts — so an archive register never tells the user it deleted
+ * something permanently.
+ */
 function BulkDeleteButton({
   count,
   ids,
-  onDelete,
-  label = "Delete selected",
+  config,
   onDeleted,
 }: {
   count: number;
   ids: string[];
-  onDelete: (ids: string[]) => Promise<{ ok: boolean; error?: string }>;
-  label?: string;
+  config: BulkDeleteConfig;
   onDeleted: () => void;
 }) {
+  const {
+    onDelete,
+    label = "Delete selected",
+    noun = DEFAULT_BULK_DELETE_NOUN,
+    verb = DEFAULT_BULK_DELETE_VERB,
+    irreversible = true,
+    Icon = Trash2,
+  } = config;
   const [pending, setPending] = React.useState(false);
 
+  const subject = `${count} ${count === 1 ? noun.one : noun.many}`;
+  const failureMessage = `Couldn't ${verb.infinitive}.`;
+
   async function run() {
-    if (
-      !window.confirm(
-        `Delete ${count} ${count === 1 ? "quotation" : "quotations"}? This can't be undone.`,
-      )
-    ) {
-      return;
-    }
+    const confirmVerb =
+      verb.infinitive.charAt(0).toUpperCase() + verb.infinitive.slice(1);
+    const warning = irreversible ? " This can't be undone." : "";
+    if (!window.confirm(`${confirmVerb} ${subject}?${warning}`)) return;
+
     setPending(true);
     try {
       const res = await onDelete(ids);
       if (res.ok) {
-        fireToast({ message: `Deleted ${count} ${count === 1 ? "row" : "rows"}.` });
+        fireToast({ message: res.message ?? `${verb.past} ${subject}.` });
         onDeleted();
       } else {
-        fireToast({ message: res.error ?? "Couldn't delete.", type: "error" });
+        fireToast({ message: res.error ?? failureMessage, type: "error" });
       }
     } catch {
-      fireToast({ message: "Couldn't delete.", type: "error" });
+      fireToast({ message: failureMessage, type: "error" });
     } finally {
       setPending(false);
     }
@@ -1456,8 +1509,8 @@ function BulkDeleteButton({
         background: "color-mix(in srgb, var(--color-red) 8%, transparent)",
       }}
     >
-      <Trash2 size={13} strokeWidth={2.2} />
-      {pending ? "Deleting" : `${label} (${count})`}
+      <Icon size={13} strokeWidth={2.2} />
+      {pending ? verb.progressive : `${label} (${count})`}
     </button>
   );
 }

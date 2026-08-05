@@ -355,6 +355,95 @@ export async function setNegotiationStatusBulk(
   return { ok: true };
 }
 
+// ---------------------------------------------------------------------------
+// Delete (hard) — the Recycle Bin is drafts-only and negotiations carry no
+// deleted_at / archived flag, so this is a permanent delete, guarded
+// client-side by a confirm and here by an FK-safety check.
+// ---------------------------------------------------------------------------
+
+/**
+ * Count downstream records that a delete would damage.
+ *
+ * - `proforma_invoices.negotiation_id` is ON DELETE **CASCADE**: deleting the
+ *   negotiation would silently destroy every issued PI hanging off it (and, by
+ *   the PI's own cascade, its `proforma_invoice_items`) with no FK error to warn
+ *   us. This is the whole reason the guard exists.
+ * - `sales_orders.negotiation_id` is ON DELETE SET NULL: the SO survives but its
+ *   negotiation lineage is silently blanked. We refuse that too (same posture as
+ *   `deleteQuotation`).
+ *
+ * `negotiation_items` is the negotiation's OWN line table (ON DELETE CASCADE),
+ * so it goes with the parent by design and is NOT counted — same treatment as
+ * `quotation_items` in the quotation reference.
+ */
+async function countNegotiationRefs(id: string): Promise<number> {
+  const counts = await Promise.all([
+    db.$count(proformaInvoices, eq(proformaInvoices.negotiationId, id)),
+    db.$count(salesOrders, eq(salesOrders.negotiationId, id)),
+  ]);
+  return counts.reduce((sum, n) => sum + n, 0);
+}
+
+const NEGOTIATION_IN_USE_ERROR =
+  "In use by a proforma invoice / sales order - can't delete.";
+
+/** Hard-delete a single negotiation (cascades its line items). Refuses when a
+ *  proforma invoice was issued from it or a sales order was won off it. */
+export async function deleteNegotiation(
+  id: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requireUser();
+  if (!isUuid(id)) return { ok: false, error: "Invalid negotiation id." };
+
+  try {
+    if ((await countNegotiationRefs(id)) > 0) {
+      return { ok: false, error: NEGOTIATION_IN_USE_ERROR };
+    }
+    await db.delete(negotiations).where(eq(negotiations.id, id));
+  } catch (err) {
+    console.error("[deleteNegotiation] failed", err);
+    return { ok: false, error: "Could not delete the negotiation. Please try again." };
+  }
+
+  revalidatePath("/negotiations");
+  return { ok: true };
+}
+
+/** Hard-delete the selected negotiations, skipping any that already issued a
+ *  proforma invoice or fed a sales order. Reports deleted vs. in-use counts so
+ *  the caller can tell the user what was actually removed. */
+export async function deleteNegotiationsBulk(
+  ids: string[],
+): Promise<
+  | { ok: true; deleted: number; failed: number }
+  | { ok: false; error: string }
+> {
+  await requireUser();
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { ok: false, error: "No rows selected." };
+  }
+  if (!ids.every(isUuid)) return { ok: false, error: "Invalid negotiation id." };
+
+  let deleted = 0;
+  let failed = 0;
+  for (const id of ids) {
+    try {
+      if ((await countNegotiationRefs(id)) > 0) {
+        failed++;
+        continue;
+      }
+      await db.delete(negotiations).where(eq(negotiations.id, id));
+      deleted++;
+    } catch (err) {
+      console.error("[deleteNegotiationsBulk] failed for", id, err);
+      failed++;
+    }
+  }
+
+  revalidatePath("/negotiations");
+  return { ok: true, deleted, failed };
+}
+
 // ── Proforma Invoice pipeline (2026-08-02) ──────────────────────────────────
 // A negotiation walks a linear stage: Quote Send → PI Issued → Negotiation
 // Awarded → Customer PO Received → (Sales Order). The actions below drive that

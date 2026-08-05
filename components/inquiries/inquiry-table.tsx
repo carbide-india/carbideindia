@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import type { Route } from "next";
+import { Archive } from "lucide-react";
 import {
   ENQUIRY_STATUSES,
   ENQUIRY_STATUS_LABELS,
@@ -33,6 +34,7 @@ import {
   setEnquiryPriorityBulk,
   setFeasibilityStatusBulk,
   assignEnquirySalesPersonBulk,
+  archiveInquiriesBulk,
 } from "@/app/(app)/inquiries/actions";
 import type { InquiryListItem } from "@/lib/queries/inquiries";
 import type { EmployeeOption } from "@/lib/queries/employees";
@@ -291,6 +293,57 @@ export function InquiryTable({ rows, employees, variant = "enquiry" }: Props) {
     [variant, hrefFor],
   );
 
+  /**
+   * Bulk row-removal for the Enquiry Register. It ARCHIVES (sets is_archived) -
+   * an enquiry cascade-owns its items, feasibility, costings, quotations,
+   * negotiations, PIs and sales orders, so a bulk hard delete would destroy the
+   * whole chain; archiving drops the rows off the register and is reversible.
+   * The control is labelled "Archive selected" so the UI never claims to delete.
+   *
+   * Deliberately NOT offered on the feasibility variant: that queue is a VIEW
+   * over the same `inquiries` rows, and removing an enquiry from a feasibility
+   * screen would silently take the SM off the Enquiry Register too.
+   */
+  const bulkArchive = React.useMemo(
+    () =>
+      variant === "feasibility"
+        ? undefined
+        : {
+            label: "Archive selected",
+            // Wording must match the server verb: this archives, and archiving
+            // is reversible via `unarchiveInquiry`, so the bulk bar must not
+            // confirm with "This can't be undone." or toast "Deleted".
+            noun: { one: "enquiry", many: "enquiries" },
+            verb: {
+              infinitive: "archive",
+              progressive: "Archiving",
+              past: "Archived",
+            },
+            irreversible: false,
+            Icon: Archive,
+            onDelete: async (ids: string[]) => {
+              const res = await archiveInquiriesBulk(ids);
+              if (!res.ok) return { ok: false, error: res.error };
+              // Partial outcomes go through `message`, which REPLACES the bulk
+              // bar's default toast — that one counts the selection and would
+              // claim rows that were never archived.
+              if (res.failed > 0) {
+                return res.archived === 0
+                  ? {
+                      ok: false,
+                      error: `Nothing archived - ${res.failed} no longer on the register.`,
+                    }
+                  : {
+                      ok: true,
+                      message: `${res.archived} archived, ${res.failed} skipped (no longer on the register).`,
+                    };
+              }
+              return { ok: true };
+            },
+          },
+    [variant],
+  );
+
   // Distinct country list (from the loaded rows) for the country facet.
   const countryOptions = React.useMemo(() => {
     const set = new Set<string>();
@@ -412,6 +465,7 @@ export function InquiryTable({ rows, employees, variant = "enquiry" }: Props) {
           onApply: (ids, value) => assignEnquirySalesPersonBulk(ids, value),
         },
       ]}
+      bulkDelete={bulkArchive}
       emptyTitle={
         variant === "feasibility"
           ? "No enquiries to check yet."

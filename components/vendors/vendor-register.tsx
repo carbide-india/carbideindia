@@ -12,7 +12,11 @@ import {
   type RowMenuItem,
 } from "@/components/registers/register-data-table";
 import { fireToast } from "@/lib/toast";
-import { deactivateVendor, reactivateVendor } from "@/app/(app)/vendors/actions";
+import {
+  deactivateVendor,
+  deactivateVendorsBulk,
+  reactivateVendor,
+} from "@/app/(app)/vendors/actions";
 import type { VendorRegisterRow } from "@/lib/queries/vendors";
 
 interface Props {
@@ -209,6 +213,48 @@ export function VendorRegister({
       showExport={false}
       rowMenu={rowMenu}
       rowMenuPlacement="left"
+      {...(isAdmin
+        ? {
+            bulkDelete: {
+              // Vendors are deactivate-only governance — the bulk bar's button
+              // is relabelled so it never claims to delete a master it only
+              // retires. The server action keeps `costings.vendor_id` and the
+              // BO quote-matrix rows intact, so nothing is skipped for being
+              // "in use"; a skip here means the row vanished or the write threw.
+              label: "Deactivate selected",
+              // Wording must match the server verb: this deactivates, and
+              // `reactivateVendor` puts the row back, so the bulk bar must not
+              // confirm with "This can't be undone." or toast "Deleted".
+              noun: { one: "vendor", many: "vendors" },
+              verb: {
+                infinitive: "deactivate",
+                progressive: "Deactivating",
+                past: "Deactivated",
+              },
+              irreversible: false,
+              Icon: Power,
+              onDelete: (ids: string[]) =>
+                deactivateVendorsBulk(ids).then((r) => {
+                  if (!r.ok) return { ok: false, error: r.error };
+                  if (r.deleted === 0) {
+                    return {
+                      ok: false,
+                      error: `Couldn't deactivate ${r.failed} ${r.failed === 1 ? "vendor" : "vendors"}. Please try again.`,
+                    };
+                  }
+                  // Reported through `message` so the bulk bar shows this
+                  // INSTEAD of its default toast, not on top of it.
+                  return {
+                    ok: true,
+                    message:
+                      r.failed > 0
+                        ? `${r.deleted} deactivated, ${r.failed} skipped (couldn't be updated).`
+                        : `${r.deleted} ${r.deleted === 1 ? "vendor" : "vendors"} deactivated - existing costings keep their vendor.`,
+                  };
+                }),
+            },
+          }
+        : {})}
       emptyTitle="No vendors yet — add the first one."
       emptyHint="Use New vendor to capture a supplier's contact and commercial terms."
     />

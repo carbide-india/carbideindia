@@ -19,9 +19,13 @@ import {
 import { ADMIN_ROLE_NAME } from "@/lib/roles/canonical";
 
 /**
- * Reads for /admin/roles (Roles & Permissions). Counts are computed with
- * correlated sub-selects rather than joins so the member count and the grant
- * count can't fan each other out.
+ * Reads for /admin/roles (Roles & Permissions). Counts come from separate
+ * grouped queries folded into maps rather than joins, so the member count and
+ * the grant count can't fan each other out. (They were correlated sub-selects
+ * built with the `sql` template, but Drizzle renders columns UNQUALIFIED inside
+ * a sub-select, so `join employees … where role_id = id` hit a genuinely
+ * ambiguous `"id"` at runtime. Grouped queries + maps is the pattern the rest
+ * of lib/queries already uses — see listFeasibilityQueue.)
  */
 
 export interface RoleWithCounts extends Role {
@@ -34,30 +38,34 @@ export interface RoleWithCounts extends Role {
 }
 
 export async function listRolesWithCounts(): Promise<RoleWithCounts[]> {
-  return db
-    .select({
-      id: roles.id,
-      name: roles.name,
-      label: roles.label,
-      sortOrder: roles.sortOrder,
-      createdAt: roles.createdAt,
-      updatedAt: roles.updatedAt,
-      memberCount: sql<number>`(
-        select count(*)::int from ${employeeRoles}
-        where ${employeeRoles.roleId} = ${roles.id}
-      )`,
-      activeMemberCount: sql<number>`(
-        select count(*)::int from ${employeeRoles}
-        join ${employees} on ${employees.id} = ${employeeRoles.employeeId}
-        where ${employeeRoles.roleId} = ${roles.id} and ${employees.isActive}
-      )`,
-      permissionCount: sql<number>`(
-        select count(*)::int from ${rolePermissions}
-        where ${rolePermissions.roleId} = ${roles.id}
-      )`,
-    })
-    .from(roles)
-    .orderBy(asc(roles.sortOrder), asc(roles.label));
+  const [rows, members, grants] = await Promise.all([
+    db.select().from(roles).orderBy(asc(roles.sortOrder), asc(roles.label)),
+    // One grouped pass over the join table gives BOTH member counts: total, and
+    // the subset whose employee row is still active.
+    db
+      .select({
+        roleId: employeeRoles.roleId,
+        total: sql<number>`count(*)::int`,
+        active: sql<number>`(count(*) filter (where ${employees.isActive}))::int`,
+      })
+      .from(employeeRoles)
+      .leftJoin(employees, eq(employees.id, employeeRoles.employeeId))
+      .groupBy(employeeRoles.roleId),
+    db
+      .select({ roleId: rolePermissions.roleId, total: sql<number>`count(*)::int` })
+      .from(rolePermissions)
+      .groupBy(rolePermissions.roleId),
+  ]);
+
+  const memberBy = new Map(members.map((m) => [m.roleId, m]));
+  const grantBy = new Map(grants.map((g) => [g.roleId, g.total]));
+
+  return rows.map((r) => ({
+    ...r,
+    memberCount: memberBy.get(r.id)?.total ?? 0,
+    activeMemberCount: memberBy.get(r.id)?.active ?? 0,
+    permissionCount: grantBy.get(r.id) ?? 0,
+  }));
 }
 
 export interface RolesOverview {
@@ -80,25 +88,31 @@ export interface RolesOverview {
 export async function getRolesOverview(): Promise<RolesOverview> {
   // One round-trip of five scalar sub-selects — cheaper than five awaits and
   // the numbers stay mutually consistent.
+  //
+  // Every column inside these sub-selects is written out with an explicit table
+  // qualifier via sql.raw. Interpolating a Drizzle column (`${employees.id}`)
+  // inside a sub-select renders it UNQUALIFIED, which either crashes on an
+  // ambiguous name or — worse, as in the `not exists` arm below — silently
+  // compares the wrong two columns and returns a plausible but wrong number.
   const rows = (await db.execute(sql`
     select
-      (select count(*)::int from ${permissions} where ${permissions.isActive}) as catalogue_size,
-      (select count(*)::int from ${rolePermissions}) as grant_count,
+      (select count(*)::int from permissions where permissions.is_active) as catalogue_size,
+      (select count(*)::int from role_permissions) as grant_count,
       (
-        select count(distinct ${employeeRoles.employeeId})::int
-        from ${employeeRoles}
-        join ${employees} on ${employees.id} = ${employeeRoles.employeeId}
-        where ${employees.isActive}
+        select count(distinct employee_roles.employee_id)::int
+        from employee_roles
+        join employees on employees.id = employee_roles.employee_id
+        where employees.is_active
       ) as people_with_roles,
       (
-        select count(*)::int from ${employees}
-        where ${employees.isActive} and ${employees.isAdmin}
+        select count(*)::int from employees
+        where employees.is_active and employees.is_admin
           and not exists (
-            select 1 from ${employeeRoles}
-            where ${employeeRoles.employeeId} = ${employees.id}
+            select 1 from employee_roles
+            where employee_roles.employee_id = employees.id
           )
       ) as implicit_admins,
-      (select count(*)::int from ${employees} where ${employees.isActive}) as active_employees
+      (select count(*)::int from employees where employees.is_active) as active_employees
   `)) as unknown as {
     catalogue_size: number;
     grant_count: number;

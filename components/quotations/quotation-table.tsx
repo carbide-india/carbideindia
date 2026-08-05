@@ -399,6 +399,7 @@ export function QuotationTable({ rows }: Props) {
         onApply: (ids, value) => setQuotationStatusBulk(ids, value),
       }}
       bulkDelete={{
+        noun: { one: "quotation", many: "quotations" },
         onDelete: (ids) =>
           deleteQuotationsBulk(ids).then((r) =>
             r.ok ? { ok: true } : { ok: false, error: r.error },

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, gt, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { tasks, employees } from "@/db/schema";
 import type { TaskStatus } from "@/db/enums";
@@ -61,14 +61,22 @@ export async function listRecurringTemplates(): Promise<RecurringTemplateRow[]> 
   const peopleIds = Array.from(
     new Set(templates.flatMap((t) => [t.doerId, t.initiatorId])),
   );
+  // `sql\`… = ANY(${peopleIds})\`` interpolates the array as N separate params —
+  // Postgres then sees a row expression, not an array, and errors with
+  // "op ANY/ALL (array) requires array on right side". inArray() renders a
+  // proper `in (…)` list.
   const people = await db
     .select({ id: employees.id, name: employees.name })
     .from(employees)
-    .where(sql`${employees.id} = ANY(${peopleIds})`);
+    .where(inArray(employees.id, peopleIds));
   const nameById = new Map(people.map((p) => [p.id, p.name]));
 
-  // Child counts + earliest future due per template in one query.
-  const now = new Date();
+  // Child counts + earliest future due per template in one query. `now` is
+  // rendered as an ISO string with an explicit cast: a bare `${date}` inside a
+  // `sql` template reaches postgres-js as an untyped param and throws
+  // ("The \"string\" argument must be of type string … Received an instance of
+  // Date"). Drizzle's typed comparisons map Dates for you; raw templates do not.
+  const now = sql`${new Date().toISOString()}::timestamptz`;
   const counts = (await db
     .select({
       parentId: tasks.recurrenceParentId,

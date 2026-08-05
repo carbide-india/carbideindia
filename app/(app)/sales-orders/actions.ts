@@ -3,7 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { and, count, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { salesOrders, salesOrderItems, type NewSalesOrder } from "@/db/schema";
+import {
+  salesOrders,
+  salesOrderItems,
+  jobCards,
+  productionOrders,
+  dispatches,
+  dispatchLines,
+  invoices,
+  invoiceLines,
+  type NewSalesOrder,
+} from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
 import {
   getQuoteAutofill,
@@ -349,4 +359,122 @@ export async function setSalesOrderSentBulk(
   }
   revalidatePath("/sales-orders");
   return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Delete (hard) — sales orders carry no soft-delete / deactivate / archive
+// column, and the Recycle Bin is drafts-only, so this is a permanent delete
+// guarded client-side by a confirm and here by an FK-safety check.
+// ---------------------------------------------------------------------------
+
+/**
+ * Count downstream records that would be silently orphaned by deleting this
+ * sales order. This is the widest blast radius in the app — EIGHT
+ * `ON DELETE SET NULL` paths, so a delete would never fail, it would quietly
+ * blank the lineage on live production/dispatch/billing records. We refuse
+ * instead (same posture as `deleteQuotation`).
+ *
+ * Direct refs to `sales_orders.id`:
+ *   job_cards.sales_order_id, production_orders.sales_order_id,
+ *   dispatches.sales_order_id, invoices.sales_order_id
+ *
+ * Indirect refs via `sales_order_items.id` — that child table is ON DELETE
+ * CASCADE, so its rows vanish with the parent and these links get blanked too.
+ * They must be counted separately because a dispatch LINE / invoice LINE can
+ * point at an SO line while its parent dispatch / invoice header points at no
+ * SO at all:
+ *   job_cards.sales_order_item_id, production_orders.sales_order_item_id,
+ *   dispatch_lines.sales_order_item_id, invoice_lines.sales_order_item_id
+ *
+ * `sales_order_items` itself is the SO's own line table (CASCADE) and is NOT
+ * counted — it is part of the record, not a dependent of it.
+ */
+async function countSalesOrderRefs(id: string): Promise<number> {
+  const directCounts = await Promise.all([
+    db.$count(jobCards, eq(jobCards.salesOrderId, id)),
+    db.$count(productionOrders, eq(productionOrders.salesOrderId, id)),
+    db.$count(dispatches, eq(dispatches.salesOrderId, id)),
+    db.$count(invoices, eq(invoices.salesOrderId, id)),
+  ]);
+  let total = directCounts.reduce((sum, n) => sum + n, 0);
+  if (total > 0) return total;
+
+  const lineRows = await db
+    .select({ id: salesOrderItems.id })
+    .from(salesOrderItems)
+    .where(eq(salesOrderItems.salesOrderId, id));
+  const lineIds = lineRows.map((r) => r.id);
+  if (lineIds.length === 0) return total;
+
+  const indirectCounts = await Promise.all([
+    db.$count(jobCards, inArray(jobCards.salesOrderItemId, lineIds)),
+    db.$count(
+      productionOrders,
+      inArray(productionOrders.salesOrderItemId, lineIds),
+    ),
+    db.$count(dispatchLines, inArray(dispatchLines.salesOrderItemId, lineIds)),
+    db.$count(invoiceLines, inArray(invoiceLines.salesOrderItemId, lineIds)),
+  ]);
+  total += indirectCounts.reduce((sum, n) => sum + n, 0);
+  return total;
+}
+
+const SO_IN_USE_ERROR =
+  "In use by a job card / production order / dispatch / invoice - can't delete.";
+
+/** Hard-delete a single sales order (cascades its line items). Refuses when a
+ *  job card, production order, dispatch or invoice was built from it. */
+export async function deleteSalesOrder(
+  id: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requireUser();
+  if (!isUuid(id)) return { ok: false, error: "Invalid sales order id." };
+
+  try {
+    if ((await countSalesOrderRefs(id)) > 0) {
+      return { ok: false, error: SO_IN_USE_ERROR };
+    }
+    await db.delete(salesOrders).where(eq(salesOrders.id, id));
+  } catch (err) {
+    console.error("[deleteSalesOrder] failed", err);
+    return { ok: false, error: "Could not delete the sales order. Please try again." };
+  }
+
+  revalidatePath("/sales-orders");
+  return { ok: true };
+}
+
+/** Hard-delete the selected sales orders, skipping any still referenced by a
+ *  job card / production order / dispatch / invoice (directly or through one of
+ *  its lines). Reports how many were deleted vs. left in place. */
+export async function deleteSalesOrdersBulk(
+  ids: string[],
+): Promise<
+  | { ok: true; deleted: number; failed: number }
+  | { ok: false; error: string }
+> {
+  await requireUser();
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { ok: false, error: "No rows selected." };
+  }
+  if (!ids.every(isUuid)) return { ok: false, error: "Invalid sales order id." };
+
+  let deleted = 0;
+  let failed = 0;
+  for (const id of ids) {
+    try {
+      if ((await countSalesOrderRefs(id)) > 0) {
+        failed++;
+        continue;
+      }
+      await db.delete(salesOrders).where(eq(salesOrders.id, id));
+      deleted++;
+    } catch (err) {
+      console.error("[deleteSalesOrdersBulk] failed for", id, err);
+      failed++;
+    }
+  }
+
+  revalidatePath("/sales-orders");
+  return { ok: true, deleted, failed };
 }

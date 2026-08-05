@@ -197,3 +197,93 @@ export async function setMeetingPurpose(
   revalidatePath(`/meetings/${id}`);
   return { ok: true };
 }
+
+// ---------------------------------------------------------------------------
+// Delete (hard) — the Recycle Bin is drafts-only and `client_meetings` carries
+// no deleted_at / is_active column, so there is no soft-delete or deactivate
+// semantic to respect here: this is a permanent delete, guarded client-side by
+// a confirm and here by the reference check below.
+// ---------------------------------------------------------------------------
+
+/**
+ * Counts downstream rows that would be silently orphaned by deleting a meeting.
+ *
+ * `client_meetings` is a LEAF today — nothing in `db/schema.ts` carries a
+ * `meeting_id` (documents key off task / client / item / job_card), and the
+ * meeting's own FKs point OUTWARD to employees/clients, so deleting one can't
+ * strand a quotation, costing, sales order, invoice or job card. The counter
+ * list is therefore empty and the guard structurally returns 0.
+ *
+ * It still exists, and both delete paths still route through it, so the day a
+ * table starts referencing a meeting the only change needed is one more entry
+ * here, e.g. `(id) => db.$count(followUps, eq(followUps.meetingId, id))` —
+ * after which the single and bulk deletes both start refusing in-use rows with
+ * no further edits.
+ */
+type MeetingRefCounter = (id: string) => Promise<number>;
+
+const MEETING_REF_COUNTERS: MeetingRefCounter[] = [];
+
+async function countClientMeetingRefs(id: string): Promise<number> {
+  const counts = await Promise.all(MEETING_REF_COUNTERS.map((c) => c(id)));
+  return counts.reduce((sum, n) => sum + n, 0);
+}
+
+const MEETING_IN_USE_ERROR =
+  "In use by a linked record - can't delete.";
+
+/** Hard-delete a single meeting log. Refuses when a downstream record depends
+ *  on it (see `countClientMeetingRefs`). */
+export async function deleteClientMeeting(
+  id: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requireUser();
+  if (!isUuid(id)) return { ok: false, error: "Invalid meeting id." };
+
+  try {
+    if ((await countClientMeetingRefs(id)) > 0) {
+      return { ok: false, error: MEETING_IN_USE_ERROR };
+    }
+    await db.delete(clientMeetings).where(eq(clientMeetings.id, id));
+  } catch (err) {
+    console.error("[deleteClientMeeting] failed", err);
+    return { ok: false, error: "Could not delete the meeting. Please try again." };
+  }
+
+  revalidatePath("/meetings");
+  return { ok: true };
+}
+
+/** Hard-delete the selected meeting logs, skipping any a downstream record
+ *  depends on. Reports how many were deleted vs. skipped. */
+export async function deleteClientMeetingsBulk(
+  ids: string[],
+): Promise<
+  | { ok: true; deleted: number; failed: number }
+  | { ok: false; error: string }
+> {
+  await requireUser();
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { ok: false, error: "No rows selected." };
+  }
+  if (!ids.every(isUuid)) return { ok: false, error: "Invalid meeting id." };
+
+  let deleted = 0;
+  let failed = 0;
+  for (const id of ids) {
+    try {
+      if ((await countClientMeetingRefs(id)) > 0) {
+        failed++;
+        continue;
+      }
+      await db.delete(clientMeetings).where(eq(clientMeetings.id, id));
+      deleted++;
+    } catch (err) {
+      console.error("[deleteClientMeetingsBulk] failed for", id, err);
+      failed++;
+    }
+  }
+
+  revalidatePath("/meetings");
+  return { ok: true, deleted, failed };
+}

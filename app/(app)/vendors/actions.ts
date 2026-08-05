@@ -202,6 +202,71 @@ export async function deactivateVendor(vendorId: string): Promise<ActionResult> 
 }
 
 /**
+ * Bulk-deactivate the selected vendors — the multi-row extension of
+ * `deactivateVendor`, wired to the register's bulk bar.
+ *
+ * There is deliberately NO bulk (or single) hard delete for vendors, and none
+ * may be added. Two live FK columns point here and both are ON DELETE SET NULL:
+ *   - `costings.vendor_id`              — the primary bought-out vendor on a costing
+ *   - `costing_vendor_quotes.vendor_id` — the per-vendor BO quote-matrix rows
+ * A hard delete would therefore not fail loudly; it would silently blank both,
+ * orphaning the commercial basis of every bought-out costing that vendor priced
+ * (the `vendor_*_snapshot` text columns would survive with no row to resolve).
+ * That is also why no per-row reference guard REFUSES anything here:
+ * deactivation leaves both columns intact, so a referenced vendor is exactly
+ * the vendor you want to deactivate rather than one you must skip.
+ *
+ * Idempotent: a vendor already inactive counts toward `deleted` (nothing left
+ * to do), never toward `failed`. `failed` means the id matched no row or the
+ * write threw. Result field names mirror the shared bulk contract the register
+ * consumes; the caller relabels them for the user ("deactivated", not "deleted").
+ */
+export async function deactivateVendorsBulk(
+  ids: string[],
+): Promise<
+  | { ok: true; deleted: number; failed: number }
+  | { ok: false; error: string }
+> {
+  await requireAdmin();
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { ok: false, error: "No rows selected." };
+  }
+  if (!ids.every((id) => VendorIdSchema.safeParse(id).success)) {
+    return { ok: false, error: "Invalid vendor id." };
+  }
+
+  let deleted = 0;
+  let failed = 0;
+  for (const id of ids) {
+    try {
+      const vendor = await db.query.vendors.findFirst({
+        where: eq(vendors.id, id),
+      });
+      if (!vendor) {
+        failed++;
+        continue;
+      }
+      if (!vendor.isActive) {
+        deleted++; // already deactivated — idempotent, counts as succeeded
+        continue;
+      }
+      await db
+        .update(vendors)
+        .set({ isActive: false, deletedAt: new Date(), updatedAt: new Date() })
+        .where(eq(vendors.id, vendor.id));
+      deleted++;
+    } catch (err) {
+      console.error("[deactivateVendorsBulk] failed for", id, err);
+      failed++;
+    }
+  }
+
+  revalidatePath("/vendors");
+  return { ok: true, deleted, failed };
+}
+
+/**
  * Reactivate a previously-deactivated vendor. Clears the deactivation flags so
  * the vendor returns to the picker. Idempotent.
  */

@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/current";
 import { loadLookups, specRefKinds } from "@/lib/import/lookups";
 import { sampleImportSpec } from "@/lib/import/specs/sample";
-import { ImportWorkbench } from "@/components/import/import-workbench";
+import { BulkUploadSheet } from "@/components/import/bulk-upload-sheet";
 import { commitSampleImport } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +21,7 @@ export default async function SampleImportPage() {
       <p className="text-body-lg text-ink-subtle mt-1 mb-6">
         Download the template, fill it, upload, fix any flagged cells inline, then import.
       </p>
-      <ImportWorkbench spec={sampleImportSpec} lookups={lookups} isAdmin commit={commitSampleImport} />
+      <BulkUploadSheet spec={sampleImportSpec} lookups={lookups} isAdmin commit={commitSampleImport} />
     </main>
   );
 }

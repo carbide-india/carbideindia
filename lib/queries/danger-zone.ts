@@ -128,6 +128,20 @@ export function cutoffFor(days: number): Date {
   return new Date(Date.now() - clampWindow(days) * 24 * 60 * 60 * 1000);
 }
 
+/**
+ * A cutoff Date rendered for use INSIDE a raw `sql` template.
+ *
+ * Drizzle's typed comparisons (lt/gt/eq) map a JS Date through the column's
+ * driver mapper, but a bare `${date}` inside a `sql` template reaches
+ * postgres-js as an untyped parameter and throws
+ * `TypeError: The "string" argument must be of type string … Received an
+ * instance of Date`. Passing the ISO string with an explicit ::timestamptz cast
+ * gives the driver a string and Postgres the right type.
+ */
+function cutoffParam(cutoff: Date) {
+  return sql`${cutoff.toISOString()}::timestamptz`;
+}
+
 /** Human label for a `form_drafts.form_key` (the enquiry form predates the map). */
 function formLabel(formKey: string): string {
   if (isFormDraftKind(formKey)) return FORM_DRAFT_META[formKey].noun;
@@ -151,7 +165,7 @@ async function previewRecycledDrafts(days: number): Promise<RecycledDraftPreview
       .select({
         totalRecycled: sql<number>`(count(*) filter (where ${formDrafts.deletedAt} is not null))::int`,
         activeProtected: sql<number>`(count(*) filter (where ${formDrafts.deletedAt} is null))::int`,
-        oldest: sql<Date | null>`min(${formDrafts.deletedAt}) filter (where ${formDrafts.deletedAt} < ${cutoff})`,
+        oldest: sql<Date | null>`min(${formDrafts.deletedAt}) filter (where ${formDrafts.deletedAt} < ${cutoffParam(cutoff)})`,
       })
       .from(formDrafts),
     db
@@ -182,9 +196,9 @@ async function previewReadNotifications(days: number): Promise<ReadNotificationP
     db
       .select({
         total: sql<number>`count(*)::int`,
-        eligible: sql<number>`(count(*) filter (where ${notifications.readAt} is not null and ${notifications.createdAt} < ${cutoff}))::int`,
-        unreadProtected: sql<number>`(count(*) filter (where ${notifications.readAt} is null and ${notifications.createdAt} < ${cutoff}))::int`,
-        oldest: sql<Date | null>`min(${notifications.createdAt}) filter (where ${notifications.readAt} is not null and ${notifications.createdAt} < ${cutoff})`,
+        eligible: sql<number>`(count(*) filter (where ${notifications.readAt} is not null and ${notifications.createdAt} < ${cutoffParam(cutoff)}))::int`,
+        unreadProtected: sql<number>`(count(*) filter (where ${notifications.readAt} is null and ${notifications.createdAt} < ${cutoffParam(cutoff)}))::int`,
+        oldest: sql<Date | null>`min(${notifications.createdAt}) filter (where ${notifications.readAt} is not null and ${notifications.createdAt} < ${cutoffParam(cutoff)})`,
       })
       .from(notifications),
     // Dispatch-log rows disappear by ON DELETE CASCADE - count them so the
@@ -216,8 +230,8 @@ async function previewStaleDevices(days: number): Promise<StaleDevicePreview> {
     db
       .select({
         total: sql<number>`count(*)::int`,
-        eligible: sql<number>`(count(*) filter (where ${pushSubscriptions.lastSeenAt} < ${cutoff}))::int`,
-        oldest: sql<Date | null>`min(${pushSubscriptions.lastSeenAt}) filter (where ${pushSubscriptions.lastSeenAt} < ${cutoff})`,
+        eligible: sql<number>`(count(*) filter (where ${pushSubscriptions.lastSeenAt} < ${cutoffParam(cutoff)}))::int`,
+        oldest: sql<Date | null>`min(${pushSubscriptions.lastSeenAt}) filter (where ${pushSubscriptions.lastSeenAt} < ${cutoffParam(cutoff)})`,
       })
       .from(pushSubscriptions),
     db

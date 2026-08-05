@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   clientContacts,
@@ -95,7 +95,7 @@ export async function getClientHeader(
     const opts = await db
       .select({ id: masterOptions.id, name: masterOptions.name })
       .from(masterOptions)
-      .where(sql`${masterOptions.id} = ANY(${allIds})`);
+      .where(inArray(masterOptions.id, allIds));
     for (const o of opts) nameById.set(o.id, o.name);
   }
   const resolve = (ids: string[]): string[] =>
@@ -547,7 +547,7 @@ export async function getClientFinancials(
     const opts = await db
       .select({ id: masterOptions.id, name: masterOptions.name })
       .from(masterOptions)
-      .where(sql`${masterOptions.id} = ANY(${allIds})`);
+      .where(inArray(masterOptions.id, allIds));
     for (const o of opts) nameById.set(o.id, o.name);
   }
   const resolve = (ids: string[]): string[] =>

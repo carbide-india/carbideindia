@@ -4,7 +4,13 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { costings, costingVendorQuotes, inquiryItems, type NewCosting } from "@/db/schema";
+import {
+  costings,
+  costingVendorQuotes,
+  inquiryItems,
+  productionOrders,
+  type NewCosting,
+} from "@/db/schema";
 import { requireAdmin, requireUser } from "@/lib/auth/current";
 import {
   CreateCostingSchema,
@@ -1051,4 +1057,140 @@ export async function saveCostingMaster(
     console.error("[saveCostingMaster]", err);
     return { ok: false, error: "Could not save the costing - please try again." };
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Delete (hard) — admin only, reference- AND approval-guarded.
+//
+// `costings` carries no deleted_at / is_active / archived column, so a soft form
+// is impossible without a migration; hard delete is the only shape available.
+// It is defensible ONLY because of the guard below, which refuses every row that
+// anything downstream depends on. The everyday case this serves is a throwaway
+// DRAFT costing that was never approved.
+//
+// Admin-only, matching this module's posture for consequential writes
+// (approveCostingDecision / unlockCostingDecision are both requireAdmin).
+// ─────────────────────────────────────────────────────────────────────────────
+
+const isUuid = (v: string): boolean => UUID_RE.test(v);
+
+type CostingBlock = "missing" | "locked" | "in_use";
+
+const COSTING_BLOCK_MESSAGES: Record<CostingBlock, string> = {
+  missing: "Costing not found.",
+  locked:
+    "Approved & locked - unlock the costing decision before deleting it.",
+  in_use: "In use by a production order - can't delete.",
+};
+
+/**
+ * Decide whether ONE costing may be hard-deleted; also returns its parent
+ * inquiry so the caller can revalidate the SM page. Blocked when:
+ *
+ *  - `is_locked` is true or `approved_at` is set. `final_unit_cost` on a locked
+ *    costing is the authoritative cost basis `createQuotation` gates every quote
+ *    line against (`getChosenCostingLocksForItems`). That link is enforced in
+ *    CODE, not by an FK, so deleting the row destroys the approval trail behind
+ *    an already-issued quotation without any DB error at all.
+ *  - `production_orders.costing_id` still points at it. That FK is ON DELETE SET
+ *    NULL, so the delete would succeed and silently blank the cost anchor on a
+ *    live production order (same posture as `deleteQuotation`).
+ *
+ * `costing_vendor_quotes.costing_id` is ON DELETE CASCADE and is this costing's
+ * OWN child matrix, so it is deliberately NOT counted - it goes with the row.
+ */
+async function inspectCostingForDelete(
+  id: string,
+): Promise<{ block: CostingBlock | null; inquiryId: string | null }> {
+  const [row] = await db
+    .select({
+      inquiryId: costings.inquiryId,
+      isLocked: costings.isLocked,
+      approvedAt: costings.approvedAt,
+    })
+    .from(costings)
+    .where(eq(costings.id, id))
+    .limit(1);
+  if (!row) return { block: "missing", inquiryId: null };
+  if (row.isLocked || row.approvedAt !== null) {
+    return { block: "locked", inquiryId: row.inquiryId };
+  }
+  const refs = await db.$count(
+    productionOrders,
+    eq(productionOrders.costingId, id),
+  );
+  if (refs > 0) return { block: "in_use", inquiryId: row.inquiryId };
+  return { block: null, inquiryId: row.inquiryId };
+}
+
+/**
+ * Hard-delete a single costing (its vendor-quote matrix cascades). Refuses when
+ * the costing is approved/locked or a production order was built against it.
+ */
+export async function deleteCosting(
+  id: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requireAdmin();
+  if (!isUuid(id)) return { ok: false, error: "Invalid costing id." };
+
+  let inquiryId: string | null = null;
+  try {
+    const inspected = await inspectCostingForDelete(id);
+    if (inspected.block) {
+      return { ok: false, error: COSTING_BLOCK_MESSAGES[inspected.block] };
+    }
+    inquiryId = inspected.inquiryId;
+    await db.delete(costings).where(eq(costings.id, id));
+  } catch (err) {
+    console.error("[deleteCosting] failed", err);
+    return { ok: false, error: "Could not delete the costing. Please try again." };
+  }
+
+  revalidatePath("/costings");
+  if (inquiryId) revalidatePath("/inquiries/" + inquiryId);
+  return { ok: true };
+}
+
+/**
+ * Hard-delete the selected costings, SKIPPING any that are approved & locked or
+ * referenced by a production order. Reports how many were deleted vs. skipped so
+ * the UI can say so honestly.
+ */
+export async function deleteCostingsBulk(
+  ids: string[],
+): Promise<
+  | { ok: true; deleted: number; failed: number }
+  | { ok: false; error: string }
+> {
+  await requireAdmin();
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { ok: false, error: "No rows selected." };
+  }
+  if (!ids.every(isUuid)) return { ok: false, error: "Invalid costing id." };
+
+  let deleted = 0;
+  let failed = 0;
+  const touchedInquiries = new Set<string>();
+
+  for (const id of ids) {
+    try {
+      const inspected = await inspectCostingForDelete(id);
+      if (inspected.block) {
+        failed++;
+        continue;
+      }
+      await db.delete(costings).where(eq(costings.id, id));
+      deleted++;
+      if (inspected.inquiryId) touchedInquiries.add(inspected.inquiryId);
+    } catch (err) {
+      console.error("[deleteCostingsBulk] failed for", id, err);
+      failed++;
+    }
+  }
+
+  revalidatePath("/costings");
+  for (const inquiryId of touchedInquiries) {
+    revalidatePath("/inquiries/" + inquiryId);
+  }
+  return { ok: true, deleted, failed };
 }

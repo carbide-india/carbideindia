@@ -3,14 +3,22 @@
 import * as React from "react";
 import Link from "next/link";
 import type { Route } from "next";
+import { useRouter } from "next/navigation";
+import { ArrowUpRight, Trash2 } from "lucide-react";
 import { formatInr, formatDate } from "@/lib/format";
 import { Chip } from "@/components/inquiries/chip";
 import {
   RegisterDataTable,
   type RegisterColumn,
   type FilterConfig,
+  type RowMenuItem,
 } from "@/components/registers/register-data-table";
-import { setSalesOrderSentBulk } from "@/app/(app)/sales-orders/actions";
+import { fireToast } from "@/lib/toast";
+import {
+  setSalesOrderSentBulk,
+  deleteSalesOrder,
+  deleteSalesOrdersBulk,
+} from "@/app/(app)/sales-orders/actions";
 import type { SalesOrderListItem } from "@/lib/queries/sales-orders";
 
 export const NEW_SALES_ORDER_ROUTE: Route = "/sales-orders/new";
@@ -42,6 +50,46 @@ function soDate(r: SalesOrderListItem): Date {
  * legit two-way SO-Sent toggle.
  */
 export function SoTable({ rows }: Props) {
+  const router = useRouter();
+
+  // Per-row actions menu: Open + a destructive Delete. Delete is a HARD delete
+  // (sales orders have no record-level recycle bin), so it confirms first and
+  // the server action refuses when a job card / production order / dispatch /
+  // invoice was built from it (directly or through one of its lines).
+  const rowMenu = React.useCallback(
+    (r: SalesOrderListItem): RowMenuItem<SalesOrderListItem>[] => [
+      {
+        key: "open",
+        label: "Open",
+        Icon: ArrowUpRight,
+        href: `/sales-orders/${r.id}` as Route,
+      },
+      {
+        key: "delete",
+        label: "Delete",
+        Icon: Trash2,
+        danger: true,
+        onSelect: async (row) => {
+          if (
+            !window.confirm(
+              `Delete sales order ${row.soNo}? This can't be undone.`,
+            )
+          ) {
+            return;
+          }
+          const res = await deleteSalesOrder(row.id);
+          if (res.ok) {
+            fireToast({ message: `Deleted ${row.soNo}.` });
+            router.refresh();
+          } else {
+            fireToast({ message: res.error, type: "error" });
+          }
+        },
+      },
+    ],
+    [router],
+  );
+
   const columns = React.useMemo<RegisterColumn<SalesOrderListItem>[]>(
     () => [
       {
@@ -156,6 +204,7 @@ export function SoTable({ rows }: Props) {
       getOpenHref={(r) => `/sales-orders/${r.id}` as Route}
       filters={filters}
       exportFilename="sales-orders"
+      rowMenu={rowMenu}
       bulkAction={{
         label: "Set SO Sent",
         options: [
@@ -163,6 +212,27 @@ export function SoTable({ rows }: Props) {
           { value: "no", label: "Not Sent" },
         ],
         onApply: (ids, value) => setSalesOrderSentBulk(ids, value),
+      }}
+      bulkDelete={{
+        noun: { one: "sales order", many: "sales orders" },
+        onDelete: async (ids) => {
+          const res = await deleteSalesOrdersBulk(ids);
+          if (!res.ok) return { ok: false, error: res.error };
+          if (res.failed > 0) {
+            // Partial run: report the real split via `message`. The bar's
+            // default toast counts the SELECTION and would claim rows the
+            // reference guard actually left in place.
+            const why =
+              "skipped (in use by a job card / production order / dispatch / invoice)";
+            return res.deleted === 0
+              ? { ok: false, error: `Nothing deleted - ${res.failed} ${why}.` }
+              : {
+                  ok: true,
+                  message: `${res.deleted} deleted, ${res.failed} ${why}.`,
+                };
+          }
+          return { ok: true };
+        },
       }}
       emptyTitle="No sales orders yet - record the first one."
       emptyHint="The customer PO and SO documents recorded against each quote appear here."
