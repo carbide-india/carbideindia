@@ -5,14 +5,17 @@ import { X, GitCompareArrows, CheckCircle2 } from "lucide-react";
 import type { SpecVarianceRow } from "@/lib/feasibility/spec-variance";
 
 /**
- * VarianceReport — presentational PF-vs-Costing spec variance modal.
+ * VarianceReport — presentational spec variance modal.
  *
- * A tabular modal [ Field | Feasibility (PF) | Costing (C) | Variance ] that
- * highlights rows whose value drifted from the frozen Primary-Feasibility
- * baseline. Purely presentational: it takes already-resolved rows (see
- * `computeSpecVariance`) so both Form 04 (feasibility) and Form 05 (costing)
- * can embed the same component. When nothing changed it shows a clean
- * "No changes from Primary Feasibility" state.
+ * A tabular modal [ Field | <baseline> | <current> | Variance ] that highlights
+ * rows whose value drifted from the frozen Primary-Feasibility baseline. Purely
+ * presentational: it takes already-resolved rows (see `computeSpecVariance`) so
+ * Form 04 (feasibility), the Secondary register and Form 05 (costing) all embed
+ * the SAME component. When nothing changed it shows a clean "no changes" state.
+ *
+ * The three captions default to the original Feasibility-vs-Costing wording;
+ * the Secondary Feasibility register overrides them to read Primary-vs-current
+ * without forking a second modal.
  */
 
 interface Props {
@@ -20,10 +23,24 @@ interface Props {
   /** Line identity for the modal header (e.g. product name / SM line). */
   title?: string;
   subtitle?: string;
+  /** Eyebrow caption above the title. */
+  heading?: string;
+  /** Column caption for the frozen baseline side. */
+  baselineLabel?: string;
+  /** Column caption for the live/current side. */
+  currentLabel?: string;
   onClose: () => void;
 }
 
-export function VarianceReport({ rows, title, subtitle, onClose }: Props) {
+export function VarianceReport({
+  rows,
+  title,
+  subtitle,
+  heading = "Variance · Feasibility vs Costing",
+  baselineLabel = "Feasibility (PF)",
+  currentLabel = "Costing (C)",
+  onClose,
+}: Props) {
   React.useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -52,7 +69,7 @@ export function VarianceReport({ rows, title, subtitle, onClose }: Props) {
           <div>
             <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.16em] text-[#3f3f94]">
               <GitCompareArrows size={14} strokeWidth={2.6} />
-              Variance · Feasibility vs Costing
+              {heading}
             </div>
             {title && (
               <h2 className="mt-1.5 text-[20px] font-black leading-tight tracking-tight text-ink-strong">
@@ -99,8 +116,8 @@ export function VarianceReport({ rows, title, subtitle, onClose }: Props) {
               <thead>
                 <tr className="bg-[#e7e9f6] text-[11px] font-black uppercase tracking-[0.08em] text-[#3f3f94]">
                   <th className="px-3.5 py-2.5">Field</th>
-                  <th className="px-3.5 py-2.5">Feasibility (PF)</th>
-                  <th className="px-3.5 py-2.5">Costing (C)</th>
+                  <th className="px-3.5 py-2.5">{baselineLabel}</th>
+                  <th className="px-3.5 py-2.5">{currentLabel}</th>
                   <th className="px-3.5 py-2.5 text-center">Variance</th>
                 </tr>
               </thead>

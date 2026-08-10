@@ -498,6 +498,13 @@
       "when": 1785866557388,
       "tag": "0071_nosy_starfox",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1786338778082,
+      "tag": "0072_icy_obadiah_stane",
+      "breakpoints": true
     }
   ]
 }

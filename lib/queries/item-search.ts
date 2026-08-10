@@ -141,6 +141,12 @@ export async function searchMaterials(
   }
 
   // Prefix/exact item-code matches rank first; then newest.
+  //
+  // Only applies when there IS a query. It must be left out entirely when
+  // browsing: a bare integer in ORDER BY is an ORDINAL COLUMN REFERENCE to
+  // Postgres, so the old `sql\`0\`` fallback produced `ORDER BY 0`, which fails
+  // with "ORDER BY position 0 is not in select list" — the browse case (empty
+  // box) threw while search worked, so the picker looked empty on open.
   const codeRank =
     q.length >= 2
       ? sql`CASE
@@ -148,7 +154,8 @@ export async function searchMaterials(
           WHEN ${items.itemCode} ILIKE ${`${q}%`} THEN 1
           WHEN ${items.itemCode} ILIKE ${`%${q}%`} THEN 2
           ELSE 3 END`
-      : sql`0`;
+      : null;
+  const orderBy = codeRank ? [codeRank, desc(items.createdAt)] : [desc(items.createdAt)];
 
   const rows = await db
     .select({
@@ -178,7 +185,7 @@ export async function searchMaterials(
     .leftJoin(tolerance, eq(items.toleranceId, tolerance.id))
     .leftJoin(condition, eq(items.conditionId, condition.id))
     .where(conds.length ? and(...conds) : undefined)
-    .orderBy(codeRank, desc(items.createdAt))
+    .orderBy(...orderBy)
     .limit(limit);
 
   return rows.map((r) => ({

@@ -15,12 +15,15 @@ import {
   CircleX,
   Clock3,
   CircleCheck,
+  GitCompareArrows,
+  PencilLine,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
 import { HubSearch } from "@/components/hub/hub-search";
 import { ModuleTitleBadge } from "@/components/layout/module-title-badge";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { FEASIBILITY_STAGE_BUCKETS, FEASIBILITY_STATUS_LABELS } from "@/db/enums";
 import { cn } from "@/lib/utils";
 
 /**
@@ -36,19 +39,41 @@ import { cn } from "@/lib/utils";
 /** A status filter nested under the Primary Feasibility destination. */
 interface StatusNav {
   label: string;
+  /** The `?status=` value, or "variance" for the `?variance=1` view. */
   status: string;
   Icon: typeof Circle;
 }
 
+/** One icon per house bucket — Secondary's sidebar uses the SAME five/six. */
+export const BUCKET_ICONS = {
+  not_started: Circle,
+  draft: PencilLine,
+  need_info: CircleHelp,
+  pending_approval: Clock3,
+  approved: CircleCheck,
+  not_feasible: CircleX,
+} as const;
+
+/**
+ * The Primary sidebar filters, built straight off FEASIBILITY_STAGE_BUCKETS so
+ * the sidebar, the dashboard strip and the table pill can never drift apart.
+ * Labels come from FEASIBILITY_STATUS_LABELS (the single source of truth) —
+ * the approved bucket therefore reads "Feasibility Approved".
+ */
 const PRIMARY_STATUS_NAV: StatusNav[] = [
-  { label: "Not Started", status: "not_started", Icon: Circle },
-  { label: "Need Info", status: "need_info", Icon: CircleHelp },
-  { label: "Not Feasible", status: "not_feasible", Icon: CircleX },
-  { label: "Pending Approval", status: "pending_approval", Icon: Clock3 },
-  { label: "Feasibility Confirmed", status: "proceed_to_costing", Icon: CircleCheck },
+  ...FEASIBILITY_STAGE_BUCKETS.map((b) => ({
+    label: FEASIBILITY_STATUS_LABELS[b],
+    status: b as string,
+    Icon:
+      b === "proceed_to_costing"
+        ? BUCKET_ICONS.approved
+        : BUCKET_ICONS[b as keyof typeof BUCKET_ICONS],
+  })),
+  { label: "Spec Variance", status: "variance", Icon: GitCompareArrows },
 ];
 
 function primaryHrefFor(status: string): Route {
+  if (status === "variance") return "/feasibility?variance=1" as Route;
   return (status ? `/feasibility?status=${status}` : "/feasibility") as Route;
 }
 
@@ -61,7 +86,9 @@ export function FeasibilityModuleShell({
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const activeStatus = searchParams.get("status") ?? "";
+  // `?variance=1` is a view of the same queue, so it shares the nested-filter slot.
+  const activeStatus =
+    searchParams.get("variance") === "1" ? "variance" : (searchParams.get("status") ?? "");
   const onQueue = pathname === "/feasibility";
   const [collapsed, setCollapsed] = useState(false);
 

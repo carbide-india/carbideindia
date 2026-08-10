@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Info, Clock, Globe, Lock, ShieldCheck } from "lucide-react";
 import { fireToast } from "@/lib/toast";
+import { formatDateTime } from "@/lib/format";
 import { updateOrgSettings } from "@/app/(admin)/admin/settings/actions";
 import type { OrgSettings } from "@/db/schema";
 
@@ -100,7 +101,7 @@ export function SettingsForm({ current }: Props) {
 
   const updatedAtLabel =
     current.updatedAt instanceof Date && current.updatedAt.getTime() > 0
-      ? current.updatedAt.toLocaleString()
+      ? formatDateTime(current.updatedAt)
       : "never";
 
   return (

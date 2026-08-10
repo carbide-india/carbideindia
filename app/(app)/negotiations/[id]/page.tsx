@@ -1,7 +1,11 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth/current";
-import { getNegotiationById, getNegotiationItems } from "@/lib/queries/negotiations";
+import {
+  getNegotiationById,
+  getNegotiationItems,
+  listRevisableCostingsForNegotiation,
+} from "@/lib/queries/negotiations";
 import { getInquiryById } from "@/lib/queries/inquiries";
 import { listEmployeeOptions } from "@/lib/queries/employees";
 import { getInquiryItemSeeds } from "@/lib/queries/quotes";
@@ -51,7 +55,15 @@ export default async function NegotiationDetailPage({ params }: PageProps) {
   // seed list lets us flag products added to the enquiry after this negotiation.
   // The linked quotation drives the Quote Send anchor; the PI list feeds the
   // iteration history + the customer-PO reconciliation.
-  const [employees, inquiry, lines, seeds, quotation, proformaInvoices] = await Promise.all([
+  const [
+    employees,
+    inquiry,
+    lines,
+    seeds,
+    quotation,
+    proformaInvoices,
+    revisableCostings,
+  ] = await Promise.all([
     listEmployeeOptions(),
     negotiation.inquiryId
       ? getInquiryById(negotiation.inquiryId)
@@ -64,6 +76,9 @@ export default async function NegotiationDetailPage({ params }: PageProps) {
       ? getQuotationById(negotiation.quotationId)
       : Promise.resolve(null),
     listProformaInvoicesForNegotiation(negotiation.id),
+    // Current-revision cost sheets behind this negotiation's product lines —
+    // the pick list for "not approved → new costing revision".
+    listRevisableCostingsForNegotiation(negotiation.id),
   ]);
 
   // Quote Send summary — the source quote's identity, falling back to the
@@ -130,6 +145,7 @@ export default async function NegotiationDetailPage({ params }: PageProps) {
         proformaInvoices={proformaInvoices}
         latestPiTotal={latestPiTotal}
         poDownloadUrl={poDownloadUrl}
+        revisableCostings={revisableCostings}
       />
     </main>
   );

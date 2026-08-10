@@ -10,6 +10,8 @@ import { Trash2, AlertTriangle, ShieldCheck, Lock } from "lucide-react";
 import {
   COSTING_DONE_STATUSES,
   COSTING_DONE_STATUS_LABELS,
+  DEPRECATED_COSTING_DONE_STATUSES,
+  QUOTATION_STATUS_LABELS,
 } from "@/db/enums";
 import { CreateQuotationSchema } from "@/lib/validators/quotation";
 import {
@@ -52,7 +54,11 @@ interface Props {
   initialValues?: Partial<QuotationFormValues>;
 }
 
-const COSTING_DONE_OPTIONS = COSTING_DONE_STATUSES.map((s) => ({
+/** Deprecated costing values stay in the enum for data-compat only - they are
+ *  never offered on a new record. */
+const COSTING_DONE_OPTIONS = COSTING_DONE_STATUSES.filter(
+  (s) => !(DEPRECATED_COSTING_DONE_STATUSES as readonly string[]).includes(s),
+).map((s) => ({
   value: s,
   label: COSTING_DONE_STATUS_LABELS[s],
 }));
@@ -639,6 +645,17 @@ export function QuotationForm({
 
       {/* 3. Status */}
       <SectionCard title="Status">
+        {/* The stage bucket is not picked here: a quotation created from an
+            approved & locked costing IS a draft, and moves through the house
+            buckets from the register / detail page. */}
+        <p className="-mt-1 mb-3 text-[12.5px] text-ink-muted">
+          This quotation will be created as{" "}
+          <span className="font-bold text-ink-strong">
+            {QUOTATION_STATUS_LABELS.draft}
+          </span>
+          . Move it through Need Info / Pending Approval / Quotation Approved
+          from the register.
+        </p>
         <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1 items-start">
           <Field label="Costing Done Status" labelOnly>
             <Controller

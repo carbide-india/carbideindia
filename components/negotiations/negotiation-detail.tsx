@@ -7,18 +7,26 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { ArrowLeft, ArrowUpRight, Loader2, Plus } from "lucide-react";
 import {
-  NEGOTIATION_STATUSES,
+  NEGOTIATION_STAGE_BUCKETS,
   NEGOTIATION_STATUS_LABELS,
   NEGOTIATION_STATUS_COLORS,
+  type NegotiationStatus,
 } from "@/db/enums";
 import type { Negotiation } from "@/db/schema";
-import type { NegotiationLineWithSpec } from "@/lib/queries/negotiations";
+import type {
+  NegotiationLineWithSpec,
+  RevisableCosting,
+} from "@/lib/queries/negotiations";
 import type { ProformaInvoiceWithItems } from "@/lib/queries/proforma-invoices";
 import {
   setNegotiationStatus,
   updateNegotiation,
 } from "@/app/(app)/negotiations/actions";
 import type { UpdateNegotiationInput } from "@/lib/validators/negotiation";
+import {
+  isNegotiationApprovedForSo,
+  NEGOTIATION_OUTCOMES,
+} from "@/lib/negotiations/buckets";
 import type { EmployeeOption } from "@/lib/queries/employees";
 import { formatDate, formatInr } from "@/lib/format";
 import { fireToast } from "@/lib/toast";
@@ -31,6 +39,11 @@ import {
 } from "@/components/negotiations/quote-send-header";
 import { PiHistory } from "@/components/negotiations/pi-history";
 import { CustomerPoCard } from "@/components/negotiations/customer-po-card";
+import { NegotiationApprovalCard } from "@/components/negotiations/negotiation-approval-card";
+import {
+  ReviseCostingCard,
+  type RevisableProductLabels,
+} from "@/components/negotiations/revise-costing-card";
 
 /** Slim link block for the header - resolved server-side from inquiryId. */
 export interface NegotiationInquiryLink {
@@ -52,7 +65,21 @@ interface Props {
   latestPiTotal: string | null;
   /** Presigned download URL for an already-uploaded customer-PO document. */
   poDownloadUrl: string | null;
+  /** Current-revision cost sheets behind this negotiation's product lines —
+   *  the pick list for the "not approved → new costing" loop. */
+  revisableCostings: RevisableCosting[];
 }
+
+/**
+ * Sidebar picker order: the five HOUSE buckets first (Not Started → Draft →
+ * Need Info → Pending Approval → Negotiation Approved), then the commercial
+ * outcomes. Both axes share one status column, so both must stay pickable —
+ * `order_won` in particular is load-bearing for SO provisioning.
+ */
+const STATUS_PICKER_ORDER: readonly NegotiationStatus[] = [
+  ...NEGOTIATION_STAGE_BUCKETS,
+  ...NEGOTIATION_OUTCOMES,
+];
 
 /** numeric-string → ₹, em-dash when unset/unparseable. */
 function money(value: string | null): string {
@@ -115,8 +142,22 @@ export function NegotiationDetail({
   proformaInvoices,
   latestPiTotal,
   poDownloadUrl,
+  revisableCostings,
 }: Props) {
   const router = useRouter();
+
+  // Product name per enquiry line, for the revise-costing picker. Read-through
+  // from the provenance inquiry line, falling back to the Item spec (§2.4).
+  const productLabels = React.useMemo<RevisableProductLabels>(() => {
+    const map: RevisableProductLabels = {};
+    for (const l of lines) {
+      if (!l.inquiryItemId) continue;
+      map[l.inquiryItemId] =
+        l.ask.custProductName ?? l.spec.gradeNameForCust ?? l.spec.itemCode ?? undefined;
+    }
+    return map;
+  }, [lines]);
+  const hasEnquiryLines = lines.some((l) => l.inquiryItemId !== null);
 
   const salesPerson =
     employees.find((e) => e.id === negotiation.salesPersonId)?.name ?? null;
@@ -248,6 +289,12 @@ export function NegotiationDetail({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr] items-start">
         {/* ── Main column ───────────────────────────────────────────── */}
         <div className="flex flex-col gap-6 min-w-0">
+          {/* House buckets + the approve gate that unlocks Issue Sales Order */}
+          <NegotiationApprovalCard
+            negotiationId={negotiation.id}
+            status={negotiation.negotiationStatus}
+          />
+
           {/* Quote Send anchor + PI progress strip + Issue PI trigger */}
           <QuoteSendHeader
             negotiationId={negotiation.id}
@@ -279,8 +326,17 @@ export function NegotiationDetail({
               }}
               latestPiTotal={latestPiTotal}
               poDownloadUrl={poDownloadUrl}
+              approvedForSo={isNegotiationApprovedForSo(negotiation.negotiationStatus)}
             />
           )}
+
+          {/* Not approved → the costing gets revised (new revision per sheet) */}
+          <ReviseCostingCard
+            negotiationId={negotiation.id}
+            costings={revisableCostings}
+            productLabels={productLabels}
+            hasLines={hasEnquiryLines}
+          />
 
           {/* Pricing (read) */}
           <SectionCard title="Pricing">
@@ -446,7 +502,7 @@ export function NegotiationDetail({
             </span>
             <StatusPicker
               value={negotiation.negotiationStatus}
-              options={NEGOTIATION_STATUSES}
+              options={STATUS_PICKER_ORDER}
               labels={NEGOTIATION_STATUS_LABELS}
               tones={NEGOTIATION_STATUS_COLORS}
               onPick={(next) => setNegotiationStatus(negotiation.id, next)}

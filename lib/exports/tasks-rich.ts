@@ -1,5 +1,4 @@
-import { format } from "date-fns";
-import { STATUS_LABELS_FALLBACK } from "@/lib/format";
+import { formatDate, STATUS_LABELS_FALLBACK } from "@/lib/format";
 import { PRIORITY_LABELS, type ApprovalStatus } from "@/db/enums";
 import type { TaskExportRow } from "@/lib/queries/tasks";
 
@@ -7,7 +6,7 @@ import type { TaskExportRow } from "@/lib/queries/tasks";
  * Rich-export columns shared between XLSX and PDF task exports.
  *
  * Both routes display human-readable labels (status, priority, approval)
- * and date-fns-formatted dates rather than raw enum values + ISO strings.
+ * and house DD-MM-YYYY dates rather than raw enum values + ISO strings.
  * The CSV export at /tasks/export keeps its raw enum-based payload so
  * downstream automations (Zapier, scripts) aren't broken - these two
  * formats are designed for humans.
@@ -35,7 +34,7 @@ const APPROVAL_LABEL: Record<ApprovalStatus, string> = {
 };
 
 const fmtDate = (d: Date | null | undefined): string =>
-  d ? format(d, "MMM d, yyyy") : "";
+  d ? formatDate(d) : "";
 
 export interface RichRow {
   clientName: string;

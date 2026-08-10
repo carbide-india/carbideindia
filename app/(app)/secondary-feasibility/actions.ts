@@ -1,12 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { inquiries, inquiryItems, masterOptions, type NewInquiry } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth/current";
 import { CHECK_STATES, DOC_GIVEN_OPTIONS, INQUIRY_SHAPES, type CheckState } from "@/db/enums";
+import { SECONDARY_SETTABLE_BUCKETS } from "@/lib/feasibility/stage-buckets";
 import { syncProductToItem, type ItemSpec } from "@/lib/item-master/sync";
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -259,4 +260,50 @@ export async function saveSecondaryProductDetails(
   revalidatePath(`/enquiries/register/${inquiryId}`);
   revalidatePath("/items");
   return { ok: true };
+}
+
+/* ── Secondary house-bucket quick-set (migration 0072) ───────────────────── */
+
+/**
+ * Only the WORKFLOW buckets can be set by hand. The two end buckets
+ * (Secondary Feasibility Approved / Not Feasible) are produced exclusively by
+ * "Mark Secondary Feasibility Done", because reaching Approved also locks the
+ * dimensions and confirms the line into Costing — a register that could flip
+ * that bit would create approved-but-uncostable lines.
+ */
+const SetSecondaryStatusSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1, "No rows selected.").max(500),
+  status: z.enum(SECONDARY_SETTABLE_BUCKETS),
+});
+
+/** Set the Secondary Feasibility bucket on one or more product LINES. */
+export async function setSecondaryFeasibilityStatusBulk(
+  ids: string[],
+  status: string,
+): Promise<Result> {
+  await requireAdmin();
+  const parsed = SetSecondaryStatusSchema.safeParse({ ids, status });
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid status." };
+  }
+
+  try {
+    await db
+      .update(inquiryItems)
+      .set({ secondaryFeasibilityStatus: parsed.data.status, updatedAt: new Date() })
+      .where(inArray(inquiryItems.id, parsed.data.ids));
+  } catch {
+    return { ok: false, error: "Could not update the selected product lines." };
+  }
+
+  revalidatePath("/secondary-feasibility");
+  return { ok: true };
+}
+
+/** Single-line convenience wrapper over {@link setSecondaryFeasibilityStatusBulk}. */
+export async function setSecondaryFeasibilityStatus(
+  inquiryItemId: string,
+  status: string,
+): Promise<Result> {
+  return setSecondaryFeasibilityStatusBulk([inquiryItemId], status);
 }

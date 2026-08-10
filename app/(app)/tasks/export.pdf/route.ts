@@ -5,6 +5,7 @@ import { parseTaskFilters } from "@/lib/task-filters";
 import { listTasksForExport, type TaskExportRow } from "@/lib/queries/tasks";
 import { MAX_EXPORT_ROWS, EXPORT_TOO_LARGE } from "@/lib/exports/csv";
 import { richExportFilename } from "@/lib/exports/tasks-rich";
+import { formatDate, formatDayMonth } from "@/lib/format";
 import type { TaskStatus, TaskPriority, ApprovalStatus } from "@/db/enums";
 
 /**
@@ -296,7 +297,8 @@ function drawMasthead(
     );
 
   // Top-right meta column - generated timestamp on top, signature below.
-  const generated = format(new Date(), "EEE, MMM d, yyyy · HH:mm");
+  const now_ = new Date();
+  const generated = `${format(now_, "EEE")}, ${formatDate(now_)} · ${format(now_, "HH:mm")}`;
   doc
     .font("Helvetica")
     .fontSize(8)
@@ -652,7 +654,7 @@ function drawCell(
         .text(row.title, cellX, cellY, { width: cellW, lineBreak: true });
       const subParts: string[] = [];
       if (row.revisedTargetDate) {
-        subParts.push(`REVISED ${format(row.revisedTargetDate, "MMM d").toUpperCase()}`);
+        subParts.push(`REVISED ${formatDayMonth(row.revisedTargetDate)}`);
       }
       if (row.tags && row.tags.length > 0) {
         subParts.push(row.tags.join(" · ").toUpperCase());
@@ -754,7 +756,7 @@ function drawCell(
     }
 
     case "due": {
-      const dueStr = format(row.dueAt, "MMM d, yyyy");
+      const dueStr = formatDate(row.dueAt);
       doc
         .font(isOverdue ? "Helvetica-Bold" : "Helvetica")
         .fontSize(9)
@@ -785,7 +787,7 @@ function drawCell(
         .font("Helvetica")
         .fontSize(9)
         .fillColor(COLORS.inkMuted)
-        .text(format(row.createdAt, "MMM d, yyyy"), cellX, cellY, {
+        .text(formatDate(row.createdAt), cellX, cellY, {
           width: cellW,
           align: c.align ?? "left",
           lineBreak: false,

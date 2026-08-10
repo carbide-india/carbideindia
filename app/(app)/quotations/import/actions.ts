@@ -10,10 +10,13 @@ export async function commitQuotationImport(rows: ImportRowPayload[]): Promise<I
   return runImportCommit(rows, {
     // Legacy bulk import of historical quote-master rows: these predate the
     // costing-lock workflow and carry no per-line inquiry_item link, so the
-    // Phase 5 costing hard-gate is bypassed for the importer only.
+    // Phase 5 costing hard-gate is bypassed for the importer only. Their real
+    // stage isn't knowable from the spreadsheet either, so they land in the
+    // Not Started bucket to be triaged rather than being called drafts.
     createRecord: (input) =>
       createQuotation(input as Parameters<typeof createQuotation>[0], {
         enforceCostingGate: false,
+        initialStatus: "not_started",
       }),
   });
 }

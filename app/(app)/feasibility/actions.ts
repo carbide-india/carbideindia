@@ -10,6 +10,10 @@ import {
   SaveFeasibilityChecklistSchema,
   SetFeasibilityStatusSchema,
 } from "@/lib/validators/feasibility";
+import {
+  effectiveSecondaryBucket,
+  nextSecondaryBucket,
+} from "@/lib/feasibility/stage-buckets";
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -197,6 +201,22 @@ export async function saveSecondaryFeasibility(input: {
   const notFeasible = markDone === true && effVerdict === "not_feasible";
   const willConfirm = markDone === true && !notFeasible;
 
+  // House bucket for the Secondary stage (migration 0072). Derived from the
+  // line's EFFECTIVE bucket so a legacy row (status still at the column default
+  // while its done/verdict stamps say otherwise) is never demoted by a save.
+  // `hasSecondaryData: true` because reaching this line IS a secondary capture.
+  const currentBucket = effectiveSecondaryBucket({
+    storedStatus: item.secondaryFeasibilityStatus,
+    secondaryDone: item.secondaryFeasibilityDone,
+    secVerdict: item.secVerdict,
+    hasSecondaryData: true,
+  });
+  const secondaryBucket = nextSecondaryBucket({
+    current: currentBucket,
+    markDone: markDone === true,
+    verdict: effVerdict,
+  });
+
   const patch = clean({
     outerDiaTol: fields.outerDiaTol,
     innerDiaTol: fields.innerDiaTol,
@@ -215,6 +235,10 @@ export async function saveSecondaryFeasibility(input: {
     secMaterialAvailability: fields.secMaterialAvailability,
     secVerdict: fields.secVerdict,
     secNotes: fields.secNotes,
+    // The bucket the Secondary register groups + counts by. Marking done is the
+    // only path to an end bucket (Approved / Not Feasible); a plain save lands
+    // on Draft, or Need Info when that verdict is set.
+    secondaryFeasibilityStatus: secondaryBucket,
     ...(markDone
       ? {
           secondaryFeasibilityDone: true,

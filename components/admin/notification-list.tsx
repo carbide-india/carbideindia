@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { format } from "date-fns";
+import { formatDateTime } from "@/lib/format";
 import type {
   Channel,
   ChannelStatus,
@@ -104,7 +104,7 @@ export function NotificationList({ rows, hasMore, loadOlderHref }: Props) {
                   <span>{n.kind.replace(/_/g, " ")}</span>
                   <span className="mx-1.5">·</span>
                   <span className="tabular-nums">
-                    {format(n.createdAt, "MMM d, HH:mm")}
+                    {formatDateTime(n.createdAt)}
                   </span>
                 </div>
               </div>

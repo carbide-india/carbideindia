@@ -1,6 +1,7 @@
 import { CircleCheck } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/current";
 import { listConfirmedFeasibility } from "@/lib/queries/feasibility";
+import { FEASIBILITY_STATUS_LABELS } from "@/db/enums";
 import { ConfirmedFeasibilityTable } from "@/components/feasibility/confirmed-feasibility-table";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +28,8 @@ export default async function ConfirmedFeasibilityPage() {
             Confirmed Feasibility Register
           </h1>
           <p className="mt-1.5 text-[13px] text-ink-subtle">
-            {rows.length} enquir{rows.length === 1 ? "y" : "ies"} with Feasibility Confirmed — ready for Costing.
+            {rows.length} enquir{rows.length === 1 ? "y" : "ies"} at{" "}
+            {FEASIBILITY_STATUS_LABELS.proceed_to_costing} — ready for Costing.
           </p>
         </div>
       </header>

@@ -29,6 +29,12 @@ import {
   type CreateSalesOrderInput,
   type UpdateSalesOrderInput,
 } from "@/lib/validators/sales-order";
+import {
+  SetSalesOrderStatusSchema,
+  SetCopySentSchema,
+  UpdateProductionNotesSchema,
+  UpdateLineProductionNotesSchema,
+} from "@/lib/sales-orders/validators";
 
 /**
  * Sales Order server actions - Phase 4 write path. No audit logging (same
@@ -331,6 +337,184 @@ export async function setSalesOrderSent(
   }
   revalidatePath("/sales-orders");
   revalidatePath(`/sales-orders/${id}`);
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// House stage buckets + the DUAL OUTPUT (customer copy / factory copy).
+//
+// One sales order produces TWO documents. The customer copy is the existing
+// customerSoLink / customerSoSent pair; the factory copy is productionSoLink +
+// its OWN productionSoSent flag plus the production narrative. The two send
+// states are independent on purpose - "SO gone to the customer" and "order
+// released to the shop floor" are different facts and the register must be able
+// to show either one as still pending.
+// ---------------------------------------------------------------------------
+
+/** Move the sales order between the house stage buckets. */
+export async function setSalesOrderStatus(
+  id: string,
+  status: string,
+): Promise<ActionResult> {
+  await requireUser();
+  if (!isUuid(id)) return { ok: false, error: "Invalid sales order id." };
+  const parsed = SetSalesOrderStatusSchema.safeParse({ status });
+  if (!parsed.success) return { ok: false, error: "Invalid status." };
+  try {
+    await db
+      .update(salesOrders)
+      .set({ salesOrderStatus: parsed.data.status, updatedAt: new Date() })
+      .where(eq(salesOrders.id, id));
+  } catch (err) {
+    console.error("[setSalesOrderStatus] failed", err);
+    return { ok: false, error: "Could not update the status. Please try again." };
+  }
+  revalidatePath("/sales-orders");
+  revalidatePath(`/sales-orders/${id}`);
+  return { ok: true };
+}
+
+/** Bulk stage-bucket move over the selected register rows. */
+export async function setSalesOrderStatusBulk(
+  ids: string[],
+  value: string,
+): Promise<ActionResult> {
+  await requireUser();
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { ok: false, error: "No rows selected." };
+  }
+  if (!ids.every(isUuid)) return { ok: false, error: "Invalid sales order id." };
+  const parsed = SetSalesOrderStatusSchema.safeParse({ status: value });
+  if (!parsed.success) return { ok: false, error: "Invalid status." };
+  try {
+    await db
+      .update(salesOrders)
+      .set({ salesOrderStatus: parsed.data.status, updatedAt: new Date() })
+      .where(inArray(salesOrders.id, ids));
+  } catch (err) {
+    console.error("[setSalesOrderStatusBulk] failed", err);
+    return { ok: false, error: "Could not update the sales orders. Please try again." };
+  }
+  revalidatePath("/sales-orders");
+  return { ok: true };
+}
+
+/** Toggle the send-state of ONE of the two copies. */
+export async function setSalesOrderCopySent(
+  id: string,
+  copy: string,
+  sent: boolean,
+): Promise<ActionResult> {
+  await requireUser();
+  if (!isUuid(id)) return { ok: false, error: "Invalid sales order id." };
+  const parsed = SetCopySentSchema.safeParse({ copy, sent });
+  if (!parsed.success) return { ok: false, error: "Invalid value" };
+  const patch =
+    parsed.data.copy === "factory"
+      ? { productionSoSent: parsed.data.sent }
+      : { customerSoSent: parsed.data.sent };
+  try {
+    await db
+      .update(salesOrders)
+      .set({ ...patch, updatedAt: new Date() })
+      .where(eq(salesOrders.id, id));
+  } catch (err) {
+    console.error("[setSalesOrderCopySent] failed", err);
+    return { ok: false, error: "Could not update the sales order. Please try again." };
+  }
+  revalidatePath("/sales-orders");
+  revalidatePath(`/sales-orders/${id}`);
+  return { ok: true };
+}
+
+/** Bulk-toggle the FACTORY copy's send flag ("yes" / "no"). The customer copy
+ *  has its own long-standing bulk action (`setSalesOrderSentBulk`). */
+export async function setProductionSoSentBulk(
+  ids: string[],
+  value: string,
+): Promise<ActionResult> {
+  await requireUser();
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { ok: false, error: "No rows selected." };
+  }
+  if (!ids.every(isUuid)) return { ok: false, error: "Invalid sales order id." };
+  if (value !== "yes" && value !== "no") return { ok: false, error: "Invalid value" };
+  try {
+    await db
+      .update(salesOrders)
+      .set({ productionSoSent: value === "yes", updatedAt: new Date() })
+      .where(inArray(salesOrders.id, ids));
+  } catch (err) {
+    console.error("[setProductionSoSentBulk] failed", err);
+    return { ok: false, error: "Could not update the sales orders. Please try again." };
+  }
+  revalidatePath("/sales-orders");
+  return { ok: true };
+}
+
+/**
+ * Header-level production narrative - prints on the FACTORY copy only.
+ * Deliberately free text: the precise extra production FIELDS are still to be
+ * collected from Alok, so nothing here pretends to be a structured spec sheet.
+ */
+export async function updateProductionNotes(
+  id: string,
+  productionNotes: string | null,
+): Promise<ActionResult> {
+  await requireUser();
+  if (!isUuid(id)) return { ok: false, error: "Invalid sales order id." };
+  const parsed = UpdateProductionNotesSchema.safeParse({ productionNotes });
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+  try {
+    await db
+      .update(salesOrders)
+      .set({ productionNotes: parsed.data.productionNotes, updatedAt: new Date() })
+      .where(eq(salesOrders.id, id));
+  } catch (err) {
+    console.error("[updateProductionNotes] failed", err);
+    return { ok: false, error: "Could not save the production notes. Please try again." };
+  }
+  revalidatePath(`/sales-orders/${id}`);
+  return { ok: true };
+}
+
+/** Per-line production note - prints on the FACTORY copy only. The line must
+ *  belong to this sales order (a hostile client can post any uuid). */
+export async function updateLineProductionNotes(
+  salesOrderId: string,
+  lineId: string,
+  productionNotes: string | null,
+): Promise<ActionResult> {
+  await requireUser();
+  if (!isUuid(salesOrderId)) return { ok: false, error: "Invalid sales order id." };
+  const parsed = UpdateLineProductionNotesSchema.safeParse({
+    lineId,
+    productionNotes,
+  });
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+  try {
+    const res = await db
+      .update(salesOrderItems)
+      .set({ productionNotes: parsed.data.productionNotes, updatedAt: new Date() })
+      .where(
+        and(
+          eq(salesOrderItems.id, parsed.data.lineId),
+          eq(salesOrderItems.salesOrderId, salesOrderId),
+        ),
+      )
+      .returning({ id: salesOrderItems.id });
+    if (res.length === 0) {
+      return { ok: false, error: "That line isn't part of this sales order." };
+    }
+  } catch (err) {
+    console.error("[updateLineProductionNotes] failed", err);
+    return { ok: false, error: "Could not save the production notes. Please try again." };
+  }
+  revalidatePath(`/sales-orders/${salesOrderId}`);
   return { ok: true };
 }
 

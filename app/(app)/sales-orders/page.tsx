@@ -4,8 +4,20 @@ import {
   SoTable,
   NEW_SALES_ORDER_ROUTE,
 } from "@/components/sales-orders/so-table";
+import { SoBucketStrip } from "@/components/sales-orders/so-bucket-strip";
 import { requireUser } from "@/lib/auth/current";
 import { listSalesOrders } from "@/lib/queries/sales-orders";
+import {
+  SALES_ORDER_STATUSES,
+  SALES_ORDER_STATUS_LABELS,
+  type SalesOrderStatus,
+} from "@/db/enums";
+import {
+  applySalesOrderFilters,
+  isOutputFilter,
+  outputCounts,
+  stageBucketCounts,
+} from "@/lib/sales-orders/buckets";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
 import { UserMenuServer } from "@/components/header/user-menu-server";
 import { loadLookups, specRefKinds } from "@/lib/import/lookups";
@@ -15,17 +27,56 @@ import { BulkImportModal } from "@/components/import/bulk-import-modal";
 
 export const dynamic = "force-dynamic";
 
+const OUTPUT_LABELS: Record<string, string> = {
+  customer_pending: "Customer Copy Pending",
+  customer_sent: "Customer Copy Sent",
+  factory_pending: "Factory Copy Pending",
+  factory_sent: "Factory Copy Sent",
+};
+
+interface PageProps {
+  searchParams: Promise<{ status?: string; output?: string }>;
+}
+
 /**
  * Sales Order Register - the customer PO / SO list, rendered inside the shared
  * Enquiries module shell (logo sidebar + indigo header). On /sales-orders the
  * shell sidebar reads as the register family automatically, so no custom nav is
- * passed. The advanced table owns search / filtering / sorting client-side, so
- * the page just loads the full register set.
+ * passed.
+ *
+ * Two count strips sit above the table (`SoBucketStrip`): the house STAGE
+ * buckets, and the DUAL OUTPUT split - one order produces a customer copy and a
+ * factory copy, each with its own send state, so "what is left" has to be
+ * answerable per copy. Both strips are computed over the FULL register set and
+ * link into the filtered view via `?status=` / `?output=`; the table itself
+ * still owns search / sorting / column filters client-side.
  */
-export default async function SalesOrdersPage() {
+export default async function SalesOrdersPage({ searchParams }: PageProps) {
   const me = await requireUser();
 
-  const rows = await listSalesOrders({});
+  const all = await listSalesOrders({});
+
+  // URL-as-state, validated: anything unrecognised falls back to "no filter"
+  // rather than silently hiding rows.
+  const sp = await searchParams;
+  const activeStatus = SALES_ORDER_STATUSES.includes(sp.status as SalesOrderStatus)
+    ? (sp.status as SalesOrderStatus)
+    : null;
+  const activeOutput = isOutputFilter(sp.output) ? sp.output : null;
+
+  // Counts are always over `all` - never over the filtered set, or clicking a
+  // tile would rewrite the very numbers you were reading.
+  const buckets = stageBucketCounts(all);
+  const outputs = outputCounts(all);
+  const rows = applySalesOrderFilters(all, {
+    status: activeStatus,
+    output: activeOutput,
+  });
+
+  const filterLabels = [
+    activeStatus ? SALES_ORDER_STATUS_LABELS[activeStatus] : null,
+    activeOutput ? OUTPUT_LABELS[activeOutput] ?? null : null,
+  ].filter((v): v is string => v !== null);
 
   // Admins get a Bulk Upload entry in the sidebar (opens the import modal — same
   // popup flow as the New Sales Order form).
@@ -54,9 +105,16 @@ export default async function SalesOrdersPage() {
           <div>
             <h1 className="text-[26px] font-black leading-none tracking-tight text-[#3f3f94]">
               Sales Order Register
+              {filterLabels.length > 0 && (
+                <span className="ml-2 text-[16px] font-bold text-ink-subtle">
+                  · {filterLabels.join(" · ")}
+                </span>
+              )}
             </h1>
             <p className="mt-1.5 text-[12.5px] font-semibold tabular-nums text-[#6b7280]">
-              {rows.length} {rows.length === 1 ? "sales order" : "sales orders"}
+              {filterLabels.length > 0
+                ? `${rows.length} of ${all.length} ${all.length === 1 ? "sales order" : "sales orders"}`
+                : `${all.length} ${all.length === 1 ? "sales order" : "sales orders"}`}
             </p>
           </div>
           <Link
@@ -73,6 +131,14 @@ export default async function SalesOrdersPage() {
             New Sales Order
           </Link>
         </header>
+
+        <SoBucketStrip
+          buckets={buckets}
+          outputs={outputs}
+          activeStatus={activeStatus}
+          activeOutput={activeOutput}
+          total={all.length}
+        />
 
         <SoTable rows={rows} />
       </div>

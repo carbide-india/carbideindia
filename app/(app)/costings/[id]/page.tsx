@@ -5,13 +5,23 @@ import type { Route } from "next";
 import type { Metadata } from "next";
 import { ArrowLeft } from "lucide-react";
 import { requireUser } from "@/lib/auth/current";
-import { getCostingById } from "@/lib/queries/costings";
+import {
+  getCostingById,
+  getCostingLineIdentity,
+  getCostingRevisionsForItem,
+} from "@/lib/queries/costings";
+import { getInquiryVarianceRows } from "@/lib/queries/feasibility";
 import { formatDate, formatInr } from "@/lib/format";
 import {
   COSTING_ROUTE_LABELS,
   COSTING_LOGIC_LABELS,
   COSTING_DONE_STATUS_LABELS,
 } from "@/db/enums";
+import { CostingStagePanel } from "@/components/costings/costing-stage-panel";
+import {
+  CostingRevisionsPanel,
+  type CostingRevisionSheet,
+} from "@/components/costings/costing-revisions-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +49,68 @@ export default async function CostingDetailPage({ params }: PageProps) {
   if (!row) notFound();
 
   const isInhouse = row.costingType === "inhouse";
+
+  // Stage + history context. `getInquiryVarianceRows` is the SAME PF-vs-Costing
+  // engine the Costing Master form uses (lib/feasibility/spec-variance.ts) —
+  // Manan asked for that view "there AND here", so the saved costing shows it
+  // read-only rather than only the entry form having it.
+  const [identity, allRevisions, varianceByItem] = await Promise.all([
+    getCostingLineIdentity(row.inquiryItemId),
+    getCostingRevisionsForItem(row.inquiryItemId),
+    getInquiryVarianceRows(row.inquiryId),
+  ]);
+
+  // Revisions are numbered within their own route chain (an in-house sheet and a
+  // bought-out sheet are alternatives, not successive revisions of each other).
+  const revisions: CostingRevisionSheet[] = allRevisions
+    .filter((r) => r.costingType === row.costingType)
+    .map((r) => ({
+      id: r.id,
+      route: r.costingType,
+      status: r.costingDoneStatus,
+      isChosen: r.isChosen,
+      isLatestRevision: r.isLatestRevision,
+      isLocked: r.isLocked,
+      revisionReason: r.revisionReason,
+      createdAt: r.createdAt,
+      // The diffable costing numbers (see lib/costing/costing-variance.ts).
+      costingType: r.costingType,
+      costingLogic: r.costingLogic,
+      qty: r.qty,
+      blockWtPerPiece: r.blockWtPerPiece,
+      blockWtOrderKg: r.blockWtOrderKg,
+      directWtPerPiece: r.directWtPerPiece,
+      directWtOrderKg: r.directWtOrderKg,
+      totalWtOrderKg: r.totalWtOrderKg,
+      pressingWt: r.pressingWt,
+      theoreticalWt: r.theoreticalWt,
+      blockWt: r.blockWt,
+      lossPct: r.lossPct,
+      rmPricePerKg: r.rmPricePerKg,
+      vaPct: r.vaPct,
+      shapingRatePerMin: r.shapingRatePerMin,
+      shapingMins: r.shapingMins,
+      machiningRate: r.machiningRate,
+      overheadPct: r.overheadPct,
+      negotiationPct: r.negotiationPct,
+      toolFlatCost: r.toolFlatCost,
+      toolPerPieceCost: r.toolPerPieceCost,
+      developmentCost: r.developmentCost,
+      outsourcedVendorCost: r.outsourcedVendorCost,
+      vendorOhPct: r.vendorOhPct,
+      sinteredPricePerPiece: r.sinteredPricePerPiece,
+      shapingCostPerPiece: r.shapingCostPerPiece,
+      machiningCostPerPiece: r.machiningCostPerPiece,
+      costAfterMachining: r.costAfterMachining,
+      finalCostPerPiece: r.finalCostPerPiece,
+      quoteValue: r.quoteValue,
+      paymentTerms: r.paymentTerms,
+      deliveryTime: r.deliveryTime,
+      validity: r.validity,
+    }));
+
+  const specVariance = varianceByItem[row.inquiryItemId] ?? null;
+  const specChanged = specVariance?.filter((v) => v.changed) ?? [];
 
   function money(v: string | null): string {
     if (!v) return "--";
@@ -82,6 +154,23 @@ export default async function CostingDetailPage({ params }: PageProps) {
           <h1 className="text-[32px] font-black leading-tight tracking-tight text-ink-strong mt-1">
             {isInhouse ? "In-house" : "Bought-Out"} Cost Sheet
           </h1>
+          {identity && (
+            <p className="text-[14px] font-semibold text-ink-soft mt-1">
+              {identity.smNumber ?? "-"}
+              {identity.custProductName && (
+                <>
+                  <span className="mx-2 text-ink-subtle">&#183;</span>
+                  {identity.custProductName}
+                </>
+              )}
+              {identity.companyName && (
+                <>
+                  <span className="mx-2 text-ink-subtle">&#183;</span>
+                  {identity.companyName}
+                </>
+              )}
+            </p>
+          )}
           <p className="text-[15px] text-ink-muted mt-1">
             {COSTING_DONE_STATUS_LABELS[row.costingDoneStatus]}
             {row.qty && (
@@ -139,6 +228,59 @@ export default async function CostingDetailPage({ params }: PageProps) {
             )}
           </div>
         </section>
+
+        {/* Stage buckets: status, Need Info note, target date */}
+        <CostingStagePanel
+          costingId={row.id}
+          status={row.costingDoneStatus}
+          needInfoNote={row.needInfoNote}
+          targetDate={row.targetDate}
+          isLocked={row.isLocked}
+        />
+
+        {/* Costing 1 / 2 / 3 + the difference between any two */}
+        <CostingRevisionsPanel currentId={row.id} revisions={revisions} />
+
+        {/* PF-vs-Costing spec variance — the same report the Costing Master form
+            shows while editing, kept visible on the saved sheet. */}
+        {specVariance && specVariance.length > 0 && (
+          <ReadCard title="Variance · Primary Feasibility vs Costing">
+            <p className="mb-3 text-[13px] font-bold text-ink-soft">
+              {specChanged.length === 0
+                ? "No spec has moved since the Primary Feasibility baseline was frozen."
+                : `${specChanged.length} spec field${specChanged.length === 1 ? "" : "s"} changed since the Primary Feasibility baseline.`}
+            </p>
+            {specChanged.length > 0 && (
+              <div className="overflow-x-auto rounded-xl border border-hairline">
+                <table className="w-full border-collapse text-left text-[13px]">
+                  <thead>
+                    <tr className="bg-surface-soft text-[11px] font-black uppercase tracking-[0.08em] text-ink-subtle">
+                      <th scope="col" className="px-3 py-2">Field</th>
+                      <th scope="col" className="px-3 py-2">Feasibility (PF)</th>
+                      <th scope="col" className="px-3 py-2">Costing (C)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-hairline">
+                    {specChanged.map((v) => (
+                      <tr key={v.field}>
+                        <td className="px-3 py-2 font-bold text-ink-strong">{v.label}</td>
+                        <td className="px-3 py-2 tabular-nums text-ink-soft">
+                          {v.feasibilityValue}
+                        </td>
+                        <td
+                          className="px-3 py-2 tabular-nums"
+                          style={{ color: "var(--color-amber-deep)", fontWeight: 800 }}
+                        >
+                          {v.costingValue}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </ReadCard>
+        )}
 
         {/* In-house breakdown cards */}
         {isInhouse && (

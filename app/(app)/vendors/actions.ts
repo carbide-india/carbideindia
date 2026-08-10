@@ -74,6 +74,10 @@ export async function createVendor(
         defaultCreditDays: v.defaultCreditDays ?? null,
         paymentTerms: v.paymentTerms ?? null,
         isGstApplicable: v.isGstApplicable ?? true,
+        // A vendor explicitly marked non-GST cannot carry a GST number — the
+        // form disables the input, and this is the hostile-client backstop.
+        gstin: v.isGstApplicable === false ? null : (v.gstin ?? null),
+        website: v.website ?? null,
         notes: v.notes ?? null,
         sortOrder: v.sortOrder ?? 100,
         createdById: me.id,
@@ -146,6 +150,10 @@ export async function updateVendor(
         defaultCreditDays: v.defaultCreditDays ?? null,
         paymentTerms: v.paymentTerms ?? null,
         ...(v.isGstApplicable !== undefined ? { isGstApplicable: v.isGstApplicable } : {}),
+        // Same rule as createVendor: "GST not applicable" wins over any number
+        // a caller sent alongside it.
+        gstin: v.isGstApplicable === false ? null : (v.gstin ?? null),
+        website: v.website ?? null,
         notes: v.notes ?? null,
         ...(v.sortOrder !== undefined ? { sortOrder: v.sortOrder } : {}),
         updatedAt: new Date(),

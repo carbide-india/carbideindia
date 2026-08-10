@@ -1,4 +1,5 @@
 import { History } from "lucide-react";
+import { formatDateTime } from "@/lib/format";
 import { AcCard, AcEmpty, AcPill } from "./access-control-primitives";
 
 export interface AccessControlEventView {
@@ -57,7 +58,7 @@ export function AccessControlEvents({
                   {EVENT_COPY[e.eventType] ?? e.eventType.replace(/_/g, " ")}
                 </p>
                 <p className="mt-0.5 text-[12px] text-ink-subtle tabular-nums">
-                  {e.createdAt.toLocaleString()}
+                  {formatDateTime(e.createdAt)}
                   {summarise(e.toValue) && ` · ${summarise(e.toValue)}`}
                 </p>
               </div>

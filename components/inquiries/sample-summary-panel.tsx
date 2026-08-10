@@ -12,6 +12,7 @@ import {
   type SampleStatus,
   type StageStatus,
 } from "@/db/enums";
+import { formatDate } from "@/lib/format";
 import type { SampleOption } from "@/lib/queries/samples";
 
 /*
@@ -31,7 +32,7 @@ function fmt(d: Date | string | null | undefined): string {
   if (!d) return "-";
   const date = typeof d === "string" ? new Date(d) : d;
   if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+  return formatDate(date);
 }
 
 /** One labelled detail cell - clear label + a bold, readable value. */

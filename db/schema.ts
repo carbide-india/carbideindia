@@ -39,6 +39,9 @@ import {
   COSTING_DONE_STATUSES,
   NEGOTIATION_STATUSES,
   NEGOTIATION_STAGES,
+  SECONDARY_FEASIBILITY_STATUSES,
+  QUOTATION_STATUSES,
+  SALES_ORDER_STATUSES,
   MEETING_PURPOSES,
   COSTING_TYPES,
   ITEM_STATUSES,
@@ -607,6 +610,11 @@ export const inquirySourceEnum = pgEnum("inquiry_source", INQUIRY_SOURCES);
 export const feasPriorityEnum = pgEnum("feas_priority", FEAS_PRIORITIES);
 export const feasCheckVerdictEnum = pgEnum("feas_check_verdict", FEAS_CHECK_VERDICTS);
 export const feasRiskEnum = pgEnum("feas_risk", FEAS_RISKS);
+/** Secondary / Technical Feasibility house buckets (2026-08). */
+export const secondaryFeasibilityStatusEnum = pgEnum(
+  "secondary_feasibility_status",
+  SECONDARY_FEASIBILITY_STATUSES,
+);
 
 /** SM numbers: SM9579, SM9580,  (observed last manual number SM9578).
  *  Admin can re-base via setval through the admin settings action. */
@@ -800,6 +808,12 @@ export const inquiryItems = pgTable(
     secondaryFeasibilityDone: boolean("secondary_feasibility_done").notNull().default(false),
     secondaryFeasibilityAt: timestamp("secondary_feasibility_at", { withTimezone: true }),
     secondaryFeasibilityById: uuid("secondary_feasibility_by_id").references(() => employees.id, { onDelete: "set null" }),
+    // House status buckets for the Secondary Feasibility stage (2026-08). The
+    // `secondaryFeasibilityDone` boolean above only ever answered "finished?" —
+    // it could never show WHAT IS LEFT. This column is the bucket the register
+    // groups + counts by; the boolean stays as the legacy completion flag.
+    secondaryFeasibilityStatus: secondaryFeasibilityStatusEnum("secondary_feasibility_status")
+      .notNull().default("not_started"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -1238,6 +1252,29 @@ export const costings = pgTable(
     // meta
     developmentTime: text("development_time"), deliveryTime: text("delivery_time"), validity: text("validity"),
     costingDoneStatus: costingDoneStatusEnum("costing_done_status").notNull().default("not_done"),
+    // ── Stage buckets + target date + revisions (2026-08 pipeline review) ──
+    // Target date the costing is expected to be finished by (Manan). Nullable —
+    // an un-dated costing is legal; the register sorts/flags overdue on this.
+    targetDate: timestamp("target_date", { withTimezone: true }),
+    // Free text for the `need_info` bucket: WHAT additional information is
+    // missing before a price can be fixed. Written together with
+    // costing_done_status = 'need_info'; kept (not cleared) when it moves on so
+    // the history of what was asked survives.
+    needInfoNote: text("need_info_note"),
+    // Costing 1 / Costing 2 / Costing 3 per product. When a negotiation is not
+    // approved the costing is REVISED — a NEW row is inserted with
+    // revisionNo + 1 and supersedesCostingId pointing at the row it replaces;
+    // the earlier rows are KEPT (never updated in place) so revisions can be
+    // listed and diffed. The revision group is naturally
+    // (inquiry_item_id, costing_type); `isLatestRevision` is the cheap filter
+    // and is what Quotation consumes (it must always take the LATEST).
+    // `revisedFromNegotiationId` records the negotiation that triggered the
+    // revision when there was one — nullable, no rule attached.
+    revisionNo: integer("revision_no").notNull().default(1),
+    supersedesCostingId: uuid("supersedes_costing_id").references((): AnyPgColumn => costings.id, { onDelete: "set null" }),
+    isLatestRevision: boolean("is_latest_revision").notNull().default(true),
+    revisionReason: text("revision_reason"),
+    revisedFromNegotiationId: uuid("revised_from_negotiation_id").references((): AnyPgColumn => negotiations.id, { onDelete: "set null" }),
     createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -1245,6 +1282,10 @@ export const costings = pgTable(
   (t) => [
     index("costings_inquiry_idx").on(t.inquiryId),
     index("costings_item_idx").on(t.inquiryItemId, t.sortOrder),
+    // Revision history per product line (Costing 1 / 2 / 3), newest last.
+    index("costings_revision_idx").on(t.inquiryItemId, t.costingType, t.revisionNo),
+    // The register's "what is left" buckets + the latest-revision filter.
+    index("costings_status_idx").on(t.costingDoneStatus, t.isLatestRevision),
     // Where-used graph fan-out on the new item FK (ERP Phase 2 — migration 0032).
     // Note: `costings_item_idx` above is legacy-named on (inquiry_item_id, sort_order).
     index("costings_item_id_idx").on(t.itemId),
@@ -1287,6 +1328,12 @@ export const vendors = pgTable(
     paymentTerms: text("payment_terms"),
     // Toggle for non-GST vendors (migration 0062).
     isGstApplicable: boolean("is_gst_applicable").notNull().default(true),
+    // 2026-08: vendor website + the actual GST number. `isGstApplicable` only
+    // ever said WHETHER GST applies — the number itself had nowhere to live.
+    // Free text (15-char GSTIN validated in the zod layer, not the DB, so legacy
+    // and overseas vendors can still be saved).
+    website: text("website"),
+    gstin: text("gstin"),
     notes: text("notes"),
     isActive: boolean("is_active").notNull().default(true),
     // Governance: deactivate-only — vendors are never hard-deleted.
@@ -1342,6 +1389,10 @@ export const costingVendorQuotes = pgTable(
 export type CostingVendorQuote = typeof costingVendorQuotes.$inferSelect;
 export type NewCostingVendorQuote = typeof costingVendorQuotes.$inferInsert;
 
+// ── Quote lifecycle house buckets (2026-08) ─────────────────────
+export const quotationStatusEnum = pgEnum("quotation_status", QUOTATION_STATUSES);
+export const salesOrderStatusEnum = pgEnum("sales_order_status", SALES_ORDER_STATUSES);
+
 export const quotations = pgTable("quotations", {
   id: uuid("id").primaryKey().defaultRandom(),
   inquiryId: uuid("inquiry_id").notNull().references(() => inquiries.id, { onDelete: "cascade" }),
@@ -1365,6 +1416,10 @@ export const quotations = pgTable("quotations", {
   deliveryTime: text("delivery_time"),
   validity: text("validity"),
   costingDoneStatus: costingDoneStatusEnum("costing_done_status").notNull().default("not_done"),
+  // House status buckets for the Quotation stage (2026-08). Distinct from
+  // `quoteSent` (a fact about the send) and from the mirrored costing status
+  // above: this is the bucket the register groups + counts by.
+  quotationStatus: quotationStatusEnum("quotation_status").notNull().default("not_started"),
   quotationLink: text("quotation_link"),
   quoteSent: boolean("quote_sent").notNull().default(false),
   createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
@@ -1578,9 +1633,24 @@ export const salesOrders = pgTable("sales_orders", {
   customerPoLink: text("customer_po_link"),
   customerPoDate: timestamp("customer_po_date", { withTimezone: true }),
   customerPoNo: text("customer_po_no"),
+  // House status buckets for the Sales Order stage (2026-08) — the SO carried no
+  // status at all before, only the `customerSoSent` boolean.
+  salesOrderStatus: salesOrderStatusEnum("sales_order_status").notNull().default("not_started"),
   customerSoLink: text("customer_so_link"),
   customerSoSent: boolean("customer_so_sent").notNull().default(false),
   productionSoLink: text("production_so_link"),
+  // ── Two outputs from one SO (2026-08): a CUSTOMER copy and a FACTORY /
+  // production copy. The customer copy is the existing customerSo* trio; these
+  // three are the factory copy's own send-state + narrative. The FACTORY copy
+  // carries extra production detail (internal grade, part numbers, …) whose
+  // EXACT field list is still to be collected from Alok in a separate sitting —
+  // Manan was explicit about that. `factoryCopyDetail` is a deliberately
+  // structureless jsonb holding-pen so the field list can be added later
+  // WITHOUT another migration; nothing reads it yet and nothing should invent
+  // keys for it before Alok's list arrives.
+  productionSoSent: boolean("production_so_sent").notNull().default(false),
+  productionNotes: text("production_notes"),
+  factoryCopyDetail: jsonb("factory_copy_detail"),
   // System-generated processing stamp (2026-08-02) — e.g. "Okay for processing"
   // written when the SO is confirmed / handed to production.
   systemRemark: text("system_remark"),
@@ -1619,6 +1689,10 @@ export const salesOrderItems = pgTable(
     unitPrice: numeric("unit_price"),
     specSnapshot: jsonb("spec_snapshot"),
     qtyOrdered: numeric("qty_ordered"),
+    // Per-line note that prints on the FACTORY copy only, never on the customer
+    // copy (2026-08). General on purpose — the precise factory field list is
+    // pending from Alok.
+    productionNotes: text("production_notes"),
     frozenAt: timestamp("frozen_at", { withTimezone: true }),
     frozenBy: uuid("frozen_by"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -1837,6 +1911,10 @@ export const documents = pgTable(
     clientId: uuid("client_id").references(() => clients.id, { onDelete: "cascade" }),
     itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
     jobCardId: uuid("job_card_id").references(() => jobCards.id, { onDelete: "set null" }),
+    // Vendor attachments (2026-08) — documents could attach to a client, an item
+    // or a job card, but never to a vendor. Mirrors the clientId shape (cascade);
+    // vendors are deactivate-only so the cascade never actually fires.
+    vendorId: uuid("vendor_id").references(() => vendors.id, { onDelete: "cascade" }),
     // Phase 7 (§11 / §13) — polymorphic FKs to the three downstream entities so
     // a document (PO route sheet, e-way bill, tax invoice PDF, delivery note) is
     // filed against the record it belongs to. Forward refs (tables defined below)
@@ -1858,6 +1936,7 @@ export const documents = pgTable(
     index("documents_task_idx").on(t.taskId),
     index("documents_client_idx").on(t.clientId),
     index("documents_item_idx").on(t.itemId),
+    index("documents_vendor_idx").on(t.vendorId),
     index("documents_job_card_idx").on(t.jobCardId),
     index("documents_production_order_idx").on(t.productionOrderId),
     index("documents_dispatch_idx").on(t.dispatchId),

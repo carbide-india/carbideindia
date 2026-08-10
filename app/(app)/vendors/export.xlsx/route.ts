@@ -27,6 +27,12 @@ export async function GET(): Promise<Response> {
     "Contact Person",
     "Contact No",
     "Email",
+    "City",
+    "State",
+    "GST Applicable",
+    "GSTIN",
+    "Website",
+    "Attachments",
     "Credit Days",
     "Payment Terms",
     "Status",
@@ -39,6 +45,12 @@ export async function GET(): Promise<Response> {
     r.contactPerson ?? "",
     r.contactNo ?? "",
     r.email ?? "",
+    r.city ?? "",
+    r.state ?? "",
+    r.isGstApplicable ? "Yes" : "No",
+    r.gstin ?? "",
+    r.website ?? "",
+    r.attachmentCount,
     r.defaultCreditDays ?? "",
     r.paymentTerms ?? "",
     r.isActive ? "Active" : "Inactive",
@@ -54,6 +66,12 @@ export async function GET(): Promise<Response> {
     { wch: 24 }, // Contact Person
     { wch: 18 }, // Contact No
     { wch: 28 }, // Email
+    { wch: 16 }, // City
+    { wch: 18 }, // State
+    { wch: 14 }, // GST Applicable
+    { wch: 18 }, // GSTIN
+    { wch: 30 }, // Website
+    { wch: 11 }, // Attachments
     { wch: 12 }, // Credit Days
     { wch: 28 }, // Payment Terms
     { wch: 10 }, // Status

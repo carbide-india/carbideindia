@@ -9,12 +9,15 @@ import type {
   InquiryPriority,
   RecheckState,
 } from "@/db/enums";
+import type { SecondaryFeasibilityStatus } from "@/db/enums";
 import {
   computeSpecVariance,
   collectMasterIds,
+  countChanged,
   type SpecSnapshot,
   type SpecVarianceRow,
 } from "@/lib/feasibility/spec-variance";
+import { effectiveSecondaryBucket } from "@/lib/feasibility/stage-buckets";
 
 /**
  * Primary-Feasibility queries (client-sheet model). The review lives on the
@@ -39,9 +42,45 @@ export interface FeasibilityQueueItem {
   /** How many of the 5 checks are set (Yes/Assumed, i.e. not "Not Done"). */
   checksDone: number;
   checksTotal: number;
+  /**
+   * How many of this SM's product lines drifted from their frozen Primary
+   * baseline (≥1 changed spec field). Lines with no baseline are not
+   * comparable and never count — see {@link countVarianceLines}.
+   */
+  varianceLines: number;
+  /** Lines that HAVE a frozen baseline, i.e. the denominator of the above. */
+  comparableLines: number;
 }
 
 const notDone = (v: RecheckState | null | undefined) => v != null && v !== "not_done";
+
+/** The spec columns the variance engine reads off a live product line. */
+const SPEC_SELECT = {
+  shape: inquiryItems.shape,
+  outerDia: inquiryItems.outerDia,
+  innerDia: inquiryItems.innerDia,
+  length: inquiryItems.length,
+  width: inquiryItems.width,
+  thickness: inquiryItems.thickness,
+  dimensionUnit: inquiryItems.dimensionUnit,
+  gradeCustomer: inquiryItems.gradeCustomer,
+  gradeCustomerFacingId: inquiryItems.gradeCustomerFacingId,
+  gradeInternalProductionId: inquiryItems.gradeInternalProductionId,
+  toleranceId: inquiryItems.toleranceId,
+  conditionId: inquiryItems.conditionId,
+  quantityNos: inquiryItems.quantityNos,
+  quantityUom: inquiryItems.quantityUom,
+} as const;
+
+/**
+ * Does this line differ from its frozen Primary baseline? Master-id fields are
+ * compared by ID, so counting needs no master_options lookup (labels are only
+ * resolved when the report is actually rendered).
+ */
+function hasSpecVariance(baseline: unknown, current: SpecSnapshot): boolean {
+  if (baseline == null) return false;
+  return countChanged(computeSpecVariance(baseline as SpecSnapshot, current)) > 0;
+}
 
 /** The feasibility queue: every live enquiry with its review state. */
 export async function listFeasibilityQueue(): Promise<FeasibilityQueueItem[]> {
@@ -68,15 +107,31 @@ export async function listFeasibilityQueue(): Promise<FeasibilityQueueItem[]> {
     .where(eq(inquiries.isArchived, false))
     .orderBy(desc(inquiries.enquiryDate), desc(inquiries.createdAt));
 
+  // One pass over the product lines gives BOTH the line count and the variance
+  // roll-up (no N+1, no second query per SM).
   const ids = rows.map((r) => r.id);
-  const counts = ids.length
+  const lines = ids.length
     ? await db
-        .select({ inquiryId: inquiryItems.inquiryId, n: sql<number>`count(*)::int` })
+        .select({
+          inquiryId: inquiryItems.inquiryId,
+          baseline: inquiryItems.feasibilityBaseline,
+          ...SPEC_SELECT,
+        })
         .from(inquiryItems)
         .where(inArray(inquiryItems.inquiryId, ids))
-        .groupBy(inquiryItems.inquiryId)
     : [];
-  const countBy = new Map(counts.map((c) => [c.inquiryId, c.n]));
+
+  const countBy = new Map<string, number>();
+  const comparableBy = new Map<string, number>();
+  const varianceBy = new Map<string, number>();
+  for (const l of lines) {
+    countBy.set(l.inquiryId, (countBy.get(l.inquiryId) ?? 0) + 1);
+    if (l.baseline == null) continue;
+    comparableBy.set(l.inquiryId, (comparableBy.get(l.inquiryId) ?? 0) + 1);
+    if (hasSpecVariance(l.baseline, l)) {
+      varianceBy.set(l.inquiryId, (varianceBy.get(l.inquiryId) ?? 0) + 1);
+    }
+  }
 
   return rows.map((r) => ({
     id: r.id,
@@ -92,6 +147,8 @@ export async function listFeasibilityQueue(): Promise<FeasibilityQueueItem[]> {
     productCount: countBy.get(r.id) ?? 0,
     checksDone: [r.c1, r.c2, r.c3, r.c4, r.c5].filter(notDone).length,
     checksTotal: 5,
+    varianceLines: varianceBy.get(r.id) ?? 0,
+    comparableLines: comparableBy.get(r.id) ?? 0,
   }));
 }
 
@@ -259,6 +316,9 @@ export interface SecondaryFeasibilityState {
   secondaryFeasibilityDone: boolean;
   secondaryFeasibilityAt: Date | null;
   secondaryByName: string | null;
+  /** House bucket for the line, with the legacy stamps folded in (see
+   *  {@link effectiveSecondaryBucket}) — the pill the section header shows. */
+  bucket: SecondaryFeasibilityStatus;
   /** A confirmed line's specs are frozen — the section renders read-only. */
   feasibilityConfirmed: boolean;
 }
@@ -301,6 +361,7 @@ export async function listSecondaryFeasibilityStates(
       secondaryFeasibilityDone: inquiryItems.secondaryFeasibilityDone,
       secondaryFeasibilityAt: inquiryItems.secondaryFeasibilityAt,
       secondaryByName: employees.name,
+      storedBucket: inquiryItems.secondaryFeasibilityStatus,
       feasibilityConfirmed: inquiryItems.feasibilityConfirmed,
     })
     .from(inquiryItems)
@@ -341,6 +402,12 @@ export async function listSecondaryFeasibilityStates(
     secondaryFeasibilityDone: r.secondaryFeasibilityDone,
     secondaryFeasibilityAt: r.secondaryFeasibilityAt ?? null,
     secondaryByName: r.secondaryByName ?? null,
+    bucket: effectiveSecondaryBucket({
+      storedStatus: r.storedBucket,
+      secondaryDone: r.secondaryFeasibilityDone,
+      secVerdict: r.secVerdict,
+      hasSecondaryData: hasSecondaryData(r),
+    }),
     feasibilityConfirmed: r.feasibilityConfirmed,
   }));
 }
@@ -363,18 +430,67 @@ export interface SecondaryFeasibilityQueueRow {
   secVerdict: string | null;
   feasibilityConfirmed: boolean;
   createdAt: Date;
+  /** The bucket the register groups + counts by (legacy stamps folded in). */
+  bucket: SecondaryFeasibilityStatus;
+  /** The raw column value, before the legacy fallback (for debugging/export). */
+  storedBucket: SecondaryFeasibilityStatus;
+  secondaryAt: Date | null;
+  /** True when the line carries a frozen Primary baseline to compare against. */
+  hasBaseline: boolean;
+  /** Spec fields that drifted from the frozen Primary baseline (0 when none). */
+  varianceCount: number;
+  /**
+   * Display-ready variance rows — attached ONLY for lines that actually differ,
+   * so the register can open the report without a second round trip while
+   * unchanged lines add nothing to the payload.
+   */
+  varianceRows: SpecVarianceRow[] | null;
+}
+
+/** True when ANY Secondary technical field on the line carries a value. */
+function hasSecondaryData(r: {
+  outerDiaTol: string | null;
+  innerDiaTol: string | null;
+  lengthTol: string | null;
+  widthTol: string | null;
+  thicknessTol: string | null;
+  secBlockWt: string | null;
+  secNetWt: string | null;
+  secMaterialWt: string | null;
+  secProcessRoute: string | null;
+  secToolingAvailability: string | null;
+  secMaterialAvailability: string | null;
+  secVerdict: string | null;
+  secNotes: string | null;
+}): boolean {
+  return [
+    r.outerDiaTol, r.innerDiaTol, r.lengthTol, r.widthTol, r.thicknessTol,
+    r.secBlockWt, r.secNetWt, r.secMaterialWt,
+    r.secProcessRoute, r.secToolingAvailability, r.secMaterialAvailability,
+    r.secVerdict, r.secNotes,
+  ].some((v) => v != null && String(v).trim() !== "");
 }
 
 /**
  * The Secondary / Technical Feasibility queue: every product line whose parent
  * enquiry has CLEARED Primary Feasibility. "Cleared primary" = the inquiry's
- * `feasibilityStatus` is post-primary — `in_review`, `pending_approval`, or
- * `proceed_to_costing` (Feasibility Confirmed). Lines still `not_started`,
- * `need_info`, or `not_feasible`, and archived enquiries, are excluded.
+ * `feasibilityStatus` is post-primary — `draft` (and its deprecated twin
+ * `in_review`), `pending_approval`, or `proceed_to_costing` (Feasibility
+ * Approved). Lines still `not_started`, `need_info`, or `not_feasible`, and
+ * archived enquiries, are excluded — they have not reached this stage.
  * Newest-enquiry first.
+ *
+ * Each row carries its house bucket and its Primary-baseline variance, so the
+ * register can show what is LEFT and where the two feasibilities disagree.
  */
 export async function listSecondaryFeasibilityQueue(): Promise<SecondaryFeasibilityQueueRow[]> {
-  const primaryCleared: FeasibilityStatus[] = ["in_review", "pending_approval", "proceed_to_costing"];
+  // `in_review` is the deprecated spelling of `draft` — both count as started.
+  const primaryCleared: FeasibilityStatus[] = [
+    "draft",
+    "in_review",
+    "pending_approval",
+    "proceed_to_costing",
+  ];
   const rows = await db
     .select({
       inquiryItemId: inquiryItems.id,
@@ -384,11 +500,27 @@ export async function listSecondaryFeasibilityQueue(): Promise<SecondaryFeasibil
       custProductName: inquiryItems.custProductName,
       description: inquiryItems.description,
       secondaryDone: inquiryItems.secondaryFeasibilityDone,
+      secondaryAt: inquiryItems.secondaryFeasibilityAt,
+      storedBucket: inquiryItems.secondaryFeasibilityStatus,
       secVerdict: inquiryItems.secVerdict,
+      secNotes: inquiryItems.secNotes,
+      outerDiaTol: inquiryItems.outerDiaTol,
+      innerDiaTol: inquiryItems.innerDiaTol,
+      lengthTol: inquiryItems.lengthTol,
+      widthTol: inquiryItems.widthTol,
+      thicknessTol: inquiryItems.thicknessTol,
+      secBlockWt: inquiryItems.secBlockWt,
+      secNetWt: inquiryItems.secNetWt,
+      secMaterialWt: inquiryItems.secMaterialWt,
+      secProcessRoute: inquiryItems.secProcessRoute,
+      secToolingAvailability: inquiryItems.secToolingAvailability,
+      secMaterialAvailability: inquiryItems.secMaterialAvailability,
       feasibilityConfirmed: inquiryItems.feasibilityConfirmed,
+      baseline: inquiryItems.feasibilityBaseline,
       enquiryDate: inquiries.enquiryDate,
       createdAt: inquiryItems.createdAt,
       sortOrder: inquiryItems.sortOrder,
+      ...SPEC_SELECT,
     })
     .from(inquiryItems)
     .innerJoin(inquiries, eq(inquiryItems.inquiryId, inquiries.id))
@@ -400,17 +532,49 @@ export async function listSecondaryFeasibilityQueue(): Promise<SecondaryFeasibil
     )
     .orderBy(desc(inquiries.enquiryDate), desc(inquiries.createdAt), asc(inquiryItems.sortOrder));
 
-  return rows.map((r) => ({
-    inquiryItemId: r.inquiryItemId,
-    inquiryId: r.inquiryId,
-    smNumber: r.smNumber,
-    companyName: r.companyName,
-    productName: (r.custProductName ?? r.description ?? "").trim() || null,
-    secondaryDone: r.secondaryDone,
-    secVerdict: r.secVerdict,
-    feasibilityConfirmed: r.feasibilityConfirmed,
-    createdAt: r.createdAt,
-  }));
+  // Resolve the master-option labels the variance report displays — one lookup
+  // for the whole queue, over the lines that actually have a baseline.
+  const withBaseline = rows.filter((r) => r.baseline != null);
+  const idSet = new Set<string>();
+  for (const r of withBaseline) {
+    for (const id of collectMasterIds(r.baseline as SpecSnapshot, r)) idSet.add(id);
+  }
+  const labels: Record<string, string> = {};
+  if (idSet.size > 0) {
+    const opts = await db
+      .select({ id: masterOptions.id, name: masterOptions.name })
+      .from(masterOptions)
+      .where(inArray(masterOptions.id, [...idSet]));
+    for (const o of opts) labels[o.id] = o.name;
+  }
+
+  return rows.map((r) => {
+    const variance =
+      r.baseline != null ? computeSpecVariance(r.baseline as SpecSnapshot, r, labels) : null;
+    const varianceCount = variance ? countChanged(variance) : 0;
+    return {
+      inquiryItemId: r.inquiryItemId,
+      inquiryId: r.inquiryId,
+      smNumber: r.smNumber,
+      companyName: r.companyName,
+      productName: (r.custProductName ?? r.description ?? "").trim() || null,
+      secondaryDone: r.secondaryDone,
+      secVerdict: r.secVerdict,
+      feasibilityConfirmed: r.feasibilityConfirmed,
+      createdAt: r.createdAt,
+      bucket: effectiveSecondaryBucket({
+        storedStatus: r.storedBucket,
+        secondaryDone: r.secondaryDone,
+        secVerdict: r.secVerdict,
+        hasSecondaryData: hasSecondaryData(r),
+      }),
+      storedBucket: r.storedBucket,
+      secondaryAt: r.secondaryAt ?? null,
+      hasBaseline: r.baseline != null,
+      varianceCount,
+      varianceRows: varianceCount > 0 ? variance : null,
+    };
+  });
 }
 
 /**

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
 import { CreateVendorSchema } from "@/lib/validators/vendor";
@@ -12,6 +12,7 @@ import { fireToast } from "@/lib/toast";
 import { NotesField } from "@/components/ui/notes-field";
 import { Select } from "@/components/ui/select";
 import { INDIAN_STATES } from "@/lib/data/geo";
+import { parseGstin, type GstinParse } from "@/lib/data/gst";
 import { Field, SectionCard } from "@/components/inquiries/form-field";
 import {
   useKeyboardForm,
@@ -20,6 +21,12 @@ import {
 
 /** Standard B2B credit periods, rendered as an "already set" dropdown. */
 const CREDIT_DAYS_PRESETS = [0, 7, 15, 30, 45, 60, 90, 120] as const;
+
+/** "Does GST apply to this vendor at all?" — the existing isGstApplicable flag. */
+const GST_APPLICABLE_OPTIONS = [
+  { value: "yes", label: "Yes" },
+  { value: "no", label: "No" },
+] as const;
 
 /** RHF holds the schema's input shape; zodResolver hands the parsed output
  *  (blank text folded to `undefined`) to the submit handler. */
@@ -79,6 +86,7 @@ export function VendorForm({
     register,
     control,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<VendorFormValues, unknown, VendorFormOutput>({
     resolver: zodResolver(CreateVendorSchema),
@@ -97,10 +105,43 @@ export function VendorForm({
       pinCode: "",
       defaultCreditDays: undefined,
       paymentTerms: "",
+      isGstApplicable: true,
+      gstin: "",
+      website: "",
       notes: "",
       ...initialValues,
     },
   });
+
+  // ── GSTIN, exactly as the client KYC form models it ──
+  // Same control, same `parseGstin` checker (lib/data/gst.ts): normalize while
+  // typing (uppercase, strip spaces/hyphens on paste), then show the decoded
+  // state + PAN so a wrong number is obvious before it is saved. Nothing is
+  // auto-filled from it here — a vendor's registered state and its postal
+  // address are separately entered facts, and silently overwriting the address
+  // the user typed would be worse than leaving it alone.
+  const [gstParse, setGstParse] = React.useState<GstinParse>(() =>
+    parseGstin(String(initialValues?.gstin ?? "")),
+  );
+
+  function handleGstinChange(raw: string) {
+    const parse = parseGstin(raw);
+    setGstParse(parse);
+    setValue("gstin", parse.normalized, { shouldDirty: true });
+  }
+
+  // "GST applicable = No" means the vendor has no GST number to hold; flipping
+  // the toggle locks and clears the input, and the server enforces the same
+  // rule for anything that bypasses this form.
+  const gstApplicable = useWatch({ control, name: "isGstApplicable" }) !== false;
+
+  function handleGstApplicableChange(next: boolean) {
+    setValue("isGstApplicable", next, { shouldDirty: true });
+    if (!next) {
+      setValue("gstin", "", { shouldDirty: true });
+      setGstParse(parseGstin(""));
+    }
+  }
 
   const submit = handleSubmit((values) => {
     setServerError(null);
@@ -270,7 +311,87 @@ export function VendorForm({
         </div>
       </SectionCard>
 
-      {/* ── 2 · Commercial terms ─────────────────────────────────────── */}
+      {/* ── 2 · Tax & web ────────────────────────────────────────────── */}
+      <SectionCard
+        title="GST & Web"
+        hint="The vendor's GST number and website. Neither is compulsory."
+        inlineHint
+      >
+        <div className="grid grid-cols-[minmax(0,0.5fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
+          <Field id="vendor-gst-applicable" label="GST Applicable" labelOnly>
+            <Controller
+              control={control}
+              name="isGstApplicable"
+              render={({ field }) => (
+                <Select
+                  ariaLabel="GST applicable"
+                  value={field.value === false ? "no" : "yes"}
+                  onValueChange={(v) => handleGstApplicableChange(v === "yes")}
+                  options={GST_APPLICABLE_OPTIONS.map((o) => ({ ...o }))}
+                />
+              )}
+            />
+          </Field>
+
+          <Field id="vendor-gstin" label="GST Number (GSTIN)">
+            <Controller
+              control={control}
+              name="gstin"
+              render={({ field }) => (
+                <input
+                  id="vendor-gstin"
+                  type="text"
+                  inputMode="text"
+                  autoCapitalize="characters"
+                  spellCheck={false}
+                  maxLength={15}
+                  disabled={!gstApplicable}
+                  placeholder={
+                    gstApplicable ? "27ABCDE1234F1Z5" : "GST not applicable"
+                  }
+                  className="nt-input font-mono uppercase tracking-wide disabled:opacity-60"
+                  value={typeof field.value === "string" ? field.value : ""}
+                  onChange={(e) => handleGstinChange(e.target.value)}
+                  onBlur={field.onBlur}
+                />
+              )}
+            />
+            {gstApplicable && gstParse.status === "valid" && (
+              <p className="mt-1 text-[12px] font-semibold text-[#15803d]">
+                Valid · {gstParse.stateName}
+                {gstParse.pan ? ` · PAN ${gstParse.pan}` : ""}
+              </p>
+            )}
+            {gstApplicable && gstParse.status === "invalid" && (
+              <p
+                className="mt-1 text-[12px] font-semibold"
+                style={{ color: "var(--color-red-deep)" }}
+              >
+                {gstParse.error}
+              </p>
+            )}
+            {gstApplicable && gstParse.status === "idle" && gstParse.stateName && (
+              <p className="mt-1 text-[12px] font-medium text-[#6b7280]">
+                {gstParse.stateName} · {15 - gstParse.normalized.length} more
+              </p>
+            )}
+          </Field>
+
+          <Field id="vendor-website" label="Website">
+            <input
+              id="vendor-website"
+              type="text"
+              inputMode="url"
+              spellCheck={false}
+              className="nt-input"
+              placeholder="e.g. carbideindia.com (optional)"
+              {...register("website")}
+            />
+          </Field>
+        </div>
+      </SectionCard>
+
+      {/* ── 3 · Commercial terms ─────────────────────────────────────── */}
       <SectionCard
         title="Default Terms"
         hint="Pre-filled into the bought-out costing matrix when this vendor is picked."

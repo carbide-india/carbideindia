@@ -705,7 +705,10 @@ function ProductMasterSelect({
           />
         )}
       />
-      <p className="text-[12px] text-ink-subtle">Managed in Admin → Masters</p>
+      {/* Masters moved out of the admin console into their own module in the
+          forms/masters redesign (/admin/masters is now only a redirect), so
+          name the real destination — the admin sidebar has no Masters entry. */}
+      <p className="text-[12px] text-ink-subtle">Managed in the Masters module</p>
     </Field>
   );
 }

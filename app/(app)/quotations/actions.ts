@@ -1,5 +1,6 @@
 "use server";
 
+import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { and, count, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
@@ -16,7 +17,12 @@ import {
   getInquiryItemSeeds,
   type QuoteLineSeed,
 } from "@/lib/queries/quotes";
-import { COSTING_DONE_STATUSES, type CostingDoneStatus } from "@/db/enums";
+import {
+  COSTING_DONE_STATUSES,
+  QUOTATION_STATUSES,
+  type CostingDoneStatus,
+  type QuotationStatus,
+} from "@/db/enums";
 import { getChosenCostingLocksForItems } from "@/lib/queries/costings";
 import {
   CreateQuotationSchema,
@@ -72,16 +78,22 @@ export async function getInquiryItemsForQuote(
  *   created (Phase 5 hard-gate). The legacy bulk importer of historical
  *   quote-master rows passes `false` - those rows predate the costing-lock
  *   workflow and carry no per-line inquiry_item link to gate against.
+ * - `initialStatus` (default "draft"): the house bucket the new quotation lands
+ *   in. A quotation created here always carries lines priced off an approved &
+ *   locked costing, so it IS a draft - not "Not Started". The legacy importer
+ *   passes "not_started" because a historical row's real stage is not knowable
+ *   from the spreadsheet.
  */
 export interface CreateQuotationOptions {
   enforceCostingGate?: boolean;
+  initialStatus?: QuotationStatus;
 }
 
 export async function createQuotation(
   input: CreateQuotationInput,
   opts: CreateQuotationOptions = {},
 ): Promise<ActionResult> {
-  const { enforceCostingGate = true } = opts;
+  const { enforceCostingGate = true, initialStatus = "draft" } = opts;
   const me = await requireUser();
   const parsed = CreateQuotationSchema.safeParse(input);
   if (!parsed.success) {
@@ -171,6 +183,7 @@ export async function createQuotation(
     deliveryTime: line0?.deliveryTime ?? undefined,
     validity: line0?.validity ?? undefined,
     costingDoneStatus: v.costingDoneStatus,
+    quotationStatus: initialStatus,
     quotationLink: v.quotationLink,
     quoteSent: v.quoteSent,
     createdById: me.id,
@@ -372,6 +385,101 @@ export async function setQuotationStatus(
   }
   revalidatePath("/quotations");
   revalidatePath(`/quotations/${id}`);
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Quotation stage buckets (house vocabulary, 2026-08)
+//
+// `quotation_status` is THIS stage's own state - distinct from the mirrored
+// upstream `costing_done_status` (display of what costing did) and from
+// `quote_sent` (a fact about the send). The register dashboard groups and
+// counts on it, so these are the only writers.
+// ---------------------------------------------------------------------------
+
+/** Validated against the pgEnum's values, so a hostile client can never write
+ *  a status Postgres would reject (or one from another stage's vocabulary). */
+const SetQuotationBucketSchema = z.object({
+  status: z.enum(QUOTATION_STATUSES),
+});
+
+/** Set one quotation's house bucket. */
+export async function setQuotationBucket(
+  id: string,
+  status: string,
+): Promise<ActionResult> {
+  await requireUser();
+  if (!isUuid(id)) return { ok: false, error: "Invalid quotation id." };
+  const parsed = SetQuotationBucketSchema.safeParse({ status });
+  if (!parsed.success) return { ok: false, error: "Invalid status" };
+
+  try {
+    await db
+      .update(quotations)
+      .set({ quotationStatus: parsed.data.status, updatedAt: new Date() })
+      .where(eq(quotations.id, id));
+  } catch (err) {
+    console.error("[setQuotationBucket] failed", err);
+    return { ok: false, error: "Could not update the status. Please try again." };
+  }
+  revalidatePath("/quotations");
+  revalidatePath(`/quotations/${id}`);
+  return { ok: true };
+}
+
+/** Bulk-set the house bucket over the selected quotation rows. */
+export async function setQuotationBucketBulk(
+  ids: string[],
+  status: string,
+): Promise<ActionResult> {
+  await requireUser();
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { ok: false, error: "No rows selected." };
+  }
+  if (!ids.every(isUuid)) return { ok: false, error: "Invalid quotation id." };
+  const parsed = SetQuotationBucketSchema.safeParse({ status });
+  if (!parsed.success) return { ok: false, error: "Invalid status" };
+
+  try {
+    await db
+      .update(quotations)
+      .set({ quotationStatus: parsed.data.status, updatedAt: new Date() })
+      .where(inArray(quotations.id, ids));
+  } catch (err) {
+    console.error("[setQuotationBucketBulk] failed", err);
+    return { ok: false, error: "Could not update the statuses. Please try again." };
+  }
+  revalidatePath("/quotations");
+  return { ok: true };
+}
+
+/**
+ * Mark the quote as sent / unsent from the register (the "Not Sent" tile is the
+ * queue this empties). Only the boolean moves - the bucket is a separate axis,
+ * because "approved" and "sent" are different facts and Manan asked to see both.
+ */
+export async function setQuotationSentBulk(
+  ids: string[],
+  sent: string,
+): Promise<ActionResult> {
+  await requireUser();
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { ok: false, error: "No rows selected." };
+  }
+  if (!ids.every(isUuid)) return { ok: false, error: "Invalid quotation id." };
+  const parsed = z.enum(["yes", "no"]).safeParse(sent);
+  if (!parsed.success) return { ok: false, error: "Invalid value" };
+
+  try {
+    await db
+      .update(quotations)
+      .set({ quoteSent: parsed.data === "yes", updatedAt: new Date() })
+      .where(inArray(quotations.id, ids));
+  } catch (err) {
+    console.error("[setQuotationSentBulk] failed", err);
+    return { ok: false, error: "Could not update the rows. Please try again." };
+  }
+  revalidatePath("/quotations");
   return { ok: true };
 }
 

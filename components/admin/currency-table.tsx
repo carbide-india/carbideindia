@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { AlertTriangle, Coins, Plus, ShieldCheck } from "lucide-react";
 import { fireToast } from "@/lib/toast";
+import { formatDate } from "@/lib/format";
 import {
   repairBaseCurrency,
   setCurrencyActive,
@@ -26,11 +27,7 @@ interface Props {
 
 function formatRateUpdated(d: Date | null): string {
   if (!d) return "Never";
-  return new Intl.DateTimeFormat("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(d);
+  return formatDate(d);
 }
 
 export function CurrencyTable({ view }: Props) {

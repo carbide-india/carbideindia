@@ -5,6 +5,7 @@ import { useTransition } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import { DayPicker, type DateRange } from "react-day-picker";
 import { format, parseISO } from "date-fns";
+import { formatDayMonth } from "@/lib/format";
 import {
   Calendar,
   Users,
@@ -156,7 +157,7 @@ export function FilterBar({
 
   const fmt = (s: string) => {
     try {
-      return format(parseISO(s), "MMM d");
+      return formatDayMonth(parseISO(s));
     } catch {
       return s;
     }

@@ -1,6 +1,7 @@
 import PDFDocument from "pdfkit";
 import { requireUser } from "@/lib/auth/current";
 import { getProformaInvoiceById } from "@/lib/queries/proforma-invoices";
+import { formatDate, formatDateTime } from "@/lib/format";
 
 /**
  * GET /proforma-invoices/[id]/pi.pdf
@@ -172,13 +173,7 @@ function drawMasthead(
       lineBreak: false,
     });
 
-  const generated = new Date().toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const generated = formatDateTime(new Date());
   doc
     .font("Helvetica-Bold")
     .fontSize(11)
@@ -239,13 +234,7 @@ function drawIdentity(
       lineBreak: false,
     });
 
-  const issued = detail.pi.issuedAt
-    ? detail.pi.issuedAt.toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
-    : "—";
+  const issued = detail.pi.issuedAt ? formatDate(detail.pi.issuedAt) : "—";
   const sub: string[] = [];
   if (detail.smNumber) sub.push(`SM ${detail.smNumber}`);
   if (detail.negotiationNo) sub.push(detail.negotiationNo);

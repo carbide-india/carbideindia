@@ -13,6 +13,7 @@ import {
 import { RecordPicker, PickerField } from "@/components/workbench/record-picker";
 import { Select, type SelectOption } from "@/components/ui/select";
 import { fireToast } from "@/lib/toast";
+import { formatDate } from "@/lib/format";
 import {
   createJobCard,
   updateJobCard,
@@ -900,9 +901,5 @@ function fmtDate(d: Date | string | null): string {
   if (!d) return "-";
   const date = typeof d === "string" ? new Date(d) : d;
   if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  return formatDate(date);
 }

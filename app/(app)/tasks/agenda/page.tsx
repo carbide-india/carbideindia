@@ -7,6 +7,7 @@ import { listTasks, listDistinctSubjects } from "@/lib/queries/tasks";
 import { listActiveClientNames } from "@/lib/queries/clients";
 import { parseTaskFilters } from "@/lib/task-filters";
 import { isDoneLate } from "@/lib/task-late";
+import { formatDayMonth } from "@/lib/format";
 import { requireUser } from "@/lib/auth/current";
 import { getStatusDisplayMap } from "@/lib/queries/status-display";
 import { TASK_STATUSES, isDeprecatedStatus } from "@/db/enums";
@@ -72,7 +73,7 @@ export default async function AgendaPage({ searchParams }: PageProps) {
     const ymd = istYmd(d);
     const label =
       i === 0 ? "Today" : i === 1 ? "Tomorrow" : d.toLocaleDateString("en-US", { weekday: "short", timeZone: TZ });
-    const sub = d.toLocaleDateString("en-US", { day: "numeric", month: "short", timeZone: TZ });
+    const sub = formatDayMonth(d, TZ);
     return { ymd, label, sub };
   });
 

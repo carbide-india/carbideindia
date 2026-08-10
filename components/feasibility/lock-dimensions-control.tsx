@@ -7,6 +7,7 @@ import type { ItemLockState } from "@/lib/queries/feasibility";
 import type { SpecVarianceRow } from "@/lib/feasibility/spec-variance";
 import { lockItemDimensions, unlockItemDimensions } from "@/app/(app)/feasibility/actions";
 import { fireToast } from "@/lib/toast";
+import { formatDateTime } from "@/lib/format";
 import { VarianceReport } from "@/components/feasibility/variance-report";
 
 /**
@@ -21,13 +22,7 @@ function fmtWhen(d: Date | string | null | undefined): string {
   if (!d) return "";
   const date = typeof d === "string" ? new Date(d) : d;
   if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatDateTime(date);
 }
 
 /** Compact one-line dims summary from the line's live spec columns. */

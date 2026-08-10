@@ -7,19 +7,11 @@
  * timezones do not have to agree - strings avoid the whole class of bug.
  */
 
-const STAMP_FMT = new Intl.DateTimeFormat("en-IN", {
-  timeZone: "Asia/Kolkata",
-  day: "2-digit",
-  month: "short",
-  year: "numeric",
-  hour: "numeric",
-  minute: "2-digit",
-  hour12: true,
-});
+import { formatDateTime } from "@/lib/format";
 
-/** "04 Aug 2026, 3:42 pm" in IST - the office timezone, always. */
+/** "04-08-2026 3:42 pm" in IST - the office timezone, always. */
 export function sessionStamp(d: Date): string {
-  return STAMP_FMT.format(d);
+  return formatDateTime(d, "Asia/Kolkata");
 }
 
 /**

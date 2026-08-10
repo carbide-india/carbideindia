@@ -105,10 +105,13 @@ export function FeasibilityReviewWorkspace({
   }, []);
 
   // Feasibility status is DERIVED from the five checks (auto-routes the review
-  // into the right sidebar/Kanban column):
+  // into the right bucket on the dashboard strip / sidebar):
   //   any Not Feasible → Not Feasible · any Need Info → Need Info ·
-  //   any still Not Done → Not Started · all Done → Feasibility Confirmed
-  //   (proceed_to_costing) · otherwise (Done + Assumed) → Pending Approval.
+  //   NO check touched yet → Not Started · some (but not all) checks set → Draft
+  //   · all Done → Feasibility Approved (proceed_to_costing) · otherwise
+  //   (Done + Assumed) → Pending Approval.
+  // Draft is the house bucket for "started, not submitted" — it replaces the
+  // deprecated `in_review`, which nothing writes any more.
   const checkValues = CHECKS.map((c) => checks[c.key].value);
   const allDone = checkValues.every((v) => v === "done");
   const doneCount = checkValues.filter((v) => v === "done").length;
@@ -116,7 +119,8 @@ export function FeasibilityReviewWorkspace({
   const derivedStatus: FeasibilityStatus = React.useMemo(() => {
     if (checkValues.some((v) => v === "not_feasible")) return "not_feasible";
     if (checkValues.some((v) => v === "need_info")) return "need_info";
-    if (checkValues.some((v) => v === "not_done")) return "not_started";
+    if (checkValues.every((v) => v === "not_done")) return "not_started";
+    if (checkValues.some((v) => v === "not_done")) return "draft";
     if (checkValues.every((v) => v === "done")) return "proceed_to_costing";
     return "pending_approval";
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -246,7 +250,7 @@ export function FeasibilityReviewWorkspace({
       <SectionCard
         title="Sign-off & Routing"
         inlineHint
-        hint="Feasibility Confirmed unlocks the costing stage."
+        hint={`${FEASIBILITY_STATUS_LABELS.proceed_to_costing} unlocks the costing stage.`}
       >
         <div className="grid grid-cols-5 gap-3 max-lg:grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1">
           <Field label="Priority" labelOnly>

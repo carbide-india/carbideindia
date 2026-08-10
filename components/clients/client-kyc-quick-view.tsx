@@ -9,6 +9,7 @@ import { fireToast } from "@/lib/toast";
 import { getClientRecordForView } from "@/app/(app)/clients/actions";
 import { deleteClient, reactivateClient } from "@/app/(admin)/admin/clients/actions";
 import { GST_REGISTRATION_TYPE_LABELS, type GstRegistrationType } from "@/db/enums";
+import { formatDate } from "@/lib/format";
 import type { ClientRecord } from "@/lib/queries/clients";
 
 /*
@@ -33,7 +34,7 @@ function fmtDate(d: Date | string | null | undefined): string | null {
   if (!d) return null;
   const date = typeof d === "string" ? new Date(d) : d;
   if (Number.isNaN(date.getTime())) return null;
-  return date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+  return formatDate(date);
 }
 
 function joinName(first?: string | null, last?: string | null): string {

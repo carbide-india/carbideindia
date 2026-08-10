@@ -49,6 +49,10 @@ interface Props {
   latestPiTotal: string | null;
   /** Presigned download URL for an already-uploaded PO document (page-provided). */
   poDownloadUrl: string | null;
+  /** Whether the negotiation is approved — an APPROVED negotiation is what
+   *  enables Issue Sales Order (mirrors the server-side gate in
+   *  acceptAndConvertToSalesOrder, which is the real authority). */
+  approvedForSo: boolean;
 }
 
 function num(v: unknown): number | undefined {
@@ -81,7 +85,14 @@ function precheckFile(file: File): string | null {
  * poMatchStatus. Finally, "Accept PO → Sales Order" converts and stamps the SO
  * "Okay for processing".
  */
-export function CustomerPoCard({ negotiationId, stage, po, latestPiTotal, poDownloadUrl }: Props) {
+export function CustomerPoCard({
+  negotiationId,
+  stage,
+  po,
+  latestPiTotal,
+  poDownloadUrl,
+  approvedForSo,
+}: Props) {
   const router = useRouter();
   const fileRef = React.useRef<HTMLInputElement>(null);
 
@@ -383,13 +394,15 @@ export function CustomerPoCard({ negotiationId, stage, po, latestPiTotal, poDown
           <button
             type="button"
             onClick={() => void onAccept()}
-            disabled={accepting || !poReceived || !hasPo}
+            disabled={accepting || !poReceived || !hasPo || !approvedForSo}
             title={
               !poReceived
                 ? "Save the customer PO first"
                 : !hasPo
                   ? "Record a PO number or document first"
-                  : "Convert this negotiation into a sales order"
+                  : !approvedForSo
+                    ? "Approve the negotiation first"
+                    : "Convert this negotiation into a sales order"
             }
             className="inline-flex items-center gap-2 rounded-pill px-6 py-2.5 text-[14px] font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
             style={{
@@ -406,7 +419,9 @@ export function CustomerPoCard({ negotiationId, stage, po, latestPiTotal, poDown
           </button>
         </div>
         <p className="text-right text-[12px] text-ink-subtle">
-          Accepting stamps the sales order “Okay for processing”.
+          {approvedForSo
+            ? "Accepting stamps the sales order “Okay for processing”."
+            : "Approve the negotiation (above) to unlock Issue Sales Order."}
         </p>
       </div>
     </SectionCard>

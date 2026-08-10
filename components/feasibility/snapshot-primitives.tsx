@@ -1,5 +1,6 @@
 import * as React from "react";
 import { CHECK_STATE_LABELS, type CheckState } from "@/db/enums";
+import { formatDate } from "@/lib/format";
 import type { Inquiry } from "@/db/schema";
 
 /**
@@ -14,7 +15,7 @@ export function fmtDate(d: Date | string | null | undefined): string {
   if (!d) return "-";
   const date = typeof d === "string" ? new Date(d) : d;
   if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+  return formatDate(date);
 }
 
 export const dash = (v: React.ReactNode): React.ReactNode =>

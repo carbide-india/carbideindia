@@ -4,11 +4,22 @@ import * as React from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import { Layers, ChevronRight, ArrowUpRight, Trash2 } from "lucide-react";
+import {
+  Layers,
+  ChevronRight,
+  ArrowUpRight,
+  AlertTriangle,
+  Trash2,
+} from "lucide-react";
 import {
   COSTING_DONE_STATUSES,
   COSTING_DONE_STATUS_LABELS,
   COSTING_DONE_STATUS_COLORS,
+  DEPRECATED_COSTING_DONE_STATUSES,
+  QUOTATION_STAGE_BUCKETS,
+  QUOTATION_STATUS_LABELS,
+  QUOTATION_STATUS_COLORS,
+  type CostingDoneStatus,
 } from "@/db/enums";
 import { formatInr, formatDate } from "@/lib/format";
 import { Chip } from "@/components/inquiries/chip";
@@ -26,9 +37,12 @@ import {
 import { fireToast } from "@/lib/toast";
 import {
   setQuotationStatusBulk,
+  setQuotationBucketBulk,
+  setQuotationSentBulk,
   deleteQuotation,
   deleteQuotationsBulk,
 } from "@/app/(app)/quotations/actions";
+import { revisionLabel } from "@/components/quotations/costing-basis";
 import type {
   QuotationListItem,
   QuotationLineProduct,
@@ -38,7 +52,16 @@ export const NEW_QUOTATION_ROUTE: Route = "/quotations/new";
 
 interface Props {
   rows: QuotationListItem[];
+  /** True when the page pre-filtered the rows from a dashboard tile - the
+   *  empty state then says so instead of claiming the register is empty. */
+  filtered?: boolean;
 }
+
+/** Live pickers hide the deprecated costing values (kept in the enum only so
+ *  legacy rows still render). */
+const COSTING_PICKER_STATUSES = COSTING_DONE_STATUSES.filter(
+  (s) => !(DEPRECATED_COSTING_DONE_STATUSES as readonly string[]).includes(s),
+) as CostingDoneStatus[];
 
 /** Parse a numeric-string money column to a number for right-aligned ₹ display
  *  and numeric sorting; em-dash when unset or unparseable. */
@@ -98,6 +121,38 @@ function productExportText(r: QuotationListItem): string {
 }
 
 /**
+ * "Costing Used" cell - which costing REVISION the line's frozen cost basis came
+ * from, and whether a newer revision has since superseded it. The revision model
+ * lives on `costings` (owned by the costing workstream); this only displays the
+ * latest one the query resolved. Silent when the line has no costing at all -
+ * an em-dash, never a false "up to date".
+ */
+function CostingUsedCell({ product }: { product: QuotationLineProduct }) {
+  const latest = product.latestCosting;
+  if (!latest) return <span className="text-ink-subtle">-</span>;
+  const label =
+    revisionLabel(latest.revisionNo, latest.costingTypeLabel) ?? "-";
+  return (
+    <span className="flex items-center gap-1.5">
+      <span className="text-[12px] font-semibold text-ink-soft">{label}</span>
+      {product.costBasisStale && (
+        <span
+          title={`Quoted on ${moneyText(product.costBasis)}; latest revision is ${moneyText(latest.finalUnitCost)}`}
+          className="inline-flex items-center gap-1 rounded-pill px-1.5 py-0.5 text-[10.5px] font-bold"
+          style={{
+            background: "color-mix(in srgb, var(--color-amber) 14%, transparent)",
+            color: "var(--color-amber-deep)",
+          }}
+        >
+          <AlertTriangle size={10.5} strokeWidth={2.6} />
+          Superseded
+        </span>
+      )}
+    </span>
+  );
+}
+
+/**
  * Detailed products popover - a compact aligned TABLE (one row per quoted
  * line-product) surfacing name + qty + read-through spec (grade / tolerance /
  * condition / part-no) + the line's quote price. Opened from the "View more
@@ -143,6 +198,7 @@ function ProductsTablePopover({ row }: { row: QuotationListItem }) {
                 <th className="px-2.5 py-2 text-left font-bold">Condition</th>
                 <th className="px-2.5 py-2 text-left font-bold">Part No</th>
                 <th className="px-2.5 py-2 text-right font-bold">Quote Price</th>
+                <th className="px-2.5 py-2 text-left font-bold">Costing Used</th>
               </tr>
             </thead>
             <tbody>
@@ -177,6 +233,9 @@ function ProductsTablePopover({ row }: { row: QuotationListItem }) {
                   </td>
                   <td className="whitespace-nowrap px-2.5 py-2 text-right font-semibold tabular-nums text-ink-strong">
                     {moneyText(p.quotePrice)}
+                  </td>
+                  <td className="whitespace-nowrap px-2.5 py-2">
+                    <CostingUsedCell product={p} />
                   </td>
                 </tr>
               ))}
@@ -220,7 +279,7 @@ function ProductCell({ row }: { row: QuotationListItem }) {
  * shared RegisterDataTable. All sort / search / faceted-filter / export /
  * bulk-status runs client-side over the rows the page loads.
  */
-export function QuotationTable({ rows }: Props) {
+export function QuotationTable({ rows, filtered = false }: Props) {
   const router = useRouter();
 
   // Per-row actions menu: Open + a destructive Delete. Delete is a HARD delete
@@ -312,6 +371,20 @@ export function QuotationTable({ rows }: Props) {
         ),
       },
       {
+        // THIS stage's bucket - what the dashboard counts. Kept ahead of the
+        // inherited costing status so the register reads in stage order.
+        id: "quotationStatus",
+        header: "Quotation Status",
+        sortValue: (r) => QUOTATION_STAGE_BUCKETS.indexOf(r.quotationStatus),
+        exportValue: (r) => QUOTATION_STATUS_LABELS[r.quotationStatus],
+        cell: (r) => (
+          <Chip
+            label={QUOTATION_STATUS_LABELS[r.quotationStatus]}
+            tone={QUOTATION_STATUS_COLORS[r.quotationStatus]}
+          />
+        ),
+      },
+      {
         id: "costingDoneStatus",
         header: "Costing Done",
         sortValue: (r) => COSTING_DONE_STATUS_LABELS[r.costingDoneStatus],
@@ -321,6 +394,26 @@ export function QuotationTable({ rows }: Props) {
             tone={COSTING_DONE_STATUS_COLORS[r.costingDoneStatus]}
           />
         ),
+      },
+      {
+        // How many quoted lines rest on a costing revision that has since been
+        // superseded - the one thing the revision model changes for this stage.
+        id: "staleCostLines",
+        header: "Cost Basis",
+        sortValue: (r) => r.staleCostLines,
+        exportValue: (r) =>
+          r.staleCostLines > 0 ? `${r.staleCostLines} superseded` : "Current",
+        cell: (r) =>
+          r.staleCostLines > 0 ? (
+            <Chip
+              label={`${r.staleCostLines} superseded`}
+              tone={COSTING_DONE_STATUS_COLORS.need_info}
+            />
+          ) : (
+            <span className="text-[13px] font-semibold text-ink-subtle">
+              Current
+            </span>
+          ),
       },
       {
         id: "quoteSent",
@@ -352,6 +445,28 @@ export function QuotationTable({ rows }: Props) {
   const filters = React.useMemo<FilterConfig<QuotationListItem>[]>(
     () => [
       {
+        id: "quotationStatus",
+        label: "Quotation",
+        type: "select",
+        options: QUOTATION_STAGE_BUCKETS.map((s) => ({
+          value: QUOTATION_STATUS_LABELS[s],
+          label: QUOTATION_STATUS_LABELS[s],
+        })),
+        accessor: (r) => QUOTATION_STATUS_LABELS[r.quotationStatus],
+      },
+      {
+        id: "staleCostLines",
+        label: "Cost basis",
+        type: "select",
+        options: [
+          { value: "Superseded", label: "Superseded" },
+          { value: "Current", label: "Current" },
+        ],
+        accessor: (r) => (r.staleCostLines > 0 ? "Superseded" : "Current"),
+      },
+      {
+        // Deliberately lists EVERY costing value, deprecated ones included, so
+        // legacy rows sitting in "In Process" / "Done" stay findable.
         id: "costingDoneStatus",
         label: "Costing",
         type: "select",
@@ -390,14 +505,34 @@ export function QuotationTable({ rows }: Props) {
       filters={filters}
       exportFilename="quotations"
       rowMenu={rowMenu}
-      bulkAction={{
-        label: "Set costing status",
-        options: COSTING_DONE_STATUSES.map((s) => ({
-          value: s,
-          label: COSTING_DONE_STATUS_LABELS[s],
-        })),
-        onApply: (ids, value) => setQuotationStatusBulk(ids, value),
-      }}
+      bulkActions={[
+        {
+          label: "Set quotation status",
+          options: QUOTATION_STAGE_BUCKETS.map((s) => ({
+            value: s,
+            label: QUOTATION_STATUS_LABELS[s],
+          })),
+          onApply: (ids, value) => setQuotationBucketBulk(ids, value),
+        },
+        {
+          label: "Quote sent",
+          options: [
+            { value: "yes", label: "Yes" },
+            { value: "no", label: "No" },
+          ],
+          onApply: (ids, value) => setQuotationSentBulk(ids, value),
+        },
+        {
+          // Inherited upstream state - editable here only because the legacy
+          // register always allowed it. Deprecated values are not offered.
+          label: "Set costing status",
+          options: COSTING_PICKER_STATUSES.map((s) => ({
+            value: s,
+            label: COSTING_DONE_STATUS_LABELS[s],
+          })),
+          onApply: (ids, value) => setQuotationStatusBulk(ids, value),
+        },
+      ]}
       bulkDelete={{
         noun: { one: "quotation", many: "quotations" },
         onDelete: (ids) =>
@@ -405,8 +540,16 @@ export function QuotationTable({ rows }: Props) {
             r.ok ? { ok: true } : { ok: false, error: r.error },
           ),
       }}
-      emptyTitle="No quotations yet - build the first one."
-      emptyHint="Priced quotes built from an enquiry appear here, with costing status and validity."
+      emptyTitle={
+        filtered
+          ? "Nothing in this bucket."
+          : "No quotations yet - build the first one."
+      }
+      emptyHint={
+        filtered
+          ? "Pick another tile above, or open All Quotations to see the whole register."
+          : "Priced quotes built from an enquiry appear here, with costing status and validity."
+      }
     />
   );
 }

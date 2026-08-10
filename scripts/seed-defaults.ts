@@ -36,6 +36,13 @@ import { presetForShapeName } from "@/lib/masters/shape-config";
 import { MESSAGE_TEMPLATE_SEEDS } from "@/lib/templates/seeds";
 import { FEASIBILITY_DIMENSIONS } from "@/lib/feasibility/dimensions";
 
+// NOTE (2026-08): `status_settings.status` is the **task_status** pgEnum — this
+// table is the admin override for TASK statuses only. The sales-pipeline stage
+// buckets (enquiry / feasibility / secondary feasibility / costing / quotation /
+// negotiation / sales order) each have their OWN pgEnum and take their label +
+// colour token from the `*_STATUS_LABELS` / `*_STATUS_COLORS` maps in
+// db/enums.ts. Nothing new needs seeding here for them — and nothing may be
+// inserted here that is not a task_status value (the PK would reject it).
 async function seedStatusSettings(): Promise<void> {
   await db.execute(sql`
     INSERT INTO status_settings (status, label, color_token, display_order) VALUES
@@ -148,7 +155,7 @@ const MASTER_SEEDS: Record<MasterKind, string[]> = {
   ],
   dispatch_condition: ["Sintered", "Green", "Soft", "HIP"],
   pressing_type: ["Manual", "Auto", "Isostatic", "Extrusion"],
-  // Form 04/05 (migration 0062) — seeded EMPTY; Alok populates via Admin → Masters.
+  // Form 04/05 (migration 0062) — seeded EMPTY; Alok populates via the Masters module.
   external_grade: [],
   internal_production_code: [],
   part_no: [],

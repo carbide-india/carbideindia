@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/auth/current";
+import { formatDayMonth } from "@/lib/format";
 import { BackLink } from "@/components/ui/back-link";
 import {
   getRoleDetail,
@@ -153,10 +154,7 @@ function ActivityTrail({ entries }: { entries: RoleActivityEntry[] }) {
                   dateTime={e.createdAt.toISOString()}
                   className="shrink-0 text-[12px] text-ink-subtle tabular-nums"
                 >
-                  {e.createdAt.toLocaleDateString("en-IN", {
-                    day: "2-digit",
-                    month: "short",
-                  })}
+                  {formatDayMonth(e.createdAt)}
                 </time>
               </div>
               <p className="text-[12.5px] text-ink-subtle">

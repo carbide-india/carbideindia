@@ -1947,8 +1947,8 @@ export function KycForm({
  * Multi-select master picker rendered as a prominent checkbox chip row - the
  * same chip treatment as the enquiry checklist's "Docs Given". Stores an array
  * of selected uuids; the legacy singular column is mirrored to the first
- * selection server-side. Empty master shows the "add in Admin -> Masters"
- * fallback.
+ * selection server-side. Empty master shows the "add them in the Masters
+ * module" fallback.
  */
 function MasterChips({
   control,

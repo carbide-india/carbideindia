@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Route } from "next";
-import { format, formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
+import { formatDateTime } from "@/lib/format";
 import { FileText, UserPlus, Settings as SettingsIcon } from "lucide-react";
 import type { ComponentType } from "react";
 import { Avatar } from "@/components/ui/avatar";
@@ -132,7 +133,7 @@ function ActivityListItem({
   statusLabels?: Record<TaskStatus, string>;
 }) {
   const relative = formatDistanceToNow(row.createdAt, { addSuffix: true });
-  const exact = format(row.createdAt, "MMM d, h:mm a");
+  const exact = formatDateTime(row.createdAt);
 
   return (
     <li

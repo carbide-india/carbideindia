@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth/current";
-import { getQuotationById } from "@/lib/queries/quotations";
+import {
+  getQuotationById,
+  getLatestCostingRevisionsForItems,
+} from "@/lib/queries/quotations";
 import { getInquiryById } from "@/lib/queries/inquiries";
 import { listEmployeeOptions } from "@/lib/queries/employees";
 import { getQuotationItems, getInquiryItemSeeds } from "@/lib/queries/quotes";
@@ -68,6 +71,12 @@ export default async function QuotationDetailPage({ params }: PageProps) {
   );
   const missingCount = seeds.filter((s) => !presentIds.has(s.inquiryItemId)).length;
 
+  // Which costing REVISION each line's frozen cost basis came from, and whether
+  // a newer one has since landed. Read here (not inside the line query, which
+  // another workstream owns) and handed down as a plain serializable record.
+  const revisionMap = await getLatestCostingRevisionsForItems([...presentIds]);
+  const latestCostings = Object.fromEntries(revisionMap);
+
   return (
     <EnquiryModuleShell title="Quotation" userMenu={<UserMenuServer />}>
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
@@ -82,6 +91,7 @@ export default async function QuotationDetailPage({ params }: PageProps) {
           employees={employees}
           inquiryLink={inquiryLink}
           lines={lines}
+          latestCostings={latestCostings}
         />
       </div>
     </EnquiryModuleShell>

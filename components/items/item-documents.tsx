@@ -11,6 +11,7 @@ import {
   validateDocumentFileShape,
 } from "@/lib/documents/upload-validation";
 import { fireToast } from "@/lib/toast";
+import { formatDate } from "@/lib/format";
 import type { ItemDocument } from "@/lib/queries/item-documents";
 
 /** Item document blobs nest under the shared `documents/` prefix that the
@@ -45,11 +46,7 @@ function typeChip(mimeType: string | null): string {
 }
 
 function fmtDate(d: Date): string {
-  return new Date(d).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  return formatDate(new Date(d));
 }
 
 /** Fast client-side pre-check so obviously-bad files fail before any network. */

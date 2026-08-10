@@ -6,15 +6,14 @@ import { FeasibilityQueueTable } from "@/components/feasibility/feasibility-queu
 export const dynamic = "force-dynamic";
 
 /**
- * Approvals inbox — enquiries awaiting a feasibility decision (in review or
- * submitted for sign-off). Open one to set its status (proceed to costing,
- * need info, or not feasible).
+ * Approvals inbox — enquiries sitting in the house Pending Approval bucket.
+ * Open one to set its status (Feasibility Approved, Need Info, Not Feasible).
+ * Draft reviews are deliberately NOT here: under the house vocabulary a draft
+ * has not been submitted, and it already has its own bucket on the dashboard.
  */
 export default async function FeasibilityApprovalsPage() {
   await requireAdmin();
-  const rows = (await listFeasibilityQueue()).filter(
-    (r) => r.status === "pending_approval" || r.status === "in_review",
-  );
+  const rows = (await listFeasibilityQueue()).filter((r) => r.status === "pending_approval");
 
   return (
     <div className="mx-auto w-full max-w-[1600px]">

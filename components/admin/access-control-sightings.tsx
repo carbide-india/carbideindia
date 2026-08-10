@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Fingerprint } from "lucide-react";
+import { formatDateTime } from "@/lib/format";
 import { AccessControlEntryDialog } from "./access-control-entry-dialog";
 import {
   AcCard,
@@ -63,7 +64,7 @@ export function AccessControlSightings({
                   </div>
                   <p className="mt-0.5 text-[12.5px] text-ink-subtle tabular-nums">
                     {s.hits} session{s.hits === 1 ? "" : "s"} · last{" "}
-                    {new Date(s.lastSeenAt).toLocaleString()}
+                    {formatDateTime(new Date(s.lastSeenAt))}
                     {s.people.length > 0 && ` · ${s.people.slice(0, 3).join(", ")}`}
                     {s.people.length > 3 && ` +${s.people.length - 3}`}
                   </p>

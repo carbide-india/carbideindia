@@ -9,6 +9,7 @@ import {
   pushSubscriptions,
 } from "@/db/schema";
 import { FORM_DRAFT_META, isFormDraftKind } from "@/lib/drafts/form-drafts";
+import { formatDateTime } from "@/lib/format";
 import {
   clampWindow,
   type DangerZoneWindows,
@@ -96,14 +97,6 @@ export interface RevokeCandidate {
   openTasks: number;
 }
 
-const stampFmt = new Intl.DateTimeFormat("en-IN", {
-  day: "2-digit",
-  month: "short",
-  year: "numeric",
-  hour: "numeric",
-  minute: "2-digit",
-  hour12: true,
-});
 
 /** postgres-js hands timestamps back as Date; be defensive about strings too. */
 function toDate(v: unknown): Date | null {
@@ -118,7 +111,7 @@ function toDate(v: unknown): Date | null {
 /** Format on the SERVER so the client never re-formats and mismatches hydration. */
 function stamp(v: unknown): string | null {
   const d = toDate(v);
-  return d ? stampFmt.format(d) : null;
+  return d ? formatDateTime(d) : null;
 }
 
 const n = (v: unknown): number => Number(v ?? 0);
@@ -312,7 +305,7 @@ export async function getDangerZonePreview(
     notifications: notificationRows,
     devices,
     derived,
-    countedAtLabel: stampFmt.format(new Date()),
+    countedAtLabel: formatDateTime(new Date()),
   };
 }
 

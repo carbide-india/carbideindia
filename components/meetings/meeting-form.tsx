@@ -367,7 +367,7 @@ export function MeetingForm({
                     aria-label="Client type - no options"
                     className="nt-input flex w-full items-center text-left text-ink-subtle cursor-not-allowed opacity-60"
                   >
-                    No options - add in Admin → Masters
+                    No options - add them in the Masters module
                   </button>
                 )
               }

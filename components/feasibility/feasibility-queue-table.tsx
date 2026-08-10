@@ -105,6 +105,38 @@ export function FeasibilityQueueTable({ rows }: { rows: FeasibilityQueueItem[] }
         cell: (r) => <ChecksBar done={r.checksDone} total={r.checksTotal} />,
       },
       {
+        // Lines of this SM whose spec drifted from the frozen Primary baseline.
+        // Which fields differ is per LINE, so the detail is on the Secondary
+        // register / review — here it is a "go look" signal only.
+        id: "variance",
+        header: "Variance",
+        width: "104px",
+        align: "right",
+        sortValue: (r) => r.varianceLines,
+        exportValue: (r) => (r.comparableLines === 0 ? "" : r.varianceLines),
+        cell: (r) => {
+          if (r.comparableLines === 0) {
+            return (
+              <span className="text-[12px] font-semibold text-ink-subtle" title="No line has a frozen Primary baseline yet.">
+                n/a
+              </span>
+            );
+          }
+          if (r.varianceLines === 0) {
+            return <span className="text-[12px] font-semibold text-ink-subtle">Match</span>;
+          }
+          return (
+            <span
+              className="tabular-nums font-bold"
+              style={{ color: "var(--color-amber-deep)" }}
+              title={`${r.varianceLines} of ${r.comparableLines} comparable line(s) differ from the frozen Primary baseline.`}
+            >
+              {r.varianceLines}/{r.comparableLines}
+            </span>
+          );
+        },
+      },
+      {
         id: "checkedByName",
         header: "Checked By",
         width: "150px",

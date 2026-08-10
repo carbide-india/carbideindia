@@ -3,6 +3,7 @@
 import * as React from "react";
 import { GitCompareArrows, History, TriangleAlert, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatDate } from "@/lib/format";
 import { INQUIRY_SHAPES, QUANTITY_UOMS } from "@/db/enums";
 import type { MasterOptionItem } from "@/lib/queries/masters";
 import type { CostingSpec } from "@/lib/queries/costings";
@@ -135,16 +136,12 @@ interface Props {
   enquiryDate?: Date | string | null;
 }
 
-/** "29 Jul 2026" — matches the enquiry-snapshot date format. */
+/** "29-07-2026" — the house DD-MM-YYYY date, same as the enquiry snapshot. */
 function fmtDate(d: Date | string | null | undefined): string {
   if (!d) return "—";
   const date = typeof d === "string" ? new Date(d) : d;
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  return formatDate(date);
 }
 
 export function CostingSpecPanel({

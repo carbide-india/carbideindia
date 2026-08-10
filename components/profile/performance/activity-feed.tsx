@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { Route } from "next";
+import { formatDate } from "@/lib/format";
 import { SectionHeader } from "@/components/profile/identity/avatar-and-name";
 
 export interface ActivityRowProp {
@@ -21,7 +22,7 @@ function relTime(iso: string): string {
   if (hrs < 24) return `${hrs}h ago`;
   const days = Math.round(hrs / 24);
   if (days < 30) return `${days}d ago`;
-  return d.toLocaleDateString();
+  return formatDate(d);
 }
 
 const KIND_COLOR: Record<ActivityRowProp["kind"], string> = {

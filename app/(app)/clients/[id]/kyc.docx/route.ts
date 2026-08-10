@@ -14,6 +14,7 @@ import {
 import { requireUser } from "@/lib/auth/current";
 import { getClientRecord } from "@/lib/queries/clients";
 import { buildKycDocument, kycFileStem, type KycDocRow } from "@/lib/clients/kyc-document";
+import { formatDateTime } from "@/lib/format";
 
 /**
  * GET /clients/[id]/kyc.docx
@@ -68,13 +69,7 @@ export async function GET(
     /* logo optional */
   }
 
-  const generated = new Date().toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const generated = formatDateTime(new Date());
 
   const children: (Paragraph | Table)[] = [];
 

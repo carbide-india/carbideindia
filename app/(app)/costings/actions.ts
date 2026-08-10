@@ -2,7 +2,8 @@
 
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
-import { and, eq, ne } from "drizzle-orm";
+import { and, asc, desc, eq, ne } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@/lib/db";
 import {
   costings,
@@ -10,6 +11,7 @@ import {
   inquiryItems,
   productionOrders,
   type NewCosting,
+  type NewCostingVendorQuote,
 } from "@/db/schema";
 import { requireAdmin, requireUser } from "@/lib/auth/current";
 import {
@@ -32,7 +34,7 @@ import {
 } from "@/lib/costing/inhouse-master";
 import { getCostingDecision } from "@/lib/queries/costings";
 import { isItemFeasibilityConfirmed } from "@/lib/queries/feasibility";
-import type { CostingRoute } from "@/db/enums";
+import type { CostingDoneStatus, CostingRoute } from "@/db/enums";
 
 type SaveCostingResult =
   | { ok: true; id: string; finalCostPerPiece: number }
@@ -206,6 +208,34 @@ export async function saveCosting(
           );
       }
 
+      // ── Revision bookkeeping ──
+      // Re-costing a line INSERTS a new row (it never updates in place), so a
+      // re-cost IS Costing 2 / Costing 3. Number it within its own
+      // (inquiry_item, route) group and demote the previous rows of that group
+      // so exactly one row is `is_latest_revision`.
+      const prior = await tx
+        .select({ id: costings.id, revisionNo: costings.revisionNo })
+        .from(costings)
+        .where(
+          and(
+            eq(costings.inquiryItemId, v.inquiryItemId),
+            eq(costings.costingType, v.costingType),
+          ),
+        )
+        .orderBy(desc(costings.revisionNo), desc(costings.createdAt));
+      const revisionNo = nextRevisionNo(prior);
+      if (prior.length > 0) {
+        await tx
+          .update(costings)
+          .set({ isLatestRevision: false })
+          .where(
+            and(
+              eq(costings.inquiryItemId, v.inquiryItemId),
+              eq(costings.costingType, v.costingType),
+            ),
+          );
+      }
+
       // ── Insert the new costing row ──
       const [row] = await tx
       .insert(costings)
@@ -215,6 +245,13 @@ export async function saveCosting(
         costingType: v.costingType,
         costingLogic: v.costingLogic,
         isChosen,
+        // A saved cost sheet is a DRAFT, not "Not Started" — the column default
+        // (`not_done`) exists for the rows the register synthesises for lines
+        // that have no costing at all.
+        costingDoneStatus: "draft",
+        revisionNo,
+        supersedesCostingId: prior[0]?.id ?? null,
+        isLatestRevision: true,
         // inputs
         qty: v.qty != null ? String(v.qty) : null,
         toolType: v.toolType,
@@ -491,6 +528,10 @@ export async function approveCostingDecision(
           approverId: me.id,
           approvedAt: new Date(),
           isLocked: true,
+          // The house bucket follows the real act of approval — this action IS
+          // the Costing Approved transition, so nothing else may write that
+          // value (see `setCostingStatus`).
+          costingDoneStatus: "costing_approved",
           updatedAt: new Date(),
         })
         .where(eq(costings.id, targetId));
@@ -542,6 +583,10 @@ export async function unlockCostingDecision(
         overrideReason: null,
         isOverridden: false,
         finalUnitCost: null,
+        // Unlocking hands the costing back to the approver's queue rather than
+        // dropping it to Draft — the sheet is complete, only the approval was
+        // reversed.
+        costingDoneStatus: "pending_approval",
         updatedAt: new Date(),
       })
       .where(eq(costings.id, chosen.id));
@@ -584,6 +629,22 @@ function uuidOrNull(v: string | undefined | null): string | null {
   return typeof v === "string" && UUID_RE.test(v) ? v : null;
 }
 /** Trimmed non-empty text, else null. */
+/**
+ * The revision number a NEW row should take within its (inquiry_item, route)
+ * group. `prior` must be ordered revision_no DESC.
+ *
+ * Uses max(highest revision_no, number of prior rows) + 1 rather than plain
+ * max+1 so that legacy groups — every pre-0072 row carries the column default
+ * `revision_no = 1` — still get a strictly increasing number that matches the
+ * row's POSITION in the revision list (which is what the UI labels
+ * "Costing 1 / 2 / 3" from).
+ */
+function nextRevisionNo(prior: ReadonlyArray<{ revisionNo: number }>): number {
+  if (prior.length === 0) return 1;
+  const highest = prior[0]?.revisionNo ?? 1;
+  return Math.max(highest, prior.length) + 1;
+}
+
 function textOrNull(v: string | undefined | null): string | null {
   const s = (v ?? "").trim();
   return s === "" ? null : s;
@@ -968,6 +1029,40 @@ export async function saveCostingMaster(
         .set({ isChosen: false })
         .where(and(eq(costings.inquiryItemId, v.inquiryItemId), eq(costings.isChosen, true)));
 
+      // ── Revision bookkeeping (per route) ──
+      // The Costing Master always INSERTS, so saving over an existing sheet is
+      // Costing 2 / Costing 3 for that route. Number the new rows within their
+      // own group and demote that group's previous rows — a bought-out-only
+      // save must NOT disturb the in-house group's latest flag, hence per-route.
+      const priorRows = await tx
+        .select({
+          id: costings.id,
+          costingType: costings.costingType,
+          revisionNo: costings.revisionNo,
+        })
+        .from(costings)
+        .where(eq(costings.inquiryItemId, v.inquiryItemId))
+        .orderBy(desc(costings.revisionNo), desc(costings.createdAt));
+      const priorInhouse = priorRows.filter((r) => r.costingType === "inhouse");
+      const priorBuyout = priorRows.filter((r) => r.costingType === "bought_out");
+
+      for (const [route, prior] of [
+        ["inhouse", priorInhouse],
+        ["bought_out", priorBuyout],
+      ] as const) {
+        const inserting = route === "inhouse" ? Boolean(inhouseBuild) : wantBuyout;
+        if (!inserting || prior.length === 0) continue;
+        await tx
+          .update(costings)
+          .set({ isLatestRevision: false })
+          .where(
+            and(
+              eq(costings.inquiryItemId, v.inquiryItemId),
+              eq(costings.costingType, route),
+            ),
+          );
+      }
+
       let inhouseId: string | null = null;
       let boughtOutId: string | null = null;
 
@@ -979,6 +1074,11 @@ export async function saveCostingMaster(
             ...inhouseBuild.row,
             isChosen: inhouseIsChosen,
             recommendedOption,
+            // A saved cost sheet is a Draft (see saveCosting).
+            costingDoneStatus: "draft",
+            revisionNo: nextRevisionNo(priorInhouse),
+            supersedesCostingId: priorInhouse[0]?.id ?? null,
+            isLatestRevision: true,
           })
           .returning({ id: costings.id });
         if (!row) throw new Error("inhouse-insert-failed");
@@ -996,6 +1096,11 @@ export async function saveCostingMaster(
             costingType: "bought_out",
             isChosen: boIsChosen,
             recommendedOption,
+            // A saved cost sheet is a Draft (see saveCosting).
+            costingDoneStatus: "draft",
+            revisionNo: nextRevisionNo(priorBuyout),
+            supersedesCostingId: priorBuyout[0]?.id ?? null,
+            isLatestRevision: true,
             qty: numStr(qty),
             outsourcedVendorCost: primary ? primary.unitPrice : null,
             vendorOhPct: primary ? primary.vendorOhPct : null,
@@ -1099,28 +1204,94 @@ const COSTING_BLOCK_MESSAGES: Record<CostingBlock, string> = {
  * `costing_vendor_quotes.costing_id` is ON DELETE CASCADE and is this costing's
  * OWN child matrix, so it is deliberately NOT counted - it goes with the row.
  */
+interface CostingDeleteTarget {
+  block: CostingBlock | null;
+  inquiryId: string | null;
+  inquiryItemId: string | null;
+  costingType: CostingRoute | null;
+  isLatestRevision: boolean;
+  isChosen: boolean;
+}
+
 async function inspectCostingForDelete(
   id: string,
-): Promise<{ block: CostingBlock | null; inquiryId: string | null }> {
+): Promise<CostingDeleteTarget> {
+  const empty = {
+    inquiryId: null,
+    inquiryItemId: null,
+    costingType: null,
+    isLatestRevision: false,
+    isChosen: false,
+  } as const;
   const [row] = await db
     .select({
       inquiryId: costings.inquiryId,
+      inquiryItemId: costings.inquiryItemId,
+      costingType: costings.costingType,
       isLocked: costings.isLocked,
       approvedAt: costings.approvedAt,
+      isLatestRevision: costings.isLatestRevision,
+      isChosen: costings.isChosen,
     })
     .from(costings)
     .where(eq(costings.id, id))
     .limit(1);
-  if (!row) return { block: "missing", inquiryId: null };
+  if (!row) return { block: "missing", ...empty };
+  const identity = {
+    inquiryId: row.inquiryId,
+    inquiryItemId: row.inquiryItemId,
+    costingType: row.costingType,
+    isLatestRevision: row.isLatestRevision,
+    isChosen: row.isChosen,
+  };
   if (row.isLocked || row.approvedAt !== null) {
-    return { block: "locked", inquiryId: row.inquiryId };
+    return { block: "locked", ...identity };
   }
   const refs = await db.$count(
     productionOrders,
     eq(productionOrders.costingId, id),
   );
-  if (refs > 0) return { block: "in_use", inquiryId: row.inquiryId };
-  return { block: null, inquiryId: row.inquiryId };
+  if (refs > 0) return { block: "in_use", ...identity };
+  return { block: null, ...identity };
+}
+
+/**
+ * After a costing is deleted, hand its `isLatestRevision` (and `isChosen`, when
+ * it held it) back to the newest surviving revision of the same
+ * (inquiry_item, route) group. Without this, deleting Costing 3 would leave the
+ * line with NO latest revision at all — and `getChosenCostingLocksForItems`
+ * filters on exactly that flag, so the Quotation would silently stop seeing an
+ * approved cost basis that is still sitting right there.
+ *
+ * No-op when the deleted row was not the latest, or the group is now empty.
+ */
+async function promoteSurvivingRevision(target: CostingDeleteTarget): Promise<void> {
+  if (!target.isLatestRevision) return;
+  if (!target.inquiryItemId || !target.costingType) return;
+
+  const [survivor] = await db
+    .select({ id: costings.id })
+    .from(costings)
+    .where(
+      and(
+        eq(costings.inquiryItemId, target.inquiryItemId),
+        eq(costings.costingType, target.costingType),
+      ),
+    )
+    .orderBy(desc(costings.revisionNo), desc(costings.createdAt))
+    .limit(1);
+  if (!survivor) return;
+
+  await db
+    .update(costings)
+    .set({
+      isLatestRevision: true,
+      // Only re-chose when the deleted row was the chosen one — the
+      // exactly-one-chosen-per-item invariant must survive the delete.
+      ...(target.isChosen ? { isChosen: true } : {}),
+      updatedAt: new Date(),
+    })
+    .where(eq(costings.id, survivor.id));
 }
 
 /**
@@ -1141,6 +1312,7 @@ export async function deleteCosting(
     }
     inquiryId = inspected.inquiryId;
     await db.delete(costings).where(eq(costings.id, id));
+    await promoteSurvivingRevision(inspected);
   } catch (err) {
     console.error("[deleteCosting] failed", err);
     return { ok: false, error: "Could not delete the costing. Please try again." };
@@ -1180,6 +1352,7 @@ export async function deleteCostingsBulk(
         continue;
       }
       await db.delete(costings).where(eq(costings.id, id));
+      await promoteSurvivingRevision(inspected);
       deleted++;
       if (inspected.inquiryId) touchedInquiries.add(inspected.inquiryId);
     } catch (err) {
@@ -1193,4 +1366,416 @@ export async function deleteCostingsBulk(
     revalidatePath("/inquiries/" + inquiryId);
   }
   return { ok: true, deleted, failed };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Costing stage buckets — status, Need Info note, target date, revisions
+// (2026-08 pipeline review with Manan).
+//
+// The house vocabulary at this stage is
+//   Not Started → Draft → Need Info → Pending Approval → Costing Approved
+// (COSTING_STAGE_BUCKETS in db/enums.ts). Two of those transitions are NOT
+// free-form and are deliberately not writable here:
+//
+//   • `costing_approved` is written ONLY by `approveCostingDecision`, because
+//     approval is an act with consequences — it picks the route/vendor, snapshots
+//     `final_unit_cost` and LOCKS the row, and that number is what every
+//     quotation line is gated against. A status dropdown that could claim
+//     "Costing Approved" without any of that would be a lie the Quotation then
+//     refuses to honour.
+//   • the legacy `in_process` / `done` values (DEPRECATED_COSTING_DONE_STATUSES)
+//     are never written again; they stay legal only so existing rows render.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** The statuses a user may set by hand on the costing stage panel. */
+const SETTABLE_COSTING_STATUSES = [
+  "not_done",
+  "draft",
+  "need_info",
+  "pending_approval",
+] as const satisfies readonly CostingDoneStatus[];
+
+const SetCostingStatusSchema = z
+  .object({
+    costingId: z.string().uuid("Invalid costing id."),
+    status: z.enum(SETTABLE_COSTING_STATUSES),
+    /** Free text for "what else do we need before we can fix a price?". */
+    needInfoNote: z.string().trim().max(2000, "Note is too long.").optional(),
+  })
+  .superRefine((v, ctx) => {
+    if (v.status === "need_info" && !(v.needInfoNote ?? "").trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["needInfoNote"],
+        message: "Say what information is missing before setting Need Info.",
+      });
+    }
+  });
+
+export type SetCostingStatusInput = z.infer<typeof SetCostingStatusSchema>;
+
+type StageResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Move a costing between the house buckets, optionally recording the Need Info
+ * note. Refuses on an approved & locked row — the approval must be reversed
+ * through `unlockCostingDecision` (admin) so the audit trail stays honest.
+ *
+ * The note is written whenever supplied and is NEVER cleared when the costing
+ * moves on: the history of what was asked for is the point of the field.
+ */
+export async function setCostingStatus(
+  input: SetCostingStatusInput,
+): Promise<StageResult> {
+  await requireUser();
+
+  const parsed = SetCostingStatusSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+  const v = parsed.data;
+
+  try {
+    const [row] = await db
+      .select({
+        inquiryId: costings.inquiryId,
+        isLocked: costings.isLocked,
+      })
+      .from(costings)
+      .where(eq(costings.id, v.costingId))
+      .limit(1);
+    if (!row) return { ok: false, error: "Costing not found." };
+    if (row.isLocked) {
+      return {
+        ok: false,
+        error:
+          "This costing is approved and locked - unlock the decision before changing its status.",
+      };
+    }
+
+    const note = (v.needInfoNote ?? "").trim();
+    await db
+      .update(costings)
+      .set({
+        costingDoneStatus: v.status,
+        ...(note ? { needInfoNote: note } : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(costings.id, v.costingId));
+
+    revalidatePath("/costings");
+    revalidatePath("/costings/" + v.costingId);
+    revalidatePath("/inquiries/" + row.inquiryId);
+    return { ok: true };
+  } catch (err) {
+    console.error("[setCostingStatus]", err);
+    return { ok: false, error: "Could not update the costing status - please try again." };
+  }
+}
+
+/**
+ * Bulk bucket move from the register's selection bar. Locked rows are SKIPPED
+ * rather than failing the whole batch, and the caller is told how many.
+ * `need_info` is not offered in bulk — the note is per-costing by definition.
+ */
+export async function setCostingStatusBulk(
+  costingIds: string[],
+  status: string,
+): Promise<
+  { ok: true; updated: number; skipped: number } | { ok: false; error: string }
+> {
+  await requireUser();
+
+  if (!Array.isArray(costingIds) || costingIds.length === 0) {
+    return { ok: false, error: "No rows selected." };
+  }
+  if (!costingIds.every(isUuid)) return { ok: false, error: "Invalid costing id." };
+
+  const bulkStatuses = SETTABLE_COSTING_STATUSES.filter((s) => s !== "need_info");
+  if (!bulkStatuses.includes(status as (typeof bulkStatuses)[number])) {
+    return { ok: false, error: "That status can't be set in bulk." };
+  }
+
+  let updated = 0;
+  let skipped = 0;
+  const touched = new Set<string>();
+  try {
+    for (const id of costingIds) {
+      const [row] = await db
+        .select({ inquiryId: costings.inquiryId, isLocked: costings.isLocked })
+        .from(costings)
+        .where(eq(costings.id, id))
+        .limit(1);
+      if (!row || row.isLocked) {
+        skipped++;
+        continue;
+      }
+      await db
+        .update(costings)
+        .set({ costingDoneStatus: status as CostingDoneStatus, updatedAt: new Date() })
+        .where(eq(costings.id, id));
+      updated++;
+      touched.add(row.inquiryId);
+    }
+  } catch (err) {
+    console.error("[setCostingStatusBulk]", err);
+    return {
+      ok: false,
+      error: "Could not update the selected costings - please try again.",
+    };
+  }
+
+  revalidatePath("/costings");
+  for (const inquiryId of touched) revalidatePath("/inquiries/" + inquiryId);
+  return { ok: true, updated, skipped };
+}
+
+const SetCostingTargetDateSchema = z.object({
+  costingId: z.string().uuid("Invalid costing id."),
+  /** Calendar day as YYYY-MM-DD, or null to clear it. */
+  targetDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Use a valid date.")
+    .nullable()
+    .optional(),
+});
+
+export type SetCostingTargetDateInput = z.infer<typeof SetCostingTargetDateSchema>;
+
+/**
+ * Set (or clear) the date a costing is expected to be finished by. Nullable on
+ * purpose — an un-dated costing is legal; the register simply can't flag it
+ * overdue. Stored at local midday so a timezone shift can never move the
+ * calendar day the register renders and compares.
+ */
+export async function setCostingTargetDate(
+  input: SetCostingTargetDateInput,
+): Promise<StageResult> {
+  await requireUser();
+
+  const parsed = SetCostingTargetDateSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+  const v = parsed.data;
+
+  const raw = v.targetDate ?? null;
+  let targetDate: Date | null = null;
+  if (raw) {
+    const [y, m, d] = raw.split("-").map(Number);
+    if (!y || !m || !d) return { ok: false, error: "Use a valid date." };
+    targetDate = new Date(y, m - 1, d, 12, 0, 0, 0);
+    if (Number.isNaN(targetDate.getTime())) {
+      return { ok: false, error: "Use a valid date." };
+    }
+  }
+
+  try {
+    const [row] = await db
+      .select({ inquiryId: costings.inquiryId })
+      .from(costings)
+      .where(eq(costings.id, v.costingId))
+      .limit(1);
+    if (!row) return { ok: false, error: "Costing not found." };
+
+    await db
+      .update(costings)
+      .set({ targetDate, updatedAt: new Date() })
+      .where(eq(costings.id, v.costingId));
+
+    revalidatePath("/costings");
+    revalidatePath("/costings/" + v.costingId);
+    revalidatePath("/inquiries/" + row.inquiryId);
+    return { ok: true };
+  } catch (err) {
+    console.error("[setCostingTargetDate]", err);
+    return { ok: false, error: "Could not update the target date - please try again." };
+  }
+}
+
+const ReviseCostingSchema = z.object({
+  costingId: z.string().uuid("Invalid costing id."),
+  reason: z
+    .string()
+    .trim()
+    .min(3, "Say why this costing is being revised.")
+    .max(2000, "Reason is too long."),
+  /** Back-link when the revision was triggered by a negotiation. */
+  negotiationId: z.string().uuid().nullable().optional(),
+});
+
+export type ReviseCostingInput = z.infer<typeof ReviseCostingSchema>;
+
+type ReviseCostingResult =
+  | { ok: true; id: string; revisionNo: number }
+  | { ok: false; error: string };
+
+/**
+ * Create the NEXT revision of a costing — Costing 1 → Costing 2 → Costing 3.
+ *
+ * A revision INSERTS a copy; the superseded row is never updated in place beyond
+ * losing its `is_latest_revision` flag, so the earlier numbers stay in the system
+ * exactly as they were (पहले वाला रहेगा सिस्टम में) and the two can be diffed.
+ *
+ * Three properties of the new row are FORCED by existing invariants, not
+ * invented business rules:
+ *   • it starts at `draft`, un-approved and un-locked — an approval is an act a
+ *     person performed on a specific number and cannot be inherited by a copy;
+ *   • it takes over `is_chosen` from the row it supersedes, because the
+ *     exactly-one-chosen-per-item invariant (and the quotation gate that reads
+ *     it) admits no other answer;
+ *   • the BO vendor matrix is copied and RE-RANKED, because the superseded row's
+ *     chosen/recommended vendor-quote ids point at its own child rows.
+ *
+ * What is deliberately NOT built (Foundation's open question on the revision
+ * trigger): nothing creates a revision automatically from a failed negotiation,
+ * and no quotation is regenerated. `negotiationId` only records the origin when
+ * a caller already knows it.
+ */
+export async function reviseCosting(
+  input: ReviseCostingInput,
+): Promise<ReviseCostingResult> {
+  const me = await requireUser();
+
+  const parsed = ReviseCostingSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+  const v = parsed.data;
+
+  try {
+    const [src] = await db
+      .select()
+      .from(costings)
+      .where(eq(costings.id, v.costingId))
+      .limit(1);
+    if (!src) return { ok: false, error: "Costing not found." };
+
+    // Same gate as creating a costing: an unconfirmed line cannot be re-costed.
+    if (!(await isItemFeasibilityConfirmed(src.inquiryItemId))) {
+      return {
+        ok: false,
+        error:
+          "This product line's feasibility is not confirmed yet - confirm it in Primary Feasibility before revising the costing.",
+      };
+    }
+
+    const quotes = await db
+      .select()
+      .from(costingVendorQuotes)
+      .where(eq(costingVendorQuotes.costingId, src.id))
+      .orderBy(asc(costingVendorQuotes.sortOrder));
+
+    const created = await db.transaction(async (tx) => {
+      const prior = await tx
+        .select({ id: costings.id, revisionNo: costings.revisionNo })
+        .from(costings)
+        .where(
+          and(
+            eq(costings.inquiryItemId, src.inquiryItemId),
+            eq(costings.costingType, src.costingType),
+          ),
+        )
+        .orderBy(desc(costings.revisionNo), desc(costings.createdAt));
+      const revisionNo = nextRevisionNo(prior);
+
+      // Demote the whole group, then flag only the new row.
+      await tx
+        .update(costings)
+        .set({ isLatestRevision: false })
+        .where(
+          and(
+            eq(costings.inquiryItemId, src.inquiryItemId),
+            eq(costings.costingType, src.costingType),
+          ),
+        );
+      if (src.isChosen) {
+        await tx
+          .update(costings)
+          .set({ isChosen: false })
+          .where(
+            and(
+              eq(costings.inquiryItemId, src.inquiryItemId),
+              eq(costings.isChosen, true),
+            ),
+          );
+      }
+
+      const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...carried } = src;
+      const values: NewCosting = {
+        ...carried,
+        // Revision identity.
+        revisionNo,
+        supersedesCostingId: src.id,
+        isLatestRevision: true,
+        revisionReason: v.reason,
+        revisedFromNegotiationId: v.negotiationId ?? null,
+        // The copy is unapproved work in progress.
+        costingDoneStatus: "draft",
+        isLocked: false,
+        approvedAt: null,
+        approverId: null,
+        approvedOption: null,
+        isOverridden: false,
+        overrideReason: null,
+        finalUnitCost: null,
+        // Vendor-quote ids belong to the superseded row; re-derived below.
+        chosenVendorQuoteId: null,
+        recommendedVendorQuoteId: null,
+        isChosen: src.isChosen,
+        createdById: me.id,
+      };
+
+      const [row] = await tx
+        .insert(costings)
+        .values(values)
+        .returning({ id: costings.id });
+      if (!row) throw new Error("revision-insert-failed");
+
+      if (quotes.length > 0) {
+        const copies: NewCostingVendorQuote[] = quotes.map((q) => ({
+          costingId: row.id,
+          vendorId: q.vendorId,
+          vendorNameSnapshot: q.vendorNameSnapshot,
+          unitPrice: q.unitPrice,
+          leadTimeDays: q.leadTimeDays,
+          creditPeriodDays: q.creditPeriodDays,
+          freightCost: q.freightCost,
+          vendorOhPct: q.vendorOhPct,
+          developmentCost: q.developmentCost,
+          paymentTermsId: q.paymentTermsId,
+          quantityToleranceId: q.quantityToleranceId,
+          deliveryTime: q.deliveryTime,
+          deliveryTimeUnit: q.deliveryTimeUnit,
+          validity: q.validity,
+          validityUnit: q.validityUnit,
+          sortOrder: q.sortOrder,
+          notes: q.notes,
+        }));
+        const inserted = await tx
+          .insert(costingVendorQuotes)
+          .values(copies)
+          .returning();
+        const cmp = compareVendors(inserted, Number(src.qty ?? 0));
+        if (cmp.cheapestId != null) {
+          await tx
+            .update(costings)
+            .set({ recommendedVendorQuoteId: cmp.cheapestId })
+            .where(eq(costings.id, row.id));
+        }
+      }
+
+      return { id: row.id, revisionNo };
+    });
+
+    revalidatePath("/costings");
+    revalidatePath("/costings/" + v.costingId);
+    revalidatePath("/costings/" + created.id);
+    revalidatePath("/inquiries/" + src.inquiryId);
+
+    return { ok: true, id: created.id, revisionNo: created.revisionNo };
+  } catch (err) {
+    console.error("[reviseCosting]", err);
+    return { ok: false, error: "Could not create the revision - please try again." };
+  }
 }

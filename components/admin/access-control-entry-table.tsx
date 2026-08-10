@@ -5,6 +5,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, MapPin, Plus, ShieldCheck } from "lucide-react";
 import { fireToast } from "@/lib/toast";
+import { formatDateTime } from "@/lib/format";
 import { describeCidr } from "@/lib/access-control-ip";
 import { setIpAllowlistEntryActive } from "@/app/(admin)/admin/access-control/actions";
 import {
@@ -238,7 +239,7 @@ function EntryRow({
         )}
       </td>
       <td className="px-5 py-3.5 text-[12.5px] text-ink-soft tabular-nums">
-        {entry.lastSeenAt ? new Date(entry.lastSeenAt).toLocaleString() : "—"}
+        {entry.lastSeenAt ? formatDateTime(new Date(entry.lastSeenAt)) : "—"}
       </td>
       <td className="px-5 py-3.5">
         {entry.isActive ? (

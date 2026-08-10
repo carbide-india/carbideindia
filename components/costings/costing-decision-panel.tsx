@@ -10,6 +10,7 @@ import {
   unlockCostingDecision,
 } from "@/app/(app)/costings/actions";
 import { fireToast } from "@/lib/toast";
+import { formatDateTime } from "@/lib/format";
 import { Select } from "@/components/ui/select";
 import { NotesField } from "@/components/ui/notes-field";
 import { StatusPill } from "@/components/erp/status-pill";
@@ -46,14 +47,7 @@ function fmtDateTime(d: Date | string | null | undefined): string {
   if (!d) return "—";
   const date = typeof d === "string" ? new Date(d) : d;
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
+  return formatDateTime(date);
 }
 
 /** A titled band — indigo accent, matches the feasibility enquiry snapshot. */

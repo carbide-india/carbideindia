@@ -10,7 +10,7 @@ import {
   type DayPunches,
   type TeamAttendanceRow,
 } from "@/lib/queries/attendance";
-import { formatTimeInTz, localDateString } from "@/lib/format";
+import { formatDate, formatTimeInTz, localDateString } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -18,19 +18,18 @@ interface PageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-const DAY_LABEL_FMT: Intl.DateTimeFormatOptions = {
+// Weekday only - the numeric date comes from the house DD-MM-YYYY formatter.
+// Both read the UTC-noon instant below, so the label can never drift a day.
+const WEEKDAY_FMT = new Intl.DateTimeFormat("en-GB", {
   weekday: "short",
-  day: "2-digit",
-  month: "short",
-  year: "numeric",
-};
+  timeZone: "UTC",
+});
 
-/** "2026-06-10" → "Wed, 10 Jun 2026" without timezone drift. */
+/** "2026-06-10" → "Wed, 10-06-2026" without timezone drift. */
 function labelForDate(date: string): string {
   const [y, m, d] = date.split("-").map(Number);
-  return new Intl.DateTimeFormat("en-IN", DAY_LABEL_FMT).format(
-    new Date(Date.UTC(y ?? 2026, (m ?? 1) - 1, d ?? 1, 12)),
-  );
+  const noonUtc = new Date(Date.UTC(y ?? 2026, (m ?? 1) - 1, d ?? 1, 12));
+  return `${WEEKDAY_FMT.format(noonUtc)}, ${formatDate(noonUtc, "UTC")}`;
 }
 
 export default async function AttendancePage({ searchParams }: PageProps) {

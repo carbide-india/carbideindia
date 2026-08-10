@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import { ArrowUpRight, Trash2 } from "lucide-react";
+import { ArrowUpRight, Factory, Trash2, UserRound } from "lucide-react";
 import { formatInr, formatDate } from "@/lib/format";
 import { Chip } from "@/components/inquiries/chip";
 import {
@@ -16,10 +16,17 @@ import {
 import { fireToast } from "@/lib/toast";
 import {
   setSalesOrderSentBulk,
+  setProductionSoSentBulk,
+  setSalesOrderStatusBulk,
   deleteSalesOrder,
   deleteSalesOrdersBulk,
 } from "@/app/(app)/sales-orders/actions";
 import type { SalesOrderListItem } from "@/lib/queries/sales-orders";
+import {
+  SALES_ORDER_STAGE_BUCKETS,
+  SALES_ORDER_STATUS_LABELS,
+  SALES_ORDER_STATUS_COLORS,
+} from "@/db/enums";
 
 export const NEW_SALES_ORDER_ROUTE: Route = "/sales-orders/new";
 
@@ -63,6 +70,19 @@ export function SoTable({ rows }: Props) {
         label: "Open",
         Icon: ArrowUpRight,
         href: `/sales-orders/${r.id}` as Route,
+      },
+      // The two outputs, straight from the register row.
+      {
+        key: "customer-copy",
+        label: "Customer copy",
+        Icon: UserRound,
+        href: `/sales-orders/${r.id}/customer-copy` as Route,
+      },
+      {
+        key: "factory-copy",
+        label: "Factory copy (internal)",
+        Icon: Factory,
+        href: `/sales-orders/${r.id}/factory-copy` as Route,
       },
       {
         key: "delete",
@@ -147,15 +167,45 @@ export function SoTable({ rows }: Props) {
         ),
       },
       {
+        id: "salesOrderStatus",
+        header: "Stage",
+        sortValue: (r) => SALES_ORDER_STAGE_BUCKETS.indexOf(r.salesOrderStatus),
+        exportValue: (r) => SALES_ORDER_STATUS_LABELS[r.salesOrderStatus],
+        cell: (r) => (
+          <Chip
+            label={SALES_ORDER_STATUS_LABELS[r.salesOrderStatus]}
+            tone={SALES_ORDER_STATUS_COLORS[r.salesOrderStatus]}
+          />
+        ),
+      },
+      // The two outputs, side by side. Independent flags on purpose: an order
+      // can be confirmed to the customer while the shop floor is still waiting.
+      {
         id: "customerSoSent",
-        header: "SO Sent",
+        header: "Customer Copy",
         sortValue: (r) => (r.customerSoSent ? 1 : 0),
-        exportValue: (r) => (r.customerSoSent ? "Yes" : "No"),
+        exportValue: (r) => (r.customerSoSent ? "Sent" : "Pending"),
         cell: (r) =>
           r.customerSoSent ? (
-            <Chip label="Yes" tone="green" />
+            <Chip label="Sent" tone="green" />
           ) : (
-            <span className="text-[13px] font-semibold text-ink-subtle">No</span>
+            <span className="text-[13px] font-semibold text-ink-subtle">
+              Pending
+            </span>
+          ),
+      },
+      {
+        id: "productionSoSent",
+        header: "Factory Copy",
+        sortValue: (r) => (r.productionSoSent ? 1 : 0),
+        exportValue: (r) => (r.productionSoSent ? "Sent" : "Pending"),
+        cell: (r) =>
+          r.productionSoSent ? (
+            <Chip label="Sent" tone="green" />
+          ) : (
+            <span className="text-[13px] font-semibold text-ink-subtle">
+              Pending
+            </span>
           ),
       },
       {
@@ -177,13 +227,23 @@ export function SoTable({ rows }: Props) {
     () => [
       {
         id: "customerSoSent",
-        label: "SO sent",
+        label: "Customer copy",
         type: "select",
         options: [
-          { value: "Yes", label: "Yes" },
-          { value: "No", label: "No" },
+          { value: "Sent", label: "Sent" },
+          { value: "Pending", label: "Pending" },
         ],
-        accessor: (r) => (r.customerSoSent ? "Yes" : "No"),
+        accessor: (r) => (r.customerSoSent ? "Sent" : "Pending"),
+      },
+      {
+        id: "productionSoSent",
+        label: "Factory copy",
+        type: "select",
+        options: [
+          { value: "Sent", label: "Sent" },
+          { value: "Pending", label: "Pending" },
+        ],
+        accessor: (r) => (r.productionSoSent ? "Sent" : "Pending"),
       },
       {
         id: "enquiryDate",
@@ -205,14 +265,32 @@ export function SoTable({ rows }: Props) {
       filters={filters}
       exportFilename="sales-orders"
       rowMenu={rowMenu}
-      bulkAction={{
-        label: "Set SO Sent",
-        options: [
-          { value: "yes", label: "Sent" },
-          { value: "no", label: "Not Sent" },
-        ],
-        onApply: (ids, value) => setSalesOrderSentBulk(ids, value),
-      }}
+      bulkActions={[
+        {
+          label: "Set Stage",
+          options: SALES_ORDER_STAGE_BUCKETS.map((b) => ({
+            value: b,
+            label: SALES_ORDER_STATUS_LABELS[b],
+          })),
+          onApply: (ids, value) => setSalesOrderStatusBulk(ids, value),
+        },
+        {
+          label: "Customer Copy",
+          options: [
+            { value: "yes", label: "Sent" },
+            { value: "no", label: "Pending" },
+          ],
+          onApply: (ids, value) => setSalesOrderSentBulk(ids, value),
+        },
+        {
+          label: "Factory Copy",
+          options: [
+            { value: "yes", label: "Sent" },
+            { value: "no", label: "Pending" },
+          ],
+          onApply: (ids, value) => setProductionSoSentBulk(ids, value),
+        },
+      ]}
       bulkDelete={{
         noun: { one: "sales order", many: "sales orders" },
         onDelete: async (ids) => {

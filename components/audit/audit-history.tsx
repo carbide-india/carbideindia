@@ -1,4 +1,5 @@
 import * as React from "react";
+import { formatDateTime } from "@/lib/format";
 import type { AuditEntry } from "@/lib/queries/audit";
 
 interface Props {
@@ -7,17 +8,9 @@ interface Props {
 
 /* ── Date formatter ─────────────────────────────────────────────────────── */
 
-const auditDateFmt = new Intl.DateTimeFormat("en-IN", {
-  day: "2-digit",
-  month: "short",
-  year: "numeric",
-  hour: "numeric",
-  minute: "2-digit",
-  hour12: true,
-});
-
+/** House stamp: "05-08-2026 3:42 pm". */
 function formatAuditDate(d: Date): string {
-  return auditDateFmt.format(d);
+  return formatDateTime(d);
 }
 
 /* ── Field-name humanizer ───────────────────────────────────────────────── */

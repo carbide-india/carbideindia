@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
 import * as Tooltip from "@radix-ui/react-tooltip";
-import { format } from "date-fns";
+import { formatDate } from "@/lib/format";
 import {
   Loader2,
   Archive,
@@ -659,7 +659,7 @@ function TaskHoverCard({
           <Meta
             icon={<CalendarDays size={14} strokeWidth={2.2} />}
             label="Due"
-            value={t.dueAt ? format(t.dueAt, "MMM d, yyyy") : null}
+            value={t.dueAt ? formatDate(t.dueAt) : null}
           />
           <div className="min-w-0">
             <FieldHead icon={<User size={14} strokeWidth={2.2} />}>Doer</FieldHead>

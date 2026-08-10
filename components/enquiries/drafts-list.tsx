@@ -7,6 +7,7 @@ import type { Route } from "next";
 import { Clock, Trash2, ArrowRight, FilePlus2, Package, Check, X } from "lucide-react";
 import { deleteEnquiryDraft } from "@/app/(app)/enquiries/drafts/actions";
 import { fireToast } from "@/lib/toast";
+import { formatDayMonth } from "@/lib/format";
 
 const MONO = "var(--font-mono-display)";
 
@@ -29,7 +30,7 @@ function relTime(d: string | Date): string {
   const days = Math.floor(h / 24);
   if (days === 1) return "yesterday";
   if (days < 7) return `${days}d ago`;
-  return new Date(t).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  return formatDayMonth(new Date(t));
 }
 
 function CompletenessRing({ pct }: { pct: number }) {

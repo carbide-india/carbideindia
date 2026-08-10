@@ -15,14 +15,95 @@ export function formatTime(d: Date): string {
   return timeFmt.format(d);
 }
 
-const dateFmt = new Intl.DateTimeFormat("en-IN", {
-  day: "2-digit",
-  month: "short",
-  year: "numeric",
-});
+// ---------------------------------------------------------------------------
+// House date format: DD-MM-YYYY (Manan, 2026-08 review: "इधर भी डीडी एमएम
+// वाईवाईवाईवाई ही रखो"). Every human-facing date in the app goes through the
+// helpers below so one change governs the whole product.
+//
+// The parts are assembled by hand rather than handed to a locale: en-GB and
+// en-IN both render "05/08/2026" with slashes, and en-CA renders the machine
+// order YYYY-MM-DD. formatToParts gives us the zero-padded pieces and we join
+// them with dashes ourselves.
+//
+// These format in the RUNTIME timezone by default (Vercel runs UTC), which is
+// the behaviour every existing call site already had. Pass `timeZone` where a
+// screen must pin a date to the office day (see formatTimeInTz / localDateString).
+// ---------------------------------------------------------------------------
 
-export function formatDate(d: Date): string {
-  return dateFmt.format(d);
+const DMY_OPTS = {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+} as const satisfies Intl.DateTimeFormatOptions;
+
+const SHORT_TIME_OPTS = {
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+} as const satisfies Intl.DateTimeFormatOptions;
+
+// Intl.DateTimeFormat construction is the expensive part - cache one instance
+// per timezone. "" is the key for "runtime timezone, no override".
+const dmyCache = new Map<string, Intl.DateTimeFormat>();
+const shortTimeCache = new Map<string, Intl.DateTimeFormat>();
+
+function cachedFmt(
+  cache: Map<string, Intl.DateTimeFormat>,
+  opts: Intl.DateTimeFormatOptions,
+  timeZone: string | undefined,
+): Intl.DateTimeFormat {
+  const key = timeZone ?? "";
+  const hit = cache.get(key);
+  if (hit) return hit;
+  const fmt = new Intl.DateTimeFormat("en-GB", timeZone ? { ...opts, timeZone } : opts);
+  cache.set(key, fmt);
+  return fmt;
+}
+
+/**
+ * `new Date("")` / `new Date(undefined as never)` are real Date objects whose
+ * time is NaN - Intl throws RangeError on them. Registers render plenty of
+ * dates that came off the wire, so guard instead of blowing up the page.
+ */
+function isValidDate(d: Date): boolean {
+  return d instanceof Date && !Number.isNaN(d.getTime());
+}
+
+/** Pull the zero-padded day/month/year out of a formatter. */
+function dmyParts(d: Date, fmt: Intl.DateTimeFormat): { day: string; month: string; year: string } {
+  let day = "";
+  let month = "";
+  let year = "";
+  for (const part of fmt.formatToParts(d)) {
+    if (part.type === "day") day = part.value;
+    else if (part.type === "month") month = part.value;
+    else if (part.type === "year") year = part.value;
+  }
+  return { day, month, year };
+}
+
+/** House date: DD-MM-YYYY, zero-padded (e.g. "05-08-2026"). "-" if invalid. */
+export function formatDate(d: Date, timeZone?: string): string {
+  if (!isValidDate(d)) return "-";
+  const { day, month, year } = dmyParts(d, cachedFmt(dmyCache, DMY_OPTS, timeZone));
+  return `${day}-${month}-${year}`;
+}
+
+/**
+ * Compact house date without the year: DD-MM (e.g. "05-08"). For dense strips
+ * (drafts, digests, agenda sub-labels) that previously read "5 Aug".
+ */
+export function formatDayMonth(d: Date, timeZone?: string): string {
+  if (!isValidDate(d)) return "-";
+  const { day, month } = dmyParts(d, cachedFmt(dmyCache, DMY_OPTS, timeZone));
+  return `${day}-${month}`;
+}
+
+/** House stamp: DD-MM-YYYY plus clock time (e.g. "05-08-2026 10:42 am"). */
+export function formatDateTime(d: Date, timeZone?: string): string {
+  if (!isValidDate(d)) return "-";
+  const time = cachedFmt(shortTimeCache, SHORT_TIME_OPTS, timeZone).format(d);
+  return `${formatDate(d, timeZone)} ${time}`;
 }
 
 /**

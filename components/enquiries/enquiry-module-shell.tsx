@@ -17,8 +17,6 @@ import {
   Truck,
   FileCheck2,
   SlidersHorizontal,
-  ClipboardCheck,
-  Layers,
   Trash2,
   PanelLeftClose,
   PanelLeftOpen,
@@ -209,30 +207,11 @@ function navFor(pathname: string): NavDef[] {
         ] as NavDef[])
       : []),
   ];
-  // Primary and Secondary Feasibility are each their own module - keep
-  // cross-link launchers in the enquiry family (they open the standalone
-  // /feasibility and /secondary-feasibility modules).
-  const fam = familySeg(pathname);
-  if (fam === "enquiries" || fam === "inquiries") {
-    items.push({
-      label: "Primary Feasibility",
-      href: "/feasibility" as Route,
-      Icon: ClipboardCheck,
-      ready: true,
-      active: (p) => p.startsWith("/feasibility"),
-      group: "records",
-      adminOnly: true,
-    });
-    items.push({
-      label: "Secondary Feasibility",
-      href: "/secondary-feasibility" as Route,
-      Icon: Layers,
-      ready: true,
-      active: (p) => p.startsWith("/secondary-feasibility"),
-      group: "records",
-      adminOnly: true,
-    });
-  }
+  // Primary and Secondary Feasibility are each their OWN module, reached from
+  // their own Forms launchpad cards. They are deliberately NOT cross-linked
+  // here: New Enquiry's sidebar is about the enquiry you are filling in, and a
+  // launcher into another module only muddles that.
+  //
   // Forms with their own "Custom" dropdown lists get a Custom editor entry.
   // The Sample Register family labels it "SAM Dropdown Master"; others keep
   // "CUST Dropdown Master" (e.g. Client KYC).

@@ -2,7 +2,17 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Loader2, Plus, Boxes, Check, X, RefreshCcw } from "lucide-react";
+import {
+  Search,
+  Loader2,
+  Plus,
+  Boxes,
+  Check,
+  X,
+  RefreshCcw,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import { StatusPill, ITEM_STATUS_PILL } from "@/components/erp/status-pill";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
@@ -22,6 +32,11 @@ import {
   type MaterialPrefill,
 } from "@/app/(app)/_actions/product-picker";
 import type { MaterialHit } from "@/lib/queries/item-search";
+
+/** Rows revealed before "View more"; and how many are fetched behind it. */
+const PEEK = 5;
+const PAGE = 25;
+
 import type { MasterOptionItem } from "@/lib/queries/masters";
 
 /**
@@ -71,14 +86,24 @@ export function ProductPicker({
   const q = deferred.trim();
   const boxRef = React.useRef<HTMLDivElement>(null);
 
+  // Fetch a full page but reveal only the first few — a 20-row list dropping out
+  // of a form field buries the fields under it. `PEEK` is the resting height;
+  // "View more" expands to everything fetched.
   const { data: hits = [], isFetching } = useQuery({
     queryKey: ["material-search", q],
     // Empty q browses the newest Product Master items; typing filters them.
-    queryFn: () => searchItemsAction({ q, limit: 10 }),
+    queryFn: () => searchItemsAction({ q, limit: PAGE }),
     enabled: open,
     staleTime: 20_000,
     placeholderData: (prev) => prev,
   });
+
+  // Reset at the source of the change (the input) rather than in an effect on
+  // `q` — every new query starts collapsed, otherwise a previous "view more"
+  // would silently apply to a different result set.
+  const [expanded, setExpanded] = React.useState(false);
+  const visible = expanded ? hits : hits.slice(0, PEEK);
+  const hiddenCount = hits.length - visible.length;
 
   // Close the results panel on outside click (create sheet stays open).
   React.useEffect(() => {
@@ -97,6 +122,7 @@ export function ProductPicker({
     setOpen(false);
     setCreating(false);
     setQuery("");
+    setExpanded(false);
     fireToast({
       message: `${reused ? "Existing material attached" : "Material created"} - ${prefill.itemCode}`,
       type: "success",
@@ -138,6 +164,7 @@ export function ProductPicker({
           onChange={(e) => {
             setQuery(e.target.value);
             setOpen(true);
+            setExpanded(false);
           }}
           placeholder="Search materials by code, size, grade, customer"
           className="h-11 flex-1 bg-transparent text-[14px] text-ink-strong outline-none placeholder:text-ink-subtle"
@@ -161,12 +188,36 @@ export function ProductPicker({
               </p>
             ) : (
               <>
-                {q.length < 2 && (
-                  <p className="px-3 pb-1 pt-2 text-[11px] font-bold uppercase tracking-[0.1em] text-ink-subtle">
-                    Recent products from the Product Master
-                  </p>
+                <p className="flex items-baseline gap-2 px-3 pb-1 pt-2 text-[11px] font-bold uppercase tracking-[0.1em] text-ink-subtle">
+                  {q.length < 2 ? "Recent products from the Product Master" : "Matching products"}
+                  <span className="ml-auto font-semibold tabular-nums tracking-normal">
+                    {expanded || hiddenCount === 0
+                      ? `${hits.length}`
+                      : `${visible.length} of ${hits.length}`}
+                  </span>
+                </p>
+                {visible.map((h) => <HitRow key={h.id} hit={h} onPick={pick} />)}
+
+                {hiddenCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setExpanded(true)}
+                    className="mt-0.5 flex w-full items-center justify-center gap-1.5 rounded-chip border border-dashed border-hairline-strong px-3 py-2 text-[12.5px] font-bold text-brand transition-colors hover:border-brand hover:bg-brand/6"
+                  >
+                    <ChevronDown size={14} strokeWidth={2.6} />
+                    View {hiddenCount} more
+                  </button>
                 )}
-                {hits.map((h) => <HitRow key={h.id} hit={h} onPick={pick} />)}
+                {expanded && hits.length > PEEK && (
+                  <button
+                    type="button"
+                    onClick={() => setExpanded(false)}
+                    className="mt-0.5 flex w-full items-center justify-center gap-1.5 rounded-chip px-3 py-2 text-[12.5px] font-semibold text-ink-subtle transition-colors hover:bg-surface-soft hover:text-ink-strong"
+                  >
+                    <ChevronUp size={14} strokeWidth={2.6} />
+                    Show less
+                  </button>
+                )}
               </>
             )}
           </div>

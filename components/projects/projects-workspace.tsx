@@ -42,6 +42,7 @@ import {
   reorderProjectNodes,
 } from "@/app/(app)/projects/actions";
 import { fireToast } from "@/lib/toast";
+import { formatDate } from "@/lib/format";
 import type { ProjectTreeNode } from "@/lib/queries/projects";
 import type { EmployeeOption } from "@/lib/queries/employees";
 
@@ -92,16 +93,11 @@ function pluralize(n: number, one: string, many: string = `${one}s`) {
   return `${n} ${n === 1 ? one : many}`;
 }
 
-/** "12 Jun 2026" - compact, locale-stable, IST. */
+/** "12-06-2026" - the house DD-MM-YYYY date, pinned to IST. */
 function fmtDate(d: Date | string | null): string {
   if (!d) return "";
   const date = typeof d === "string" ? new Date(d) : d;
-  return date.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    timeZone: "Asia/Kolkata",
-  });
+  return formatDate(date, "Asia/Kolkata");
 }
 
 /** Date → "YYYY-MM-DD" in IST, for prefilling a <input type=date>. */

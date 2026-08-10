@@ -47,6 +47,8 @@ export default async function EditVendorPage({
     defaultCreditDays: vendor.defaultCreditDays ?? undefined,
     paymentTerms: vendor.paymentTerms ?? "",
     isGstApplicable: vendor.isGstApplicable,
+    gstin: vendor.gstin ?? "",
+    website: vendor.website ?? "",
     notes: vendor.notes ?? "",
   };
 

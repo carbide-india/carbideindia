@@ -2,10 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { and, count, desc, eq, inArray } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@/lib/db";
 import {
   negotiations,
   negotiationItems,
+  costings,
   proformaInvoices,
   proformaInvoiceItems,
   salesOrders,
@@ -13,6 +15,9 @@ import {
   type NewNegotiation,
 } from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
+import { isNegotiationApprovedForSo } from "@/lib/negotiations/buckets";
+// The revision MODEL is the costing stage's — call into it, never fork it.
+import { reviseCosting } from "@/app/(app)/costings/actions";
 import { negotiationLineRows, negotiationLineInsert } from "@/lib/negotiations/line-rows";
 import {
   getQuoteAutofill,
@@ -353,6 +358,133 @@ export async function setNegotiationStatusBulk(
   }
   revalidatePath("/negotiations");
   return { ok: true };
+}
+
+// ── Revise-costing loop (2026-08 pipeline review) ───────────────────────────
+// "वो नया कॉस्टिंग बनेगा उसका" — when a negotiation is NOT approved the costing
+// goes back for a fresh revision. The revision MODEL is the costing stage's
+// (revisionNo / supersedesCostingId / isLatestRevision on `costings`); this
+// action only starts it from the negotiation side.
+//
+// Deliberately NOT automatic: whether a not-approved negotiation should spawn a
+// revision by itself is an open question for Manan, and an ERP that silently
+// forks cost sheets is worse than one that asks. The user picks which cost
+// sheets and states why.
+
+const RequestCostingRevisionSchema = z.object({
+  negotiationId: z.string().uuid(),
+  /** Costing ids to revise — each must be the CURRENT revision of its chain. */
+  costingIds: z.array(z.string().uuid()).min(1).max(50),
+  reason: z
+    .string()
+    .trim()
+    .min(3, "Say why the costing is being revised.")
+    .max(2000),
+});
+
+export interface RequestCostingRevisionInput {
+  negotiationId: string;
+  costingIds: string[];
+  reason: string;
+}
+
+type RequestRevisionResult =
+  | { ok: true; created: number; failed: number; firstError: string | null }
+  | { ok: false; error: string };
+
+/**
+ * Send the selected cost sheets back for a new costing revision.
+ *
+ * This is the NEGOTIATION side of the loop only. The revision model itself —
+ * revisionNo / supersedesCostingId / isLatestRevision, the vendor-quote matrix
+ * copy + re-rank, the approval reset — belongs to the costing stage and is
+ * delegated to `reviseCosting` (app/(app)/costings/actions.ts). Nothing about a
+ * revision is reimplemented here; what this action owns is the guard that the
+ * picked sheets really belong to THIS negotiation's enquiry and are the head of
+ * their revision chain, plus the back-link (`revisedFromNegotiationId`).
+ *
+ * Deliberately NOT automatic: whether a not-approved negotiation should spawn a
+ * revision by itself is an open question for Manan, and an ERP that silently
+ * forks cost sheets is worse than one that asks. The user picks the sheets and
+ * states why. The negotiation's own status is left alone for the same reason.
+ *
+ * Per-sheet failures (e.g. the costing stage's own feasibility gate) do not
+ * abort the whole run: the successes stand and the caller is told how many were
+ * skipped and why.
+ */
+export async function requestCostingRevision(
+  input: RequestCostingRevisionInput,
+): Promise<RequestRevisionResult> {
+  await requireUser();
+  const parsed = RequestCostingRevisionSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+  const { negotiationId, costingIds, reason } = parsed.data;
+
+  let sources: { id: string }[];
+  try {
+    const [neg] = await db
+      .select({ id: negotiations.id, inquiryId: negotiations.inquiryId })
+      .from(negotiations)
+      .where(eq(negotiations.id, negotiationId))
+      .limit(1);
+    if (!neg) return { ok: false, error: "Negotiation not found." };
+
+    const ids = [...new Set(costingIds)];
+    const rows = await db
+      .select({
+        id: costings.id,
+        inquiryId: costings.inquiryId,
+        isLatestRevision: costings.isLatestRevision,
+      })
+      .from(costings)
+      .where(inArray(costings.id, ids));
+
+    if (rows.length !== ids.length) {
+      return { ok: false, error: "One of the selected cost sheets no longer exists." };
+    }
+    // Hostile-client guards: only cost sheets of THIS negotiation's enquiry, and
+    // only the head of a revision chain (a superseded row is history).
+    if (rows.some((c) => c.inquiryId !== neg.inquiryId)) {
+      return { ok: false, error: "That cost sheet doesn't belong to this negotiation." };
+    }
+    if (rows.some((c) => !c.isLatestRevision)) {
+      return {
+        ok: false,
+        error: "One of the selected cost sheets has already been revised - reload and try again.",
+      };
+    }
+    sources = rows;
+  } catch (err) {
+    console.error("[requestCostingRevision] lookup failed", err);
+    return { ok: false, error: "Could not start the costing revision. Please try again." };
+  }
+
+  let created = 0;
+  let failed = 0;
+  let firstError: string | null = null;
+  for (const src of sources) {
+    const res = await reviseCosting({ costingId: src.id, reason, negotiationId });
+    if (res.ok) {
+      created++;
+    } else {
+      failed++;
+      firstError ??= res.error;
+    }
+  }
+
+  if (created === 0) {
+    return {
+      ok: false,
+      error: firstError ?? "Could not start the costing revision. Please try again.",
+    };
+  }
+
+  revalidatePath("/costings");
+  revalidatePath("/negotiations");
+  revalidatePath(`/negotiations/${negotiationId}`);
+  return { ok: true, created, failed, firstError };
 }
 
 // ---------------------------------------------------------------------------
@@ -723,6 +855,7 @@ export async function acceptAndConvertToSalesOrder(
       inquiryId: negotiations.inquiryId,
       quotationId: negotiations.quotationId,
       stage: negotiations.negotiationStage,
+      status: negotiations.negotiationStatus,
       customerPoNo: negotiations.customerPoNo,
       customerPoDate: negotiations.customerPoDate,
       customerPoLink: negotiations.customerPoLink,
@@ -740,6 +873,15 @@ export async function acceptAndConvertToSalesOrder(
   }
   if (neg.stage !== "customer_po_received") {
     return { ok: false, error: "The negotiation must be at Customer PO Received to convert." };
+  }
+  // GATE: an APPROVED negotiation is what enables Issue Sales Order (Manan).
+  // `order_won` is accepted as the legacy synonym of `negotiation_approved` —
+  // see NEGOTIATION_SO_READY_STATUSES — so already-won rows stay convertible.
+  if (!isNegotiationApprovedForSo(neg.status)) {
+    return {
+      ok: false,
+      error: "Approve the negotiation before issuing the sales order.",
+    };
   }
 
   try {

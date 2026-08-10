@@ -13,6 +13,7 @@ import {
   Send,
 } from "lucide-react";
 import { fireToast } from "@/lib/toast";
+import { formatDateTime } from "@/lib/format";
 import {
   restoreTemplateDefault,
   saveTemplate,
@@ -515,14 +516,9 @@ export function TemplatesEditor({ slot, adminEmail, emailConfigured }: Props) {
 
       {slot.updatedAt && (
         <p className="border-t border-hairline px-5 py-2 text-[11.5px] text-ink-subtle tabular-nums">
-          {/* Fixed locale + zone: this renders on the server too, and a
+          {/* Fixed format + zone: this renders on the server too, and a
               browser-dependent format would break hydration. */}
-          Last saved{" "}
-          {slot.updatedAt.toLocaleString("en-IN", {
-            timeZone: "Asia/Kolkata",
-            dateStyle: "medium",
-            timeStyle: "short",
-          })}
+          Last saved {formatDateTime(slot.updatedAt, "Asia/Kolkata")}
           {slot.updatedByName ? ` by ${slot.updatedByName}` : ""}
         </p>
       )}

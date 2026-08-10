@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { formatDateTime } from "@/lib/format";
 import type { IntegrationStatus } from "@/lib/queries/integration-health";
 import { sendIntegrationTestAction } from "@/app/(admin)/admin/settings/actions";
 
@@ -63,7 +64,7 @@ export function IntegrationCard({ status }: { status: IntegrationStatus }) {
           <dt className="text-ink-subtle">Last sent</dt>
           <dd className="font-mono">
             {status.lastSuccessAt
-              ? new Date(status.lastSuccessAt).toLocaleString()
+              ? formatDateTime(new Date(status.lastSuccessAt))
               : "-"}
           </dd>
         </div>

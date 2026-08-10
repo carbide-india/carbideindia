@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, or } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   clients,
@@ -14,7 +14,17 @@ import {
   compareVendors,
   type VendorComparison,
 } from "@/lib/costing/compute";
-import type { CostingRoute } from "@/db/enums";
+import {
+  costingBucketOf,
+  costingDaysToTarget,
+  isCostingOverdue,
+  type CostingBucket,
+} from "@/lib/costing/buckets";
+import type {
+  CostingDoneStatus,
+  CostingRoute,
+  SecondaryFeasibilityStatus,
+} from "@/db/enums";
 import type { SpecSnapshot } from "@/lib/feasibility/spec-variance";
 
 /**
@@ -147,26 +157,6 @@ export async function getCostingSpecForItem(
   };
 }
 
-/**
- * One row of the /costings register - joins inquiry smNumber/companyName and
- * the inquiry_item's custProductName so the register is human-readable without
- * extra round-trips.
- */
-export interface CostingListItem {
-  id: string;
-  inquiryId: string;
-  inquiryItemId: string;
-  smNumber: string | null;
-  companyName: string | null;
-  custProductName: string | null;
-  costingType: "inhouse" | "bought_out";
-  isChosen: boolean;
-  finalCostPerPiece: string | null;
-  quoteValue: string | null;
-  costingDoneStatus: "not_done" | "in_process" | "done";
-  createdAt: Date;
-}
-
 /** Full costing row (all inputs + outputs). */
 export type CostingRow = typeof costings.$inferSelect;
 
@@ -207,33 +197,285 @@ async function attachVendorQuotes(
 export interface ChosenCostingSummary {
   inquiryItemId: string;
   finalCostPerPiece: string | null;
-  costingDoneStatus: "not_done" | "in_process" | "done";
+  costingDoneStatus: CostingDoneStatus;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Costing register — "what is LEFT", not "what exists"
+//
+// The register counts PRODUCT LINES, because a product line is the unit of
+// costing work. One line can carry an in-house row AND a bought-out row AND
+// several revisions and it is still ONE costing job. Crucially, a line that is
+// costable but has NO costing row at all is still a row here, in the Not Started
+// bucket — that is the only way Manan's "20 confirmed, 3 costed, 17 NOT DONE"
+// can ever appear on screen. Listing `costings` (as this register used to) can
+// by construction only ever show the 3.
+//
+// Membership (deliberately a UNION, so no row is ever silently excluded):
+//   A) every product line whose per-item feasibility is CONFIRMED
+//      (inquiry_items.feasibility_confirmed = true) — this is exactly the gate
+//      `saveCosting` / `saveCostingMaster` enforce, so every line counted here
+//      is a line the system will actually let you cost; and
+//   B) every product line that already carries at least one costing row, even if
+//      it has since been un-confirmed — otherwise real cost sheets would vanish
+//      from their own register.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** One costing row under a register line (the expanded revision/route list). */
+export interface CostingRegisterCosting {
+  id: string;
+  costingType: CostingRoute;
+  status: CostingDoneStatus;
+  isChosen: boolean;
+  isLocked: boolean;
+  isLatestRevision: boolean;
+  revisionNo: number;
+  revisionReason: string | null;
+  finalCostPerPiece: string | null;
+  quoteValue: string | null;
+  targetDate: Date | null;
+  needInfoNote: string | null;
+  createdAt: Date;
+}
+
+/** One row of the /costings register — a PRODUCT LINE, costed or not. */
+export interface CostingRegisterRow {
+  /** Row id = the inquiry_item id (the register's unit is the product line). */
+  id: string;
+  inquiryItemId: string;
+  inquiryId: string;
+  smNumber: string | null;
+  companyName: string | null;
+  custProductName: string | null;
+  quantityNos: string | null;
+  quantityUom: string | null;
+  /** The costing this row reports on — null when nothing has been costed yet. */
+  costingId: string | null;
+  costingType: CostingRoute | null;
+  /** Raw stored status of the representative costing (null = no costing row). */
+  status: CostingDoneStatus | null;
+  /** House bucket — legacy statuses fold in, `null` status ⇒ "not_done". */
+  bucket: CostingBucket;
+  finalCostPerPiece: string | null;
+  quoteValue: string | null;
+  targetDate: Date | null;
+  needInfoNote: string | null;
+  isLocked: boolean;
+  /** Position of the representative within its route's revision list (1-based). */
+  revisionNo: number;
+  /** How many revisions exist on the representative's route. */
+  revisionCount: number;
+  /** Total costing rows on the line, across both routes and all revisions. */
+  costingCount: number;
+  overdue: boolean;
+  /** Days late (positive) / remaining (negative); null when un-dated. */
+  daysToTarget: number | null;
+  secondaryFeasibilityStatus: SecondaryFeasibilityStatus;
+  feasibilityConfirmed: boolean;
+  /** Every costing on the line, oldest first — powers the expanded row panel. */
+  costings: CostingRegisterCosting[];
+  /** Representative costing's date, else the enquiry's — the register's "Date". */
+  createdAt: Date;
+}
+
+/** Newest-first comparator inside one revision group: revision no, then date. */
+function byRevisionDesc(
+  a: CostingRegisterCosting,
+  b: CostingRegisterCosting,
+): number {
+  if (a.revisionNo !== b.revisionNo) return b.revisionNo - a.revisionNo;
+  return b.createdAt.getTime() - a.createdAt.getTime();
 }
 
 /**
- * Costing register - all costings, newest first. Joins inquiry smNumber +
- * companyName and inquiry_item custProductName for display.
+ * The costing that speaks for a line: the CHOSEN latest revision if there is one
+ * (that is the row the Quotation will lock onto), otherwise the newest latest
+ * revision, otherwise — for legacy lines where nothing is flagged latest — the
+ * newest row of all. Never returns undefined for a non-empty list.
  */
-export async function listCostings(): Promise<CostingListItem[]> {
-  return db
+function pickRepresentative(
+  rows: readonly CostingRegisterCosting[],
+): CostingRegisterCosting | null {
+  if (rows.length === 0) return null;
+  const latest = rows.filter((r) => r.isLatestRevision);
+  const pool = latest.length > 0 ? latest : [...rows];
+  const chosen = pool.filter((r) => r.isChosen);
+  const ranked = (chosen.length > 0 ? chosen : pool).slice().sort(byRevisionDesc);
+  return ranked[0] ?? null;
+}
+
+/**
+ * The Costing register. Two reads (all costings; the union of costable +
+ * already-costed lines) then an in-memory roll-up per line — no N+1.
+ *
+ * `now` is injectable so the overdue flag is testable; callers pass nothing.
+ */
+export async function listCostingRegister(
+  now: Date = new Date(),
+): Promise<CostingRegisterRow[]> {
+  const costingRows = await db
     .select({
       id: costings.id,
-      inquiryId: costings.inquiryId,
       inquiryItemId: costings.inquiryItemId,
-      smNumber: inquiries.smNumber,
-      companyName: inquiries.companyName,
-      custProductName: inquiryItems.custProductName,
       costingType: costings.costingType,
+      status: costings.costingDoneStatus,
       isChosen: costings.isChosen,
+      isLocked: costings.isLocked,
+      isLatestRevision: costings.isLatestRevision,
+      revisionNo: costings.revisionNo,
+      revisionReason: costings.revisionReason,
       finalCostPerPiece: costings.finalCostPerPiece,
       quoteValue: costings.quoteValue,
-      costingDoneStatus: costings.costingDoneStatus,
+      targetDate: costings.targetDate,
+      needInfoNote: costings.needInfoNote,
       createdAt: costings.createdAt,
     })
     .from(costings)
-    .leftJoin(inquiries, eq(costings.inquiryId, inquiries.id))
-    .leftJoin(inquiryItems, eq(costings.inquiryItemId, inquiryItems.id))
-    .orderBy(desc(costings.createdAt));
+    .orderBy(asc(costings.createdAt));
+
+  const byLine = new Map<string, CostingRegisterCosting[]>();
+  for (const c of costingRows) {
+    const list = byLine.get(c.inquiryItemId);
+    const entry: CostingRegisterCosting = {
+      id: c.id,
+      costingType: c.costingType,
+      status: c.status,
+      isChosen: c.isChosen,
+      isLocked: c.isLocked,
+      isLatestRevision: c.isLatestRevision,
+      revisionNo: c.revisionNo,
+      revisionReason: c.revisionReason,
+      finalCostPerPiece: c.finalCostPerPiece,
+      quoteValue: c.quoteValue,
+      targetDate: c.targetDate,
+      needInfoNote: c.needInfoNote,
+      createdAt: c.createdAt,
+    };
+    if (list) list.push(entry);
+    else byLine.set(c.inquiryItemId, [entry]);
+  }
+
+  const costedLineIds = [...byLine.keys()];
+  // Union membership (A ∪ B). `inArray` with an empty list is invalid SQL, so a
+  // fresh database — no costings at all — falls back to the confirmed-only arm.
+  const membership =
+    costedLineIds.length > 0
+      ? or(
+          eq(inquiryItems.feasibilityConfirmed, true),
+          inArray(inquiryItems.id, costedLineIds),
+        )
+      : eq(inquiryItems.feasibilityConfirmed, true);
+
+  const lines = await db
+    .select({
+      inquiryItemId: inquiryItems.id,
+      inquiryId: inquiryItems.inquiryId,
+      custProductName: inquiryItems.custProductName,
+      quantityNos: inquiryItems.quantityNos,
+      quantityUom: inquiryItems.quantityUom,
+      feasibilityConfirmed: inquiryItems.feasibilityConfirmed,
+      secondaryFeasibilityStatus: inquiryItems.secondaryFeasibilityStatus,
+      sortOrder: inquiryItems.sortOrder,
+      smNumber: inquiries.smNumber,
+      companyName: inquiries.companyName,
+      enquiryCreatedAt: inquiries.createdAt,
+    })
+    .from(inquiryItems)
+    .innerJoin(inquiries, eq(inquiryItems.inquiryId, inquiries.id))
+    // Archived enquiries are out — same rule the feasibility queue applies. An
+    // archived SM is not outstanding work, and counting it would inflate every
+    // bucket. This is the register's ONE exclusion and it is stated on the page.
+    .where(and(eq(inquiries.isArchived, false), membership))
+    .orderBy(desc(inquiries.createdAt), asc(inquiryItems.sortOrder));
+
+  return lines.map((l) => {
+    const all = (byLine.get(l.inquiryItemId) ?? []).slice().sort(
+      (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+    );
+    const rep = pickRepresentative(all);
+    const sameRoute = rep ? all.filter((c) => c.costingType === rep.costingType) : [];
+    // Positional ordinal, NOT the stored revision_no: every row written before
+    // migration 0072 carries the default 1, so position is the only honest
+    // "Costing 1 / 2 / 3" for legacy lines. They agree for new rows.
+    const repIndex = rep ? sameRoute.findIndex((c) => c.id === rep.id) : -1;
+    const bucket = costingBucketOf(rep?.status ?? null);
+
+    return {
+      id: l.inquiryItemId,
+      inquiryItemId: l.inquiryItemId,
+      inquiryId: l.inquiryId,
+      smNumber: l.smNumber,
+      companyName: l.companyName,
+      custProductName: l.custProductName,
+      quantityNos: l.quantityNos,
+      quantityUom: l.quantityUom,
+      costingId: rep?.id ?? null,
+      costingType: rep?.costingType ?? null,
+      status: rep?.status ?? null,
+      bucket,
+      finalCostPerPiece: rep?.finalCostPerPiece ?? null,
+      quoteValue: rep?.quoteValue ?? null,
+      targetDate: rep?.targetDate ?? null,
+      needInfoNote: rep?.needInfoNote ?? null,
+      isLocked: rep?.isLocked ?? false,
+      revisionNo: repIndex >= 0 ? repIndex + 1 : 0,
+      revisionCount: sameRoute.length,
+      costingCount: all.length,
+      overdue: isCostingOverdue(rep?.targetDate ?? null, bucket, now),
+      daysToTarget: costingDaysToTarget(rep?.targetDate ?? null, now),
+      secondaryFeasibilityStatus: l.secondaryFeasibilityStatus,
+      feasibilityConfirmed: l.feasibilityConfirmed,
+      costings: all,
+      createdAt: rep?.createdAt ?? l.enquiryCreatedAt,
+    } satisfies CostingRegisterRow;
+  });
+}
+
+/**
+ * Every costing revision on one product line, oldest first, grouped by route —
+ * the "Costing 1 / Costing 2 / Costing 3" list on the costing detail page.
+ * Earlier revisions are RETAINED, never deleted (पहले वाला रहेगा सिस्टम में), so
+ * this is a plain history read with no filtering.
+ */
+export async function getCostingRevisionsForItem(
+  inquiryItemId: string,
+): Promise<CostingRow[]> {
+  return db
+    .select()
+    .from(costings)
+    .where(eq(costings.inquiryItemId, inquiryItemId))
+    .orderBy(asc(costings.revisionNo), asc(costings.createdAt));
+}
+
+/** Line identity shown above a costing (SM / company / product / gate state). */
+export interface CostingLineIdentity {
+  inquiryItemId: string;
+  inquiryId: string;
+  smNumber: string | null;
+  companyName: string | null;
+  custProductName: string | null;
+  feasibilityConfirmed: boolean;
+  secondaryFeasibilityStatus: SecondaryFeasibilityStatus;
+}
+
+export async function getCostingLineIdentity(
+  inquiryItemId: string,
+): Promise<CostingLineIdentity | null> {
+  const [row] = await db
+    .select({
+      inquiryItemId: inquiryItems.id,
+      inquiryId: inquiryItems.inquiryId,
+      smNumber: inquiries.smNumber,
+      companyName: inquiries.companyName,
+      custProductName: inquiryItems.custProductName,
+      feasibilityConfirmed: inquiryItems.feasibilityConfirmed,
+      secondaryFeasibilityStatus: inquiryItems.secondaryFeasibilityStatus,
+    })
+    .from(inquiryItems)
+    .innerJoin(inquiries, eq(inquiryItems.inquiryId, inquiries.id))
+    .where(eq(inquiryItems.id, inquiryItemId))
+    .limit(1);
+  return row ?? null;
 }
 
 /**
@@ -511,6 +753,11 @@ export async function getChosenCostingLocksForItems(
       and(
         inArray(costings.inquiryItemId, inquiryItemIds),
         eq(costings.isChosen, true),
+        // The Quotation must consume the LATEST revision. Previously "latest"
+        // was implied by createdAt DESC alone; this makes it explicit so a
+        // superseded Costing 1 can never win a race with Costing 2. No
+        // behaviour change on legacy rows — every pre-0072 row is flagged true.
+        eq(costings.isLatestRevision, true),
       ),
     )
     .orderBy(desc(costings.createdAt));

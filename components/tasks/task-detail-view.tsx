@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { format, formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
+import { formatDateTime } from "@/lib/format";
 import {
   Building2,
   Clock,
@@ -516,13 +517,13 @@ export function TaskDetailView({
                   icon={<Clock size={13} strokeWidth={2.4} />}
                   label="Created"
                   value={`${formatDistanceToNow(task.createdAt, { addSuffix: true })}`}
-                  title={format(task.createdAt, "MMM d, yyyy 'at' h:mm a")}
+                  title={formatDateTime(task.createdAt)}
                 />
                 <MetaRow
                   icon={<History size={13} strokeWidth={2.4} />}
                   label="Updated"
                   value={formatDistanceToNow(task.updatedAt, { addSuffix: true })}
-                  title={format(task.updatedAt, "MMM d, yyyy 'at' h:mm a")}
+                  title={formatDateTime(task.updatedAt)}
                 />
                 <MetaRow
                   icon={<CheckCircle2 size={13} strokeWidth={2.4} />}

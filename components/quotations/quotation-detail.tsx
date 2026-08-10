@@ -5,15 +5,25 @@ import Link from "next/link";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
-import { ArrowLeft, ArrowUpRight, Loader2, Plus } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowUpRight, Loader2, Plus } from "lucide-react";
 import {
   COSTING_DONE_STATUSES,
   COSTING_DONE_STATUS_LABELS,
   COSTING_DONE_STATUS_COLORS,
+  QUOTATION_STAGE_BUCKETS,
+  QUOTATION_STATUS_LABELS,
+  QUOTATION_STATUS_COLORS,
 } from "@/db/enums";
 import type { Quotation } from "@/db/schema";
 import type { QuotationLineWithSpec } from "@/lib/queries/quotes";
+import type { LatestCostingRevision } from "@/lib/queries/quotations";
 import {
+  isCostBasisStale,
+  costBasisDelta,
+  revisionLabel,
+} from "@/components/quotations/costing-basis";
+import {
+  setQuotationBucket,
   setQuotationStatus,
   updateQuotation,
 } from "@/app/(app)/quotations/actions";
@@ -37,6 +47,9 @@ interface Props {
   employees: EmployeeOption[];
   inquiryLink: QuotationInquiryLink | null;
   lines: QuotationLineWithSpec[];
+  /** LATEST costing revision per `inquiry_item_id`, resolved server-side.
+   *  Lines with no costing are simply absent. */
+  latestCostings: Record<string, LatestCostingRevision>;
 }
 
 const QUOTE_SENT_OPTIONS = [
@@ -98,7 +111,13 @@ const MONEY_KEYS = new Set<keyof QuotationEditValues>([
  * Done StatusPicker, Quote Sent, Created/by, Open Register), and read cards for
  * Pricing + Timeline plus ONE dirty-only edit form (mirrors the sample detail).
  */
-export function QuotationDetail({ quotation, employees, inquiryLink, lines }: Props) {
+export function QuotationDetail({
+  quotation,
+  employees,
+  inquiryLink,
+  lines,
+  latestCostings,
+}: Props) {
   const router = useRouter();
 
   const createdBy =
@@ -156,6 +175,8 @@ export function QuotationDetail({ quotation, employees, inquiryLink, lines }: Pr
 
   const statusTone =
     COSTING_DONE_STATUS_COLORS[quotation.costingDoneStatus] ?? "slate";
+  const bucketTone =
+    QUOTATION_STATUS_COLORS[quotation.quotationStatus] ?? "slate";
 
   return (
     <div className="flex flex-col gap-6">
@@ -211,15 +232,27 @@ export function QuotationDetail({ quotation, employees, inquiryLink, lines }: Pr
             <span aria-hidden className="text-ink-subtle">
               ·
             </span>
+            {/* This stage's own bucket first, then the inherited costing state. */}
             <span
               className="inline-flex items-center px-2.5 py-1 rounded-pill text-[12px] font-bold"
+              style={{
+                background: `color-mix(in srgb, var(--color-${bucketTone}) 12%, transparent)`,
+                color: `var(--color-${bucketTone}-deep)`,
+                border: `1px solid color-mix(in srgb, var(--color-${bucketTone}) 30%, transparent)`,
+              }}
+            >
+              {QUOTATION_STATUS_LABELS[quotation.quotationStatus]}
+            </span>
+            <span
+              className="inline-flex items-center px-2.5 py-1 rounded-pill text-[12px] font-bold"
+              title="Costing status inherited from the upstream cost sheet"
               style={{
                 background: `color-mix(in srgb, var(--color-${statusTone}) 12%, transparent)`,
                 color: `var(--color-${statusTone}-deep)`,
                 border: `1px solid color-mix(in srgb, var(--color-${statusTone}) 30%, transparent)`,
               }}
             >
-              {COSTING_DONE_STATUS_LABELS[quotation.costingDoneStatus]}
+              Costing: {COSTING_DONE_STATUS_LABELS[quotation.costingDoneStatus]}
             </span>
           </p>
         </div>
@@ -242,7 +275,16 @@ export function QuotationDetail({ quotation, employees, inquiryLink, lines }: Pr
                 Quoted Lines
               </h2>
               {lines.map((line, idx) => (
-                <QuotedLineCard key={line.id} line={line} lineNo={idx + 1} />
+                <QuotedLineCard
+                  key={line.id}
+                  line={line}
+                  lineNo={idx + 1}
+                  latestCosting={
+                    (line.inquiryItemId
+                      ? latestCostings[line.inquiryItemId]
+                      : undefined) ?? null
+                  }
+                />
               ))}
             </section>
           )}
@@ -384,10 +426,11 @@ export function QuotationDetail({ quotation, employees, inquiryLink, lines }: Pr
         {/* ── Sticky sidebar ─────────────────────────────────────────── */}
         <aside className="lg:sticky lg:top-24 flex flex-col gap-4 rounded-section border border-hairline bg-surface-card p-5">
           <div className="flex flex-col gap-2">
-            {/* Costing Done header with Open Register sitting beside it. */}
+            {/* Quotation Status - THIS stage's bucket, the one the register
+                dashboard counts. Open Register sits beside it. */}
             <div className="flex items-center justify-between gap-2">
               <span className="text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
-                Costing Done
+                Quotation Status
               </span>
               <Link
                 href={"/quotations" as Route}
@@ -397,6 +440,19 @@ export function QuotationDetail({ quotation, employees, inquiryLink, lines }: Pr
                 Open Register
               </Link>
             </div>
+            <StatusPicker
+              value={quotation.quotationStatus}
+              options={QUOTATION_STAGE_BUCKETS}
+              labels={QUOTATION_STATUS_LABELS}
+              tones={QUOTATION_STATUS_COLORS}
+              onPick={(next) => setQuotationBucket(quotation.id, next)}
+              ariaLabel="Quotation status"
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <span className="text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
+              Costing Done
+            </span>
             <StatusPicker
               value={quotation.costingDoneStatus}
               options={COSTING_DONE_STATUSES}
@@ -443,6 +499,76 @@ function SidebarRow({ label, value }: { label: string; value: string }) {
       </span>
       <span className="text-[14px] font-semibold text-ink-strong">{value}</span>
     </div>
+  );
+}
+
+/**
+ * "Costing Used" band - which costing REVISION this line's frozen cost basis
+ * came from (Costing 1 / 2 / 3 per product), the latest revision's approved unit
+ * cost, and a warning when a NEWER revision has landed since the quote was
+ * priced. The revision model itself belongs to the costing workstream; this only
+ * displays what the server resolved as `is_latest_revision`.
+ *
+ * No transition is triggered from here - whether a superseded basis should force
+ * the quotation back to Draft / Pending Approval is an open question.
+ */
+function CostingUsedBand({
+  line,
+  latestCosting,
+}: {
+  line: QuotationLineWithSpec;
+  latestCosting: LatestCostingRevision | null;
+}) {
+  const triGrid = "grid grid-cols-1 divide-x divide-y divide-[#c6cbdd] sm:grid-cols-3";
+
+  if (!latestCosting) {
+    return (
+      <p className="px-4 py-3 text-[13px] text-ink-muted">
+        No costing is linked to this line - its price has no cost basis to check
+        against.
+      </p>
+    );
+  }
+
+  const stale = isCostBasisStale(line.finalCost, latestCosting.finalUnitCost);
+  const delta = costBasisDelta(line.finalCost, latestCosting.finalUnitCost);
+
+  return (
+    <>
+      <div className={triGrid}>
+        <LineCell
+          label="Revision"
+          value={lineDash(
+            revisionLabel(latestCosting.revisionNo, latestCosting.costingTypeLabel),
+          )}
+        />
+        <LineCell
+          label="Latest Approved Cost"
+          value={money(latestCosting.finalUnitCost)}
+        />
+        <LineCell
+          label="Costing Status"
+          value={COSTING_DONE_STATUS_LABELS[latestCosting.costingDoneStatus]}
+        />
+      </div>
+      {stale && (
+        <p
+          className="flex flex-wrap items-center gap-1.5 px-4 py-3 text-[13px] font-semibold"
+          style={{ color: "var(--color-amber-deep)" }}
+        >
+          <AlertTriangle size={14} strokeWidth={2.4} />
+          Quoted on {money(line.finalCost)}; the latest costing revision says{" "}
+          {money(latestCosting.finalUnitCost)}
+          {delta !== null && (
+            <span className="tabular-nums">
+              ({delta > 0 ? "+" : ""}
+              {formatInr(delta)})
+            </span>
+          )}
+          - re-check this price before sending.
+        </p>
+      )}
+    </>
   );
 }
 
@@ -507,7 +633,15 @@ function specSummary(spec: QuotationLineWithSpec["spec"]): string {
  * spec (4-up on lg), then Pricing and Timeline bands with their own dense grids.
  * All values are read-through from the line/item; editing happens in the form.
  */
-function QuotedLineCard({ line, lineNo }: { line: QuotationLineWithSpec; lineNo: number }) {
+function QuotedLineCard({
+  line,
+  lineNo,
+  latestCosting,
+}: {
+  line: QuotationLineWithSpec;
+  lineNo: number;
+  latestCosting: LatestCostingRevision | null;
+}) {
   // Spec fields resolved read-through from the linked Item (§2.4); prices / qty
   // / timeline remain the line's own transactional facts.
   const spec = line.spec;
@@ -537,6 +671,9 @@ function QuotedLineCard({ line, lineNo }: { line: QuotationLineWithSpec; lineNo:
         <LineCell label="Negotiation" value={money(line.negotiation)} />
         <LineCell label="Quote Price" value={money(line.quotePrice)} emphasis />
       </div>
+
+      <LineBand title="Costing Used" />
+      <CostingUsedBand line={line} latestCosting={latestCosting} />
 
       <LineBand title="Timeline & Validity" />
       <div className={triGrid}>

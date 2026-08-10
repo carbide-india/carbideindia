@@ -14,6 +14,12 @@ import type { SecondaryFeasibilityState } from "@/lib/queries/feasibility";
 import type { MasterOptionItem } from "@/lib/queries/masters";
 import { saveSecondaryFeasibility } from "@/app/(app)/feasibility/actions";
 import { fireToast } from "@/lib/toast";
+import { formatDateTime } from "@/lib/format";
+import {
+  SECONDARY_FEASIBILITY_STATUS_COLORS,
+  SECONDARY_FEASIBILITY_STATUS_LABELS,
+} from "@/db/enums";
+import { Chip } from "@/components/inquiries/chip";
 import { Select } from "@/components/ui/select";
 import { NotesField } from "@/components/ui/notes-field";
 import { MiniField } from "@/components/inquiries/form-field";
@@ -71,13 +77,7 @@ function fmtWhen(d: Date | string | null | undefined): string {
   if (!d) return "";
   const date = typeof d === "string" ? new Date(d) : d;
   if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatDateTime(date);
 }
 
 interface FormState {
@@ -263,6 +263,12 @@ export function SecondaryFeasibilitySection({
           {lineNumber}
         </span>
         <span className="text-[15px] font-extrabold tracking-tight text-ink-strong">{title}</span>
+        {/* The line's house bucket — the same pill the register and the sidebar
+            show, so the detail page reads in the same vocabulary. */}
+        <Chip
+          label={SECONDARY_FEASIBILITY_STATUS_LABELS[line.bucket]}
+          tone={SECONDARY_FEASIBILITY_STATUS_COLORS[line.bucket]}
+        />
         {line.gradeCustomer && (
           <span className="text-[12px] font-semibold text-ink-subtle">Grade {line.gradeCustomer}</span>
         )}

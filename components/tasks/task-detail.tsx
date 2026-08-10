@@ -1,4 +1,5 @@
 import { format, formatDistanceToNow } from "date-fns";
+import { formatDate, formatDayMonth } from "@/lib/format";
 import { Calendar, Sparkles, ArrowRight } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import type { TaskDetail as TaskDetailModel } from "@/lib/queries/tasks";
@@ -181,11 +182,11 @@ function DuePill({ dueAt, overdue }: { dueAt: Date; overdue: boolean }) {
         border: `1px solid rgba(${rgb}, ${overdue ? 0.30 : 0.16})`,
         fontWeight: 700,
       }}
-      title={format(dueAt, "EEE, MMM d, yyyy")}
+      title={`${format(dueAt, "EEE")}, ${formatDate(dueAt)}`}
     >
       <Calendar size={14} strokeWidth={2.4} />
       {overdue ? "Overdue · " : "Due "}
-      {format(dueAt, "MMM d")}
+      {formatDayMonth(dueAt)}
     </span>
   );
 }

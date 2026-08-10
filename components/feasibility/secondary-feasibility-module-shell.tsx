@@ -11,10 +11,7 @@ import {
   LayoutGrid,
   Layers,
   Circle,
-  CircleHelp,
-  CircleX,
-  Clock3,
-  CircleCheck,
+  GitCompareArrows,
   BadgeCheck,
   PanelLeftClose,
   PanelLeftOpen,
@@ -22,6 +19,11 @@ import {
 import { HubSearch } from "@/components/hub/hub-search";
 import { ModuleTitleBadge } from "@/components/layout/module-title-badge";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import {
+  SECONDARY_FEASIBILITY_STAGE_BUCKETS,
+  SECONDARY_FEASIBILITY_STATUS_LABELS,
+} from "@/db/enums";
+import { BUCKET_ICONS } from "@/components/feasibility/feasibility-module-shell";
 import { cn } from "@/lib/utils";
 
 /**
@@ -41,19 +43,24 @@ interface StatusNav {
 }
 
 /**
- * The Secondary queue's status filters — the same five-slot rhythm (and icons)
- * as the Primary sidebar, mapped onto what a Secondary LINE actually carries:
- * its technical verdict and its Secondary-done / confirmed stamps.
+ * The Secondary queue's status filters — literally the SAME menu as Primary
+ * ("ये सेम मेनू आएगा सेकेंडरी में"), built off the stage's own bucket array so
+ * labels and order can never drift from the dashboard strip or the table pill.
  */
 const SECONDARY_STATUS_NAV: StatusNav[] = [
-  { label: "Not Started", status: "not_started", Icon: Circle },
-  { label: "Need Info", status: "need_info", Icon: CircleHelp },
-  { label: "Not Feasible", status: "not_feasible", Icon: CircleX },
-  { label: "Pending", status: "pending", Icon: Clock3 },
-  { label: "Done", status: "done", Icon: CircleCheck },
+  ...SECONDARY_FEASIBILITY_STAGE_BUCKETS.map((b) => ({
+    label: SECONDARY_FEASIBILITY_STATUS_LABELS[b],
+    status: b as string,
+    Icon:
+      b === "secondary_feasibility_approved"
+        ? BUCKET_ICONS.approved
+        : BUCKET_ICONS[b as keyof typeof BUCKET_ICONS],
+  })),
+  { label: "Spec Variance", status: "variance", Icon: GitCompareArrows },
 ];
 
 function queueHrefFor(status: string): Route {
+  if (status === "variance") return "/secondary-feasibility?variance=1" as Route;
   return (status ? `/secondary-feasibility?status=${status}` : "/secondary-feasibility") as Route;
 }
 
@@ -66,7 +73,9 @@ export function SecondaryFeasibilityModuleShell({
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const activeStatus = searchParams.get("status") ?? "";
+  // `?variance=1` is a view of the same queue, so it shares the nested-filter slot.
+  const activeStatus =
+    searchParams.get("variance") === "1" ? "variance" : (searchParams.get("status") ?? "");
   const onQueue = pathname === "/secondary-feasibility";
   const [collapsed, setCollapsed] = useState(false);
 

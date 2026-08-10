@@ -4,13 +4,12 @@ import * as React from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import { ArrowUpRight, Trash2 } from "lucide-react";
-// Route used for typed href in columns
+import { AlertTriangle, ArrowUpRight, Calculator, Trash2 } from "lucide-react";
 import {
   COSTING_ROUTE_LABELS,
-  COSTING_DONE_STATUSES,
   COSTING_DONE_STATUS_LABELS,
   COSTING_DONE_STATUS_COLORS,
+  COSTING_STAGE_BUCKETS,
 } from "@/db/enums";
 import { formatInr, formatDate } from "@/lib/format";
 import { Chip } from "@/components/inquiries/chip";
@@ -21,15 +20,26 @@ import {
   type RowMenuItem,
 } from "@/components/registers/register-data-table";
 import { fireToast } from "@/lib/toast";
-import { deleteCosting, deleteCostingsBulk } from "@/app/(app)/costings/actions";
-import type { CostingListItem } from "@/lib/queries/costings";
+import {
+  deleteCosting,
+  deleteCostingsBulk,
+  setCostingStatusBulk,
+} from "@/app/(app)/costings/actions";
+import { costingRevisionLabel } from "@/lib/costing/buckets";
+import type { CostingRegisterRow } from "@/lib/queries/costings";
 
 interface Props {
-  rows: CostingListItem[];
+  rows: CostingRegisterRow[];
 }
 
 /** Deleting a costing is admin-only (`requireAdmin` throws for everyone else). */
 const FORBIDDEN_MESSAGE = "Admins only - ask an admin to delete this costing.";
+
+/** Filter labels for the target-date column (kept out of the render loop). */
+const TARGET_OVERDUE = "Overdue";
+const TARGET_DUE_SOON = "Due in 7 days";
+const TARGET_SET = "On track";
+const TARGET_NONE = "No target date";
 
 function moneyText(value: string | null): string {
   if (value == null || value === "") return "-";
@@ -43,93 +53,162 @@ function moneyNumber(value: string | null): number {
   return Number.isFinite(n) ? n : -Infinity;
 }
 
+/** The Costing Master link for a line — where an un-costed line gets started. */
+function costingMasterHref(r: CostingRegisterRow): Route {
+  return `/costings/new?inquiryItemId=${r.inquiryItemId}&inquiryId=${r.inquiryId}` as Route;
+}
+
+function targetBand(r: CostingRegisterRow): string {
+  if (r.targetDate == null) return TARGET_NONE;
+  if (r.overdue) return TARGET_OVERDUE;
+  if (r.daysToTarget != null && r.daysToTarget >= 0 && r.daysToTarget <= 7) {
+    return TARGET_DUE_SOON;
+  }
+  return TARGET_SET;
+}
+
 /**
- * Costing register table -- thin config wrapper over RegisterDataTable.
- * Columns: SM, Product, Route, Final Cost/pc, Quote Value, Status, Date.
+ * Costing register table — a thin config wrapper over RegisterDataTable.
+ *
+ * One row = one PRODUCT LINE, costed or not. A line with no costing sheet at all
+ * is a real row here (status "Not Started"), which is the only way the register
+ * can answer Manan's question — "20 are costable, I costed 3, where are the 17?".
+ * The expanded panel behind each row lists every cost sheet on the line: both
+ * routes, every revision (Costing 1 / 2 / 3), oldest first.
  */
 export function CostingTable({ rows }: Props) {
   const router = useRouter();
 
-  // Per-row actions menu: Open + a destructive Delete. `costings` has no
-  // recycle bin / archived flag, so this is a HARD delete: it confirms first and
-  // the server action refuses when the costing is approved & locked or a
-  // production order was built against it.
+  // Selection ids are inquiry_item ids (the row unit), but every write below
+  // targets a `costings` row — map through the rows we already hold rather than
+  // re-resolving server-side, and drop lines that have nothing to act on.
+  const costingIdsFor = React.useCallback(
+    (lineIds: string[]): string[] => {
+      const wanted = new Set(lineIds);
+      return rows
+        .filter((r) => wanted.has(r.id) && r.costingId != null)
+        .map((r) => r.costingId as string);
+    },
+    [rows],
+  );
+
   const rowMenu = React.useCallback(
-    (r: CostingListItem): RowMenuItem<CostingListItem>[] => [
-      {
-        key: "open",
-        label: "Open",
-        Icon: ArrowUpRight,
-        href: `/costings/${r.id}` as Route,
-      },
-      {
-        key: "delete",
-        label: "Delete",
-        Icon: Trash2,
-        danger: true,
-        onSelect: async (row) => {
-          const name = row.smNumber ?? row.custProductName ?? "this costing";
-          if (
-            !window.confirm(`Delete the costing for ${name}? This can't be undone.`)
-          ) {
-            return;
-          }
-          try {
-            const res = await deleteCosting(row.id);
-            if (res.ok) {
-              fireToast({ message: `Deleted the costing for ${name}.` });
-              router.refresh();
-            } else {
-              fireToast({ message: res.error, type: "error" });
+    (r: CostingRegisterRow): RowMenuItem<CostingRegisterRow>[] => {
+      const items: RowMenuItem<CostingRegisterRow>[] = [];
+      if (r.costingId) {
+        items.push({
+          key: "open",
+          label: "Open cost sheet",
+          Icon: ArrowUpRight,
+          href: `/costings/${r.costingId}` as Route,
+        });
+      }
+      items.push({
+        key: "cost",
+        label: r.costingId ? "Re-cost in Costing Master" : "Start costing",
+        Icon: Calculator,
+        href: costingMasterHref(r),
+      });
+      if (r.costingId) {
+        items.push({
+          key: "delete",
+          label: "Delete latest cost sheet",
+          Icon: Trash2,
+          danger: true,
+          onSelect: async (row) => {
+            const id = row.costingId;
+            if (!id) return;
+            const name = row.smNumber ?? row.custProductName ?? "this line";
+            if (
+              !window.confirm(
+                `Delete the latest cost sheet for ${name}? Earlier revisions are kept. This can't be undone.`,
+              )
+            ) {
+              return;
             }
-          } catch {
-            // requireAdmin throws for non-admins; the menu handler is
-            // fire-and-forget, so swallow it into an honest toast.
-            fireToast({ message: FORBIDDEN_MESSAGE, type: "error" });
-          }
-        },
-      },
-    ],
+            try {
+              const res = await deleteCosting(id);
+              if (res.ok) {
+                fireToast({ message: `Deleted the cost sheet for ${name}.` });
+                router.refresh();
+              } else {
+                fireToast({ message: res.error, type: "error" });
+              }
+            } catch {
+              // requireAdmin throws for non-admins; the menu handler is
+              // fire-and-forget, so swallow it into an honest toast.
+              fireToast({ message: FORBIDDEN_MESSAGE, type: "error" });
+            }
+          },
+        });
+      }
+      return items;
+    },
     [router],
   );
 
-  // Bulk delete. A PARTIAL outcome (rows the server guard refused) is reported
-  // with the real split via `message`, never the bar's default toast - that one
-  // counts the SELECTION and would claim rows the guard actually kept. Nothing
-  // deleted at all is an error, not a success.
+  // Bulk delete. Lines with no cost sheet are not deletable and are counted as
+  // skipped, and a PARTIAL outcome (rows the server guard refused) is reported
+  // with the real split - never the bar's default toast, which counts the
+  // SELECTION and would claim rows the guard actually kept.
   const onBulkDelete = React.useCallback(
     async (
       ids: string[],
     ): Promise<{ ok: boolean; error?: string; message?: string }> => {
+      const costingIds = costingIdsFor(ids);
+      const notCosted = ids.length - costingIds.length;
+      if (costingIds.length === 0) {
+        return { ok: false, error: "None of the selected lines has a cost sheet yet." };
+      }
       let res: Awaited<ReturnType<typeof deleteCostingsBulk>>;
       try {
-        res = await deleteCostingsBulk(ids);
+        res = await deleteCostingsBulk(costingIds);
       } catch {
         return { ok: false, error: FORBIDDEN_MESSAGE };
       }
       if (!res.ok) return { ok: false, error: res.error };
-      if (res.failed > 0) {
-        const why = "skipped (approved & locked, or used by a production order)";
+      const why = "skipped (approved & locked, used by a production order, or not costed yet)";
+      const failed = res.failed + notCosted;
+      if (failed > 0) {
         return res.deleted === 0
-          ? { ok: false, error: `Nothing deleted - ${res.failed} ${why}.` }
-          : { ok: true, message: `${res.deleted} deleted, ${res.failed} ${why}.` };
+          ? { ok: false, error: `Nothing deleted - ${failed} ${why}.` }
+          : { ok: true, message: `${res.deleted} deleted, ${failed} ${why}.` };
       }
       return { ok: true };
     },
-    [],
+    [costingIdsFor],
   );
 
-  const columns = React.useMemo<RegisterColumn<CostingListItem>[]>(
+  // Bulk bucket move. Need Info is intentionally absent - it demands a per-row
+  // note ("what exactly is missing?"), which a bulk control cannot supply.
+  const onBulkStatus = React.useCallback(
+    async (ids: string[], value: string): Promise<{ ok: boolean; error?: string }> => {
+      const costingIds = costingIdsFor(ids);
+      if (costingIds.length === 0) {
+        return { ok: false, error: "None of the selected lines has a cost sheet yet." };
+      }
+      const res = await setCostingStatusBulk(costingIds, value);
+      if (!res.ok) return { ok: false, error: res.error };
+      if (res.updated === 0) {
+        return { ok: false, error: "Nothing updated - every selected cost sheet is locked." };
+      }
+      return { ok: true };
+    },
+    [costingIdsFor],
+  );
+
+  const columns = React.useMemo<RegisterColumn<CostingRegisterRow>[]>(
     () => [
       {
         id: "smNumber",
         header: "SM",
         searchable: true,
+        pinnedLeft: true,
         sortValue: (r) => r.smNumber ?? "",
         exportValue: (r) => r.smNumber ?? "",
         cell: (r) => (
           <Link
-            href={`/costings/${r.id}` as Route}
+            href={r.costingId ? (`/costings/${r.costingId}` as Route) : costingMasterHref(r)}
             className="font-semibold text-ink-strong hover:underline"
             style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}
           >
@@ -141,6 +220,7 @@ export function CostingTable({ rows }: Props) {
         id: "custProductName",
         header: "Product",
         searchable: true,
+        truncate: true,
         sortValue: (r) => r.custProductName ?? "",
         exportValue: (r) => r.custProductName ?? "",
         cell: (r) => (
@@ -158,20 +238,84 @@ export function CostingTable({ rows }: Props) {
         searchable: true,
         sortValue: (r) => r.companyName ?? "",
         exportValue: (r) => r.companyName ?? "",
+        cell: (r) => <span className="text-ink-soft">{r.companyName ?? "-"}</span>,
+      },
+      {
+        id: "bucket",
+        header: "Status",
+        sortValue: (r) => COSTING_STAGE_BUCKETS.indexOf(r.bucket),
+        exportValue: (r) => COSTING_DONE_STATUS_LABELS[r.status ?? r.bucket],
         cell: (r) => (
-          <span className="text-ink-soft">{r.companyName ?? "-"}</span>
+          <span className="inline-flex items-center gap-1.5">
+            <Chip
+              // Show the row's REAL stored status; a legacy value (In Process /
+              // Done) still counts under the bucket that superseded it.
+              label={COSTING_DONE_STATUS_LABELS[r.status ?? r.bucket]}
+              tone={COSTING_DONE_STATUS_COLORS[r.status ?? r.bucket]}
+            />
+            {r.costingId == null && (
+              <span className="text-[11px] font-semibold text-ink-subtle">no sheet</span>
+            )}
+          </span>
         ),
+      },
+      {
+        id: "targetDate",
+        header: "Target",
+        // Un-dated rows sort last in both directions rather than pretending to
+        // be the epoch.
+        sortValue: (r) => (r.targetDate ? r.targetDate.getTime() : Number.MAX_SAFE_INTEGER),
+        exportValue: (r) => (r.targetDate ? formatDate(r.targetDate) : null),
+        cell: (r) => {
+          if (!r.targetDate) return <span className="text-ink-subtle">-</span>;
+          if (!r.overdue) {
+            return (
+              <span className="tabular-nums text-ink-soft">{formatDate(r.targetDate)}</span>
+            );
+          }
+          const late = r.daysToTarget != null ? Math.abs(r.daysToTarget) : null;
+          return (
+            <span
+              className="inline-flex items-center gap-1 font-bold tabular-nums"
+              style={{ color: "var(--color-red-deep)" }}
+              title={late != null ? `${late} day${late === 1 ? "" : "s"} overdue` : "Overdue"}
+            >
+              <AlertTriangle size={13} strokeWidth={2.6} />
+              {formatDate(r.targetDate)}
+            </span>
+          );
+        },
       },
       {
         id: "costingType",
         header: "Route",
-        sortValue: (r) => COSTING_ROUTE_LABELS[r.costingType],
-        exportValue: (r) => COSTING_ROUTE_LABELS[r.costingType],
+        sortValue: (r) => (r.costingType ? COSTING_ROUTE_LABELS[r.costingType] : ""),
+        exportValue: (r) => (r.costingType ? COSTING_ROUTE_LABELS[r.costingType] : null),
         cell: (r) => (
           <span className="text-[13px] font-medium text-ink-soft">
-            {COSTING_ROUTE_LABELS[r.costingType]}
+            {r.costingType ? COSTING_ROUTE_LABELS[r.costingType] : "-"}
           </span>
         ),
+      },
+      {
+        id: "revision",
+        header: "Rev",
+        sortValue: (r) => r.revisionCount,
+        exportValue: (r) => (r.revisionNo > 0 ? r.revisionNo : null),
+        cell: (r) =>
+          r.revisionNo > 0 ? (
+            <span
+              className="tabular-nums text-[12.5px] font-semibold text-ink-soft"
+              title={`${costingRevisionLabel(r.revisionNo - 1)} of ${r.revisionCount} on this route`}
+            >
+              {r.revisionNo}
+              {r.revisionCount > 1 && (
+                <span className="text-ink-subtle"> / {r.revisionCount}</span>
+              )}
+            </span>
+          ) : (
+            <span className="text-ink-subtle">-</span>
+          ),
       },
       {
         id: "finalCostPerPiece",
@@ -181,7 +325,7 @@ export function CostingTable({ rows }: Props) {
         exportValue: (r) =>
           r.finalCostPerPiece == null ? null : Number(r.finalCostPerPiece),
         cell: (r) => (
-          <span className="tabular-nums text-ink-strong font-semibold">
+          <span className="tabular-nums font-semibold text-ink-strong">
             {moneyText(r.finalCostPerPiece)}
           </span>
         ),
@@ -191,23 +335,39 @@ export function CostingTable({ rows }: Props) {
         header: "Quote Value",
         align: "right",
         sortValue: (r) => moneyNumber(r.quoteValue),
-        exportValue: (r) =>
-          r.quoteValue == null ? null : Number(r.quoteValue),
+        exportValue: (r) => (r.quoteValue == null ? null : Number(r.quoteValue)),
+        cell: (r) => (
+          <span className="tabular-nums text-ink-soft">{moneyText(r.quoteValue)}</span>
+        ),
+      },
+      {
+        id: "quantityNos",
+        header: "Qty",
+        align: "right",
+        defaultHidden: true,
+        sortValue: (r) => moneyNumber(r.quantityNos),
+        exportValue: (r) => (r.quantityNos == null ? null : Number(r.quantityNos)),
         cell: (r) => (
           <span className="tabular-nums text-ink-soft">
-            {moneyText(r.quoteValue)}
+            {r.quantityNos ?? "-"}
+            {r.quantityNos && r.quantityUom ? ` ${r.quantityUom}` : ""}
           </span>
         ),
       },
       {
-        id: "costingDoneStatus",
-        header: "Status",
-        sortValue: (r) => COSTING_DONE_STATUS_LABELS[r.costingDoneStatus],
+        id: "needInfoNote",
+        header: "Info Needed",
+        defaultHidden: true,
+        searchable: true,
+        sortValue: (r) => r.needInfoNote ?? "",
+        exportValue: (r) => r.needInfoNote ?? null,
         cell: (r) => (
-          <Chip
-            label={COSTING_DONE_STATUS_LABELS[r.costingDoneStatus]}
-            tone={COSTING_DONE_STATUS_COLORS[r.costingDoneStatus]}
-          />
+          <span
+            className="block max-w-[280px] truncate text-ink-soft"
+            title={r.needInfoNote ?? undefined}
+          >
+            {r.needInfoNote ?? "-"}
+          </span>
         ),
       },
       {
@@ -215,17 +375,27 @@ export function CostingTable({ rows }: Props) {
         header: "Date",
         sortValue: (r) => r.createdAt,
         cell: (r) => (
-          <span className="tabular-nums text-ink-soft">
-            {formatDate(r.createdAt)}
-          </span>
+          <span className="tabular-nums text-ink-soft">{formatDate(r.createdAt)}</span>
         ),
       },
     ],
     [],
   );
 
-  const filters = React.useMemo<FilterConfig<CostingListItem>[]>(
+  const filters = React.useMemo<FilterConfig<CostingRegisterRow>[]>(
     () => [
+      {
+        id: "bucket",
+        label: "Status",
+        type: "select",
+        // Iterates the house bucket array, so a deprecated value can never
+        // reappear in the picker while still rendering on its row.
+        options: COSTING_STAGE_BUCKETS.map((b) => ({
+          value: COSTING_DONE_STATUS_LABELS[b],
+          label: COSTING_DONE_STATUS_LABELS[b],
+        })),
+        accessor: (r) => COSTING_DONE_STATUS_LABELS[r.bucket],
+      },
       {
         id: "costingType",
         label: "Route",
@@ -234,17 +404,17 @@ export function CostingTable({ rows }: Props) {
           value: COSTING_ROUTE_LABELS[r],
           label: COSTING_ROUTE_LABELS[r],
         })),
-        accessor: (r) => COSTING_ROUTE_LABELS[r.costingType],
+        accessor: (r) => (r.costingType ? COSTING_ROUTE_LABELS[r.costingType] : ""),
       },
       {
-        id: "costingDoneStatus",
-        label: "Status",
+        id: "target",
+        label: "Target",
         type: "select",
-        options: COSTING_DONE_STATUSES.map((s) => ({
-          value: COSTING_DONE_STATUS_LABELS[s],
-          label: COSTING_DONE_STATUS_LABELS[s],
+        options: [TARGET_OVERDUE, TARGET_DUE_SOON, TARGET_SET, TARGET_NONE].map((v) => ({
+          value: v,
+          label: v,
         })),
-        accessor: (r) => COSTING_DONE_STATUS_LABELS[r.costingDoneStatus],
+        accessor: targetBand,
       },
       {
         id: "createdAt",
@@ -257,21 +427,134 @@ export function CostingTable({ rows }: Props) {
   );
 
   return (
-    <RegisterDataTable<CostingListItem>
+    <RegisterDataTable<CostingRegisterRow>
       tableKey="costings"
       rows={rows}
       getRowId={(r) => r.id}
       columns={columns}
-      getOpenHref={(r) => `/costings/${r.id}` as Route}
+      getOpenHref={(r) =>
+        r.costingId ? (`/costings/${r.costingId}` as Route) : costingMasterHref(r)
+      }
       filters={filters}
       exportFilename="costings"
       rowMenu={rowMenu}
+      renderExpanded={(r) => <CostingLinePanel row={r} />}
+      bulkActions={[
+        {
+          label: "Set status",
+          options: [
+            { value: "draft", label: COSTING_DONE_STATUS_LABELS.draft },
+            {
+              value: "pending_approval",
+              label: COSTING_DONE_STATUS_LABELS.pending_approval,
+            },
+            { value: "not_done", label: COSTING_DONE_STATUS_LABELS.not_done },
+          ],
+          onApply: onBulkStatus,
+        },
+      ]}
       bulkDelete={{
-        noun: { one: "costing", many: "costings" },
+        noun: { one: "cost sheet", many: "cost sheets" },
         onDelete: onBulkDelete,
       }}
-      emptyTitle="No costings yet -- run the first one."
-      emptyHint="In-house and bought-out costings appear here with their SM, product, route and final cost per piece."
+      emptyTitle="Nothing is costable yet."
+      emptyHint="A product line appears here the moment its feasibility is confirmed - costed or not - so the work still outstanding is always visible."
     />
+  );
+}
+
+/**
+ * The expanded row: every cost sheet on this product line, oldest first, across
+ * both routes and all revisions. Earlier revisions are retained forever, so this
+ * is the register's window onto the full history without cluttering the table.
+ */
+function CostingLinePanel({ row }: { row: CostingRegisterRow }) {
+  if (row.costings.length === 0) {
+    return (
+      <div className="px-4 py-3 text-[13px]">
+        <p className="font-semibold text-ink-strong">No cost sheet on this line yet.</p>
+        <p className="mt-0.5 text-ink-soft">
+          Feasibility is confirmed, so it is costable — this is one of the lines still
+          outstanding.
+        </p>
+        <Link
+          href={costingMasterHref(row)}
+          className="mt-2 inline-flex items-center gap-1.5 text-[13px] font-bold text-brand hover:underline"
+        >
+          <Calculator size={14} strokeWidth={2.4} />
+          Start costing
+        </Link>
+      </div>
+    );
+  }
+
+  // Group by route so "Costing 1 / 2 / 3" is numbered within its own revision
+  // chain, exactly as the register's Rev column reports it.
+  const byRoute = (["inhouse", "bought_out"] as const)
+    .map((route) => ({
+      route,
+      sheets: row.costings.filter((c) => c.costingType === route),
+    }))
+    .filter((g) => g.sheets.length > 0);
+
+  return (
+    <div className="flex flex-col gap-3 px-4 py-3">
+      {row.needInfoNote && (
+        <div
+          className="rounded-lg px-3 py-2 text-[12.5px]"
+          style={{
+            background: "color-mix(in srgb, var(--color-amber) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--color-amber) 30%, transparent)",
+            color: "var(--color-amber-deep)",
+          }}
+        >
+          <span className="font-black uppercase tracking-[0.08em]">Information needed</span>
+          <p className="mt-0.5 font-medium">{row.needInfoNote}</p>
+        </div>
+      )}
+
+      {byRoute.map((g) => (
+        <div key={g.route}>
+          <p className="mb-1.5 text-[11px] font-black uppercase tracking-[0.1em] text-ink-subtle">
+            {COSTING_ROUTE_LABELS[g.route]}
+          </p>
+          <ul className="flex flex-col gap-1">
+            {g.sheets.map((c, i) => (
+              <li key={c.id} className="flex flex-wrap items-center gap-2 text-[12.5px]">
+                <Link
+                  href={`/costings/${c.id}` as Route}
+                  className="font-bold text-brand hover:underline"
+                >
+                  {costingRevisionLabel(i)}
+                </Link>
+                <Chip
+                  label={COSTING_DONE_STATUS_LABELS[c.status]}
+                  tone={COSTING_DONE_STATUS_COLORS[c.status]}
+                />
+                <span className="tabular-nums text-ink-soft">
+                  {moneyText(c.finalCostPerPiece)} / pc
+                </span>
+                <span className="text-ink-subtle">{formatDate(c.createdAt)}</span>
+                {c.isChosen && (
+                  <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-ink-subtle">
+                    chosen
+                  </span>
+                )}
+                {c.isLatestRevision && g.sheets.length > 1 && (
+                  <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-ink-subtle">
+                    latest
+                  </span>
+                )}
+                {c.revisionReason && (
+                  <span className="text-ink-soft" title={c.revisionReason}>
+                    · {c.revisionReason}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
   );
 }

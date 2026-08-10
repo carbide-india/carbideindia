@@ -4,7 +4,9 @@ import type { Route } from "next";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { requireUser } from "@/lib/auth/current";
-import { getVendorById } from "@/lib/queries/vendors";
+import { getVendorById, getVendorDocuments } from "@/lib/queries/vendors";
+import { parseGstin } from "@/lib/data/gst";
+import { VendorDocuments } from "@/components/vendors/vendor-documents";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
 import { UserMenuServer } from "@/components/header/user-menu-server";
 
@@ -53,6 +55,13 @@ export default async function VendorRecordPage({
   const { id } = await params;
   const vendor = await getVendorById(id);
   if (!vendor) notFound();
+
+  // Attachments are fetched only once the vendor is known to exist, so a 404
+  // never pays for a Blob presign round-trip.
+  const attachments = await getVendorDocuments(vendor.id);
+
+  // Decoded from the stored number itself — nothing extra is persisted.
+  const gst = vendor.gstin ? parseGstin(vendor.gstin) : null;
 
   // Prefer the structured street lines; fall back to the legacy free-text field.
   const streetLines =
@@ -150,6 +159,52 @@ export default async function VendorRecordPage({
             <Cell label="Pincode" value={dash(vendor.pinCode)} />
           </div>
 
+          <Band title="GST & Web" />
+          <div className={gridClass}>
+            <Cell
+              label="GST Applicable"
+              value={vendor.isGstApplicable ? "Yes" : "No"}
+            />
+            <Cell
+              label="GST Number"
+              value={
+                vendor.gstin ? (
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 14 }}>
+                    {vendor.gstin}
+                  </span>
+                ) : vendor.isGstApplicable ? (
+                  // A real gap, not just an empty cell — say so.
+                  <span className="text-[13px] font-bold text-[#b45309]">
+                    Not recorded
+                  </span>
+                ) : (
+                  <span className="text-[13px] text-[#8a90a0]">Not applicable</span>
+                )
+              }
+            />
+            <Cell label="GST State" value={dash(gst?.stateName ?? null)} />
+            <Cell label="PAN (from GSTIN)" value={dash(gst?.pan ?? null)} />
+            <div className="col-span-full">
+              <Cell
+                label="Website"
+                value={
+                  vendor.website ? (
+                    <a
+                      href={vendor.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="break-all font-bold text-[#3f3f94] hover:underline"
+                    >
+                      {vendor.website}
+                    </a>
+                  ) : (
+                    dash(null)
+                  )
+                }
+              />
+            </div>
+          </div>
+
           <Band title="Default Terms" />
           <div className={gridClass}>
             <Cell
@@ -162,14 +217,17 @@ export default async function VendorRecordPage({
             />
             <Cell label="Payment Terms" value={dash(vendor.paymentTerms)} />
             <Cell
-              label="GST Applicable"
-              value={vendor.isGstApplicable ? "Yes" : "No"}
-            />
-            <Cell
               label="Status"
               value={vendor.isActive ? "Active" : "Inactive"}
             />
           </div>
+
+          <Band title="Attachments" />
+          <VendorDocuments
+            vendorId={vendor.id}
+            documents={attachments}
+            canEdit={me.isAdmin}
+          />
 
           <Band title="Notes" />
           <div className={gridClass}>
