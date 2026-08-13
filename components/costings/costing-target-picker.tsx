@@ -20,8 +20,9 @@ import {
 import type { CostingRegisterRow } from "@/lib/queries/costings";
 
 /**
- * "Start a Costing" — the target picker shown when /costings/new is opened
- * without a product line.
+ * "Cost a New Line" — the target picker shown when /costings/new is opened
+ * without a product line. Named for the ACTION: you never create a costing in
+ * the abstract, you cost one product line.
  *
  * A costing must attach to a specific inquiry_item, so rather than 404 we list
  * the lines that can be costed and let the user pick one. It used to be a plain
@@ -244,12 +245,12 @@ export function CostingTargetPicker({ rows }: { rows: CostingRegisterRow[] }) {
       <header className="mb-5">
         <h1 className="flex items-center gap-2 text-[26px] font-black leading-none tracking-tight text-[#3f3f94]">
           <Calculator size={22} strokeWidth={2.4} />
-          Start a Costing
+          Cost a New Line
         </h1>
         <p className="mt-1.5 text-[12.5px] font-semibold tabular-nums text-[#6b7280]">
-          {rows.length} costable line{rows.length === 1 ? "" : "s"} · {notCosted} not
-          costed yet. Only lines that have cleared Primary Feasibility appear here —
-          pick one to open a fresh cost sheet against it.
+          {rows.length} product line{rows.length === 1 ? "" : "s"} ready to cost ·{" "}
+          {notCosted} with no cost sheet yet. A line appears here once its
+          feasibility is confirmed — pick one to open a fresh cost sheet against it.
         </p>
       </header>
 

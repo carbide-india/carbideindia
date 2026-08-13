@@ -15,14 +15,23 @@ export async function DraftsScreen({ kind }: { kind: FormDraftKind }) {
   const meta = FORM_DRAFT_META[kind];
 
   return (
-    <EnquiryModuleShell title={`${meta.noun} Drafts`} userMenu={<UserMenuServer />}>
+    <EnquiryModuleShell title={`Unfinished ${meta.noun} Forms`} userMenu={<UserMenuServer />}>
       <div className="mx-auto w-full max-w-[1200px]">
-        <div className="mb-5 flex items-center justify-between gap-4">
-          <h1 className="text-[26px] font-black leading-none tracking-tight text-[#3f3f94]">
-            {meta.noun} Drafts
-          </h1>
-          <span className="text-[13px] font-semibold text-ink-subtle tabular-nums">
-            {items.length} {items.length === 1 ? "draft" : "drafts"}
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-[26px] font-black leading-none tracking-tight text-[#3f3f94]">
+              Unfinished {meta.noun} Forms
+            </h1>
+            {/* Spelled out because this used to be called "Drafts", which
+                collided with the DRAFT status bucket — a saved record. These
+                are forms nobody ever saved. */}
+            <p className="mt-1.5 text-[12.5px] font-semibold text-[#6b7280]">
+              {meta.noun} forms that were started and never saved. Nothing here
+              exists in the register yet — open one to finish it.
+            </p>
+          </div>
+          <span className="shrink-0 text-[13px] font-semibold text-ink-subtle tabular-nums">
+            {items.length} unfinished
           </span>
         </div>
         <FormDraftsList kind={kind} items={items} />

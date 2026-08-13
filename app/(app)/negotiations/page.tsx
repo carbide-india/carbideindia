@@ -108,10 +108,11 @@ export default async function NegotiationsPage({ searchParams }: PageProps) {
     <EnquiryModuleShell
       title="Negotiation Register"
       userMenu={<UserMenuServer />}
-      sidebarExtra={
+      registerChildren={
         <SidebarBuckets
-          tiles={sidebarTiles}
+          tiles={sidebarTiles.filter((t) => t.key !== "all")}
           ariaLabel="Negotiation status distribution"
+          unit="negotiation"
         />
       }
     >

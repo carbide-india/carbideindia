@@ -60,10 +60,11 @@ export default async function QuotationsPage({ searchParams }: PageProps) {
     <EnquiryModuleShell
       title="Quotation Register"
       userMenu={<UserMenuServer />}
-      sidebarExtra={
+      registerChildren={
         <SidebarBuckets
-          tiles={sidebarTiles}
+          tiles={sidebarTiles.filter((t) => t.key !== "all")}
           ariaLabel="Quotation status distribution"
+          unit="quotation"
         />
       }
     >

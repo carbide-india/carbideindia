@@ -19,6 +19,12 @@ export type FormDraftKind = (typeof FORM_DRAFT_KINDS)[number];
 
 export interface FormDraftMeta {
   noun: string;
+  /**
+   * Sidebar label for the create action, when "Create New <noun>" reads as a
+   * PLACE rather than a thing to do. Costing is the case: you do not create a
+   * costing in the abstract, you cost one product line.
+   */
+  createLabel?: string;
   newRoute: string;
   draftsRoute: string;
   /** Per-form Recycle Bin route. */
@@ -30,7 +36,7 @@ export interface FormDraftMeta {
 export const FORM_DRAFT_META: Record<FormDraftKind, FormDraftMeta> = {
   kyc: { noun: "Client KYC", newRoute: "/clients/new", draftsRoute: "/clients/drafts", recycleBinRoute: "/clients/recycle-bin", labelFields: ["name", "companyName"] },
   sample: { noun: "Sample", newRoute: "/samples/new", draftsRoute: "/samples/drafts", recycleBinRoute: "/samples/recycle-bin", labelFields: ["sampleNo", "sampleNotes"] },
-  costing: { noun: "Costing", newRoute: "/costings/new", draftsRoute: "/costings/drafts", recycleBinRoute: "/costings/recycle-bin", labelFields: ["custProductName", "itemCode"] },
+  costing: { noun: "Costing", createLabel: "Cost a New Line", newRoute: "/costings/new", draftsRoute: "/costings/drafts", recycleBinRoute: "/costings/recycle-bin", labelFields: ["custProductName", "itemCode"] },
   quotation: { noun: "Quotation", newRoute: "/quotations/new", draftsRoute: "/quotations/drafts", recycleBinRoute: "/quotations/recycle-bin", labelFields: ["quoteNo", "companyName"] },
   negotiation: { noun: "Negotiation", newRoute: "/negotiations/new", draftsRoute: "/negotiations/drafts", recycleBinRoute: "/negotiations/recycle-bin", labelFields: ["negotiationNo", "companyName"] },
   "sales-order": { noun: "Sales Order", newRoute: "/sales-orders/new", draftsRoute: "/sales-orders/drafts", recycleBinRoute: "/sales-orders/recycle-bin", labelFields: ["poNumber", "companyName"] },

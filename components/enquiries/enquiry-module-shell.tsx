@@ -32,6 +32,8 @@ import { cn } from "@/lib/utils";
 import { ModuleStepButtons } from "@/components/layout/next-module-button";
 
 interface NavDef {
+  /** Stable handle — `"register"` is where `registerChildren` is nested. */
+  id?: string;
   label: string;
   href: Route;
   Icon: typeof FileText;
@@ -39,7 +41,7 @@ interface NavDef {
   /** returns true when this item should show active for the given path */
   active?: (path: string) => boolean;
   /** Section key - a greyed divider is drawn where this changes. */
-  group?: "overview" | "create" | "records" | "config";
+  group?: "overview" | "create" | "records" | "config" | "bottom";
   /** Hidden from non-admins (the target route is admin-gated server-side). */
   adminOnly?: boolean;
 }
@@ -99,7 +101,8 @@ function navFor(pathname: string): NavDef[] {
   const recycleBinRoute = draftKind ? FORM_DRAFT_META[draftKind].recycleBinRoute : null;
   // "Create New Form" reads as the specific form (e.g. "Create New Enquiry").
   const createLabel = draftKind
-    ? `Create New ${FORM_DRAFT_META[draftKind].noun}`
+    ? (FORM_DRAFT_META[draftKind].createLabel ??
+       `Create New ${FORM_DRAFT_META[draftKind].noun}`)
     : familySeg(pathname) === "enquiries" || familySeg(pathname) === "inquiries"
       ? "Create New Enquiry"
       : familySeg(pathname) === "vendors"
@@ -116,15 +119,20 @@ function navFor(pathname: string): NavDef[] {
       active: (p) => p.startsWith(newForm),
       group: "create",
     },
-    // Drafts — only for families that actually keep a draft store (any
-    // draftKind form, or the Enquiry family with its own store). The Vendors
-    // family has no auto-save draft, so it shows no Drafts item.
+    // Unfinished Forms — only for families that actually keep a draft store
+    // (any draftKind form, or the Enquiry family with its own store). The
+    // Vendors family has no auto-save draft, so it shows no entry.
+    //
+    // NOT called "Drafts": every stage also has a DRAFT status bucket, and the
+    // two are unrelated — this holds forms somebody started typing and never
+    // saved, the bucket holds real saved records. One word for two things was
+    // the single biggest source of confusion in the module.
     ...(draftKind ||
     familySeg(pathname) === "enquiries" ||
     familySeg(pathname) === "inquiries"
       ? ([
           {
-            label: "Drafts",
+            label: "Unfinished Forms",
             href: draftsRoute as Route,
             Icon: Files,
             ready: true,
@@ -136,6 +144,7 @@ function navFor(pathname: string): NavDef[] {
     (() => {
       const reg = registerFor(pathname);
       return {
+        id: "register",
         label: reg.label,
         href: reg.href as Route,
         Icon: FileText,
@@ -176,7 +185,9 @@ function navFor(pathname: string): NavDef[] {
             Icon: Truck,
             ready: true,
             active: (p: string) => p.startsWith("/vendors"),
-            group: "records" as const,
+            // Bottom of the sidebar, below the status buckets: it is a
+            // reference list, not a step of the costing flow.
+            group: "bottom" as const,
           },
         ] as NavDef[])
       : []),
@@ -203,7 +214,7 @@ function navFor(pathname: string): NavDef[] {
             Icon: Trash2,
             ready: true,
             active: (p: string) => p.startsWith(recycleBinRoute),
-            group: "records",
+            group: "bottom",
           },
         ] as NavDef[])
       : []),
@@ -231,7 +242,10 @@ function navFor(pathname: string): NavDef[] {
       group: "config",
     });
   }
-  return items;
+  // "bottom" always sinks below everything else (Vendor Master, Recycle Bin),
+  // whatever order the conditional builders above happened to push them in.
+  const rank = (n: NavDef) => (n.group === "bottom" ? 1 : 0);
+  return items.sort((a, b) => rank(a) - rank(b));
 }
 
 export function EnquiryModuleShell({
@@ -240,11 +254,19 @@ export function EnquiryModuleShell({
   bulkUpload,
   title,
   isAdmin = false,
+  registerChildren,
   sidebarExtra,
 }: {
   children: ReactNode;
   userMenu?: ReactNode;
   bulkUpload?: ReactNode;
+  /**
+   * Rendered NESTED under the register nav item, behind the same left rule the
+   * feasibility status filters use — so Costing's buckets read as "the register,
+   * split by status" instead of a second, unrelated list. Hidden while collapsed:
+   * there is no room for labelled counts in a 72px rail.
+   */
+  registerChildren?: ReactNode;
   /**
    * Rendered under the nav, inside the sidebar. Lets a module hang its own
    * status-wise distribution off the shared shell (the Costing register lists
@@ -421,6 +443,13 @@ export function EnquiryModuleShell({
                           <n.Icon className="h-[19px] w-[19px]" />
                           {!collapsed && n.label}
                         </Link>
+                      )}
+                      {/* The register's status buckets, nested exactly as the
+                          feasibility status filters are. */}
+                      {n.id === "register" && registerChildren && !collapsed && (
+                        <div className="ml-3 flex flex-col gap-1 border-l border-[#e5e7eb] pl-2">
+                          {registerChildren}
+                        </div>
                       )}
                     </Fragment>
                   );

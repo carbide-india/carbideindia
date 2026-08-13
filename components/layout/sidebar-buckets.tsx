@@ -27,34 +27,45 @@ import { cn } from "@/lib/utils";
 export function SidebarBuckets({
   tiles,
   ariaLabel,
+  unit,
 }: {
   tiles: BucketTile[];
   /** e.g. "Quotation status distribution". */
   ariaLabel: string;
+  /**
+   * What one count counts — "line", "quotation", … Stated once above the rows
+   * because the module's numbers count DIFFERENT things (the register counts
+   * product lines, a costing counts cost sheets), and a bare number invites
+   * exactly the "why don't these add up?" confusion.
+   */
+  unit?: string;
 }) {
   if (tiles.length === 0) return null;
 
   const parent = tiles.find((t) => t.group === "all" || t.key === "all") ?? null;
   const flags = tiles.filter((t) => t.group === "flag");
   const buckets = tiles.filter((t) => t !== parent && !flags.includes(t));
+  const total = parent?.count ?? buckets.reduce((n, t) => n + t.count, 0);
 
   return (
-    <nav className="flex w-full flex-col gap-1.5" aria-label={ariaLabel}>
+    <nav className="flex w-full flex-col gap-1" aria-label={ariaLabel}>
       {parent && <BucketRow tile={parent} />}
 
-      {buckets.length > 0 && (
-        <div className="ml-3 flex flex-col gap-1 border-l border-[#e5e7eb] pl-2">
-          {buckets.map((t) => (
-            <BucketRow key={t.key} tile={t} nested />
-          ))}
-        </div>
+      {unit && (
+        <p className="px-3.5 pb-0.5 text-[10.5px] font-bold uppercase tracking-[0.1em] text-[#9aa0ab]">
+          {total} {total === 1 ? unit : `${unit}s`} by status
+        </p>
       )}
+
+      {buckets.map((t) => (
+        <BucketRow key={t.key} tile={t} nested />
+      ))}
 
       {flags.length > 0 && (
         <>
           <div className="my-1 h-[1.5px] rounded-full bg-[#e5e7eb]" />
           {flags.map((t) => (
-            <BucketRow key={t.key} tile={t} flag />
+            <BucketRow key={t.key} tile={t} flag nested />
           ))}
         </>
       )}

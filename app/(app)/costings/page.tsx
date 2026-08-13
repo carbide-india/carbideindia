@@ -70,12 +70,12 @@ export default async function CostingsPage({
     {
       key: "all",
       group: "all",
-      label: "Costable Lines",
+      label: "All Lines",
       tone: "slate",
       count: all.length,
       href: href(""),
       active: !activeBucket && !overdueOnly,
-      sub: "feasibility confirmed",
+      sub: "product lines, feasibility confirmed",
       hint: "Every product line on a live enquiry whose feasibility is confirmed (so it can be costed), plus any line that already carries a cost sheet. Archived enquiries are excluded.",
     },
     ...COSTING_STAGE_BUCKETS.map<BucketTile>((b) => ({
@@ -116,7 +116,16 @@ export default async function CostingsPage({
     <EnquiryModuleShell
       title="Costing Register"
       userMenu={<UserMenuServer />}
-      sidebarExtra={<SidebarBuckets tiles={tiles} ariaLabel="Costing status distribution" />}
+      // Nested under "Costing Register", not a second list beside it: the
+      // buckets ARE the register split by status. The old "Costable Lines"
+      // row was the register counted, i.e. the same thing twice.
+      registerChildren={
+        <SidebarBuckets
+          tiles={tiles.filter((t) => t.key !== "all")}
+          ariaLabel="Costing status distribution"
+          unit="line"
+        />
+      }
     >
       <div className="mx-auto w-full max-w-[1600px]">
         <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
