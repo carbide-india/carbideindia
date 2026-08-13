@@ -52,7 +52,7 @@ export { BUCKET_ICONS };
  * Labels come from FEASIBILITY_STATUS_LABELS (the single source of truth) —
  * the approved bucket therefore reads "Feasibility Approved".
  */
-const PRIMARY_STATUS_NAV: StatusNav[] = FEASIBILITY_STAGE_BUCKETS.map((b) => ({
+const ALL_PRIMARY_NAV: StatusNav[] = FEASIBILITY_STAGE_BUCKETS.map((b) => ({
   label: FEASIBILITY_STATUS_LABELS[b],
   status: b as string,
   Icon:
@@ -60,6 +60,17 @@ const PRIMARY_STATUS_NAV: StatusNav[] = FEASIBILITY_STAGE_BUCKETS.map((b) => ({
       ? BUCKET_ICONS.approved
       : BUCKET_ICONS[b as keyof typeof BUCKET_ICONS],
 }));
+
+/** Where work still SITS — nested under the queue destination. */
+const PRIMARY_STATUS_NAV = ALL_PRIMARY_NAV.filter(
+  (n) => n.status !== "proceed_to_costing",
+);
+
+/** Where work has GONE — the handover to Secondary Feasibility, its own row at
+ *  the end, outside the sequence above. */
+const PRIMARY_APPROVED = ALL_PRIMARY_NAV.find(
+  (n) => n.status === "proceed_to_costing",
+)!;
 
 function primaryHrefFor(status: string): Route {
   if (status === "variance") return "/feasibility?variance=1" as Route;
@@ -234,6 +245,34 @@ export function FeasibilityModuleShell({
                     >
                       <GitCompareArrows className="h-[18px] w-[18px] shrink-0" />
                       {!collapsed && <span className="truncate">Spec Variance</span>}
+                    </Link>
+
+                    {/* The EXIT — enquiries that have cleared Primary and moved
+                        on to Secondary Feasibility. Green, like the approved
+                        chip everywhere else. */}
+                    <Link
+                      href={primaryHrefFor(PRIMARY_APPROVED.status)}
+                      title={collapsed ? PRIMARY_APPROVED.label : undefined}
+                      className={cn(
+                        base,
+                        primaryActive && activeStatus === PRIMARY_APPROVED.status
+                          ? activeCls
+                          : "border-[1.5px] border-[#b7e0c6] bg-[#eef8f2] font-bold text-[#1c7a44] hover:border-[#16a34a] hover:bg-[#e2f3ea]",
+                      )}
+                    >
+                      <PRIMARY_APPROVED.Icon className="h-[18px] w-[18px] shrink-0" />
+                      {!collapsed && (
+                        <>
+                          <span className="min-w-0 flex-1 truncate">
+                            {PRIMARY_APPROVED.label}
+                          </span>
+                          {counts?.[PRIMARY_APPROVED.status] !== undefined && (
+                            <span className="shrink-0 tabular-nums font-black text-[#1c7a44]">
+                              {counts[PRIMARY_APPROVED.status]}
+                            </span>
+                          )}
+                        </>
+                      )}
                     </Link>
                   </>
                 );

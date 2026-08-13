@@ -48,17 +48,17 @@ interface StatusNav {
  * ("ये सेम मेनू आएगा सेकेंडरी में"), built off the stage's own bucket array so
  * labels and order can never drift from the dashboard strip or the table pill.
  */
-const SECONDARY_STATUS_NAV: StatusNav[] = [
-  ...SECONDARY_FEASIBILITY_STAGE_BUCKETS.map((b) => ({
-    label: SECONDARY_FEASIBILITY_STATUS_LABELS[b],
-    status: b as string,
-    Icon:
-      b === "secondary_feasibility_approved"
-        ? BUCKET_ICONS.approved
-        : BUCKET_ICONS[b as keyof typeof BUCKET_ICONS],
-  })),
-  { label: "Spec Variance", status: "variance", Icon: GitCompareArrows },
-];
+/** Where work still SITS. The approved bucket is NOT here: it is the stage's
+ *  exit and lives at the end as "Confirmed Feasibility", outside the sequence.
+ *  Spec Variance is likewise promoted out — it is a standing exception report,
+ *  not a bucket of the queue. */
+const SECONDARY_STATUS_NAV: StatusNav[] = SECONDARY_FEASIBILITY_STAGE_BUCKETS.filter(
+  (b) => b !== "secondary_feasibility_approved",
+).map((b) => ({
+  label: SECONDARY_FEASIBILITY_STATUS_LABELS[b],
+  status: b as string,
+  Icon: BUCKET_ICONS[b as keyof typeof BUCKET_ICONS],
+}));
 
 function queueHrefFor(status: string): Route {
   if (status === "variance") return "/secondary-feasibility?variance=1" as Route;
@@ -218,14 +218,56 @@ export function SecondaryFeasibilityModuleShell({
 
                     <div className="my-2 h-[1.5px] rounded-full bg-[#c2c7d6]" />
 
-                    {/* Destination 2 — Confirmed Feasibility register. */}
+                    {/* Spec Variance — a standing exception report ("what did
+                        somebody change after Primary signed it off"), not a
+                        bucket of the queue. */}
+                    <Link
+                      href={queueHrefFor("variance")}
+                      title={collapsed ? "Spec Variance" : undefined}
+                      className={cn(
+                        base,
+                        onQueue && activeStatus === "variance"
+                          ? "border-[1.5px] border-[#b45309] bg-[#b45309] font-bold text-white shadow-[0_2px_8px_rgba(180,83,9,0.30)]"
+                          : "border-[1.5px] border-[#f0d3a4] bg-[#fdf6e7] font-bold text-[#8a5a08] hover:border-[#b45309] hover:bg-[#f9ecd2]",
+                      )}
+                    >
+                      <GitCompareArrows className="h-[18px] w-[18px] shrink-0" />
+                      {!collapsed && (
+                        <>
+                          <span className="min-w-0 flex-1 truncate">Spec Variance</span>
+                          {counts?.variance !== undefined && (
+                            <span className="shrink-0 tabular-nums font-black text-[#8a5a08]">
+                              {counts.variance}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </Link>
+
+                    {/* The EXIT — lines that have cleared Secondary and gone on
+                        to Costing. Confirming a line IS the Secondary-done step,
+                        so this register is the stage's approved bucket. */}
                     <Link
                       href={"/secondary-feasibility/confirmed" as Route}
                       title={collapsed ? "Confirmed Feasibility" : undefined}
-                      className={onConfirmed ? activeCls : idleCls}
+                      className={cn(
+                        base,
+                        onConfirmed
+                          ? activeCls
+                          : "border-[1.5px] border-[#b7e0c6] bg-[#eef8f2] font-bold text-[#1c7a44] hover:border-[#16a34a] hover:bg-[#e2f3ea]",
+                      )}
                     >
                       <BadgeCheck className="h-[18px] w-[18px] shrink-0" />
-                      {!collapsed && <span className="truncate">Confirmed Feasibility</span>}
+                      {!collapsed && (
+                        <>
+                          <span className="min-w-0 flex-1 truncate">Confirmed Feasibility</span>
+                          {counts?.secondary_feasibility_approved !== undefined && (
+                            <span className="shrink-0 tabular-nums font-black text-[#1c7a44]">
+                              {counts.secondary_feasibility_approved}
+                            </span>
+                          )}
+                        </>
+                      )}
                     </Link>
                   </>
                 );

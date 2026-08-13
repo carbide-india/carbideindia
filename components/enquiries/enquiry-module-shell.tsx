@@ -261,10 +261,11 @@ export function EnquiryModuleShell({
   userMenu?: ReactNode;
   bulkUpload?: ReactNode;
   /**
-   * Rendered NESTED under the register nav item, behind the same left rule the
-   * feasibility status filters use — so Costing's buckets read as "the register,
-   * split by status" instead of a second, unrelated list. Hidden while collapsed:
-   * there is no room for labelled counts in a 72px rail.
+   * Rendered immediately under the register nav item — the buckets read as "the
+   * register, split by status" instead of a second, unrelated list. The child
+   * owns its own indentation, because the stage's Approved row must sit OUTSIDE
+   * the nested sequence. Hidden while collapsed: there is no room for labelled
+   * counts in a 72px rail.
    */
   registerChildren?: ReactNode;
   /**
@@ -444,13 +445,11 @@ export function EnquiryModuleShell({
                           {!collapsed && n.label}
                         </Link>
                       )}
-                      {/* The register's status buckets, nested exactly as the
-                          feasibility status filters are. */}
-                      {n.id === "register" && registerChildren && !collapsed && (
-                        <div className="ml-3 flex flex-col gap-1 border-l border-[#e5e7eb] pl-2">
-                          {registerChildren}
-                        </div>
-                      )}
+                      {/* The register's status buckets. NOT wrapped in the
+                          nesting rule here — `SidebarBuckets` owns that, because
+                          its last row (the stage's Approved exit) has to sit
+                          OUTSIDE the nested sequence. */}
+                      {n.id === "register" && registerChildren && !collapsed && registerChildren}
                     </Fragment>
                   );
                 })}
