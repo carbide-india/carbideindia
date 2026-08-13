@@ -114,6 +114,15 @@ export const employees = pgTable("employees", {
   // rollback path until the cutover is verified.
   firebaseUid: text("firebase_uid").unique(),
   isAdmin: boolean("is_admin").notNull().default(false),
+  /**
+   * May sign work off — move a stage's checks to Approved / Not Approved
+   * (Manan, 2026-08-13: "only Alok ji"). DELIBERATELY not the same thing as
+   * `is_admin`: four people carry the admin flag (Alok, Altus, Jeevan, Manan)
+   * and approval is one person's job, so folding it into is_admin would grant
+   * it to three people who were never meant to have it. Seeded true for Alok
+   * only (migration 0074) and toggled per person in Admin → People.
+   */
+  isApprover: boolean("is_approver").notNull().default(false),
   isActive: boolean("is_active").notNull().default(true),
   invitedAt: timestamp("invited_at", { withTimezone: true }),
   joinedAt: timestamp("joined_at", { withTimezone: true }),

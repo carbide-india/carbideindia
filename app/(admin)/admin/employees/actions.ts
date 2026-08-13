@@ -312,6 +312,7 @@ export async function editEmployee(
     patch.departmentId = departmentSelection.primaryId;
   }
   if (parsed.data.isAdmin !== undefined) patch.isAdmin = parsed.data.isAdmin;
+  if (parsed.data.isApprover !== undefined) patch.isApprover = parsed.data.isApprover;
 
   if (parsed.data.managerId !== undefined) {
     if (parsed.data.managerId === emp.id) {

@@ -12,6 +12,7 @@ import {
   type NewQuotation,
 } from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
+import { approvalRefusal } from "@/lib/approval/gate";
 import {
   getQuoteAutofill,
   getInquiryItemSeeds,
@@ -370,10 +371,12 @@ export async function setQuotationStatus(
   id: string,
   status: string,
 ): Promise<ActionResult> {
-  await requireUser();
+  const me = await requireUser();
   if (!isUuid(id)) return { ok: false, error: "Invalid quotation id." };
   const parsed = SetQuotationStatusSchema.safeParse({ status });
   if (!parsed.success) return { ok: false, error: "Invalid status" };
+  const refusal = approvalRefusal({ status: parsed.data.status }, me);
+  if (refusal) return { ok: false, error: refusal };
   try {
     await db
       .update(quotations)
@@ -408,10 +411,12 @@ export async function setQuotationBucket(
   id: string,
   status: string,
 ): Promise<ActionResult> {
-  await requireUser();
+  const me = await requireUser();
   if (!isUuid(id)) return { ok: false, error: "Invalid quotation id." };
   const parsed = SetQuotationBucketSchema.safeParse({ status });
   if (!parsed.success) return { ok: false, error: "Invalid status" };
+  const refusal = approvalRefusal({ status: parsed.data.status }, me);
+  if (refusal) return { ok: false, error: refusal };
 
   try {
     await db
@@ -432,13 +437,15 @@ export async function setQuotationBucketBulk(
   ids: string[],
   status: string,
 ): Promise<ActionResult> {
-  await requireUser();
+  const me = await requireUser();
   if (!Array.isArray(ids) || ids.length === 0) {
     return { ok: false, error: "No rows selected." };
   }
   if (!ids.every(isUuid)) return { ok: false, error: "Invalid quotation id." };
   const parsed = SetQuotationBucketSchema.safeParse({ status });
   if (!parsed.success) return { ok: false, error: "Invalid status" };
+  const refusal = approvalRefusal({ status: parsed.data.status }, me);
+  if (refusal) return { ok: false, error: refusal };
 
   try {
     await db
@@ -569,7 +576,7 @@ export async function setQuotationStatusBulk(
   ids: string[],
   status: string,
 ): Promise<ActionResult> {
-  await requireUser();
+  const me = await requireUser();
   if (!Array.isArray(ids) || ids.length === 0) {
     return { ok: false, error: "No rows selected." };
   }
@@ -577,6 +584,8 @@ export async function setQuotationStatusBulk(
   if (!(COSTING_DONE_STATUSES as readonly string[]).includes(status)) {
     return { ok: false, error: "Invalid status" };
   }
+  const refusal = approvalRefusal({ status }, me);
+  if (refusal) return { ok: false, error: refusal };
   try {
     await db
       .update(quotations)

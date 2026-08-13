@@ -1,5 +1,5 @@
 import { Layers } from "lucide-react";
-import { requireAdmin } from "@/lib/auth/current";
+import { requireUser } from "@/lib/auth/current";
 import {
   listSecondaryFeasibilityQueue,
   type SecondaryFeasibilityQueueRow,
@@ -35,7 +35,7 @@ export default async function SecondaryFeasibilityPage({
 }: {
   searchParams: Promise<{ status?: string; variance?: string }>;
 }) {
-  await requireAdmin();
+  await requireUser();
   const all = await listSecondaryFeasibilityQueue();
 
   const sp = await searchParams;

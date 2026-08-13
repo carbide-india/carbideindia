@@ -1,5 +1,5 @@
 import { BadgeCheck } from "lucide-react";
-import { requireAdmin } from "@/lib/auth/current";
+import { requireUser } from "@/lib/auth/current";
 import { listFeasibilityQueue } from "@/lib/queries/feasibility";
 import { FeasibilityQueueTable } from "@/components/feasibility/feasibility-queue-table";
 
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
  * has not been submitted, and it already has its own bucket on the dashboard.
  */
 export default async function FeasibilityApprovalsPage() {
-  await requireAdmin();
+  await requireUser();
   const rows = (await listFeasibilityQueue()).filter((r) => r.status === "pending_approval");
 
   return (

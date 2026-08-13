@@ -1,5 +1,5 @@
 import { CircleCheck } from "lucide-react";
-import { requireAdmin } from "@/lib/auth/current";
+import { requireUser } from "@/lib/auth/current";
 import { listConfirmedFeasibility } from "@/lib/queries/feasibility";
 import { FEASIBILITY_STATUS_LABELS } from "@/db/enums";
 import { ConfirmedFeasibilityTable } from "@/components/feasibility/confirmed-feasibility-table";
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
  * back to its feasibility review.
  */
 export default async function ConfirmedFeasibilityPage() {
-  await requireAdmin();
+  await requireUser();
   const rows = await listConfirmedFeasibility();
 
   return (

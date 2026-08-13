@@ -69,6 +69,8 @@ export const EditEmployeeSchema = z
     primaryDepartmentId:  z.string().uuid().nullable().optional(),
     managerId:  z.string().uuid().nullable().optional(),
     isAdmin:    z.boolean().optional(),
+    // Approval is its own capability, not a consequence of being an admin.
+    isApprover: z.boolean().optional(),
     // M4 - multi-channel admin controls.
     emailOptIn: z.boolean().optional(),
   })

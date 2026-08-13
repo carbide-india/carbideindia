@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireAdmin } from "@/lib/auth/current";
+import { requireUser } from "@/lib/auth/current";
 import { listMasterOptions } from "@/lib/queries/masters";
 import { listEmployeeOptions } from "@/lib/queries/employees";
 import { getClientForEdit } from "@/lib/queries/clients";
@@ -17,7 +17,7 @@ interface PageProps {
 }
 
 export default async function EditClientPage({ params }: PageProps) {
-  await requireAdmin();
+  await requireUser();
   const { id } = await params;
 
   const [client, customerTypes, industryTypes, productTypes, departments, employees, documents, kycLists] =

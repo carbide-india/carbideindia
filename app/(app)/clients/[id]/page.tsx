@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth/current";
+import { requireUser } from "@/lib/auth/current";
 import { getClientDocuments } from "@/lib/queries/client-documents";
 import {
   getClientHeader,
@@ -34,7 +34,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function ClientWorkspacePage({ params }: PageProps) {
-  await requireAdmin();
+  await requireUser();
   const { id } = await params;
   if (!UUID_RE.test(id)) notFound();
 

@@ -15,6 +15,7 @@ import {
   type NewNegotiation,
 } from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
+import { approvalRefusal } from "@/lib/approval/gate";
 import { isNegotiationApprovedForSo } from "@/lib/negotiations/buckets";
 // The revision MODEL is the costing stage's — call into it, never fork it.
 import { reviseCosting } from "@/app/(app)/costings/actions";
@@ -316,10 +317,12 @@ export async function setNegotiationStatus(
   id: string,
   status: string,
 ): Promise<ActionResult> {
-  await requireUser();
+  const me = await requireUser();
   if (!isUuid(id)) return { ok: false, error: "Invalid negotiation id." };
   const parsed = SetNegotiationStatusSchema.safeParse({ status });
   if (!parsed.success) return { ok: false, error: "Invalid status" };
+  const refusal = approvalRefusal({ status: parsed.data.status }, me);
+  if (refusal) return { ok: false, error: refusal };
   try {
     await db
       .update(negotiations)
@@ -339,7 +342,7 @@ export async function setNegotiationStatusBulk(
   ids: string[],
   status: string,
 ): Promise<ActionResult> {
-  await requireUser();
+  const me = await requireUser();
   if (!Array.isArray(ids) || ids.length === 0) {
     return { ok: false, error: "No rows selected." };
   }
@@ -347,6 +350,8 @@ export async function setNegotiationStatusBulk(
   if (!(NEGOTIATION_STATUSES as readonly string[]).includes(status)) {
     return { ok: false, error: "Invalid status" };
   }
+  const refusal = approvalRefusal({ status }, me);
+  if (refusal) return { ok: false, error: refusal };
   try {
     await db
       .update(negotiations)

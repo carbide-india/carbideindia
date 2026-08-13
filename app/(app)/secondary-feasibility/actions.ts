@@ -5,7 +5,8 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { inquiries, inquiryItems, masterOptions, type NewInquiry } from "@/db/schema";
-import { requireAdmin } from "@/lib/auth/current";
+import { requireUser } from "@/lib/auth/current";
+import { approvalRefusal } from "@/lib/approval/gate";
 import { CHECK_STATES, DOC_GIVEN_OPTIONS, INQUIRY_SHAPES, type CheckState } from "@/db/enums";
 import { SECONDARY_SETTABLE_BUCKETS } from "@/lib/feasibility/stage-buckets";
 import { syncProductToItem, type ItemSpec } from "@/lib/item-master/sync";
@@ -119,7 +120,7 @@ export async function saveSecondaryProductDetails(
   inquiryId: string,
   input: unknown,
 ): Promise<Result> {
-  const me = await requireAdmin();
+  const me = await requireUser();
   if (!UUID_RE.test(inquiryId)) return { ok: false, error: "Invalid enquiry." };
 
   const parsed = SaveProductDetailsSchema.safeParse(input);
@@ -281,11 +282,16 @@ export async function setSecondaryFeasibilityStatusBulk(
   ids: string[],
   status: string,
 ): Promise<Result> {
-  await requireAdmin();
+  const me = await requireUser();
   const parsed = SetSecondaryStatusSchema.safeParse({ ids, status });
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid status." };
   }
+  // Anyone may move a line up to Pending Approval; signing it off is the
+  // approver's alone. Bulk carries the same gate as the single setter, since
+  // bulk is the easiest way round a per-row check.
+  const refusal = approvalRefusal({ status: parsed.data.status }, me);
+  if (refusal) return { ok: false, error: refusal };
 
   try {
     await db

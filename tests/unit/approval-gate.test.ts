@@ -16,13 +16,24 @@ import {
   SECONDARY_FEASIBILITY_STAGE_BUCKETS,
 } from "@/db/enums";
 
-const APPROVER = { isAdmin: true };
-const EMPLOYEE = { isAdmin: false };
+const APPROVER = { isApprover: true };
+const EMPLOYEE = { isApprover: false };
 
 describe("who may approve", () => {
-  it("is the admins — Alok and Altus", () => {
+  it("is the approver flag, not the admin flag", () => {
     expect(canApprove(APPROVER)).toBe(true);
     expect(canApprove(EMPLOYEE)).toBe(false);
+  });
+
+  it("an admin who is not the approver still cannot approve", () => {
+    // The whole reason approval is its own flag: four people carry `is_admin`
+    // (Alok, Altus, Jeevan, Manan) and signing off is Alok's alone. Gating on
+    // `isAdmin` would have handed it to three people who never had it.
+    const adminOnly = { isApprover: false, isAdmin: true };
+    expect(canApprove(adminOnly)).toBe(false);
+    expect(approvalRefusal({ checks: ["approved"] }, adminOnly)).toMatch(
+      /only the approver/i,
+    );
   });
 });
 
@@ -106,14 +117,14 @@ describe("approvalRefusal", () => {
   });
 
   it("refuses an employee approving via the checks", () => {
-    expect(approvalRefusal({ checks: ["approved"] }, EMPLOYEE)).toMatch(/only an approver/i);
+    expect(approvalRefusal({ checks: ["approved"] }, EMPLOYEE)).toMatch(/only the approver/i);
   });
 
   it("refuses an employee approving via the record status", () => {
     expect(approvalRefusal({ status: "proceed_to_costing" }, EMPLOYEE)).toMatch(
-      /only an approver/i,
+      /only the approver/i,
     );
-    expect(approvalRefusal({ status: "not_approved" }, EMPLOYEE)).toMatch(/only an approver/i);
+    expect(approvalRefusal({ status: "not_approved" }, EMPLOYEE)).toMatch(/only the approver/i);
   });
 
   it("never refuses an approver", () => {

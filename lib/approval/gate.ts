@@ -3,15 +3,16 @@
  *
  * Every sales stage now has a two-step finish: anyone doing the work can take a
  * record as far as **Done / Pending Approval**, and only an APPROVER can move it
- * to **Approved** or send it back as **Not Approved**. In this office that means
- * Alok (and Altus) — the admins.
+ * to **Approved** or send it back as **Not Approved**. In this office that is
+ * Alok, and only Alok — see `canApprove` for why that is its own flag rather
+ * than the admin one.
  *
  * Pure and dependency-free so both the client board and the server action can
  * ask the same question, and so the rule is unit-testable without a database.
  *
  * The UI hides the two approver-only columns, but that is convenience only: the
- * authority is `assertApprovalAllowed`, called inside the server action, because
- * a hidden column is not a permission.
+ * authority is `approvalRefusal`, called inside the server action, because a
+ * hidden column is not a permission.
  */
 
 import {
@@ -23,16 +24,26 @@ import {
 const APPROVER_CHECKS = new Set<string>(APPROVER_ONLY_CHECK_STATES);
 const APPROVER_BUCKETS = new Set<string>(APPROVER_ONLY_BUCKETS);
 
+/** Anyone this gate is asked about. Only the approver flag matters. */
+export interface Approver {
+  isApprover: boolean;
+}
+
 /**
- * Who may approve. Today that is the admin flag — Alok and Altus are the two
- * admins, which is exactly the set Manan named.
+ * Who may approve.
  *
- * Kept as a named function rather than an inline `isAdmin` so that when the
- * permission catalogue is enforced (`<stage>.approve` already exists in it),
- * this is the ONE place that has to learn about it.
+ * `is_approver`, NOT `is_admin`. Manan's instruction (2026-08-13) was that
+ * signing work off is Alok's alone, and four people carry the admin flag —
+ * Alok, Altus, Jeevan and Manan — so gating on `isAdmin` would have handed
+ * approval to three people who were never meant to have it. The flag is seeded
+ * for Alok in migration 0074 and granted per person in Admin → People.
+ *
+ * Deliberately independent of the permission-enforcement master switch: the
+ * catalogue's `<stage>.approve` keys govern nothing until an admin turns
+ * enforcement on, and approval must be restricted from the moment it ships.
  */
-export function canApprove(viewer: { isAdmin: boolean }): boolean {
-  return viewer.isAdmin;
+export function canApprove(viewer: Approver): boolean {
+  return viewer.isApprover;
 }
 
 /** True for a per-check state only an approver may set. */
@@ -54,7 +65,7 @@ export function isApproverBucket(status: string): boolean {
  */
 export function forbiddenCheckStates(
   values: readonly (RecheckState | string | undefined | null)[],
-  viewer: { isAdmin: boolean },
+  viewer: Approver,
 ): string[] {
   if (canApprove(viewer)) return [];
   const bad = new Set<string>();
@@ -72,16 +83,16 @@ export function approvalRefusal(
     /** The record-level status being written. */
     status?: string | null;
   },
-  viewer: { isAdmin: boolean },
+  viewer: Approver,
 ): string | null {
   if (canApprove(viewer)) return null;
 
   const badChecks = forbiddenCheckStates(input.checks ?? [], viewer);
   if (badChecks.length > 0) {
-    return "Only an approver can mark a check Approved or Not Approved. Move it to Done and it will go for approval.";
+    return "Only the approver can mark a check Approved or Not Approved. Move it to Done and it will go for approval.";
   }
   if (input.status && isApproverBucket(statusBucketOf(input.status))) {
-    return "Only an approver can approve or reject this stage.";
+    return "Only the approver can approve or reject this stage.";
   }
   return null;
 }

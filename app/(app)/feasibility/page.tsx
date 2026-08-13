@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/lib/auth/current";
+import { requireUser } from "@/lib/auth/current";
 import { listFeasibilityQueue, type FeasibilityQueueItem } from "@/lib/queries/feasibility";
 import { FeasibilityQueueTable } from "@/components/feasibility/feasibility-queue-table";
 import { BucketStrip, type BucketTile } from "@/components/feasibility/bucket-strip";
@@ -32,7 +32,7 @@ export default async function FeasibilityDashboardPage({
 }: {
   searchParams: Promise<{ status?: string; variance?: string }>;
 }) {
-  await requireAdmin();
+  await requireUser();
   const all = await listFeasibilityQueue();
 
   const sp = await searchParams;

@@ -14,6 +14,7 @@ import {
   type NewCostingVendorQuote,
 } from "@/db/schema";
 import { requireAdmin, requireUser } from "@/lib/auth/current";
+import { approvalRefusal, canApprove } from "@/lib/approval/gate";
 import {
   CreateCostingSchema,
   type CreateCostingInput,
@@ -406,7 +407,12 @@ export interface ApproveCostingInput {
 export async function approveCostingDecision(
   input: ApproveCostingInput,
 ): Promise<ApproveCostingResult> {
-  const me = await requireAdmin();
+  // Choosing and locking the winning cost sheet IS the costing approval, so it
+  // is the approver's call — not any admin's (Manan, 2026-08-13).
+  const me = await requireUser();
+  if (!canApprove(me)) {
+    return { ok: false, error: "Only the approver can approve a costing." };
+  }
 
   const inquiryItemId = input.inquiryItemId;
   if (!inquiryItemId) {
@@ -557,7 +563,11 @@ type UnlockCostingResult = { ok: true } | { ok: false; error: string };
 export async function unlockCostingDecision(
   inquiryItemId: string,
 ): Promise<UnlockCostingResult> {
-  await requireAdmin();
+  // Un-locking reverses an approval, so it needs the same authority.
+  const me = await requireUser();
+  if (!canApprove(me)) {
+    return { ok: false, error: "Only the approver can re-open an approved costing." };
+  }
 
   if (!inquiryItemId) {
     return { ok: false, error: "Missing product line." };
@@ -1173,8 +1183,10 @@ export async function saveCostingMaster(
 // anything downstream depends on. The everyday case this serves is a throwaway
 // DRAFT costing that was never approved.
 //
-// Admin-only, matching this module's posture for consequential writes
-// (approveCostingDecision / unlockCostingDecision are both requireAdmin).
+// Admin-only, and deliberately still so after the modules were opened up on
+// 2026-08-13: "everything is open to everybody" was about who may DO the work,
+// not about who may hard-delete a row. The governance rule in CLAUDE.md is
+// deactivate-only, so deletion keeps the narrower gate.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const isUuid = (v: string): boolean => UUID_RE.test(v);
@@ -1427,13 +1439,18 @@ type StageResult = { ok: true } | { ok: false; error: string };
 export async function setCostingStatus(
   input: SetCostingStatusInput,
 ): Promise<StageResult> {
-  await requireUser();
+  const me = await requireUser();
 
   const parsed = SetCostingStatusSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
   const v = parsed.data;
+
+  // Anyone may work a costing up to Pending Approval; signing it off is the
+  // approver's alone (Manan, 2026-08-13).
+  const refusal = approvalRefusal({ status: v.status }, me);
+  if (refusal) return { ok: false, error: refusal };
 
   try {
     const [row] = await db
@@ -1484,12 +1501,16 @@ export async function setCostingStatusBulk(
 ): Promise<
   { ok: true; updated: number; skipped: number } | { ok: false; error: string }
 > {
-  await requireUser();
+  const me = await requireUser();
 
   if (!Array.isArray(costingIds) || costingIds.length === 0) {
     return { ok: false, error: "No rows selected." };
   }
   if (!costingIds.every(isUuid)) return { ok: false, error: "Invalid costing id." };
+
+  // Bulk is the easiest way round a per-row gate, so it carries the same one.
+  const refusal = approvalRefusal({ status }, me);
+  if (refusal) return { ok: false, error: refusal };
 
   const bulkStatuses = SETTABLE_COSTING_STATUSES.filter((s) => s !== "need_info");
   if (!bulkStatuses.includes(status as (typeof bulkStatuses)[number])) {

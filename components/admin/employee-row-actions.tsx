@@ -43,6 +43,7 @@ type RowEmployee = {
   designation: string | null;
   departments: EmployeeDepartmentMembership[];
   isAdmin: boolean;
+  isApprover: boolean;
   isActive: boolean;
   joinedAt: Date | null;
   managerId: string | null;
@@ -217,6 +218,7 @@ export function EmployeeRowActions({
           designation: employee.designation,
           departments: employee.departments,
           isAdmin: employee.isAdmin,
+          isApprover: employee.isApprover,
           managerId: employee.managerId,
         }}
         isSelf={isSelf}

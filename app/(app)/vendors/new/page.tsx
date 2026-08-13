@@ -1,5 +1,5 @@
 import { VendorForm } from "@/components/vendors/vendor-form";
-import { requireAdmin } from "@/lib/auth/current";
+import { requireUser } from "@/lib/auth/current";
 import { listMasterOptions } from "@/lib/queries/masters";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
 import { UserMenuServer } from "@/components/header/user-menu-server";
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
  * Terms are picked from the admin-managed master ("already set" options).
  */
 export default async function NewVendorPage() {
-  await requireAdmin();
+  await requireUser();
   const paymentTerms = await listMasterOptions("payment_term");
   const paymentTermsOptions = paymentTerms.map((o) => ({
     value: o.name,

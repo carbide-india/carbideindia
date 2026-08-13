@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { VendorForm, type VendorFormValues } from "@/components/vendors/vendor-form";
-import { requireAdmin } from "@/lib/auth/current";
+import { requireUser } from "@/lib/auth/current";
 import { getVendorById } from "@/lib/queries/vendors";
 import { listMasterOptions } from "@/lib/queries/masters";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
@@ -18,7 +18,7 @@ export default async function EditVendorPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireAdmin();
+  await requireUser();
   const { id } = await params;
   const [vendor, paymentTerms] = await Promise.all([
     getVendorById(id),

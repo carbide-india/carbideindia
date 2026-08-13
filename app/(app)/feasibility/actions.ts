@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { inquiries, inquiryItems } from "@/db/schema";
-import { requireAdmin } from "@/lib/auth/current";
+import { requireUser } from "@/lib/auth/current";
 import { approvalRefusal } from "@/lib/approval/gate";
 import { FEASIBILITY_STATUSES, type FeasibilityStatus } from "@/db/enums";
 import {
@@ -73,7 +73,7 @@ export async function saveFeasibilityChecklist(
   inquiryId: string,
   input: unknown,
 ): Promise<Result> {
-  const me = await requireAdmin();
+  const me = await requireUser();
   if (!UUID_RE.test(inquiryId)) return { ok: false, error: "Invalid enquiry." };
 
   const parsed = SaveFeasibilityChecklistSchema.safeParse(input);
@@ -146,7 +146,7 @@ export async function setFeasibilityStatus(
   inquiryId: string,
   status: string,
 ): Promise<Result> {
-  const me = await requireAdmin();
+  const me = await requireUser();
   const parsed = SetFeasibilityStatusSchema.safeParse({ status });
   if (!parsed.success || !UUID_RE.test(inquiryId)) {
     return { ok: false, error: "Invalid status." };
@@ -199,7 +199,7 @@ export async function saveSecondaryFeasibility(input: {
   secNotes?: string | null;
   markDone?: boolean;
 }): Promise<{ ok: true; note?: string } | { ok: false; error: string }> {
-  const me = await requireAdmin();
+  const me = await requireUser();
   const { inquiryItemId, markDone, ...fields } = input;
   if (!UUID_RE.test(inquiryItemId)) return { ok: false, error: "Invalid product line." };
 
@@ -345,7 +345,7 @@ export async function saveSecondaryFeasibility(input: {
  * unlocked line simply re-snapshots the current values. Any user may lock.
  */
 export async function lockItemDimensions(inquiryItemId: string): Promise<Result> {
-  const me = await requireAdmin();
+  const me = await requireUser();
   if (!UUID_RE.test(inquiryItemId)) return { ok: false, error: "Invalid product line." };
 
   const [item] = await db
@@ -392,7 +392,7 @@ export async function lockItemDimensions(inquiryItemId: string): Promise<Result>
  * snapshot is never lost.
  */
 export async function unlockItemDimensions(inquiryItemId: string): Promise<Result> {
-  await requireAdmin();
+  await requireUser();
   if (!UUID_RE.test(inquiryItemId)) return { ok: false, error: "Invalid product line." };
 
   const [item] = await db
@@ -437,7 +437,7 @@ export async function unlockItemDimensions(inquiryItemId: string): Promise<Resul
  * per-item costing gate). Any user may confirm.
  */
 export async function confirmItemFeasibility(inquiryItemId: string): Promise<Result> {
-  const me = await requireAdmin();
+  const me = await requireUser();
   if (!UUID_RE.test(inquiryItemId)) return { ok: false, error: "Invalid product line." };
 
   const [item] = await db
@@ -483,7 +483,7 @@ export async function confirmItemFeasibility(inquiryItemId: string): Promise<Res
  * and can no longer be costed until re-confirmed.
  */
 export async function unconfirmItemFeasibility(inquiryItemId: string): Promise<Result> {
-  await requireAdmin();
+  await requireUser();
   if (!UUID_RE.test(inquiryItemId)) return { ok: false, error: "Invalid product line." };
 
   const [item] = await db
@@ -521,7 +521,7 @@ export async function setFeasibilityStatusBulk(
   ids: string[],
   status: string,
 ): Promise<Result> {
-  const me = await requireAdmin();
+  const me = await requireUser();
   if (!Array.isArray(ids) || ids.length === 0) return { ok: false, error: "No rows selected." };
   if (!ids.every((id) => UUID_RE.test(id))) return { ok: false, error: "Invalid selection." };
   if (!FEASIBILITY_STATUSES.includes(status as FeasibilityStatus)) {

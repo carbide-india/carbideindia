@@ -277,6 +277,14 @@ export function EmployeeList({
                   </td>
                   <td className="px-5 py-4">
                     <AdminCell isAdmin={e.isAdmin} />
+                    {e.isApprover && (
+                      <span
+                        title="Can approve — sign a stage off"
+                        className="ml-1.5 inline-flex items-center rounded-full bg-[#e7f6ed] px-2 py-0.5 text-[10.5px] font-black uppercase tracking-wide text-[#1c7a44]"
+                      >
+                        Approver
+                      </span>
+                    )}
                   </td>
                   <td className="px-5 py-4">
                     <StatusPill isActive={e.isActive} joinedAt={e.joinedAt} />
@@ -291,6 +299,7 @@ export function EmployeeList({
                         designation: e.designation,
                         departments: membershipsByEmployee[e.id] ?? [],
                         isAdmin: e.isAdmin,
+                        isApprover: e.isApprover,
                         isActive: e.isActive,
                         joinedAt: e.joinedAt,
                         managerId: e.managerId,

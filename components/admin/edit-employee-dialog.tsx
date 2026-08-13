@@ -29,6 +29,7 @@ export interface EditEmployeeDialogProps {
     designation?: string | null;
     departments: EmployeeDepartmentMembership[];
     isAdmin: boolean;
+    isApprover: boolean;
     managerId?: string | null;
   };
   isSelf: boolean;
@@ -63,6 +64,7 @@ export function EditEmployeeDialog({
   const [deptIds, setDeptIds]   = useState<string[]>(initialDeptIds);
   const [primaryId, setPrimaryId] = useState<string | null>(initialPrimaryId);
   const [isAdmin, setIsAdmin]   = useState(employee.isAdmin);
+  const [isApprover, setIsApprover] = useState(employee.isApprover);
   const [managerId, setManagerId] = useState<string | null>(employee.managerId ?? null);
   const [error, setError]       = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -81,6 +83,7 @@ export function EditEmployeeDialog({
           null,
       );
       setIsAdmin(employee.isAdmin);
+      setIsApprover(employee.isApprover);
       setManagerId(employee.managerId ?? null);
       setError(null);
     }
@@ -92,6 +95,7 @@ export function EditEmployeeDialog({
     employee.name,
     employee.role,
     employee.isAdmin,
+    employee.isApprover,
     employee.managerId,
   ]);
 
@@ -107,6 +111,7 @@ export function EditEmployeeDialog({
       departmentIds?: string[];
       primaryDepartmentId?: string | null;
       isAdmin?: boolean;
+      isApprover?: boolean;
       managerId?: string | null;
     } = {};
     const trimmedName = name.trim();
@@ -122,6 +127,7 @@ export function EditEmployeeDialog({
       patch.primaryDepartmentId = primaryId;
     }
     if (isAdmin !== employee.isAdmin) patch.isAdmin = isAdmin;
+    if (isApprover !== employee.isApprover) patch.isApprover = isApprover;
     if (managerId !== (employee.managerId ?? null)) patch.managerId = managerId;
 
     if (Object.keys(patch).length === 0) {
@@ -219,6 +225,24 @@ export function EditEmployeeDialog({
                 className="h-4 w-4"
               />
               Admin (can manage employees + settings)
+            </label>
+            {/* Approval is its OWN capability, not a consequence of being an
+                admin: four people carry the admin flag and Manan's instruction
+                (2026-08-13) was that signing work off is Alok's alone. */}
+            <label className="flex items-start gap-2.5 text-[15px] text-[#334155]">
+              <input
+                type="checkbox"
+                checked={isApprover}
+                onChange={(e) => setIsApprover(e.target.checked)}
+                className="mt-1 h-4 w-4"
+              />
+              <span>
+                Approver
+                <span className="mt-0.5 block text-[12.5px] text-[#64748B]">
+                  Can mark checks Approved / Not Approved and sign off a stage.
+                  Everyone else can only take work as far as Pending Approval.
+                </span>
+              </span>
             </label>
             {error && (
               <div

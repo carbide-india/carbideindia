@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { vendors } from "@/db/schema";
-import { requireAdmin } from "@/lib/auth/current";
+import { requireAdmin, requireUser } from "@/lib/auth/current";
 import {
   CreateVendorSchema,
   UpdateVendorSchema,
@@ -35,7 +35,7 @@ function isNameClash(msg: string): boolean {
 export async function createVendor(
   input: CreateVendorInput,
 ): Promise<ActionResult<{ id: string; vendorCode: string | null }>> {
-  const me = await requireAdmin();
+  const me = await requireUser();
 
   const parsed = CreateVendorSchema.safeParse(input);
   if (!parsed.success) {
@@ -102,7 +102,7 @@ export async function updateVendor(
   vendorId: string,
   input: UpdateVendorInput,
 ): Promise<ActionResult> {
-  await requireAdmin();
+  await requireUser();
 
   const parsedId = VendorIdSchema.safeParse(vendorId);
   if (!parsedId.success) {

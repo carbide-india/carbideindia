@@ -512,6 +512,13 @@
       "when": 1786623998014,
       "tag": "0073_public_zombie",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1786631040788,
+      "tag": "0074_needy_master_chief",
+      "breakpoints": true
     }
   ]
 }

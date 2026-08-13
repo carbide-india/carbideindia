@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { Plus, Download } from "lucide-react";
-import { requireAdmin } from "@/lib/auth/current";
+import { requireUser } from "@/lib/auth/current";
 import { listClientsForRegister } from "@/lib/queries/clients";
 import { ClientRegister } from "@/components/clients/client-register";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
@@ -22,12 +22,13 @@ export const dynamic = "force-dynamic";
  * header action row.
  */
 export default async function ClientsPage() {
-  const me = await requireAdmin();
+  const me = await requireUser();
   const rows = await listClientsForRegister();
 
   // Admins get the KYC bulk-import modal (same wiring as /clients/new). Lookups
   // resolve master/employee refs so imported cells validate against real ids.
-  // The whole route is requireAdmin-gated, so `me` is always an admin here.
+  // The register itself is open to every employee (2026-08-13); the import
+  // stays admin-only, which is what these `me.isAdmin` branches keep.
   const importLookups = me.isAdmin
     ? await loadLookups(specRefKinds(kycImportSpec.fields))
     : null;
