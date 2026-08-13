@@ -3,25 +3,39 @@ import type { Route } from "next";
 import type { BucketTile } from "@/components/feasibility/bucket-strip";
 
 /**
- * Status-wise distribution in the Costing sidebar.
+ * Status-wise distribution in a module sidebar.
  *
- * Fed the SAME `BucketTile[]` the dashboard strip renders, so the sidebar
- * counts can never drift from the tiles above the table — one derivation, two
- * presentations. Each row links to its own `?bucket=…` view, and the active
- * bucket is highlighted so the sidebar always says where you are.
+ * Fed the SAME tiles the dashboard strip above the table renders, so the
+ * sidebar counts can never drift from the tiles — one derivation, two
+ * presentations. Each row links to its own filtered view and the active bucket
+ * is highlighted, so the sidebar always says where you are.
+ *
+ * Shared by Costing, Quotation and Negotiation (and anything else with house
+ * buckets): Manan's ask is that no stage make you re-learn it, which only holds
+ * if one component draws them all.
  */
-export function CostingSidebarBuckets({ tiles }: { tiles: BucketTile[] }) {
+export function SidebarBuckets({
+  tiles,
+  ariaLabel,
+  heading = "By Status",
+}: {
+  tiles: BucketTile[];
+  /** e.g. "Quotation status distribution". */
+  ariaLabel: string;
+  heading?: string;
+}) {
+  if (tiles.length === 0) return null;
   return (
     <div className="w-full">
       <p className="mb-2 px-1 text-[10.5px] font-black uppercase tracking-[0.14em] text-[#9aa0ab]">
-        By Status
+        {heading}
       </p>
-      <nav className="flex flex-col gap-0.5" aria-label="Costing status distribution">
+      <nav className="flex flex-col gap-0.5" aria-label={ariaLabel}>
         {tiles.map((t) => (
           <Link
             key={t.key}
             href={t.href as Route}
-            title={t.hint}
+            title={t.hint ?? t.label}
             aria-current={t.active ? "page" : undefined}
             className={
               t.active

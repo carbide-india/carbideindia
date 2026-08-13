@@ -32,17 +32,23 @@ export interface BucketTile {
 export function BucketStrip({ tiles, ariaLabel }: { tiles: BucketTile[]; ariaLabel: string }) {
   if (tiles.length === 0) return null;
   return (
-    <nav
-      aria-label={ariaLabel}
-      className="mb-5 grid gap-2.5 [grid-template-columns:repeat(auto-fill,minmax(156px,1fr))]"
-    >
+    // Flex, not a fixed-track grid: `auto-fill,minmax(156px,1fr)` sized the
+    // tracks off the CONTAINER, so a ninth bucket dropped to a second row while
+    // the eight above it sat half-empty.
+    //
+    // `grow basis-auto` rather than `flex-1` (which is `basis-0`, i.e. equal
+    // widths): equal tracks starve the longest label — "Feasibility Approved"
+    // truncated while "Draft" sat in twice the room it needed. Sizing from
+    // content and sharing the slack gives every label the width it actually
+    // wants. `min-w-0` keeps truncation as the fallback on a narrow window.
+    <nav aria-label={ariaLabel} className="mb-5 flex flex-wrap gap-2">
       {tiles.map((t) => (
         <Link
           key={t.key}
           href={t.href as Route}
-          title={t.hint}
+          title={t.hint ?? t.label}
           aria-current={t.active ? "page" : undefined}
-          className="group flex items-center gap-2.5 rounded-xl border border-hairline bg-surface-card px-3 py-2 transition-all hover:-translate-y-[1px] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3f3f94] focus-visible:ring-offset-1"
+          className="group flex min-w-0 grow basis-auto items-center gap-2 rounded-xl border border-hairline bg-surface-card px-2.5 py-1.5 transition-all hover:-translate-y-[1px] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3f3f94] focus-visible:ring-offset-1"
           style={{
             boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
             // The active tile is tinted with its OWN bucket tone (same
@@ -56,16 +62,16 @@ export function BucketStrip({ tiles, ariaLabel }: { tiles: BucketTile[]; ariaLab
           }}
         >
           <span
-            className="font-mono text-[21px] font-black leading-none tabular-nums"
+            className="shrink-0 font-mono text-[18px] font-black leading-none tabular-nums"
             style={{ color: `var(--color-${t.tone}-deep)` }}
           >
             {t.count}
           </span>
           <span className="min-w-0 leading-tight">
-            <span className="block truncate text-[11px] font-bold uppercase tracking-[0.03em] text-ink-strong">
+            <span className="block truncate text-[10px] font-bold uppercase tracking-[0.02em] text-ink-strong">
               {t.label}
             </span>
-            {t.sub && <span className="block text-[10px] font-semibold text-ink-subtle">{t.sub}</span>}
+            {t.sub && <span className="block truncate text-[9.5px] font-semibold text-ink-subtle">{t.sub}</span>}
           </span>
         </Link>
       ))}

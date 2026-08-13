@@ -4,6 +4,7 @@ import {
   allowedModules,
   moduleForPath,
   nextModuleFor,
+  prevModuleFor,
 } from "@/lib/modules/pipeline";
 
 /** Everything a fully-permitted person holds. */
@@ -74,6 +75,55 @@ describe("nextModuleFor", () => {
     // The distinction that stops a flag flip from hiding the pipeline from
     // everyone: null = unrestricted, empty = holds no permissions.
     expect(nextModuleFor("/clients", new Set())).toBeNull();
+  });
+});
+
+describe("prevModuleFor", () => {
+  it("walks the pipeline backwards", () => {
+    expect(prevModuleFor("/samples", ALL)?.key).toBe("kyc");
+    expect(prevModuleFor("/secondary-feasibility", ALL)?.key).toBe("primary-feasibility");
+    expect(prevModuleFor("/quotations", ALL)?.key).toBe("costing");
+    expect(prevModuleFor("/sales-orders", ALL)?.key).toBe("negotiation");
+  });
+
+  it("stops at the head of the pipeline", () => {
+    expect(prevModuleFor("/clients", ALL)).toBeNull();
+  });
+
+  it("returns null off-pipeline rather than jumping to the last module", () => {
+    // "Forward" from nowhere sensibly starts at the first stage; "back" from
+    // nowhere has no meaning, so the button simply does not render.
+    expect(prevModuleFor("/hub", ALL)).toBeNull();
+    expect(prevModuleFor("/admin/roles", ALL)).toBeNull();
+  });
+
+  it("skips modules the viewer may not enter", () => {
+    const partial = new Set(["clients.view", "feasibility.view", "costing.view"]);
+    // From costing, secondary feasibility is permitted, so that is the step back.
+    expect(prevModuleFor("/costings", partial)?.key).toBe("secondary-feasibility");
+    // From secondary, primary is permitted too (same permission key).
+    expect(prevModuleFor("/secondary-feasibility", partial)?.key).toBe(
+      "primary-feasibility",
+    );
+    // From primary, enquiry and sample are not — it falls back to KYC.
+    expect(prevModuleFor("/feasibility", partial)?.key).toBe("kyc");
+  });
+
+  it("null permissions means enforcement is off", () => {
+    expect(prevModuleFor("/costings", null)?.key).toBe("secondary-feasibility");
+  });
+
+  it("an EMPTY set grants nothing", () => {
+    expect(prevModuleFor("/sales-orders", new Set())).toBeNull();
+  });
+
+  it("next and prev are inverses across the whole chain", () => {
+    for (let i = 1; i < PIPELINE_MODULES.length; i++) {
+      const here = PIPELINE_MODULES[i]!;
+      const back = prevModuleFor(here.href, ALL);
+      expect(back?.key, here.key).toBe(PIPELINE_MODULES[i - 1]!.key);
+      expect(nextModuleFor(back!.href, ALL)?.key, here.key).toBe(here.key);
+    }
   });
 });
 

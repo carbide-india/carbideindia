@@ -4,6 +4,7 @@ import type { Route } from "next";
 import { notFound } from "next/navigation";
 import { ArrowLeft, FlaskConical } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/current";
+import { canApprove } from "@/lib/approval/gate";
 import { getInquiryWorkspaceHeader, getInquiryProducts } from "@/lib/queries/sm-workspace";
 import { getInquiryById } from "@/lib/queries/inquiries";
 import { listEmployeeOptions } from "@/lib/queries/employees";
@@ -31,7 +32,7 @@ export default async function FeasibilityReviewPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireAdmin();
+  const me = await requireAdmin();
   const { id } = await params;
   if (!UUID_RE.test(id)) notFound();
 
@@ -103,7 +104,11 @@ export default async function FeasibilityReviewPage({
         <FeasibilityEnquirySnapshot inquiry={inquiry} product={products[0] ?? null} />
       </div>
 
-      <FeasibilityReviewWorkspace inquiry={inquiry} employees={employees} />
+      <FeasibilityReviewWorkspace
+        inquiry={inquiry}
+        employees={employees}
+        canApprove={canApprove(me)}
+      />
     </div>
   );
 }

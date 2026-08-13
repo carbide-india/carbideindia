@@ -49,9 +49,12 @@ interface CheckState {
 export function FeasibilityReviewWorkspace({
   inquiry,
   employees,
+  canApprove = false,
 }: {
   inquiry: Inquiry;
   employees: EmployeeOption[];
+  /** Viewer may sign checks off (Approved / Not Approved). Admins only. */
+  canApprove?: boolean;
 }) {
   const [checks, setChecks] = React.useState<Record<CheckKey, CheckState>>(() => ({
     sizeDrawing: { value: inquiry.feasSizeDrawingCheck ?? "not_done", notes: inquiry.feasSizeDrawingNotes ?? "" },
@@ -105,23 +108,33 @@ export function FeasibilityReviewWorkspace({
   }, []);
 
   // Feasibility status is DERIVED from the five checks (auto-routes the review
-  // into the right bucket on the dashboard strip / sidebar):
-  //   any Not Feasible → Not Feasible · any Need Info → Need Info ·
-  //   NO check touched yet → Not Started · some (but not all) checks set → Draft
-  //   · all Done → Feasibility Approved (proceed_to_costing) · otherwise
-  //   (Done + Assumed) → Pending Approval.
+  // into the right bucket on the dashboard strip / sidebar), in priority order:
+  //   any Not Feasible  → Not Feasible
+  //   any Not Approved  → Not Approved      (the approver sent it back)
+  //   any Need Info     → Need Info
+  //   nothing touched   → Not Started
+  //   any Not Done left → Draft
+  //   ALL Approved      → Feasibility Approved
+  //   otherwise (Done / Assumed, fully worked) → Pending Approval
+  //
+  // The approval gate (Manan, 2026-08-13): finishing the checks no longer
+  // approves the enquiry. Working every check to Done lands it in PENDING
+  // APPROVAL; only an approver moving them to Approved reaches Feasibility
+  // Approved. That is the whole point — a normal employee can say "I have done
+  // this", but only Alok can say "this is signed off".
   // Draft is the house bucket for "started, not submitted" — it replaces the
   // deprecated `in_review`, which nothing writes any more.
   const checkValues = CHECKS.map((c) => checks[c.key].value);
-  const allDone = checkValues.every((v) => v === "done");
-  const doneCount = checkValues.filter((v) => v === "done").length;
+  const allDone = checkValues.every((v) => v === "done" || v === "approved");
+  const doneCount = checkValues.filter((v) => v === "done" || v === "approved").length;
   const pendingCount = checkValues.filter((v) => v === "not_done").length;
   const derivedStatus: FeasibilityStatus = React.useMemo(() => {
     if (checkValues.some((v) => v === "not_feasible")) return "not_feasible";
+    if (checkValues.some((v) => v === "not_approved")) return "not_approved";
     if (checkValues.some((v) => v === "need_info")) return "need_info";
     if (checkValues.every((v) => v === "not_done")) return "not_started";
     if (checkValues.some((v) => v === "not_done")) return "draft";
-    if (checkValues.every((v) => v === "done")) return "proceed_to_costing";
+    if (checkValues.every((v) => v === "approved")) return "proceed_to_costing";
     return "pending_approval";
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [checks]);
@@ -236,6 +249,7 @@ export function FeasibilityReviewWorkspace({
         hint="Drag each check into a status · a reason popup opens for Need Info / Not Feasible / Assumed."
       >
         <FeasibilityChecksBoard
+          canApprove={canApprove}
           items={CHECKS.map((c) => ({
             key: c.key,
             label: c.label,

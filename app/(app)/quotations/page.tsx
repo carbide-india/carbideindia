@@ -5,7 +5,11 @@ import {
   NEW_QUOTATION_ROUTE,
 } from "@/components/quotations/quotation-table";
 import { QuotationBucketStrip } from "@/components/quotations/quotation-bucket-strip";
-import { parseQuotationSelection } from "@/components/quotations/quotation-buckets";
+import {
+  buildQuotationBucketTiles,
+  parseQuotationSelection,
+} from "@/components/quotations/quotation-buckets";
+import { SidebarBuckets } from "@/components/layout/sidebar-buckets";
 import { QUOTATION_STATUS_LABELS } from "@/db/enums";
 import { requireUser } from "@/lib/auth/current";
 import {
@@ -48,8 +52,21 @@ export default async function QuotationsPage({ searchParams }: PageProps) {
     .filter(Boolean)
     .join(" · ");
 
+  // The sidebar shows the SAME tiles the strip above the table renders, so the
+  // two can never disagree — one derivation, two presentations.
+  const sidebarTiles = buildQuotationBucketTiles(counts, selection);
+
   return (
-    <EnquiryModuleShell title="Quotation Register" userMenu={<UserMenuServer />}>
+    <EnquiryModuleShell
+      title="Quotation Register"
+      userMenu={<UserMenuServer />}
+      sidebarExtra={
+        <SidebarBuckets
+          tiles={sidebarTiles}
+          ariaLabel="Quotation status distribution"
+        />
+      }
+    >
       <div className="mx-auto w-full max-w-[1600px]">
         <div className="mb-5 flex items-center justify-between gap-4">
           <div>

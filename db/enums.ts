@@ -342,14 +342,30 @@ export const INQUIRY_SHAPES = ["Cylinder - Reg", "Cylinder - Spl", "Flat - Reg",
 // those to render their bucket strip + live counts. The tone for each bucket is
 // fixed by HOUSE_BUCKET_TONES so the six colours read identically everywhere.
 export const HOUSE_BUCKETS = [
-  "not_started", "draft", "need_info", "pending_approval", "approved", "not_feasible",
+  "not_started", "draft", "need_info", "pending_approval", "approved",
+  "not_approved", "not_feasible",
 ] as const;
 export type HouseBucket = (typeof HOUSE_BUCKETS)[number];
-/** Colour token per house bucket. Stage colour maps MUST agree with this. */
+/** Colour token per house bucket. Stage colour maps MUST agree with this.
+ *  `not_approved` is ROSE, not red: red is reserved for Not Feasible ("this
+ *  cannot be made"), while Not Approved is "the approver sent it back" — a
+ *  different, recoverable thing, and the two sit next to each other. */
 export const HOUSE_BUCKET_TONES: Record<HouseBucket, StatusColorToken> = {
   not_started: "slate", draft: "blue", need_info: "amber",
-  pending_approval: "purple", approved: "green", not_feasible: "red",
+  pending_approval: "purple", approved: "green",
+  not_approved: "rose", not_feasible: "red",
 };
+
+/**
+ * The approval gate (Manan, 2026-08-13).
+ *
+ * Anyone may take work as far as the stage's Done / Pending Approval state.
+ * Only an approver — in practice Alok and Altus, i.e. the admins — may move it
+ * into Approved or Not Approved. The gate is enforced server-side in each
+ * stage's action; the UI merely stops offering the columns, which is
+ * convenience, never security.
+ */
+export const APPROVER_ONLY_BUCKETS = ["approved", "not_approved"] as const;
 
 export const ENQUIRY_STATUSES = [
   "not_started", "initiated", "need_info", "need_help", "proceed",
@@ -380,18 +396,31 @@ export const FEAS_VERDICT_LABELS: Record<FeasVerdict, string> = { to_check: "To 
 // Primary-Feasibility check state: Not Done / Done / Need Info / Not Feasible /
 // Assumed (a Notes box opens on any selection). Append-only — `done`,
 // `need_info`, `not_feasible` added at the end; `yes`/`no` kept for data-compat.
-export const RECHECK_STATES = ["not_done", "yes", "no", "assumed", "done", "need_info", "not_feasible"] as const;
+export const RECHECK_STATES = ["not_done", "yes", "no", "assumed", "done", "need_info", "not_feasible", "not_approved", "approved"] as const;
 export type RecheckState = (typeof RECHECK_STATES)[number];
 export const RECHECK_STATE_LABELS: Record<RecheckState, string> = {
   not_done: "Not Done", yes: "Yes", no: "No", assumed: "Assumed",
   done: "Done", need_info: "Need Info", not_feasible: "Not Feasible",
+  not_approved: "Not Approved", approved: "Approved",
 };
 export const RECHECK_STATE_TONES: Record<RecheckState, string> = {
   not_done: "slate", yes: "green", no: "red", assumed: "amber",
   done: "green", need_info: "blue", not_feasible: "red",
+  not_approved: "rose", approved: "green",
 };
-/** The live check options surfaced in the feasibility UI (in sheet order). */
-export const ACTIVE_RECHECK_STATES = ["not_done", "done", "need_info", "not_feasible", "assumed"] as const;
+/** The live check options surfaced in the feasibility UI (in sheet order).
+ *  The approval pair sits at the END: a check is worked to Done first, and only
+ *  then reviewed. See APPROVER_ONLY_CHECK_STATES for who may set them. */
+export const ACTIVE_RECHECK_STATES = [
+  "not_done", "done", "need_info", "not_feasible", "assumed",
+  "not_approved", "approved",
+] as const;
+/** Check states only an approver (admin) may set — the other end of
+ *  APPROVER_ONLY_BUCKETS, enforced in the feasibility save action. */
+export const APPROVER_ONLY_CHECK_STATES = ["approved", "not_approved"] as const;
+export function isApproverOnlyCheckState(v: RecheckState): boolean {
+  return (APPROVER_ONLY_CHECK_STATES as readonly string[]).includes(v);
+}
 
 // Primary-Feasibility SM-level status (gated: Not Started → In Review →
 // (Need Info) → Pending Approval → {Proceed to Costing | Not Feasible}).
@@ -399,7 +428,7 @@ export const ACTIVE_RECHECK_STATES = ["not_done", "done", "need_info", "not_feas
 // data-compat, filtered from the UI via ACTIVE_FEASIBILITY_STATUSES). Enum is
 // append-only — new values (in_review, pending_approval, not_feasible) are added
 // at the END so the pg enum only ever grows.
-export const FEASIBILITY_STATUSES = ["not_started", "initiated", "need_info", "need_help", "primary_feasibility_done", "proceed_to_costing", "in_review", "pending_approval", "not_feasible", "draft"] as const;
+export const FEASIBILITY_STATUSES = ["not_started", "initiated", "need_info", "need_help", "primary_feasibility_done", "proceed_to_costing", "in_review", "pending_approval", "not_feasible", "draft", "not_approved"] as const;
 export type FeasibilityStatus = (typeof FEASIBILITY_STATUSES)[number];
 export const FEASIBILITY_STATUS_LABELS: Record<FeasibilityStatus, string> = {
   not_started: "Not Started", initiated: "Initiated", need_info: "Need Info", need_help: "Need Help",
@@ -409,13 +438,13 @@ export const FEASIBILITY_STATUS_LABELS: Record<FeasibilityStatus, string> = {
   // the label moved from "Feasibility Confirmed" to "Feasibility Approved".
   proceed_to_costing: "Feasibility Approved",
   in_review: "In Review", pending_approval: "Pending Approval", not_feasible: "Not Feasible",
-  draft: "Draft",
+  draft: "Draft", not_approved: "Not Approved",
 };
 export const FEASIBILITY_STATUS_COLORS: Record<FeasibilityStatus, string> = {
   not_started: "slate", initiated: "blue", need_info: "amber", need_help: "red",
   primary_feasibility_done: "purple", proceed_to_costing: "green",
   in_review: "blue", pending_approval: "purple", not_feasible: "red",
-  draft: "blue",
+  draft: "blue", not_approved: "rose",
 };
 /** Deprecated statuses hidden from every picker/filter (data-compat only).
  *  `in_review` joined them in 2026-08 — the house vocabulary calls that bucket
@@ -423,7 +452,8 @@ export const FEASIBILITY_STATUS_COLORS: Record<FeasibilityStatus, string> = {
 export const DEPRECATED_FEASIBILITY_STATUSES = ["initiated", "need_help", "primary_feasibility_done", "in_review"] as const;
 /** The six house buckets of the Primary Feasibility stage, in display order. */
 export const FEASIBILITY_STAGE_BUCKETS = [
-  "not_started", "draft", "need_info", "pending_approval", "proceed_to_costing", "not_feasible",
+  "not_started", "draft", "need_info", "pending_approval", "proceed_to_costing",
+  "not_approved", "not_feasible",
 ] as const satisfies readonly FeasibilityStatus[];
 /** The live status set surfaced in the module UI (pickers, KPI strip, filters). */
 export const ACTIVE_FEASIBILITY_STATUSES = FEASIBILITY_STATUSES.filter(
@@ -436,21 +466,27 @@ export const ACTIVE_FEASIBILITY_STATUSES = FEASIBILITY_STATUSES.filter(
 // feasibility-only Not Feasible bucket. Stored on
 // inquiry_items.secondary_feasibility_status.
 export const SECONDARY_FEASIBILITY_STATUSES = [
-  "not_started", "draft", "need_info", "pending_approval", "secondary_feasibility_approved", "not_feasible",
+  "not_started", "draft", "need_info", "pending_approval", "secondary_feasibility_approved", "not_feasible", "not_approved",
 ] as const;
 export type SecondaryFeasibilityStatus = (typeof SECONDARY_FEASIBILITY_STATUSES)[number];
 export const SECONDARY_FEASIBILITY_STATUS_LABELS: Record<SecondaryFeasibilityStatus, string> = {
   not_started: "Not Started", draft: "Draft", need_info: "Need Info",
   pending_approval: "Pending Approval",
   secondary_feasibility_approved: "Secondary Feasibility Approved",
-  not_feasible: "Not Feasible",
+  not_feasible: "Not Feasible", not_approved: "Not Approved",
 };
 export const SECONDARY_FEASIBILITY_STATUS_COLORS: Record<SecondaryFeasibilityStatus, string> = {
   not_started: "slate", draft: "blue", need_info: "amber",
   pending_approval: "purple", secondary_feasibility_approved: "green", not_feasible: "red",
+  not_approved: "rose",
 };
-/** The six house buckets of the Secondary Feasibility stage, in display order. */
-export const SECONDARY_FEASIBILITY_STAGE_BUCKETS = SECONDARY_FEASIBILITY_STATUSES;
+/** The house buckets of the Secondary Feasibility stage, in display order.
+ *  NOT the raw enum: `not_approved` was appended to the enum (append-only) but
+ *  belongs beside Approved on screen, not after Not Feasible. */
+export const SECONDARY_FEASIBILITY_STAGE_BUCKETS = [
+  "not_started", "draft", "need_info", "pending_approval",
+  "secondary_feasibility_approved", "not_approved", "not_feasible",
+] as const satisfies readonly SecondaryFeasibilityStatus[];
 
 export const FEAS_PRIORITIES = ["p1", "p2", "p3", "p5_high_profile"] as const;     // sheet: 1, 2, 3, 5. High Profile
 export type FeasPriority = (typeof FEAS_PRIORITIES)[number];
@@ -539,7 +575,7 @@ export const COSTING_LOGIC_FORMULAS = [
 // superseded by `draft` and `costing_approved` and kept only for data-compat.
 export const COSTING_DONE_STATUSES = [
   "not_done", "in_process", "done",
-  "draft", "need_info", "pending_approval", "costing_approved",
+  "draft", "need_info", "pending_approval", "costing_approved", "not_approved",
 ] as const;
 export type CostingDoneStatus = (typeof COSTING_DONE_STATUSES)[number];
 export const COSTING_DONE_STATUS_LABELS: Record<CostingDoneStatus, string> = {
@@ -548,17 +584,18 @@ export const COSTING_DONE_STATUS_LABELS: Record<CostingDoneStatus, string> = {
   // not "Not Started", because it answers "how much costing is LEFT".
   not_done: "Not Done", in_process: "In Process", done: "Done",
   draft: "Draft", need_info: "Need Info", pending_approval: "Pending Approval",
-  costing_approved: "Costing Approved",
+  costing_approved: "Costing Approved", not_approved: "Not Approved",
 };
 export const COSTING_DONE_STATUS_COLORS: Record<CostingDoneStatus, string> = {
   not_done: "slate", in_process: "amber", done: "green",
   draft: "blue", need_info: "amber", pending_approval: "purple", costing_approved: "green",
+  not_approved: "rose",
 };
 /** Legacy values kept in the pgEnum so already-costed rows still render. */
 export const DEPRECATED_COSTING_DONE_STATUSES = ["in_process", "done"] as const;
 /** The five house buckets of the Costing stage, in display order. */
 export const COSTING_STAGE_BUCKETS = [
-  "not_done", "draft", "need_info", "pending_approval", "costing_approved",
+  "not_done", "draft", "need_info", "pending_approval", "costing_approved", "not_approved",
 ] as const satisfies readonly CostingDoneStatus[];
 
 // Quotation stage status (2026-08). The stage previously had only the
@@ -566,18 +603,19 @@ export const COSTING_STAGE_BUCKETS = [
 // was left. Stored on quotations.quotation_status. No Not-Feasible bucket — a
 // quotation cannot reject, only feasibility can.
 export const QUOTATION_STATUSES = [
-  "not_started", "draft", "need_info", "pending_approval", "quotation_approved",
+  "not_started", "draft", "need_info", "pending_approval", "quotation_approved", "not_approved",
 ] as const;
 export type QuotationStatus = (typeof QUOTATION_STATUSES)[number];
 export const QUOTATION_STATUS_LABELS: Record<QuotationStatus, string> = {
   not_started: "Not Started", draft: "Draft", need_info: "Need Info",
   pending_approval: "Pending Approval", quotation_approved: "Quotation Approved",
+  not_approved: "Not Approved",
 };
 export const QUOTATION_STATUS_COLORS: Record<QuotationStatus, string> = {
   not_started: "slate", draft: "blue", need_info: "amber",
-  pending_approval: "purple", quotation_approved: "green",
+  pending_approval: "purple", quotation_approved: "green", not_approved: "rose",
 };
-/** The five house buckets of the Quotation stage, in display order. */
+/** The house buckets of the Quotation stage, in display order. */
 export const QUOTATION_STAGE_BUCKETS = QUOTATION_STATUSES;
 
 // Sales Order stage status (2026-08). The SO carried no status at all before —
@@ -606,7 +644,7 @@ export const SALES_ORDER_STAGE_BUCKETS = SALES_ORDER_STATUSES;
 export const NEGOTIATION_STATUSES = [
   "to_start", "follow_up", "revision", "verbal_yes",
   "order_won", "order_lost", "order_abandoned", "need_help", "on_hold",
-  "draft", "need_info", "pending_approval", "negotiation_approved",
+  "draft", "need_info", "pending_approval", "negotiation_approved", "not_approved",
 ] as const;
 export type NegotiationStatus = (typeof NEGOTIATION_STATUSES)[number];
 export const NEGOTIATION_STATUS_LABELS: Record<NegotiationStatus, string> = {
@@ -614,18 +652,19 @@ export const NEGOTIATION_STATUS_LABELS: Record<NegotiationStatus, string> = {
   order_won: "Order Won", order_lost: "Order Lost", order_abandoned: "Order Abandoned",
   need_help: "Need Help", on_hold: "On Hold",
   draft: "Draft", need_info: "Need Info", pending_approval: "Pending Approval",
-  negotiation_approved: "Negotiation Approved",
+  negotiation_approved: "Negotiation Approved", not_approved: "Not Approved",
 };
 export const NEGOTIATION_STATUS_COLORS: Record<NegotiationStatus, string> = {
   to_start: "slate", follow_up: "blue", revision: "amber", verbal_yes: "purple",
   order_won: "green", order_lost: "red", order_abandoned: "stone",
   need_help: "red", on_hold: "stone",
   draft: "blue", need_info: "amber", pending_approval: "purple", negotiation_approved: "green",
+  not_approved: "rose",
 };
 /** The five house buckets of the Negotiation stage, in display order. The
  *  outcome values above stay available as a separate axis on the detail page. */
 export const NEGOTIATION_STAGE_BUCKETS = [
-  "to_start", "draft", "need_info", "pending_approval", "negotiation_approved",
+  "to_start", "draft", "need_info", "pending_approval", "negotiation_approved", "not_approved",
 ] as const satisfies readonly NegotiationStatus[];
 
 // Negotiation STAGE (Proforma Invoice lifecycle) — the linear pipeline a

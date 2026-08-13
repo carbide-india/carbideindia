@@ -150,6 +150,29 @@ export function nextModuleFor(
   return null;
 }
 
+/**
+ * The PREVIOUS module the viewer is allowed to enter — the mirror of
+ * `nextModuleFor`, so someone can walk the pipeline back to check what came
+ * before without going via the Hub.
+ *
+ * Returns null at the head of the pipeline. Off-pipeline paths return null too
+ * (not the last module): "back" from somewhere that isn't a stage has no
+ * meaning, whereas "forward" sensibly starts at the first stage.
+ */
+export function prevModuleFor(
+  pathname: string,
+  allowed: ReadonlySet<string> | null,
+): PipelineModule | null {
+  const current = moduleForPath(pathname);
+  if (!current) return null;
+  const startAt = PIPELINE_MODULES.findIndex((m) => m.key === current.key) - 1;
+  for (let i = startAt; i >= 0; i--) {
+    const m = PIPELINE_MODULES[i]!;
+    if (allowed === null || allowed.has(m.viewPermission)) return m;
+  }
+  return null;
+}
+
 /** Every module the viewer may enter, in pipeline order. */
 export function allowedModules(
   allowed: ReadonlySet<string> | null,

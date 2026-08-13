@@ -70,6 +70,52 @@ function hrefFor(f: Partial<NegotiationStripFilters>): Route {
   return (qs ? `/negotiations?${qs}` : "/negotiations") as Route;
 }
 
+/**
+ * The house buckets as plain sidebar tiles — the same rows band 1 renders, in
+ * the shape `SidebarBuckets` takes. Exported so the register sidebar and the
+ * header strip read from one derivation and can never show different counts.
+ */
+export function buildNegotiationSidebarTiles(
+  dashboard: NegotiationDashboard,
+  active: NegotiationStripFilters,
+): {
+  key: string;
+  label: string;
+  tone: string;
+  count: number;
+  href: string;
+  active: boolean;
+}[] {
+  const anyFilter =
+    active.status !== null || active.stage !== null || active.axis !== null || active.sent !== null;
+  return [
+    {
+      key: "all",
+      label: "All Negotiations",
+      tone: "brand",
+      count: dashboard.total,
+      href: hrefFor({}),
+      active: !anyFilter,
+    },
+    ...NEGOTIATION_STAGE_BUCKETS.map((s) => ({
+      key: s as string,
+      label: NEGOTIATION_STATUS_LABELS[s],
+      tone: NEGOTIATION_STATUS_COLORS[s],
+      count: dashboard.counts[s],
+      href: active.status === s ? hrefFor({}) : hrefFor({ status: s }),
+      active: active.status === s,
+    })),
+    {
+      key: "outcome",
+      label: "Commercial Outcome",
+      tone: "stone",
+      count: dashboard.outcomeTotal.count,
+      href: active.axis === "outcome" ? hrefFor({}) : hrefFor({ axis: "outcome" }),
+      active: active.axis === "outcome",
+    },
+  ];
+}
+
 export function NegotiationBucketStrip({ dashboard, active, shownCount }: Props) {
   const d = dashboard;
   const anyFilter =

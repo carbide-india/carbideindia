@@ -29,7 +29,7 @@ import { NotificationBell } from "@/components/notifications/notification-bell";
 import { draftKindForSegment, FORM_DRAFT_META } from "@/lib/drafts/form-drafts";
 import { customEditorForSegment } from "@/lib/custom-lists/registry";
 import { cn } from "@/lib/utils";
-import { NextModuleButton } from "@/components/layout/next-module-button";
+import { ModuleStepButtons } from "@/components/layout/next-module-button";
 
 interface NavDef {
   label: string;
@@ -444,7 +444,7 @@ export function EnquiryModuleShell({
               </div>
 
               <div className="mt-3 flex w-full shrink-0 flex-col gap-1.5 border-t border-[#e5e7eb] pt-3">
-                <NextModuleButton collapsed={collapsed} />
+                <ModuleStepButtons collapsed={collapsed} />
                 <span
                   title="Support - coming soon"
                   className={cn(

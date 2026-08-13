@@ -20,9 +20,11 @@ import {
   ACTIVE_RECHECK_STATES,
   RECHECK_STATE_LABELS,
   RECHECK_STATE_TONES,
+  isApproverOnlyCheckState,
   type RecheckState,
 } from "@/db/enums";
 import { NotesField } from "@/components/ui/notes-field";
+import { Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /* ── Public API ────────────────────────────────────────────────────────── */
@@ -34,21 +36,27 @@ export interface CheckItem {
 }
 
 /** The three statuses whose meaning demands a written justification. */
-const NEEDS_REASON = new Set<RecheckState>(["need_info", "not_feasible", "assumed"]);
+const NEEDS_REASON = new Set<RecheckState>([
+  "need_info", "not_feasible", "assumed", "not_approved",
+]);
 
 /** A reason is *required* (blocks Confirm) for these; `assumed` is encouraged. */
-const REASON_REQUIRED = new Set<RecheckState>(["need_info", "not_feasible"]);
+const REASON_REQUIRED = new Set<RecheckState>([
+  "need_info", "not_feasible", "not_approved",
+]);
 
 const REASON_PLACEHOLDER: Partial<Record<RecheckState, string>> = {
   need_info: "What information is needed?",
   not_feasible: "Why is this not feasible?",
   assumed: "What did you assume?",
+  not_approved: "Why is this sent back?",
 };
 
 const REASON_TITLE: Partial<Record<RecheckState, string>> = {
   need_info: "What information is needed to complete Primary Feasibility?",
   not_feasible: "Why is this not feasible?",
   assumed: "What did you assume?",
+  not_approved: "Why are you sending this check back?",
 };
 
 /* dnd-kit ids are namespaced so a check key can never collide with a status. */
@@ -75,10 +83,24 @@ type PendingDrop = { key: string; label: string; target: RecheckState; reason: s
 export function FeasibilityChecksBoard({
   items,
   onChange,
+  canApprove = false,
 }: {
   items: CheckItem[];
   onChange: (key: string, patch: { value?: RecheckState; notes?: string }) => void;
+  /**
+   * Whether this viewer may move a check into Approved / Not Approved.
+   * Anyone can work a check up to Done; only an approver signs it off
+   * (Manan, 2026-08-13). False locks the two columns here — but the real
+   * gate is server-side in the save action, because hiding a column is
+   * convenience, never security.
+   */
+  canApprove?: boolean;
 }) {
+  /** A column this viewer may not drop into. */
+  const locked = React.useCallback(
+    (s: RecheckState) => !canApprove && isApproverOnlyCheckState(s),
+    [canApprove],
+  );
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 8 } }),
@@ -124,7 +146,13 @@ export function FeasibilityChecksBoard({
       if (!item) return;
       const order = ACTIVE_RECHECK_STATES as readonly RecheckState[];
       const curIdx = Math.max(0, order.indexOf(item.value)); // fold legacy → col 0
-      const nextIdx = curIdx + dir;
+      // Step over any column this viewer may not use, rather than stopping
+      // dead on it — arrowing right from Assumed should still do nothing for a
+      // non-approver, but it must never land them somewhere they can't save.
+      let nextIdx = curIdx + dir;
+      while (nextIdx >= 0 && nextIdx < order.length && locked(order[nextIdx]!)) {
+        nextIdx += dir;
+      }
       if (nextIdx < 0 || nextIdx >= order.length) return; // at an edge
       const target = order[nextIdx];
       if (!target || target === item.value) return;
@@ -135,7 +163,7 @@ export function FeasibilityChecksBoard({
       onChange(key, { value: target });
       focusCard(key);
     },
-    [items, onChange, focusCard],
+    [items, onChange, focusCard, locked],
   );
 
   function handleStart(e: DragStartEvent) {
@@ -151,7 +179,7 @@ export function FeasibilityChecksBoard({
     // `over` can be a column OR a card sitting inside a column.
     const col = parseCol(overId);
     if (col) {
-      setOverCol(col);
+      setOverCol(locked(col) ? null : col);
       return;
     }
     const cardKey = parseCard(overId);
@@ -177,6 +205,7 @@ export function FeasibilityChecksBoard({
 
     const item = items.find((i) => i.key === key);
     if (!item || item.value === target) return; // same column → no-op
+    if (locked(target)) return; // approver-only column — drop is a no-op
 
     if (NEEDS_REASON.has(target)) {
       setPending({ key, label: item.label, target, reason: item.notes ?? "" });
@@ -208,6 +237,7 @@ export function FeasibilityChecksBoard({
               draggingKey={activeKey}
               onMove={moveCheck}
               registerCard={registerCard}
+              locked={locked(status)}
             />
           ))}
         </div>
@@ -248,6 +278,7 @@ function StatusColumn({
   draggingKey,
   onMove,
   registerCard,
+  locked = false,
 }: {
   status: RecheckState;
   items: CheckItem[];
@@ -255,6 +286,8 @@ function StatusColumn({
   draggingKey: string | null;
   onMove: (key: string, dir: 1 | -1) => void;
   registerCard: (key: string, node: HTMLDivElement | null) => void;
+  /** Approver-only column this viewer cannot drop into. */
+  locked?: boolean;
 }) {
   const { setNodeRef } = useDroppable({ id: COL(status) });
   const tone = RECHECK_STATE_TONES[status];
@@ -289,6 +322,15 @@ function StatusColumn({
         >
           {RECHECK_STATE_LABELS[status]}
         </span>
+        {locked && (
+          <Lock
+            size={12}
+            strokeWidth={2.6}
+            aria-hidden
+            className="shrink-0 opacity-55"
+            style={{ color: deep(tone) }}
+          />
+        )}
         <span
           className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-black tabular-nums text-white"
           style={{ background: fill(tone) }}
@@ -314,7 +356,7 @@ function StatusColumn({
               color: `color-mix(in srgb, ${deep(tone)} 70%, #8b8ba3)`,
             }}
           >
-            Drop a check here
+            {locked ? "Approver only" : "Drop a check here"}
           </div>
         ) : (
           items.map((it) => (

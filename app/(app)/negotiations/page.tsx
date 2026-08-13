@@ -6,6 +6,7 @@ import {
 } from "@/components/negotiations/negotiation-table";
 import {
   NegotiationBucketStrip,
+  buildNegotiationSidebarTiles,
   type NegotiationStripFilters,
 } from "@/components/negotiations/negotiation-bucket-strip";
 import { requireUser } from "@/lib/auth/current";
@@ -24,6 +25,7 @@ import {
 } from "@/db/enums";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
 import { UserMenuServer } from "@/components/header/user-menu-server";
+import { SidebarBuckets } from "@/components/layout/sidebar-buckets";
 
 export const dynamic = "force-dynamic";
 
@@ -99,10 +101,19 @@ export default async function NegotiationsPage({ searchParams }: PageProps) {
     .filter((v): v is string => v !== null)
     .join(" · ");
 
+  // Same derivation as the header strip — the sidebar just renders it densely.
+  const sidebarTiles = buildNegotiationSidebarTiles(dashboard, active);
+
   return (
     <EnquiryModuleShell
       title="Negotiation Register"
       userMenu={<UserMenuServer />}
+      sidebarExtra={
+        <SidebarBuckets
+          tiles={sidebarTiles}
+          ariaLabel="Negotiation status distribution"
+        />
+      }
     >
       <div className="mx-auto w-full max-w-[1600px]">
         <header className="mb-5 flex flex-wrap items-center justify-between gap-4">

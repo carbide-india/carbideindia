@@ -16,6 +16,7 @@ import {
   Clock3,
   CircleCheck,
   GitCompareArrows,
+  Undo2,
   PencilLine,
   PanelLeftClose,
   PanelLeftOpen,
@@ -25,7 +26,7 @@ import { ModuleTitleBadge } from "@/components/layout/module-title-badge";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { FEASIBILITY_STAGE_BUCKETS, FEASIBILITY_STATUS_LABELS } from "@/db/enums";
 import { cn } from "@/lib/utils";
-import { NextModuleButton } from "@/components/layout/next-module-button";
+import { ModuleStepButtons } from "@/components/layout/next-module-button";
 
 /**
  * Primary Feasibility module shell — its own chrome (like the other form
@@ -52,6 +53,9 @@ export const BUCKET_ICONS = {
   need_info: CircleHelp,
   pending_approval: Clock3,
   approved: CircleCheck,
+  // Distinct from Not Feasible: "the approver sent it back", not "this cannot
+  // be made". Same distinction the rose/red tones carry.
+  not_approved: Undo2,
   not_feasible: CircleX,
 } as const;
 
@@ -61,17 +65,14 @@ export const BUCKET_ICONS = {
  * Labels come from FEASIBILITY_STATUS_LABELS (the single source of truth) —
  * the approved bucket therefore reads "Feasibility Approved".
  */
-const PRIMARY_STATUS_NAV: StatusNav[] = [
-  ...FEASIBILITY_STAGE_BUCKETS.map((b) => ({
-    label: FEASIBILITY_STATUS_LABELS[b],
-    status: b as string,
-    Icon:
-      b === "proceed_to_costing"
-        ? BUCKET_ICONS.approved
-        : BUCKET_ICONS[b as keyof typeof BUCKET_ICONS],
-  })),
-  { label: "Spec Variance", status: "variance", Icon: GitCompareArrows },
-];
+const PRIMARY_STATUS_NAV: StatusNav[] = FEASIBILITY_STAGE_BUCKETS.map((b) => ({
+  label: FEASIBILITY_STATUS_LABELS[b],
+  status: b as string,
+  Icon:
+    b === "proceed_to_costing"
+      ? BUCKET_ICONS.approved
+      : BUCKET_ICONS[b as keyof typeof BUCKET_ICONS],
+}));
 
 function primaryHrefFor(status: string): Route {
   if (status === "variance") return "/feasibility?variance=1" as Route;
@@ -200,6 +201,26 @@ export function FeasibilityModuleShell({
                         );
                       })}
                     </div>
+
+                    {/* Destination 2 — Spec Variance. Promoted out of the status
+                        filters: it is not a bucket of the queue but a standing
+                        exception report ("what did somebody change after the
+                        enquiry was signed off"), so it reads as its own place
+                        and is tinted amber to be noticed. */}
+                    <div className="my-1 h-[1.5px] rounded-full bg-[#e5e7eb]" />
+                    <Link
+                      href={primaryHrefFor("variance")}
+                      title={collapsed ? "Spec Variance" : undefined}
+                      className={cn(
+                        base,
+                        primaryActive && activeStatus === "variance"
+                          ? "border-[1.5px] border-[#b45309] bg-[#b45309] font-bold text-white shadow-[0_2px_8px_rgba(180,83,9,0.30)]"
+                          : "border-[1.5px] border-[#f0d3a4] bg-[#fdf6e7] font-bold text-[#8a5a08] hover:border-[#b45309] hover:bg-[#f9ecd2]",
+                      )}
+                    >
+                      <GitCompareArrows className="h-[18px] w-[18px] shrink-0" />
+                      {!collapsed && <span className="truncate">Spec Variance</span>}
+                    </Link>
                   </>
                 );
               })()}
@@ -207,7 +228,7 @@ export function FeasibilityModuleShell({
             </div>
 
             <div className="mt-3 flex w-full shrink-0 flex-col gap-1.5 border-t border-[#e5e7eb] pt-3">
-              <NextModuleButton collapsed={collapsed} />
+              <ModuleStepButtons collapsed={collapsed} />
               <span
                 title="Support - coming soon"
                 className={cn(

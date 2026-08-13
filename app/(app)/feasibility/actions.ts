@@ -5,6 +5,7 @@ import { eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { inquiries, inquiryItems } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth/current";
+import { approvalRefusal } from "@/lib/approval/gate";
 import { FEASIBILITY_STATUSES, type FeasibilityStatus } from "@/db/enums";
 import {
   SaveFeasibilityChecklistSchema,
@@ -72,7 +73,7 @@ export async function saveFeasibilityChecklist(
   inquiryId: string,
   input: unknown,
 ): Promise<Result> {
-  await requireAdmin();
+  const me = await requireAdmin();
   if (!UUID_RE.test(inquiryId)) return { ok: false, error: "Invalid enquiry." };
 
   const parsed = SaveFeasibilityChecklistSchema.safeParse(input);
@@ -80,6 +81,21 @@ export async function saveFeasibilityChecklist(
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
   }
   const v = parsed.data;
+
+  // The approval gate. The board hides the two approver-only columns, but a
+  // hidden column is not a permission — this is the authority. Checked here
+  // rather than in the schema because it depends on WHO is saving.
+  const refusal = approvalRefusal(
+    {
+      checks: [
+        v.sizeDrawingCheck, v.toleranceCheck, v.gradeAppCheck,
+        v.quantityCheck, v.conditionCheck,
+      ],
+      status: v.status,
+    },
+    me,
+  );
+  if (refusal) return { ok: false, error: refusal };
 
   const patch = clean({
     feasSizeDrawingCheck: v.sizeDrawingCheck,
@@ -130,11 +146,13 @@ export async function setFeasibilityStatus(
   inquiryId: string,
   status: string,
 ): Promise<Result> {
-  await requireAdmin();
+  const me = await requireAdmin();
   const parsed = SetFeasibilityStatusSchema.safeParse({ status });
   if (!parsed.success || !UUID_RE.test(inquiryId)) {
     return { ok: false, error: "Invalid status." };
   }
+  const refusal = approvalRefusal({ status: parsed.data.status }, me);
+  if (refusal) return { ok: false, error: refusal };
   try {
     const updated = await db
       .update(inquiries)
@@ -503,12 +521,15 @@ export async function setFeasibilityStatusBulk(
   ids: string[],
   status: string,
 ): Promise<Result> {
-  await requireAdmin();
+  const me = await requireAdmin();
   if (!Array.isArray(ids) || ids.length === 0) return { ok: false, error: "No rows selected." };
   if (!ids.every((id) => UUID_RE.test(id))) return { ok: false, error: "Invalid selection." };
   if (!FEASIBILITY_STATUSES.includes(status as FeasibilityStatus)) {
     return { ok: false, error: "Invalid status." };
   }
+  // Bulk is the easiest way round a per-row gate, so it carries the same one.
+  const refusal = approvalRefusal({ status }, me);
+  if (refusal) return { ok: false, error: refusal };
   try {
     await db
       .update(inquiries)
