@@ -31,6 +31,7 @@ import {
 } from "@/components/inquiries/form-field";
 import { useFormDraft } from "@/components/drafts/use-form-draft";
 import { useKeyboardForm } from "@/components/forms/use-keyboard-form";
+import { ViewPdfButton } from "@/components/forms/view-pdf-button";
 
 /** RHF holds the schema's *input* shape (pre-transform); zodResolver hands the
  *  parsed *output* (defaults applied, `""` folded to `undefined`) to the submit
@@ -259,7 +260,7 @@ export function NegotiationForm({
         inlineHint
       >
         <div className="grid grid-cols-3 gap-3 max-lg:grid-cols-3 max-md:grid-cols-1">
-          <Field label="Enquiry (SM)" labelOnly required>
+          <Field label="Enquiry (SM)" labelOnly required float>
             <Controller
               control={control}
               name="inquiryId"
@@ -280,7 +281,7 @@ export function NegotiationForm({
             />
           </Field>
 
-          <Field label="Linked Quotation" labelOnly>
+          <Field label="Linked Quotation" labelOnly float>
             <Select
               value={quoteId}
               onValueChange={(v) => void onPickQuotation(v || undefined)}
@@ -295,7 +296,7 @@ export function NegotiationForm({
             />
           </Field>
 
-          <Field id="ng-no" label="Negotiation No">
+          <Field id="ng-no" label="Negotiation No" float>
             <input
               id="ng-no"
               type="text"
@@ -360,7 +361,7 @@ export function NegotiationForm({
             <div className="grid grid-cols-6 gap-3 max-lg:grid-cols-3 max-md:grid-cols-1">
               <Field
                 id={`lines.${index}.custProductName`}
-                label="Cust Product Name"
+                label="Cust Product Name" float
               >
                 <input
                   id={`lines.${index}.custProductName`}
@@ -370,7 +371,7 @@ export function NegotiationForm({
                   {...register(`lines.${index}.custProductName`)}
                 />
               </Field>
-              <Field id={`lines.${index}.qty`} label="Qty">
+              <Field id={`lines.${index}.qty`} label="Qty" float>
                 <input
                   id={`lines.${index}.qty`}
                   type="number"
@@ -382,7 +383,7 @@ export function NegotiationForm({
                   {...register(`lines.${index}.qty`, qtyRegister)}
                 />
               </Field>
-              <Field id={`lines.${index}.partNo`} label="Part No">
+              <Field id={`lines.${index}.partNo`} label="Part No" float>
                 <input
                   id={`lines.${index}.partNo`}
                   type="text"
@@ -392,7 +393,7 @@ export function NegotiationForm({
               </Field>
               <Field
                 id={`lines.${index}.developmentTime`}
-                label="Development Time"
+                label="Development Time" float
               >
                 <input
                   id={`lines.${index}.developmentTime`}
@@ -404,7 +405,7 @@ export function NegotiationForm({
               </Field>
               <Field
                 id={`lines.${index}.deliveryTime`}
-                label="Delivery Time"
+                label="Delivery Time" float
               >
                 <input
                   id={`lines.${index}.deliveryTime`}
@@ -414,7 +415,7 @@ export function NegotiationForm({
                   {...register(`lines.${index}.deliveryTime`)}
                 />
               </Field>
-              <Field id={`lines.${index}.validity`} label="Validity">
+              <Field id={`lines.${index}.validity`} label="Validity" float>
                 <input
                   id={`lines.${index}.validity`}
                   type="text"
@@ -434,7 +435,7 @@ export function NegotiationForm({
                 Pricing
               </p>
               <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
-                <MiniField label="Final Cost">
+                <MiniField label="Final Cost" float>
                   <span className="block w-[180px]">
                     <MoneyInput
                       aria-label={`Final cost line ${index + 1}`}
@@ -442,7 +443,7 @@ export function NegotiationForm({
                     />
                   </span>
                 </MiniField>
-                <MiniField label="Negotiation">
+                <MiniField label="Negotiation" float>
                   <span className="block w-[180px]">
                     <MoneyInput
                       aria-label={`Negotiation line ${index + 1}`}
@@ -450,7 +451,7 @@ export function NegotiationForm({
                     />
                   </span>
                 </MiniField>
-                <MiniField label="Quote Price">
+                <MiniField label="Quote Price" float>
                   <span className="block w-[180px]">
                     <MoneyInput
                       aria-label={`Quote price line ${index + 1}`}
@@ -481,8 +482,10 @@ export function NegotiationForm({
         hint="The live pipeline state plus the quote document and any negotiation notes."
         inlineHint
       >
-        <Field label="Negotiation Status" labelOnly>
-          <div className="[&>[role=group]]:flex-wrap [&>[role=group]]:max-w-full">
+        <Field label="Negotiation Status" labelOnly float>
+          {/* Segmented wraps on its own now — the old [role=group] wrapper here
+              never matched (the control renders role="radiogroup"). */}
+          <div>
             <Controller
               control={control}
               name="negotiationStatus"
@@ -500,7 +503,7 @@ export function NegotiationForm({
           </div>
         </Field>
 
-        <Field id="ng-link" label="Quotation Link">
+        <Field id="ng-link" label="Quotation Link" float>
           <input
             id="ng-link"
             type="url"
@@ -510,7 +513,7 @@ export function NegotiationForm({
           />
         </Field>
 
-        <Field id="ng-notes" label="Negotiation Notes">
+        <Field id="ng-notes" label="Negotiation Notes" float>
           <Controller
             control={control}
             name="negotiationNotes"
@@ -543,6 +546,7 @@ export function NegotiationForm({
         <span className="text-[11px] text-ink-subtle">
           Ctrl / &#8984; + Enter to save
         </span>
+        <ViewPdfButton title="Negotiation" />
         <button
           type="submit"
           disabled={pending}

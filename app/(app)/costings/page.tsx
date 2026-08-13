@@ -7,6 +7,7 @@ import { listCostingRegister } from "@/lib/queries/costings";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
 import { UserMenuServer } from "@/components/header/user-menu-server";
 import { BucketStrip, type BucketTile } from "@/components/feasibility/bucket-strip";
+import { CostingSidebarBuckets } from "@/components/costings/costing-sidebar-buckets";
 import {
   COSTING_DONE_STATUS_COLORS,
   COSTING_DONE_STATUS_LABELS,
@@ -108,7 +109,11 @@ export default async function CostingsPage({
       : null;
 
   return (
-    <EnquiryModuleShell title="Costing Register" userMenu={<UserMenuServer />}>
+    <EnquiryModuleShell
+      title="Costing Register"
+      userMenu={<UserMenuServer />}
+      sidebarExtra={<CostingSidebarBuckets tiles={tiles} />}
+    >
       <div className="mx-auto w-full max-w-[1600px]">
         <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
           <div>

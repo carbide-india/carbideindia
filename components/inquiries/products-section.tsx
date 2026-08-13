@@ -132,7 +132,7 @@ function ProductCheck({
   register: UseFormRegister<InquiryFormValues>;
 }) {
   return (
-    <Field label={label}>
+    <Field label={label} float>
       <Controller
         control={control}
         name={`products.${index}.${name}`}
@@ -286,7 +286,7 @@ export function ProductsSection({
               <ProductCheck index={index} label="Grade" name="gradeCheck" assumed="assumedGrade" control={control} register={register} />
               <ProductCheck index={index} label="Tolerance" name="toleranceCheck" assumed="assumedTolerance" control={control} register={register} />
               <ProductCheck index={index} label="Condition" name="conditionCheck" assumed="assumedCondition" control={control} register={register} />
-              <Field label="Sample Received">
+              <Field label="Sample Received" float>
                 <Controller
                   control={control}
                   name={`products.${index}.sampleReceived`}
@@ -302,7 +302,7 @@ export function ProductsSection({
                 />
               </Field>
             </div>
-            <Field label="Docs Given">
+            <Field label="Docs Given" float>
               <Controller
                 control={control}
                 name={`products.${index}.docsGiven`}
@@ -404,7 +404,7 @@ export function ProductsSection({
           <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
             <Field
               id={`products.${index}.custProductName`}
-              label="Customer Product Name"
+              label="Customer Product Name" float
             >
               <input
                 id={`products.${index}.custProductName`}
@@ -414,7 +414,7 @@ export function ProductsSection({
                 {...register(`products.${index}.custProductName`)}
               />
             </Field>
-            <Field id={`products.${index}.custDrawingNo`} label="Drawing No">
+            <Field id={`products.${index}.custDrawingNo`} label="Drawing No" float>
               <input
                 id={`products.${index}.custDrawingNo`}
                 type="text"
@@ -424,7 +424,7 @@ export function ProductsSection({
             </Field>
             <Field
               id={`products.${index}.drawingRevisionNo`}
-              label="Drawing Rev No"
+              label="Drawing Rev No" float
             >
               <input
                 id={`products.${index}.drawingRevisionNo`}
@@ -439,7 +439,7 @@ export function ProductsSection({
               boxes stretch to fill the row (no wasted space, no truncation)
               however many dimensions the chosen shape shows. */}
           <div className="grid grid-cols-[repeat(auto-fit,minmax(108px,1fr))] gap-2.5 max-lg:grid-cols-4 max-md:grid-cols-2">
-            <Field id={`products.${index}.shape`} label="Shape">
+            <Field id={`products.${index}.shape`} label="Shape" float>
               <Controller
                 control={control}
                 name={`products.${index}.shape`}
@@ -466,7 +466,7 @@ export function ProductsSection({
                 )}
               />
             </Field>
-            <Field id={`products.${index}.dimensionUnit`} label="Unit">
+            <Field id={`products.${index}.dimensionUnit`} label="Unit" float>
               <Controller
                 control={control}
                 name={`products.${index}.dimensionUnit`}
@@ -487,7 +487,7 @@ export function ProductsSection({
                 <Field
                   key={dim}
                   id={`products.${index}.${dim}`}
-                  label={`${DIM_LABELS[dim]}${rule === "required" ? " *" : ""}`}
+                  label={`${DIM_LABELS[dim]}${rule === "required" ? " *" : ""}`} float
                 >
                   <div className="relative">
                     <input
@@ -512,7 +512,7 @@ export function ProductsSection({
 
           <Field
             id={`products.${index}.dimensionNotes`}
-            label="Dimension Notes"
+            label="Dimension Notes" float
           >
             <Controller
               control={control}
@@ -538,7 +538,7 @@ export function ProductsSection({
               Grades &amp; Codes
             </span>
             <div className="grid grid-cols-5 gap-4 max-lg:grid-cols-3 max-md:grid-cols-1">
-              <Field id={`products.${index}.gradeCustomer`} label="Grade Name (Customer)">
+              <Field id={`products.${index}.gradeCustomer`} label="Grade Name (Customer)" float>
                 <input
                   id={`products.${index}.gradeCustomer`}
                   type="text"
@@ -594,7 +594,7 @@ export function ProductsSection({
               label="Condition"
               options={conditions}
             />
-            <Field id={`products.${index}.quantityNos`} label="Quantity (Nos)">
+            <Field id={`products.${index}.quantityNos`} label="Quantity (Nos)" float>
               <input
                 id={`products.${index}.quantityNos`}
                 type="number"
@@ -607,7 +607,7 @@ export function ProductsSection({
                 })}
               />
             </Field>
-            <Field id={`products.${index}.quantityUom`} label="UOM">
+            <Field id={`products.${index}.quantityUom`} label="UOM" float>
               <Controller
                 control={control}
                 name={`products.${index}.quantityUom`}
@@ -625,7 +625,7 @@ export function ProductsSection({
           </div>
 
           {/* Product Description - at the bottom of each product. */}
-          <Field id={`products.${index}.description`} label="Product Description">
+          <Field id={`products.${index}.description`} label="Product Description" float>
             <Controller
               control={control}
               name={`products.${index}.description`}
@@ -688,7 +688,7 @@ function ProductMasterSelect({
   const id = `${name}`;
   const empty = options.length === 0;
   return (
-    <Field id={id} label={label}>
+    <Field id={id} label={label} float>
       <Controller
         control={control}
         name={name}

@@ -40,6 +40,7 @@ import {
   Segmented,
   GroupHeader,
 } from "@/components/inquiries/form-field";
+import { ViewPdfButton } from "@/components/forms/view-pdf-button";
 
 interface Props {
   inquiryItemId: string;
@@ -393,7 +394,7 @@ export function CostingForm({
         inlineHint
         hint={`Product: ${productCaption}. In-house (we manufacture) or Bought-Out (vendor).`}
       >
-        <Field label="Route" labelOnly>
+        <Field label="Route" labelOnly float>
           <Controller
             control={control}
             name="costingType"
@@ -466,7 +467,7 @@ export function CostingForm({
           {/* Identity */}
           <SectionCard title="Identity" inlineHint hint="Costing logic + quantity for this run.">
             <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
-              <Field id="c-qty" label="Quantity">
+              <Field id="c-qty" label="Quantity" float>
                 <input
                   id="c-qty"
                   type="number"
@@ -478,7 +479,7 @@ export function CostingForm({
                   {...register("qty", numRegister)}
                 />
               </Field>
-              <Field label="Costing Logic" labelOnly>
+              <Field label="Costing Logic" labelOnly float>
                 <Controller
                   control={control}
                   name="costingLogic"
@@ -502,7 +503,7 @@ export function CostingForm({
             inlineHint
             hint="Block, theoretical and pressing weights in grams. Choose which the sintered cost is based on."
           >
-            <Field label="Weight Used For Costing" labelOnly>
+            <Field label="Weight Used For Costing" labelOnly float>
               <Controller
                 control={control}
                 name="weightUsed"
@@ -518,7 +519,7 @@ export function CostingForm({
               />
             </Field>
             <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
-              <MiniField label="Block Wt (gms)">
+              <MiniField label="Block Wt (gms)" float>
                 <input
                   type="number"
                   inputMode="decimal"
@@ -530,7 +531,7 @@ export function CostingForm({
                   {...register("blockWt", numRegister)}
                 />
               </MiniField>
-              <MiniField label="Theoretical Wt (gms)">
+              <MiniField label="Theoretical Wt (gms)" float>
                 <input
                   type="number"
                   inputMode="decimal"
@@ -542,7 +543,7 @@ export function CostingForm({
                   {...register("theoreticalWt", numRegister)}
                 />
               </MiniField>
-              <MiniField label="Pressing Wt (gms)">
+              <MiniField label="Pressing Wt (gms)" float>
                 <input
                   type="number"
                   inputMode="decimal"
@@ -554,7 +555,7 @@ export function CostingForm({
                   {...register("pressingWt", numRegister)}
                 />
               </MiniField>
-              <MiniField label="Loss % (0.15 = 15%)">
+              <MiniField label="Loss % (0.15 = 15%)" float>
                 <input
                   type="number"
                   inputMode="decimal"
@@ -577,13 +578,13 @@ export function CostingForm({
             hint="RM price per kg and VA percentage (VA/kg = max(RM x VA%, VA floor))."
           >
             <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
-              <MiniField label="RM Price / kg">
+              <MiniField label="RM Price / kg" float>
                 <MoneyInput
                   aria-label="RM price per kg"
                   {...register("rmPricePerKg", numRegister)}
                 />
               </MiniField>
-              <MiniField label="VA % (e.g. 0.3 = 30%)">
+              <MiniField label="VA % (e.g. 0.3 = 30%)" float>
                 <input
                   type="number"
                   inputMode="decimal"
@@ -596,7 +597,7 @@ export function CostingForm({
                   {...register("vaPct", numRegister)}
                 />
               </MiniField>
-              <MiniField label="VA Floor / kg">
+              <MiniField label="VA Floor / kg" float>
                 <MoneyInput
                   aria-label="VA floor per kg"
                   {...register("vaFloorPerKg", numRegister)}
@@ -612,7 +613,7 @@ export function CostingForm({
             hint="Flat tool cost folded per piece (tool cost / qty). Leave blank if none."
           >
             <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
-              <Field id="c-tooltype" label="Tool Type">
+              <Field id="c-tooltype" label="Tool Type" float>
                 <input
                   id="c-tooltype"
                   type="text"
@@ -621,7 +622,7 @@ export function CostingForm({
                   {...register("toolType")}
                 />
               </Field>
-              <Field id="c-toolmethod" label="Cost Method">
+              <Field id="c-toolmethod" label="Cost Method" float>
                 <input
                   id="c-toolmethod"
                   type="text"
@@ -630,7 +631,7 @@ export function CostingForm({
                   {...register("toolCostMethod")}
                 />
               </Field>
-              <Field id="c-toolcost" label="Flat Tool Cost">
+              <Field id="c-toolcost" label="Flat Tool Cost" float>
                 <MoneyInput
                   id="c-toolcost"
                   aria-label="Flat tool cost"
@@ -643,7 +644,7 @@ export function CostingForm({
           {/* Shaping */}
           <SectionCard title="Shaping" inlineHint hint="Shaping time and rate per minute.">
             <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
-              <MiniField label="Shaping (mins)">
+              <MiniField label="Shaping (mins)" float>
                 <input
                   type="number"
                   inputMode="decimal"
@@ -655,7 +656,7 @@ export function CostingForm({
                   {...register("shapingMins", numRegister)}
                 />
               </MiniField>
-              <MiniField label="Rate / min">
+              <MiniField label="Rate / min" float>
                 <MoneyInput
                   aria-label="Shaping rate per minute"
                   {...register("shapingRatePerMin", numRegister)}
@@ -667,7 +668,7 @@ export function CostingForm({
           {/* Machining */}
           <SectionCard title="Machining" inlineHint hint="Machining rate and overhead percentage.">
             <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
-              <Field id="c-machtype" label="Machining Type">
+              <Field id="c-machtype" label="Machining Type" float>
                 <input
                   id="c-machtype"
                   type="text"
@@ -676,14 +677,14 @@ export function CostingForm({
                   {...register("machiningType")}
                 />
               </Field>
-              <Field id="c-machrate" label="Machining Rate">
+              <Field id="c-machrate" label="Machining Rate" float>
                 <MoneyInput
                   id="c-machrate"
                   aria-label="Machining rate"
                   {...register("machiningRate", numRegister)}
                 />
               </Field>
-              <Field id="c-ovhpct" label="Overhead % (0.25 = 25%)">
+              <Field id="c-ovhpct" label="Overhead % (0.25 = 25%)" float>
                 <input
                   id="c-ovhpct"
                   type="number"
@@ -706,7 +707,7 @@ export function CostingForm({
             hint="Negotiation buffer as a fraction (0.03 = 3%)."
           >
             <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
-              <MiniField label="Negotiation % (e.g. 0.03)">
+              <MiniField label="Negotiation % (e.g. 0.03)" float>
                 <input
                   type="number"
                   inputMode="decimal"
@@ -729,7 +730,7 @@ export function CostingForm({
         <>
           {/* Identity */}
           <SectionCard title="Identity" inlineHint hint="Quantity for this bought-out run.">
-            <Field id="bo-qty" label="Quantity">
+            <Field id="bo-qty" label="Quantity" float>
               <input
                 id="bo-qty"
                 type="number"
@@ -826,7 +827,7 @@ export function CostingForm({
                     <Field
                       id={`vq-${index}-vendor`}
                       label="Vendor"
-                      labelOnly
+                      labelOnly float
                     >
                       <Controller
                         control={control}
@@ -853,7 +854,7 @@ export function CostingForm({
                         )}
                       />
                     </Field>
-                    <Field id={`vq-${index}-name`} label="Vendor Name (ad-hoc)">
+                    <Field id={`vq-${index}-name`} label="Vendor Name (ad-hoc)" float>
                       <input
                         id={`vq-${index}-name`}
                         type="text"
@@ -866,13 +867,13 @@ export function CostingForm({
 
                   {/* Price + timing + terms */}
                   <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
-                    <MiniField label="Unit Price / pc">
+                    <MiniField label="Unit Price / pc" float>
                       <MoneyInput
                         aria-label="Unit price per piece"
                         {...register(`vendorQuotes.${index}.unitPrice`)}
                       />
                     </MiniField>
-                    <MiniField label="Lead Time (days)">
+                    <MiniField label="Lead Time (days)" float>
                       <input
                         type="number"
                         inputMode="numeric"
@@ -884,7 +885,7 @@ export function CostingForm({
                         {...register(`vendorQuotes.${index}.leadTimeDays`, numRegister)}
                       />
                     </MiniField>
-                    <MiniField label="Credit Period (days)">
+                    <MiniField label="Credit Period (days)" float>
                       <input
                         type="number"
                         inputMode="numeric"
@@ -900,13 +901,13 @@ export function CostingForm({
 
                   {/* Freight + OH + development */}
                   <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
-                    <MiniField label="Freight (per order)">
+                    <MiniField label="Freight (per order)" float>
                       <MoneyInput
                         aria-label="Freight cost per order"
                         {...register(`vendorQuotes.${index}.freightCost`, numRegister)}
                       />
                     </MiniField>
-                    <MiniField label="OH % (0.1 = 10%)">
+                    <MiniField label="OH % (0.1 = 10%)" float>
                       <input
                         type="number"
                         inputMode="decimal"
@@ -919,7 +920,7 @@ export function CostingForm({
                         {...register(`vendorQuotes.${index}.vendorOhPct`, numRegister)}
                       />
                     </MiniField>
-                    <MiniField label="Development Cost / pc">
+                    <MiniField label="Development Cost / pc" float>
                       <MoneyInput
                         aria-label="Development cost per piece"
                         {...register(`vendorQuotes.${index}.developmentCost`, numRegister)}
@@ -927,7 +928,7 @@ export function CostingForm({
                     </MiniField>
                   </div>
 
-                  <Field id={`vq-${index}-notes`} label="Notes">
+                  <Field id={`vq-${index}-notes`} label="Notes" float>
                     <input
                       id={`vq-${index}-notes`}
                       type="text"
@@ -977,7 +978,7 @@ export function CostingForm({
       {/* 4. Meta - timeline + validity (shared) */}
       <SectionCard title="Timeline and Validity">
         <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-          <Field id="c-devtime" label="Development Time">
+          <Field id="c-devtime" label="Development Time" float>
             <input
               id="c-devtime"
               type="text"
@@ -986,7 +987,7 @@ export function CostingForm({
               {...register("developmentTime")}
             />
           </Field>
-          <Field id="c-deltime" label="Delivery Time">
+          <Field id="c-deltime" label="Delivery Time" float>
             <input
               id="c-deltime"
               type="text"
@@ -995,7 +996,7 @@ export function CostingForm({
               {...register("deliveryTime")}
             />
           </Field>
-          <Field id="c-validity" label="Validity">
+          <Field id="c-validity" label="Validity" float>
             <input
               id="c-validity"
               type="text"
@@ -1025,6 +1026,7 @@ export function CostingForm({
         <span className="text-[11px] text-ink-subtle">
           Ctrl / &#8984; + Enter to save
         </span>
+        <ViewPdfButton title="Costing Sheet" />
         <button
           type="submit"
           disabled={pending}

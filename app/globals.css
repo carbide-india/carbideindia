@@ -1621,6 +1621,169 @@ select.nt-input {
   background-size: 14px, auto;
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   Floating-label field shell (outlined + notched).
+
+   The label rests INSIDE the box like a placeholder, then floats up and sits
+   ON the top border when the field is focused or filled, with the border
+   notched behind it so the line never strikes through the text.
+
+   The notch is a REAL gap, cut with <fieldset>/<legend>, not a label sitting
+   on a white background patch: many forms render on tinted SectionCards where
+   a painted patch would show as a smear. The fieldset is aria-hidden and
+   purely decorative — the visible <label> beside it keeps the real
+   htmlFor/aria association.
+
+   Brand note: the client's reference art uses red outlines, but red (#D32F2F)
+   is this product's ERROR role. Resting is hairline grey, focus is brand
+   indigo (#3F3F94); red is reserved for the required asterisk and errors.
+   ───────────────────────────────────────────────────────────────────────── */
+.nt-field-shell {
+  position: relative;
+  display: block;
+}
+
+/* Inside the shell the control stops drawing its own chrome — the notch owns
+   the outline. Scoped so a standalone .nt-input elsewhere is untouched. */
+.nt-field-shell .nt-input {
+  position: relative;
+  z-index: 1;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+.nt-field-shell .nt-input:hover,
+.nt-field-shell .nt-input:focus,
+.nt-field-shell .nt-input:focus-visible,
+.nt-field-shell .nt-input:focus-within {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* The visible outline, and the gap the label drops into. */
+.nt-field-notch {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0 8px;
+  pointer-events: none;
+  border: 1.5px solid #c3c9db;
+  border-radius: 12px;
+  background: transparent;
+  transition: border-color 160ms ease;
+}
+.nt-field-legend {
+  padding: 0;
+  width: auto;
+  max-width: 0.01px; /* closed: no gap while the label sits inside */
+  height: 11px;
+  font-size: 11.5px;
+  font-weight: 700;
+  visibility: hidden; /* takes space (cuts the border) without painting */
+  white-space: nowrap;
+  transition: max-width 140ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.nt-field-legend > span {
+  display: inline-block;
+  padding: 0 6px;
+}
+
+/* The real label. Starts centred inside the box, reading as a placeholder. */
+.nt-field-label {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  z-index: 2;
+  transform: translateY(-50%);
+  transform-origin: left center;
+  pointer-events: none;
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  color: #8a90a0;
+  transition:
+    top 140ms cubic-bezier(0.2, 0.7, 0.3, 1),
+    font-size 140ms cubic-bezier(0.2, 0.7, 0.3, 1),
+    color 140ms ease;
+}
+.nt-field-req { color: #d32f2f; }
+
+/* WHEN THE LABEL FLOATS — decided automatically, so a call site cannot get it
+   wrong and leave a label sitting on top of its own control:
+     1. the field is focused;
+     2. a plain <input> is non-empty (:not(:placeholder-shown));
+     3. the shell holds NO plain <input placeholder> at all — i.e. a popover
+        Select (a <button>), a native <select>, a NotesField <textarea>, a radio
+        group, chips, or an input that declares no placeholder. None of those
+        can report "empty", so resting the label inside would overlap their
+        content. They stay permanently floated, exactly as the reference does
+        for Position Applied For / Date of Birth / Gender.
+   `data-float="always"` remains an explicit override. */
+.nt-field-shell:focus-within .nt-field-label,
+.nt-field-shell:has(input.nt-input:not(:placeholder-shown)) .nt-field-label,
+.nt-field-shell:not(:has(input.nt-input[placeholder])) .nt-field-label,
+.nt-field-shell[data-float="always"] .nt-field-label {
+  top: 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--color-ink-soft, #4b5563);
+}
+.nt-field-shell:focus-within .nt-field-legend,
+.nt-field-shell:has(input.nt-input:not(:placeholder-shown)) .nt-field-legend,
+.nt-field-shell:not(:has(input.nt-input[placeholder])) .nt-field-legend,
+.nt-field-shell[data-float="always"] .nt-field-legend {
+  max-width: 100%;
+}
+
+/* An .nt-input carries its own 11px top padding, so the label sitting on the
+   border clears its text. Custom content (chip rows, radio groups, composite
+   controls, the NotesField wrapper) has no such padding and would be overlapped
+   by the floated label — reserve the room. Scoped to shells whose direct child
+   is NOT an .nt-input, so plain fields are untouched. */
+.nt-field-shell > *:not(fieldset):not(label) {
+  position: relative;
+  z-index: 1;
+}
+.nt-field-shell:not(:has(> .nt-input)) > *:not(fieldset):not(label) {
+  padding-top: 10px;
+}
+
+/* A real placeholder ("e.g. Sandvik Hard Materials") stays invisible while the
+   label is resting inside the box — otherwise the two texts sit on top of each
+   other. It fades in as a hint the moment the label floats clear, which is what
+   makes "click it and it shifts up, giving space to write" read correctly.
+   The attribute is still present, so :placeholder-shown keeps detecting empty. */
+.nt-field-shell .nt-input::placeholder {
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+.nt-field-shell:focus-within .nt-input::placeholder,
+.nt-field-shell:not(:has(input.nt-input[placeholder])) .nt-input::placeholder,
+.nt-field-shell[data-float="always"] .nt-input::placeholder {
+  opacity: 1;
+}
+
+.nt-field-shell:hover .nt-field-notch { border-color: #9aa2bd; }
+.nt-field-shell:focus-within .nt-field-notch {
+  border-color: #3f3f94;
+  border-width: 2px;
+}
+.nt-field-shell:focus-within .nt-field-label { color: #3f3f94; }
+
+/* Error state — the one place the outline legitimately goes red. */
+.nt-field-shell[data-invalid="true"] .nt-field-notch { border-color: #d32f2f; }
+.nt-field-shell[data-invalid="true"] .nt-field-label { color: #d32f2f; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nt-field-label,
+  .nt-field-legend,
+  .nt-field-notch {
+    transition: none;
+  }
+}
+
 /* Sidebar collapse toggle — a springy pop each time the icon flips, so the
    collapse action reads clearly. Applied to a re-keyed span in the shell. */
 @keyframes togglePop {

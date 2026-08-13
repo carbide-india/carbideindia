@@ -239,10 +239,18 @@ export function EnquiryModuleShell({
   bulkUpload,
   title,
   isAdmin = false,
+  sidebarExtra,
 }: {
   children: ReactNode;
   userMenu?: ReactNode;
   bulkUpload?: ReactNode;
+  /**
+   * Rendered under the nav, inside the sidebar. Lets a module hang its own
+   * status-wise distribution off the shared shell (the Costing register lists
+   * its buckets with live counts) without every other form growing the same
+   * block.
+   */
+  sidebarExtra?: ReactNode;
   /** Header title. When omitted it's derived from the route (enquiry pages).
    *  Pass it explicitly to reuse this shell for any other form (KYC, Sample…). */
   title?: string;
@@ -420,6 +428,13 @@ export function EnquiryModuleShell({
                   </>
                 )}
               </nav>
+
+              {/* Module-supplied sidebar block (e.g. Costing's status-wise
+                  distribution). Hidden while collapsed — there is no room for
+                  labelled counts in a 72px rail. */}
+              {sidebarExtra && !collapsed && (
+                <div className="mt-5 w-full">{sidebarExtra}</div>
+              )}
 
               <div className="mt-auto flex w-full flex-col gap-1.5">
                 <span

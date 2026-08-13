@@ -39,6 +39,7 @@ import { useUnsavedGuard } from "@/lib/forms/use-unsaved-guard";
 import { useKeyboardForm } from "@/components/forms/use-keyboard-form";
 import { CURRENCY_CODES } from "@/lib/data/currencies";
 import { COUNTRIES } from "@/lib/data/geo";
+import { ViewPdfButton } from "@/components/forms/view-pdf-button";
 
 /** Field label with an optional action (e.g. inline "+ Add") on the right. */
 function LabelWithAdd({ label, add }: { label: string; add?: React.ReactNode }) {
@@ -409,7 +410,7 @@ export function InquiryForm({
             </a>
           </div>
           <div className="min-w-[240px] max-w-[460px] flex-1 max-md:w-full">
-            <Field id="inq-company" label="Company Name" required>
+            <Field id="inq-company" label="Company Name" required float>
               <input
                 id="inq-company"
                 type="text"
@@ -420,7 +421,7 @@ export function InquiryForm({
             </Field>
           </div>
           <div className="w-[132px] max-md:w-full">
-            <Field id="inq-export" label="Export">
+            <Field id="inq-export" label="Export" float>
               <Controller
                 control={control}
                 name="export"
@@ -437,7 +438,7 @@ export function InquiryForm({
             </Field>
           </div>
           <div className="w-[160px] max-md:w-full">
-            <Field id="inq-sm" label="SM Number">
+            <Field id="inq-sm" label="SM Number" float>
               <div className="flex min-h-[42px] items-center rounded-lg border border-[#dcdce8] bg-[#f4f5f9] px-3 py-2 text-[12px] leading-snug text-[#9aa0ab]">
                 Auto-generated on save
               </div>
@@ -446,7 +447,7 @@ export function InquiryForm({
         </div>
 
         <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
-          <Field id="inq-date" label="Enquiry Date">
+          <Field id="inq-date" label="Enquiry Date" float>
             <input
               id="inq-date"
               type="date"
@@ -454,7 +455,7 @@ export function InquiryForm({
               {...register("enquiryDate")}
             />
           </Field>
-          <Field id="inq-priority" label="Priority">
+          <Field id="inq-priority" label="Priority" float>
             <Controller
               control={control}
               name="priority"
@@ -471,7 +472,7 @@ export function InquiryForm({
               )}
             />
           </Field>
-          <Field id="inq-source" label="Source">
+          <Field id="inq-source" label="Source" float>
             <Controller
               control={control}
               name="source"
@@ -489,7 +490,7 @@ export function InquiryForm({
               )}
             />
           </Field>
-          <Field id="inq-first" label="First Enquiry?">
+          <Field id="inq-first" label="First Enquiry?" float>
             <Controller
               control={control}
               name="firstEnquiry"
@@ -575,7 +576,7 @@ export function InquiryForm({
           </div>
           {watch("country") === "India" ? (
             <>
-              <Field id="inq-state" label="State">
+              <Field id="inq-state" label="State" float>
                 <Controller
                   control={control}
                   name="state"
@@ -596,7 +597,7 @@ export function InquiryForm({
                   )}
                 />
               </Field>
-              <Field id="inq-city" label="City">
+              <Field id="inq-city" label="City" float>
                 <Controller
                   control={control}
                   name="city"
@@ -641,7 +642,7 @@ export function InquiryForm({
             </>
           ) : (
             <>
-              <Field id="inq-state" label="State / Province">
+              <Field id="inq-state" label="State / Province" float>
                 <input
                   id="inq-state"
                   type="text"
@@ -649,7 +650,7 @@ export function InquiryForm({
                   {...register("state")}
                 />
               </Field>
-              <Field id="inq-city" label="City">
+              <Field id="inq-city" label="City" float>
                 <input
                   id="inq-city"
                   type="text"
@@ -659,7 +660,7 @@ export function InquiryForm({
               </Field>
             </>
           )}
-          <Field id="inq-pin" label="Pin Code">
+          <Field id="inq-pin" label="Pin Code" float>
             <input
               id="inq-pin"
               type="text"
@@ -676,7 +677,7 @@ export function InquiryForm({
         <div className="flex flex-col gap-3">
           <GroupHeader n={1} label="Contact" />
           <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
-            <Field id="inq-cfirst" label="First Name">
+            <Field id="inq-cfirst" label="First Name" float>
               <input
                 id="inq-cfirst"
                 type="text"
@@ -684,7 +685,7 @@ export function InquiryForm({
                 {...register("contactFirstName")}
               />
             </Field>
-            <Field id="inq-clast" label="Last Name">
+            <Field id="inq-clast" label="Last Name" float>
               <input
                 id="inq-clast"
                 type="text"
@@ -692,7 +693,7 @@ export function InquiryForm({
                 {...register("contactLastName")}
               />
             </Field>
-            <Field id="inq-cno" label="Contact No">
+            <Field id="inq-cno" label="Contact No" float>
               <input
                 id="inq-cno"
                 type="tel"
@@ -700,7 +701,7 @@ export function InquiryForm({
                 {...register("contactNo")}
               />
             </Field>
-            <Field id="inq-cemail" label="Email">
+            <Field id="inq-cemail" label="Email" float>
               <input
                 id="inq-cemail"
                 type="email"
@@ -711,7 +712,7 @@ export function InquiryForm({
           </div>
         </div>
 
-        <Field id="inq-cc" label="CC Emails">
+        <Field id="inq-cc" label="CC Emails" float>
           <input
             id="inq-cc"
             type="text"
@@ -744,16 +745,16 @@ export function InquiryForm({
                   }
                 />
                 <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
-                  <Field label="First Name">
+                  <Field label="First Name" float>
                     <input id={`extra-contact-${i}-first`} type="text" className="nt-input" {...register(`extraContacts.${i}.firstName` as const)} />
                   </Field>
-                  <Field label="Last Name">
+                  <Field label="Last Name" float>
                     <input type="text" className="nt-input" {...register(`extraContacts.${i}.lastName` as const)} />
                   </Field>
-                  <Field label="Contact No">
+                  <Field label="Contact No" float>
                     <input type="tel" className="nt-input" {...register(`extraContacts.${i}.contactNo` as const)} />
                   </Field>
-                  <Field label="Email">
+                  <Field label="Email" float>
                     <input type="email" className="nt-input" {...register(`extraContacts.${i}.email` as const)} />
                   </Field>
                 </div>
@@ -776,7 +777,7 @@ export function InquiryForm({
         </button>
 
         <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-          <Field id="inq-addr1" label="Address Line 1">
+          <Field id="inq-addr1" label="Address Line 1" float>
             <input
               id="inq-addr1"
               type="text"
@@ -785,7 +786,7 @@ export function InquiryForm({
               {...register("addressLine1")}
             />
           </Field>
-          <Field id="inq-addr2" label="Address Line 2">
+          <Field id="inq-addr2" label="Address Line 2" float>
             <input
               id="inq-addr2"
               type="text"
@@ -794,7 +795,7 @@ export function InquiryForm({
               {...register("addressLine2")}
             />
           </Field>
-          <Field id="inq-addr3" label="Address Line 3">
+          <Field id="inq-addr3" label="Address Line 3" float>
             <input
               id="inq-addr3"
               type="text"
@@ -803,7 +804,7 @@ export function InquiryForm({
               {...register("addressLine3")}
             />
           </Field>
-          <Field id="inq-addr4" label="Address Line 4">
+          <Field id="inq-addr4" label="Address Line 4" float>
             <input
               id="inq-addr4"
               type="text"
@@ -853,7 +854,7 @@ export function InquiryForm({
       {/* ── 4 · Assignment ───────────────────────────────────────────── */}
       <SectionCard title="Assignment">
         <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-          <Field id="inq-sm-link" label="SM Folder Link">
+          <Field id="inq-sm-link" label="SM Folder Link" float>
             <input
               id="inq-sm-link"
               type="url"
@@ -862,7 +863,7 @@ export function InquiryForm({
               {...register("smFolderLink")}
             />
           </Field>
-          <Field id="inq-sales" label="Assign Sales Person">
+          <Field id="inq-sales" label="Assign Sales Person" float>
             <Controller
               control={control}
               name="assignedSalesPersonId"
@@ -879,7 +880,7 @@ export function InquiryForm({
               )}
             />
           </Field>
-          <Field id="inq-dept" label="Department">
+          <Field id="inq-dept" label="Department" float>
             <Controller
               control={control}
               name="departmentId"
@@ -896,7 +897,7 @@ export function InquiryForm({
             />
           </Field>
         </div>
-        <Field id="inq-notes" label="Enquiry Notes">
+        <Field id="inq-notes" label="Enquiry Notes" float>
           <Controller
             control={control}
             name="enquiryNotes"
@@ -926,6 +927,7 @@ export function InquiryForm({
         className="flex flex-col items-center justify-center gap-2 pt-5"
         style={{ borderTop: "1px solid var(--color-hairline)" }}
       >
+        <ViewPdfButton title="New Enquiry" />
         <button
           type="submit"
           disabled={pending}

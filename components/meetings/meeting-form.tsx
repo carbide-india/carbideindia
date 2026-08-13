@@ -25,6 +25,7 @@ import {
 import type { EmployeeOption } from "@/lib/queries/employees";
 import type { ClientAutofill, ClientOption } from "@/lib/queries/clients";
 import type { MasterOptionItem } from "@/lib/queries/masters";
+import { ViewPdfButton } from "@/components/forms/view-pdf-button";
 
 /** RHF holds the schema's *input* shape (pre-transform); zodResolver hands the
  *  parsed *output* (defaults applied, `""` folded to `undefined`) to the submit
@@ -231,7 +232,7 @@ export function MeetingForm({
         inlineHint
       >
         <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
-          <Field id="mtg-sales-name" label="Name" required>
+          <Field id="mtg-sales-name" label="Name" required float>
             <input
               id="mtg-sales-name"
               type="text"
@@ -241,7 +242,7 @@ export function MeetingForm({
               {...register("salesName")}
             />
           </Field>
-          <Field id="mtg-sales-number" label="Sales Number">
+          <Field id="mtg-sales-number" label="Sales Number" float>
             <input
               id="mtg-sales-number"
               type="tel"
@@ -250,7 +251,7 @@ export function MeetingForm({
               {...register("salesNumber")}
             />
           </Field>
-          <Field id="mtg-sales-desig" label="Designation">
+          <Field id="mtg-sales-desig" label="Designation" float>
             <input
               id="mtg-sales-desig"
               type="text"
@@ -259,7 +260,7 @@ export function MeetingForm({
               {...register("salesDesignation")}
             />
           </Field>
-          <Field id="mtg-sales-email" label="Email">
+          <Field id="mtg-sales-email" label="Email" float>
             <input
               id="mtg-sales-email"
               type="email"
@@ -278,7 +279,7 @@ export function MeetingForm({
         inlineHint
       >
         <div className="grid grid-cols-5 gap-3 max-lg:grid-cols-3 max-md:grid-cols-1">
-          <Field id="mtg-date" label="Date" required>
+          <Field id="mtg-date" label="Date" required float>
             <input
               id="mtg-date"
               type="date"
@@ -287,7 +288,7 @@ export function MeetingForm({
               {...register("meetingDate")}
             />
           </Field>
-          <Field id="mtg-start" label="Meeting Start Time">
+          <Field id="mtg-start" label="Meeting Start Time" float>
             <input
               id="mtg-start"
               type="time"
@@ -295,7 +296,7 @@ export function MeetingForm({
               {...register("meetingStartTime")}
             />
           </Field>
-          <Field id="mtg-end" label="Meeting End Time">
+          <Field id="mtg-end" label="Meeting End Time" float>
             <input
               id="mtg-end"
               type="time"
@@ -303,7 +304,7 @@ export function MeetingForm({
               {...register("meetingEndTime")}
             />
           </Field>
-          <Field label="Meeting Source" labelOnly>
+          <Field label="Meeting Source" labelOnly float>
             <div className="flex flex-col gap-2">
               <Controller
                 control={control}
@@ -343,7 +344,7 @@ export function MeetingForm({
               )}
             </div>
           </Field>
-          <Field label="Client Type" labelOnly>
+          <Field label="Client Type" labelOnly float>
             <Controller
               control={control}
               name="clientType"
@@ -382,7 +383,7 @@ export function MeetingForm({
         hint="Pick a known client to link it, or type a new company name."
         inlineHint
       >
-        <Field label="Company Name" labelOnly required>
+        <Field label="Company Name" labelOnly required float>
           <Controller
             control={control}
             name="companyName"
@@ -418,7 +419,7 @@ export function MeetingForm({
         </Field>
 
         <div className="grid grid-cols-5 gap-3 max-lg:grid-cols-3 max-md:grid-cols-1">
-          <Field id="mtg-cfirst" label="Contact First Name" required>
+          <Field id="mtg-cfirst" label="Contact First Name" required float>
             <input
               id="mtg-cfirst"
               type="text"
@@ -428,7 +429,7 @@ export function MeetingForm({
               {...register("contactFirstName")}
             />
           </Field>
-          <Field id="mtg-clast" label="Contact Last Name">
+          <Field id="mtg-clast" label="Contact Last Name" float>
             <input
               id="mtg-clast"
               type="text"
@@ -437,7 +438,7 @@ export function MeetingForm({
               {...register("contactLastName")}
             />
           </Field>
-          <Field id="mtg-cdesig" label="Designation">
+          <Field id="mtg-cdesig" label="Designation" float>
             <input
               id="mtg-cdesig"
               type="text"
@@ -446,7 +447,7 @@ export function MeetingForm({
               {...register("contactPersonDesignation")}
             />
           </Field>
-          <Field id="mtg-cnumber" label="Number">
+          <Field id="mtg-cnumber" label="Number" float>
             <input
               id="mtg-cnumber"
               type="tel"
@@ -455,7 +456,7 @@ export function MeetingForm({
               {...register("contactNumber")}
             />
           </Field>
-          <Field id="mtg-cemail" label="Email">
+          <Field id="mtg-cemail" label="Email" float>
             <input
               id="mtg-cemail"
               type="email"
@@ -473,7 +474,7 @@ export function MeetingForm({
         hint="Why you met, what came of it, and when to follow up."
         inlineHint
       >
-        <Field label="Purpose of Meeting" labelOnly>
+        <Field label="Purpose of Meeting" labelOnly float>
           <Controller
             control={control}
             name="purpose"
@@ -491,7 +492,7 @@ export function MeetingForm({
         </Field>
 
         {showSpecify && (
-          <Field id="mtg-purpose-other" label="Specify purpose" required>
+          <Field id="mtg-purpose-other" label="Specify purpose" required float>
             <input
               id="mtg-purpose-other"
               type="text"
@@ -503,7 +504,7 @@ export function MeetingForm({
           </Field>
         )}
 
-        <Field id="mtg-notes" label="Meeting Notes">
+        <Field id="mtg-notes" label="Meeting Notes" float>
           <Controller
             control={control}
             name="meetingNotes"
@@ -519,7 +520,7 @@ export function MeetingForm({
           />
         </Field>
 
-        <Field id="mtg-followup" label="Next Follow-Up Date">
+        <Field id="mtg-followup" label="Next Follow-Up Date" float>
           <input
             id="mtg-followup"
             type="date"
@@ -542,6 +543,7 @@ export function MeetingForm({
         className="flex items-center justify-end gap-3 pt-2"
         style={{ borderTop: "1px solid var(--color-hairline)" }}
       >
+        <ViewPdfButton title="Client Meeting" />
         <button
           type="submit"
           disabled={pending}

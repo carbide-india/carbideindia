@@ -50,7 +50,7 @@ function CheckField({
   register: UseFormRegister<InquiryFormValues>;
 }) {
   return (
-    <Field label={label}>
+    <Field label={label} float>
       <Controller
         control={control}
         name={name}
@@ -105,7 +105,7 @@ export function ChecklistSection({
       inlineHint
       hint="Mark what the client actually gave (Given), didn't give (Not Given), or what we filled in ourselves (Assumed)."
     >
-      <Field id="inq-product" label="Product Description" required>
+      <Field id="inq-product" label="Product Description" required float>
         <textarea
           id="inq-product"
           rows={3}
@@ -122,7 +122,7 @@ export function ChecklistSection({
       </Field>
 
       {/* Docs given - checkbox chip group */}
-      <Field label="Docs Given">
+      <Field label="Docs Given" float>
         <Controller
           control={control}
           name="docsGiven"
@@ -177,7 +177,7 @@ export function ChecklistSection({
         <CheckField label="Grade" name="gradeCheck" assumedKey="grade" control={control} register={register} />
         <CheckField label="Tolerance" name="toleranceCheck" assumedKey="tolerance" control={control} register={register} />
         <CheckField label="Condition" name="conditionCheck" assumedKey="condition" control={control} register={register} />
-        <Field label="Sample Received">
+        <Field label="Sample Received" float>
           <Controller
             control={control}
             name="sampleReceived"

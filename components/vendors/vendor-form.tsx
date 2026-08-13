@@ -18,6 +18,7 @@ import {
   useKeyboardForm,
   useAutofocusFirstField,
 } from "@/components/forms/use-keyboard-form";
+import { ViewPdfButton } from "@/components/forms/view-pdf-button";
 
 /** Standard B2B credit periods, rendered as an "already set" dropdown. */
 const CREDIT_DAYS_PRESETS = [0, 7, 15, 30, 45, 60, 90, 120] as const;
@@ -177,7 +178,7 @@ export function VendorForm({
         inlineHint
       >
         {isEdit && vendorCode && (
-          <Field id="vendor-code" label="Vendor Code">
+          <Field id="vendor-code" label="Vendor Code" float floatAlways>
             <input
               id="vendor-code"
               type="text"
@@ -188,7 +189,7 @@ export function VendorForm({
             />
           </Field>
         )}
-        <Field id="vendor-name" label="Vendor Name" required>
+        <Field id="vendor-name" label="Vendor Name" required float>
           <input
             id="vendor-name"
             type="text"
@@ -200,7 +201,7 @@ export function VendorForm({
         </Field>
 
         <div className="grid grid-cols-3 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
-          <Field id="vendor-contact-person" label="Contact Person">
+          <Field id="vendor-contact-person" label="Contact Person" float>
             <input
               id="vendor-contact-person"
               type="text"
@@ -209,7 +210,7 @@ export function VendorForm({
               {...register("contactPerson")}
             />
           </Field>
-          <Field id="vendor-contact-no" label="Contact No.">
+          <Field id="vendor-contact-no" label="Contact No." float>
             <input
               id="vendor-contact-no"
               type="tel"
@@ -218,7 +219,7 @@ export function VendorForm({
               {...register("contactNo")}
             />
           </Field>
-          <Field id="vendor-email" label="Email">
+          <Field id="vendor-email" label="Email" float>
             <input
               id="vendor-email"
               type="email"
@@ -233,7 +234,7 @@ export function VendorForm({
             a hidden field so an old vendor's value survives an edit. */}
         <input type="hidden" {...register("address")} />
 
-        <Field id="vendor-addr-1" label="Address Line 1">
+        <Field id="vendor-addr-1" label="Address Line 1" float>
           <input
             id="vendor-addr-1"
             type="text"
@@ -242,7 +243,7 @@ export function VendorForm({
             {...register("addressLine1")}
           />
         </Field>
-        <Field id="vendor-addr-2" label="Address Line 2">
+        <Field id="vendor-addr-2" label="Address Line 2" float>
           <input
             id="vendor-addr-2"
             type="text"
@@ -252,7 +253,7 @@ export function VendorForm({
           />
         </Field>
         <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
-          <Field id="vendor-addr-3" label="Address Line 3">
+          <Field id="vendor-addr-3" label="Address Line 3" float>
             <input
               id="vendor-addr-3"
               type="text"
@@ -261,7 +262,7 @@ export function VendorForm({
               {...register("addressLine3")}
             />
           </Field>
-          <Field id="vendor-addr-4" label="Address Line 4">
+          <Field id="vendor-addr-4" label="Address Line 4" float>
             <input
               id="vendor-addr-4"
               type="text"
@@ -272,7 +273,7 @@ export function VendorForm({
           </Field>
         </div>
         <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
-          <Field id="vendor-city" label="City">
+          <Field id="vendor-city" label="City" float>
             <input
               id="vendor-city"
               type="text"
@@ -281,7 +282,7 @@ export function VendorForm({
               {...register("city")}
             />
           </Field>
-          <Field id="vendor-state" label="State" labelOnly>
+          <Field id="vendor-state" label="State" labelOnly float floatAlways>
             <Controller
               control={control}
               name="state"
@@ -298,7 +299,7 @@ export function VendorForm({
               )}
             />
           </Field>
-          <Field id="vendor-pincode" label="Pincode">
+          <Field id="vendor-pincode" label="Pincode" float>
             <input
               id="vendor-pincode"
               type="text"
@@ -318,7 +319,7 @@ export function VendorForm({
         inlineHint
       >
         <div className="grid grid-cols-[minmax(0,0.5fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
-          <Field id="vendor-gst-applicable" label="GST Applicable" labelOnly>
+          <Field id="vendor-gst-applicable" label="GST Applicable" labelOnly float floatAlways>
             <Controller
               control={control}
               name="isGstApplicable"
@@ -333,7 +334,7 @@ export function VendorForm({
             />
           </Field>
 
-          <Field id="vendor-gstin" label="GST Number (GSTIN)">
+          <Field id="vendor-gstin" label="GST Number (GSTIN)" float>
             <Controller
               control={control}
               name="gstin"
@@ -377,7 +378,7 @@ export function VendorForm({
             )}
           </Field>
 
-          <Field id="vendor-website" label="Website">
+          <Field id="vendor-website" label="Website" float>
             <input
               id="vendor-website"
               type="text"
@@ -398,7 +399,7 @@ export function VendorForm({
         inlineHint
       >
         <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
-          <Field id="vendor-credit-days" label="Default Credit Days" labelOnly>
+          <Field id="vendor-credit-days" label="Default Credit Days" labelOnly float floatAlways>
             <Controller
               control={control}
               name="defaultCreditDays"
@@ -415,7 +416,7 @@ export function VendorForm({
               )}
             />
           </Field>
-          <Field id="vendor-payment-terms" label="Payment Terms" labelOnly>
+          <Field id="vendor-payment-terms" label="Payment Terms" labelOnly float floatAlways>
             <Controller
               control={control}
               name="paymentTerms"
@@ -439,7 +440,7 @@ export function VendorForm({
           </Field>
         </div>
 
-        <Field id="vendor-notes" label="Notes">
+        <Field id="vendor-notes" label="Notes" float floatAlways>
           <Controller
             control={control}
             name="notes"
@@ -469,6 +470,7 @@ export function VendorForm({
         className="flex items-center justify-end gap-3 pt-2"
         style={{ borderTop: "1px solid var(--color-hairline)" }}
       >
+        <ViewPdfButton title="Vendor" />
         <button
           type="submit"
           disabled={pending}

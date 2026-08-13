@@ -29,6 +29,7 @@ import {
 } from "@/components/inquiries/form-field";
 import { useFormDraft } from "@/components/drafts/use-form-draft";
 import { useKeyboardForm } from "@/components/forms/use-keyboard-form";
+import { ViewPdfButton } from "@/components/forms/view-pdf-button";
 
 /** RHF holds the schema's *input* shape (pre-transform); zodResolver hands the
  *  parsed *output* (defaults applied, `""` folded to `undefined`) to the submit
@@ -246,7 +247,7 @@ export function SoForm({
       >
         {/* Enquiry · Linked Quotation · SO No · Quotation Link - one line. */}
         <div className="grid grid-cols-4 gap-4 max-lg:grid-cols-2 max-md:grid-cols-1">
-          <Field label="Enquiry (SM)" labelOnly required>
+          <Field label="Enquiry (SM)" labelOnly required float>
             <Controller
               control={control}
               name="inquiryId"
@@ -266,7 +267,7 @@ export function SoForm({
               )}
             />
           </Field>
-          <Field label="Linked Quotation" labelOnly>
+          <Field label="Linked Quotation" labelOnly float>
             <Select
               value={quoteId}
               onValueChange={(v) => void onPickQuotation(v || undefined)}
@@ -280,7 +281,7 @@ export function SoForm({
               }))}
             />
           </Field>
-          <Field id="so-no" label="SO No">
+          <Field id="so-no" label="SO No" float>
             <input
               id="so-no"
               type="text"
@@ -290,7 +291,7 @@ export function SoForm({
               {...register("soNo")}
             />
           </Field>
-          <Field id="so-link" label="Quotation Link">
+          <Field id="so-link" label="Quotation Link" float>
             <input
               id="so-link"
               type="url"
@@ -355,7 +356,7 @@ export function SoForm({
               <Field
                 id={`lines.${index}.custProductName`}
                 label="Cust Product Name"
-                className="col-span-2 max-md:col-span-1"
+                className="col-span-2 max-md:col-span-1" float
               >
                 <input
                   id={`lines.${index}.custProductName`}
@@ -365,7 +366,7 @@ export function SoForm({
                   {...register(`lines.${index}.custProductName`)}
                 />
               </Field>
-              <Field id={`lines.${index}.qty`} label="Qty">
+              <Field id={`lines.${index}.qty`} label="Qty" float>
                 <input
                   id={`lines.${index}.qty`}
                   type="number"
@@ -377,7 +378,7 @@ export function SoForm({
                   {...register(`lines.${index}.qty`, qtyRegister)}
                 />
               </Field>
-              <Field id={`lines.${index}.partNo`} label="Part No">
+              <Field id={`lines.${index}.partNo`} label="Part No" float>
                 <input
                   id={`lines.${index}.partNo`}
                   type="text"
@@ -392,7 +393,7 @@ export function SoForm({
               className="grid grid-cols-4 gap-4 pt-4 max-md:grid-cols-1"
               style={{ borderTop: "1px solid var(--color-hairline)" }}
             >
-              <Field label="Quote Price" labelOnly>
+              <Field label="Quote Price" labelOnly float>
                 <MoneyInput
                   aria-label={`Quote price line ${index + 1}`}
                   {...register(`lines.${index}.quotePrice`, moneyRegister)}
@@ -400,7 +401,7 @@ export function SoForm({
               </Field>
               <Field
                 id={`lines.${index}.developmentTime`}
-                label="Development Time"
+                label="Development Time" float
               >
                 <input
                   id={`lines.${index}.developmentTime`}
@@ -412,7 +413,7 @@ export function SoForm({
               </Field>
               <Field
                 id={`lines.${index}.deliveryTime`}
-                label="Delivery Time"
+                label="Delivery Time" float
               >
                 <input
                   id={`lines.${index}.deliveryTime`}
@@ -422,7 +423,7 @@ export function SoForm({
                   {...register(`lines.${index}.deliveryTime`)}
                 />
               </Field>
-              <Field id={`lines.${index}.validity`} label="Validity">
+              <Field id={`lines.${index}.validity`} label="Validity" float>
                 <input
                   id={`lines.${index}.validity`}
                   type="text"
@@ -454,13 +455,13 @@ export function SoForm({
         hint="The purchase order the customer raised against the quote."
       >
         <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-          <Field id="so-pono" label="Customer PO No">
+          <Field id="so-pono" label="Customer PO No" float>
             <input id="so-pono" type="text" className="nt-input" {...register("customerPoNo")} />
           </Field>
-          <Field id="so-podate" label="Customer PO Date">
+          <Field id="so-podate" label="Customer PO Date" float>
             <input id="so-podate" type="date" className="nt-input" {...register("customerPoDate")} />
           </Field>
-          <Field id="so-polink" label="Customer PO Link">
+          <Field id="so-polink" label="Customer PO Link" float>
             <input
               id="so-polink"
               type="url"
@@ -479,7 +480,7 @@ export function SoForm({
         hint="The customer-facing SO sent back and the internal production SO."
       >
         <div className="grid grid-cols-3 gap-4 max-lg:grid-cols-3 max-md:grid-cols-1">
-          <Field id="so-custlink" label="Customer SO Link">
+          <Field id="so-custlink" label="Customer SO Link" float>
             <input
               id="so-custlink"
               type="url"
@@ -488,7 +489,7 @@ export function SoForm({
               {...register("customerSoLink")}
             />
           </Field>
-          <Field id="so-prodlink" label="Production SO Link">
+          <Field id="so-prodlink" label="Production SO Link" float>
             <input
               id="so-prodlink"
               type="url"
@@ -497,7 +498,7 @@ export function SoForm({
               {...register("productionSoLink")}
             />
           </Field>
-          <Field label="Customer SO Sent" labelOnly>
+          <Field label="Customer SO Sent" labelOnly float>
             <Controller
               control={control}
               name="customerSoSent"
@@ -532,6 +533,7 @@ export function SoForm({
         <span className="text-[11px] text-ink-subtle">
           Ctrl / &#8984; + Enter to save
         </span>
+        <ViewPdfButton title="Sales Order" />
         <button
           type="submit"
           disabled={pending}

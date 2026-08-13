@@ -43,6 +43,7 @@ import { CURRENCY_CODES, currencyLabel } from "@/lib/data/currencies";
 import { BANKS, ACCOUNT_TYPES } from "@/lib/data/banks";
 import { ClientDocuments } from "@/components/clients/client-documents";
 import type { ClientDocument } from "@/lib/queries/client-documents";
+import { ViewPdfButton } from "@/components/forms/view-pdf-button";
 
 /** RHF holds the schema's *input* shape (pre-transform); zodResolver hands
  *  the parsed *output* (`""` folded to `undefined`, currency/country
@@ -792,7 +793,7 @@ export function KycForm({
       >
         {/* Client Code - read-only display field, only when editing */}
         {isEdit && clientCode && (
-          <Field id="kyc-client-code" label="Client Code">
+          <Field id="kyc-client-code" label="Client Code" float>
             <input
               id="kyc-client-code"
               type="text"
@@ -808,7 +809,7 @@ export function KycForm({
         {/* GSTIN · Company Name · Assign Sales Person · Export · Grade · Tags —
             one line. GSTIN sits first and auto-fetches the company details. */}
         <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,0.95fr)_minmax(0,0.65fr)_minmax(0,0.55fr)_minmax(0,1.1fr)] gap-3 max-xl:grid-cols-3 max-md:grid-cols-2">
-          <Field id="kyc-gstin" label="GSTIN">
+          <Field id="kyc-gstin" label="GSTIN" float>
             <Controller
               control={control}
               name="gstin"
@@ -853,7 +854,7 @@ export function KycForm({
               </p>
             )}
           </Field>
-          <Field id="kyc-name" label="Company Name" required>
+          <Field id="kyc-name" label="Company Name" required float>
             <input
               id="kyc-name"
               type="text"
@@ -867,7 +868,7 @@ export function KycForm({
               </p>
             )}
           </Field>
-          <Field label="Assign Sales Person" labelOnly>
+          <Field label="Assign Sales Person" labelOnly float>
             <Controller
               control={control}
               name="kycSalesPersonId"
@@ -887,7 +888,7 @@ export function KycForm({
               )}
             />
           </Field>
-          <Field label="Export" labelOnly>
+          <Field label="Export" labelOnly float>
             <Controller
               control={control}
               name="export"
@@ -907,7 +908,7 @@ export function KycForm({
               )}
             />
           </Field>
-          <Field label="Grade" labelOnly>
+          <Field label="Grade" labelOnly float>
             <Controller
               control={control}
               name="grade"
@@ -924,7 +925,7 @@ export function KycForm({
               )}
             />
           </Field>
-          <Field label="Tags">
+          <Field label="Tags" float>
             <Controller
               control={control}
               name="tags"
@@ -1047,7 +1048,7 @@ export function KycForm({
         {/* PAN · MSME · GST Reg Type · Currency · Country · State - one line.
             GSTIN moved to the Identity row and auto-fetches on a complete number. */}
         <div className="grid grid-cols-6 gap-3 max-lg:grid-cols-3 max-md:grid-cols-2">
-          <Field id="kyc-pan" label="PAN / IT No">
+          <Field id="kyc-pan" label="PAN / IT No" float>
             <Controller
               control={control}
               name="panNo"
@@ -1071,7 +1072,7 @@ export function KycForm({
               )}
             />
           </Field>
-          <Field id="kyc-msme" label="MSME / Udyam No">
+          <Field id="kyc-msme" label="MSME / Udyam No" float>
             <input
               id="kyc-msme"
               type="text"
@@ -1080,7 +1081,7 @@ export function KycForm({
               {...register("msmeUdyamNo")}
             />
           </Field>
-          <Field label="GST Registration Type" labelOnly>
+          <Field label="GST Registration Type" labelOnly float>
             <Controller
               control={control}
               name="gstRegistrationType"
@@ -1098,7 +1099,7 @@ export function KycForm({
               )}
             />
           </Field>
-          <Field label="Currency" labelOnly>
+          <Field label="Currency" labelOnly float>
             <Controller
               control={control}
               name="currency"
@@ -1114,7 +1115,7 @@ export function KycForm({
               )}
             />
           </Field>
-          <Field label="Country" labelOnly>
+          <Field label="Country" labelOnly float>
             <Controller
               control={control}
               name="country"
@@ -1131,7 +1132,7 @@ export function KycForm({
             />
           </Field>
           {/* State — auto-detected from the GSTIN state code; also editable. */}
-          <Field label="State" labelOnly>
+          <Field label="State" labelOnly float>
             <Controller
               control={control}
               name="placeOfSupply"
@@ -1177,16 +1178,16 @@ export function KycForm({
           {/* First Name · Last Name · Contact No · Email · Designation ·
               Department - all on one line (wraps on smaller screens). */}
           <div className="grid grid-cols-6 gap-3 max-xl:grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1">
-            <Field id="kyc-cfirst" label="First Name">
+            <Field id="kyc-cfirst" label="First Name" float>
               <input id="kyc-cfirst" type="text" className="nt-input" {...register("contactFirstName")} />
             </Field>
-            <Field id="kyc-clast" label="Last Name">
+            <Field id="kyc-clast" label="Last Name" float>
               <input id="kyc-clast" type="text" className="nt-input" {...register("contactLastName")} />
             </Field>
-            <Field id="kyc-cno" label="Contact No">
+            <Field id="kyc-cno" label="Contact No" float>
               <input id="kyc-cno" type="tel" className="nt-input" {...register("contactNo")} />
             </Field>
-            <Field id="kyc-cemail" label="Email">
+            <Field id="kyc-cemail" label="Email" float>
               <input id="kyc-cemail" type="email" className="nt-input" {...register("contactEmail")} />
             </Field>
             <div className="flex flex-col gap-1.5">
@@ -1278,7 +1279,7 @@ export function KycForm({
               />
             </div>
           </div>
-          <Field id="kyc-cnotes" label="Contact Notes">
+          <Field id="kyc-cnotes" label="Contact Notes" float>
             <Controller
               control={control}
               name="contactNotes"
@@ -1315,21 +1316,21 @@ export function KycForm({
               }
             />
             <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
-              <Field id={`kyc-ac${idx}-first`} label="First Name" required>
+              <Field id={`kyc-ac${idx}-first`} label="First Name" required float>
                 <input id={`kyc-ac${idx}-first`} type="text" className="nt-input" {...register(`additionalContacts.${idx}.firstName`)} />
               </Field>
-              <Field id={`kyc-ac${idx}-last`} label="Last Name">
+              <Field id={`kyc-ac${idx}-last`} label="Last Name" float>
                 <input id={`kyc-ac${idx}-last`} type="text" className="nt-input" {...register(`additionalContacts.${idx}.lastName`)} />
               </Field>
-              <Field id={`kyc-ac${idx}-no`} label="Contact No">
+              <Field id={`kyc-ac${idx}-no`} label="Contact No" float>
                 <input id={`kyc-ac${idx}-no`} type="tel" className="nt-input" {...register(`additionalContacts.${idx}.contactNo`)} />
               </Field>
-              <Field id={`kyc-ac${idx}-email`} label="Email">
+              <Field id={`kyc-ac${idx}-email`} label="Email" float>
                 <input id={`kyc-ac${idx}-email`} type="email" className="nt-input" {...register(`additionalContacts.${idx}.email`)} />
               </Field>
             </div>
             <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-              <Field label="Designation" labelOnly>
+              <Field label="Designation" labelOnly float>
                 <Controller
                   control={control}
                   name={`additionalContacts.${idx}.designation`}
@@ -1346,7 +1347,7 @@ export function KycForm({
                   )}
                 />
               </Field>
-              <Field id={`kyc-ac${idx}-notes`} label="Notes">
+              <Field id={`kyc-ac${idx}-notes`} label="Notes" float>
                 <Controller
                   control={control}
                   name={`additionalContacts.${idx}.notes`}
@@ -1427,7 +1428,7 @@ export function KycForm({
               />
 
               <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-                <Field id={`kyc-addr${idx}-l1`} label="Address Line 1">
+                <Field id={`kyc-addr${idx}-l1`} label="Address Line 1" float>
                   <input
                     id={`kyc-addr${idx}-l1`}
                     type="text"
@@ -1436,7 +1437,7 @@ export function KycForm({
                     {...register(`addresses.${idx}.line1`)}
                   />
                 </Field>
-                <Field id={`kyc-addr${idx}-l2`} label="Address Line 2">
+                <Field id={`kyc-addr${idx}-l2`} label="Address Line 2" float>
                   <input
                     id={`kyc-addr${idx}-l2`}
                     type="text"
@@ -1448,7 +1449,7 @@ export function KycForm({
               </div>
 
               <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-                <Field id={`kyc-addr${idx}-l3`} label="Address Line 3">
+                <Field id={`kyc-addr${idx}-l3`} label="Address Line 3" float>
                   <input
                     id={`kyc-addr${idx}-l3`}
                     type="text"
@@ -1457,7 +1458,7 @@ export function KycForm({
                     {...register(`addresses.${idx}.line3`)}
                   />
                 </Field>
-                <Field id={`kyc-addr${idx}-l4`} label="Address Line 4">
+                <Field id={`kyc-addr${idx}-l4`} label="Address Line 4" float>
                   <input
                     id={`kyc-addr${idx}-l4`}
                     type="text"
@@ -1469,10 +1470,10 @@ export function KycForm({
               </div>
 
               <div className="grid grid-cols-4 gap-3 max-md:grid-cols-2">
-                <Field label="City" labelOnly>
+                <Field label="City" labelOnly float>
                   <CityField idx={idx} control={control} />
                 </Field>
-                <Field label="State" labelOnly>
+                <Field label="State" labelOnly float>
                   <Controller
                     control={control}
                     name={`addresses.${idx}.state`}
@@ -1489,7 +1490,7 @@ export function KycForm({
                     )}
                   />
                 </Field>
-                <Field label="Country" labelOnly>
+                <Field label="Country" labelOnly float>
                   <Controller
                     control={control}
                     name={`addresses.${idx}.country`}
@@ -1506,7 +1507,7 @@ export function KycForm({
                     )}
                   />
                 </Field>
-                <Field id={`kyc-addr${idx}-pin`} label="Pin Code">
+                <Field id={`kyc-addr${idx}-pin`} label="Pin Code" float>
                   <input
                     id={`kyc-addr${idx}-pin`}
                     type="text"
@@ -1692,7 +1693,7 @@ export function KycForm({
 
         {/* Other References + Client Notes side by side to save vertical space. */}
         <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-          <Field id="kyc-otherrefs" label="Other References">
+          <Field id="kyc-otherrefs" label="Other References" float>
             <Controller
               control={control}
               name="otherReferences"
@@ -1709,7 +1710,7 @@ export function KycForm({
             />
           </Field>
 
-          <Field id="kyc-notes" label="Client Notes">
+          <Field id="kyc-notes" label="Client Notes" float>
             <Controller
               control={control}
               name="notes"
@@ -1753,7 +1754,7 @@ export function KycForm({
             />
 
             <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
-              <Field id={`kyc-bank${idx}-holder`} label="Account Name">
+              <Field id={`kyc-bank${idx}-holder`} label="Account Name" float>
                 <input
                   id={`kyc-bank${idx}-holder`}
                   type="text"
@@ -1771,7 +1772,7 @@ export function KycForm({
                   &#8627; Same as company
                 </button>
               </Field>
-              <Field label="Bank Name" labelOnly>
+              <Field label="Bank Name" labelOnly float>
                 <Controller
                   control={control}
                   name={`bankAccounts.${idx}.bankName`}
@@ -1788,19 +1789,19 @@ export function KycForm({
                   )}
                 />
               </Field>
-              <Field id={`kyc-bank${idx}-accno`} label="Account No">
+              <Field id={`kyc-bank${idx}-accno`} label="Account No" float>
                 <input id={`kyc-bank${idx}-accno`} type="text" className="nt-input" {...register(`bankAccounts.${idx}.accountNo`)} />
               </Field>
             </div>
 
             <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
-              <Field id={`kyc-bank${idx}-ifsc`} label="IFSC / SWIFT Code">
+              <Field id={`kyc-bank${idx}-ifsc`} label="IFSC / SWIFT Code" float>
                 <input id={`kyc-bank${idx}-ifsc`} type="text" className="nt-input" placeholder="IFSC (domestic) or SWIFT (international)" {...register(`bankAccounts.${idx}.ifsc`)} />
               </Field>
-              <Field id={`kyc-bank${idx}-branch`} label="Branch">
+              <Field id={`kyc-bank${idx}-branch`} label="Branch" float>
                 <input id={`kyc-bank${idx}-branch`} type="text" className="nt-input" placeholder="e.g. Ambad, Nashik" {...register(`bankAccounts.${idx}.branch`)} />
               </Field>
-              <Field label="Account Type" labelOnly>
+              <Field label="Account Type" labelOnly float>
                 <Controller
                   control={control}
                   name={`bankAccounts.${idx}.accountType`}
@@ -1915,6 +1916,7 @@ export function KycForm({
         style={{ borderTop: "1px solid var(--color-hairline)" }}
       >
         <span className="text-[11px] text-ink-subtle">Ctrl / ⌘ + Enter to save</span>
+        <ViewPdfButton title="Client KYC" />
         <button
           type="submit"
           // Block submit while any business-card upload is still in flight, else
@@ -2064,7 +2066,7 @@ function CardUpload({
 }) {
   const inputRef = React.useRef<HTMLInputElement>(null);
   return (
-    <Field label={label} labelOnly>
+    <Field label={label} labelOnly float>
       <input
         ref={inputRef}
         type="file"
@@ -2153,7 +2155,7 @@ function OtherDocsUpload({
 }) {
   const inputRef = React.useRef<HTMLInputElement>(null);
   return (
-    <Field label="Other" labelOnly>
+    <Field label="Other" labelOnly float>
       <input
         ref={inputRef}
         type="file"

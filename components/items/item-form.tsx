@@ -24,6 +24,7 @@ import {
   type DimField,
   type ShapeConfig,
 } from "@/lib/masters/shape-config";
+import { ViewPdfButton } from "@/components/forms/view-pdf-button";
 
 export type ItemFormValues = z.input<typeof CreateItemSchema>;
 type ItemFormOutput = z.output<typeof CreateItemSchema>;
@@ -327,7 +328,7 @@ export function ItemForm({
             it stays wide enough; the visible dims + Unit fill the rest. */}
         <div className="grid grid-cols-6 gap-3 max-lg:grid-cols-3 max-sm:grid-cols-2">
           <div className="col-span-2 max-lg:col-span-3 max-sm:col-span-2">
-            <Field id="item-shape" label="Shape" labelOnly>
+            <Field id="item-shape" label="Shape" labelOnly float>
               <Controller
                 control={control}
                 name="shapeId"
@@ -354,7 +355,7 @@ export function ItemForm({
               <Field
                 key={f}
                 id={`item-${f}`}
-                label={`${DIM_LABELS[f]}${rule === "required" ? " *" : ""}`}
+                label={`${DIM_LABELS[f]}${rule === "required" ? " *" : ""}`} float
               >
                 <input
                   id={`item-${f}`}
@@ -368,7 +369,7 @@ export function ItemForm({
               </Field>
             );
           })}
-          <Field id="item-dim-unit" label="Unit" labelOnly>
+          <Field id="item-dim-unit" label="Unit" labelOnly float>
             <Controller
               control={control}
               name="dimensionUnit"
@@ -384,7 +385,7 @@ export function ItemForm({
             />
           </Field>
         </div>
-        <Field id="item-dim-notes" label="Dimension Notes">
+        <Field id="item-dim-notes" label="Dimension Notes" float>
           <Controller
             control={control}
             name="dimensionNotes"
@@ -405,7 +406,7 @@ export function ItemForm({
             all on one line (wraps to 3 / 2 columns on smaller screens).
             items-end keeps the controls bottom-aligned even if a label wraps. */}
         <div className="grid grid-cols-7 items-end gap-3 max-lg:grid-cols-3 max-sm:grid-cols-2">
-          <Field id="item-grade" label="Internal Grade" labelOnly>
+          <Field id="item-grade" label="Internal Grade" labelOnly float>
             <Controller
               control={control}
               name="internalGradeId"
@@ -425,7 +426,7 @@ export function ItemForm({
             />
           </Field>
 
-          <Field id="item-condition" label="Condition" labelOnly>
+          <Field id="item-condition" label="Condition" labelOnly float>
             <Controller
               control={control}
               name="conditionId"
@@ -445,7 +446,7 @@ export function ItemForm({
             />
           </Field>
 
-          <Field id="item-tolerance" label="Tolerance" labelOnly>
+          <Field id="item-tolerance" label="Tolerance" labelOnly float>
             <Controller
               control={control}
               name="toleranceId"
@@ -465,7 +466,7 @@ export function ItemForm({
             />
           </Field>
 
-          <Field id="item-size" label="Size" labelOnly>
+          <Field id="item-size" label="Size" labelOnly float>
             <Controller
               control={control}
               name="sizeCode"
@@ -481,7 +482,7 @@ export function ItemForm({
             />
           </Field>
 
-          <Field id="item-costing" label="Costing Type" labelOnly>
+          <Field id="item-costing" label="Costing Type" labelOnly float>
             <Controller
               control={control}
               name="costingType"
@@ -502,7 +503,7 @@ export function ItemForm({
             />
           </Field>
 
-          <Field id="item-grade-cust" label="Cust. Grade" labelOnly>
+          <Field id="item-grade-cust" label="Cust. Grade" labelOnly float>
             <Controller
               control={control}
               name="gradeCustomer"
@@ -518,7 +519,7 @@ export function ItemForm({
               )}
             />
           </Field>
-          <Field id="item-grade-name-cust" label="Cust. Grade Name" labelOnly>
+          <Field id="item-grade-name-cust" label="Cust. Grade Name" labelOnly float>
             <Controller
               control={control}
               name="gradeNameForCust"
@@ -547,7 +548,7 @@ export function ItemForm({
         summary={watch("hsnCode") ? `HSN ${watch("hsnCode")} · ${watch("uom") ?? "Nos"}` : (watch("uom") ?? "Nos")}
       >
         <div className="grid grid-cols-4 gap-4 max-lg:grid-cols-2 max-sm:grid-cols-1">
-          <Field id="item-hsn" label="HSN Code">
+          <Field id="item-hsn" label="HSN Code" float>
             <input
               id="item-hsn"
               type="text"
@@ -556,7 +557,7 @@ export function ItemForm({
               {...register("hsnCode")}
             />
           </Field>
-          <Field id="item-uom" label="Unit of Measure (UoM)">
+          <Field id="item-uom" label="Unit of Measure (UoM)" float>
             <input
               id="item-uom"
               type="text"
@@ -565,7 +566,7 @@ export function ItemForm({
               {...register("uom")}
             />
           </Field>
-          <Field id="item-alt-uom" label="Alt UoM">
+          <Field id="item-alt-uom" label="Alt UoM" float>
             <input
               id="item-alt-uom"
               type="text"
@@ -574,7 +575,7 @@ export function ItemForm({
               {...register("altUom")}
             />
           </Field>
-          <Field id="item-alt-uom-conv" label="Alt UoM Conversion (1 Alt UoM = ? base)">
+          <Field id="item-alt-uom-conv" label="Alt UoM Conversion (1 Alt UoM = ? base)" float>
             <input
               id="item-alt-uom-conv"
               type="number"
@@ -597,7 +598,7 @@ export function ItemForm({
         hideContinue
       >
         <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-          <Field id="item-part-no" label="Part No">
+          <Field id="item-part-no" label="Part No" float>
             <input
               id="item-part-no"
               type="text"
@@ -606,7 +607,7 @@ export function ItemForm({
               {...register("partNo")}
             />
           </Field>
-          <Field id="item-part-tag" label="Part Tag">
+          <Field id="item-part-tag" label="Part Tag" float>
             <input
               id="item-part-tag"
               type="text"
@@ -619,7 +620,7 @@ export function ItemForm({
         {([1, 2, 3, 4] as const).map((n) => {
           const fieldName = `partDescription${n}` as const;
           return (
-            <Field key={n} id={`item-desc${n}`} label={`Part Description ${n}`}>
+            <Field key={n} id={`item-desc${n}`} label={`Part Description ${n}`} float>
               <Controller
                 control={control}
                 name={fieldName}
@@ -651,6 +652,7 @@ export function ItemForm({
         className="flex items-center justify-end gap-3 pt-2"
         style={{ borderTop: "1px solid var(--color-hairline)" }}
       >
+        <ViewPdfButton title="Item Master" />
         <button
           type="submit"
           disabled={pending}

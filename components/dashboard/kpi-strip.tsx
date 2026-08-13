@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import type { Route } from "next";
-import { Plus, Minus, ArrowUpRight } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import type { NeonKey } from "./kpi-card";
 import { KpiDetailPanel } from "./kpi-detail-panel";
 import type { KpiSet, WmsSummary } from "@/lib/types";
@@ -16,8 +16,10 @@ interface Entry {
   href: Route;
 }
 
-// One compact card per KPI, in a single row. The first (Total) reads as the
-// anchor; the rest follow in the operational reading order.
+// One card per KPI, laid out 3 across × 2 down (the approved dashboard design).
+// The first (Total) reads as the anchor; the rest follow in the operational
+// reading order, so the top row is the summary and the bottom row is the states
+// you act on.
 const ITEMS: Entry[] = [
   { key: "total", label: "Total", sublabel: "All Tasks", neonKey: "total", href: "/tasks" },
   { key: "needHelp", label: "Need Info", sublabel: "Awaiting info", neonKey: "need-help", href: "/tasks?status=need_info" },
@@ -32,9 +34,11 @@ export function KpiStrip({ kpis, summary }: { kpis: KpiSet; summary: WmsSummary 
   const active = expanded ? ITEMS.find((i) => i.key === expanded) ?? null : null;
 
   return (
-    <section className="mt-10 mx-auto max-w-[1600px] px-12 max-md:px-4" aria-label="Task summary">
+    // Layout-agnostic: the page owns the page gutter and decides where this
+    // block sits, so the KPI grid can share a row with the analytics panels.
+    <section aria-label="Task summary">
       <div
-        className="grid grid-cols-6 gap-4 max-xl:grid-cols-3 max-md:grid-cols-2"
+        className="grid grid-cols-3 gap-5 max-lg:grid-cols-2 max-sm:grid-cols-1"
         role="list"
       >
         {ITEMS.map((item) => {
@@ -54,72 +58,73 @@ export function KpiStrip({ kpis, summary }: { kpis: KpiSet; summary: WmsSummary 
 
           return (
             <div role="listitem" key={item.key}>
+              {/* The whole card carries its channel colour as a tinted border —
+                  the design's signature — rather than a top rail. */}
               <div
                 className="group relative overflow-hidden rounded-2xl transition-all duration-200"
                 style={{
                   background: "var(--color-surface-card)",
-                  border: `1px solid ${isOpen ? `rgb(${neonDeep})` : "var(--color-hairline-strong)"}`,
+                  border: `1.5px solid rgb(${neon} / ${isOpen ? 1 : 0.55})`,
                   boxShadow: isOpen
                     ? `0 0 0 1px rgb(${neonDeep}), 0 12px 28px -16px rgb(${neon} / 0.6)`
-                    : "0 1px 2px rgba(15,23,42,0.05)",
+                    : "0 1px 2px rgba(15,23,42,0.04)",
                 }}
               >
-                {/* top accent rail */}
-                <span
-                  aria-hidden
-                  className="absolute inset-x-0 top-0 h-[3px]"
-                  style={{ background: `linear-gradient(90deg, rgb(${neon}), rgb(${neonDeep}))` }}
-                />
-                <div className="flex items-start justify-between gap-2 px-4 pt-4 pb-3.5">
-                  <Link
-                    href={item.href}
-                    className="group/link min-w-0 flex-1 outline-none"
-                    aria-label={`${item.label} - view tasks`}
+                <div className="flex items-start justify-between gap-3 px-5 pt-4.5 pb-5">
+                  {/* Card body toggles the detail panel; the View pill navigates. */}
+                  <button
+                    type="button"
+                    onClick={() => setExpanded((cur) => (cur === item.key ? null : item.key))}
+                    aria-expanded={isOpen}
+                    aria-label={
+                      isOpen ? `Collapse ${item.label} details` : `Expand ${item.label} details`
+                    }
+                    className="min-w-0 flex-1 text-left outline-none"
                   >
                     <span
-                      className="flex items-center gap-1 uppercase font-black tracking-[0.07em] leading-none"
+                      className="block uppercase font-black tracking-[0.07em] leading-none"
                       style={{ fontSize: 12.5, color: `rgb(${neonDeep})` }}
                     >
                       {item.label}
-                      <ArrowUpRight
-                        size={13}
-                        strokeWidth={3}
-                        className="opacity-0 -translate-x-0.5 transition-all group-hover/link:opacity-100 group-hover/link:translate-x-0"
-                      />
                     </span>
                     <span
-                      className="block tabular-nums leading-none mt-2.5 text-ink-strong"
+                      className="block tabular-nums leading-none mt-5 text-ink-strong"
                       style={{
                         fontFamily: "var(--font-display), system-ui, sans-serif",
                         fontWeight: 900,
-                        fontSize: 38,
-                        letterSpacing: "-0.02em",
+                        fontSize: 46,
+                        letterSpacing: "-0.03em",
                       }}
                     >
                       {kpi.current.toLocaleString()}
                     </span>
                     <span
-                      className="mt-2 inline-flex items-center gap-1 tabular-nums font-extrabold"
+                      className="mt-5 inline-flex items-center gap-1 tabular-nums font-extrabold"
                       style={{ fontSize: 12.5, color: deltaColor }}
                     >
                       {arrow} {Math.abs(delta)}
-                      <span className="font-semibold opacity-60">vs last</span>
+                      <span className="font-semibold opacity-60">vs last week</span>
                     </span>
-                  </Link>
-
-                  <button
-                    type="button"
-                    onClick={() => setExpanded((cur) => (cur === item.key ? null : item.key))}
-                    aria-expanded={isOpen}
-                    aria-label={isOpen ? `Collapse ${item.label} details` : `Expand ${item.label} details`}
-                    className="inline-flex size-7 shrink-0 items-center justify-center rounded-full transition-colors"
-                    style={{
-                      color: isOpen ? "#fff" : `rgb(${neonDeep})`,
-                      background: isOpen ? `rgb(${neonDeep})` : `color-mix(in srgb, rgb(${neon}) 14%, transparent)`,
-                    }}
-                  >
-                    {isOpen ? <Minus size={16} strokeWidth={3} /> : <Plus size={16} strokeWidth={3} />}
                   </button>
+
+                  <Link
+                    href={item.href}
+                    className="group/link inline-flex shrink-0 items-center gap-1 rounded-lg border px-2.5 py-1 font-bold transition-colors"
+                    style={{
+                      fontSize: 11.5,
+                      color: `rgb(${neonDeep})`,
+                      borderColor: `rgb(${neon} / 0.55)`,
+                      background: `color-mix(in srgb, rgb(${neon}) 8%, transparent)`,
+                    }}
+                    aria-label={`View ${item.label} tasks`}
+                  >
+                    View
+                    <ArrowUpRight
+                      size={12}
+                      strokeWidth={3}
+                      className="opacity-0 -translate-x-0.5 transition-all group-hover/link:opacity-100 group-hover/link:translate-x-0"
+                    />
+                  </Link>
                 </div>
               </div>
             </div>

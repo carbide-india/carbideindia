@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ArrowUpRight, Calculator, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, Calculator, CircleDot, Trash2 } from "lucide-react";
 import {
   COSTING_ROUTE_LABELS,
   COSTING_DONE_STATUS_LABELS,
@@ -23,9 +23,14 @@ import { fireToast } from "@/lib/toast";
 import {
   deleteCosting,
   deleteCostingsBulk,
+  setCostingStatus,
   setCostingStatusBulk,
 } from "@/app/(app)/costings/actions";
+
+/** Buckets offered on the row menu — mirrors the chip's inline-settable set. */
+const ROW_MENU_STATUSES = ["not_done", "draft", "pending_approval"] as const;
 import { costingRevisionLabel } from "@/lib/costing/buckets";
+import { CostingStatusCell } from "./costing-status-cell";
 import type { CostingRegisterRow } from "@/lib/queries/costings";
 
 interface Props {
@@ -109,6 +114,33 @@ export function CostingTable({ rows }: Props) {
         Icon: Calculator,
         href: costingMasterHref(r),
       });
+
+      // Move the bucket straight from the row menu. Only offered on a real,
+      // unlocked cost sheet: a line with no sheet has nothing to update, and a
+      // locked (approved) one must be reopened through the sheet so the audit
+      // trail stays honest. Need Info is absent on purpose — it carries a note,
+      // so it routes to the sheet via the status chip instead.
+      if (r.costingId && !r.isLocked) {
+        const current = r.status ?? r.bucket;
+        for (const s of ROW_MENU_STATUSES) {
+          if (s === current) continue;
+          items.push({
+            key: `status-${s}`,
+            label: `Mark ${COSTING_DONE_STATUS_LABELS[s]}`,
+            Icon: CircleDot,
+            onSelect: async (row) => {
+              if (!row.costingId) return;
+              const res = await setCostingStatus({ costingId: row.costingId, status: s });
+              if (res.ok) {
+                fireToast({ message: `Moved to ${COSTING_DONE_STATUS_LABELS[s]}.` });
+                router.refresh();
+              } else {
+                fireToast({ message: res.error, type: "error" });
+              }
+            },
+          });
+        }
+      }
       if (r.costingId) {
         items.push({
           key: "delete",
@@ -245,18 +277,18 @@ export function CostingTable({ rows }: Props) {
         header: "Status",
         sortValue: (r) => COSTING_STAGE_BUCKETS.indexOf(r.bucket),
         exportValue: (r) => COSTING_DONE_STATUS_LABELS[r.status ?? r.bucket],
+        // Editable in place: the chip IS the control. It shows the row's REAL
+        // stored status (a legacy value like In Process / Done still counts
+        // under the bucket that superseded it) and offers the inline-settable
+        // buckets; Need Info routes to the sheet because it carries a note.
         cell: (r) => (
-          <span className="inline-flex items-center gap-1.5">
-            <Chip
-              // Show the row's REAL stored status; a legacy value (In Process /
-              // Done) still counts under the bucket that superseded it.
-              label={COSTING_DONE_STATUS_LABELS[r.status ?? r.bucket]}
-              tone={COSTING_DONE_STATUS_COLORS[r.status ?? r.bucket]}
-            />
-            {r.costingId == null && (
-              <span className="text-[11px] font-semibold text-ink-subtle">no sheet</span>
-            )}
-          </span>
+          <CostingStatusCell
+            costingId={r.costingId}
+            inquiryItemId={r.inquiryItemId}
+            status={r.status}
+            bucket={r.bucket}
+            isLocked={r.isLocked}
+          />
         ),
       },
       {

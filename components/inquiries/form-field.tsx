@@ -16,6 +16,9 @@ export function Field({
   children,
   className,
   labelOnly,
+  float,
+  floatAlways,
+  invalid,
 }: {
   id?: string;
   label: string;
@@ -28,7 +31,55 @@ export function Field({
    * so the control carries an `aria-label` instead of a `for` association.
    */
   labelOnly?: boolean;
+  /**
+   * Render the floating-label shell: the label rests inside the box and floats
+   * into a notch in the border on focus / once filled. Opt-in while the forms
+   * are migrated module by module — the stacked label above stays the default
+   * so none of the ~393 existing call sites move until they are converted.
+   *
+   * Plain text inputs inside a float Field MUST carry `placeholder=" "` (a
+   * single space) so the browser can report "empty"; that is what drives the
+   * rest → floated transition.
+   */
+  float?: boolean;
+  /**
+   * Keep the label permanently floated. Required for any control with no empty
+   * TEXT state — popover selects, native selects, date inputs, radio groups,
+   * read-only computed fields — and for inputs carrying a real placeholder,
+   * which would otherwise collide with the resting label.
+   */
+  floatAlways?: boolean;
+  /** Paints the outline in the error role. */
+  invalid?: boolean;
 }) {
+  if (float) {
+    return (
+      <div className={cn("flex flex-col", className)}>
+        <div
+          className="nt-field-shell"
+          data-float={floatAlways ? "always" : undefined}
+          data-invalid={invalid ? "true" : undefined}
+        >
+          {children}
+          {/* Decorative: cuts the gap the label sits in. The real label is the
+              sibling below, so screen readers never see this duplicate. */}
+          <fieldset aria-hidden className="nt-field-notch">
+            <legend className="nt-field-legend">
+              <span>
+                {label}
+                {required ? " *" : ""}
+              </span>
+            </legend>
+          </fieldset>
+          <label htmlFor={labelOnly ? undefined : id} className="nt-field-label">
+            {label}
+            {required && <span className="nt-field-req"> *</span>}
+          </label>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={cn("flex flex-col gap-2", className)}>
       <label
@@ -59,11 +110,46 @@ export function MiniField({
   label,
   children,
   className,
+  float,
+  floatAlways,
+  invalid,
 }: {
   label: string;
   children: React.ReactNode;
   className?: string;
+  /**
+   * Floating-label shell — the same one `Field` renders. A form that has
+   * converted its `Field`s must convert its `MiniField`s too, or it shows two
+   * different label styles side by side (Costing is nearly half MiniField).
+   */
+  float?: boolean;
+  /** Keep the label floated: controls with no empty TEXT state. */
+  floatAlways?: boolean;
+  /** Paints the outline in the error role. */
+  invalid?: boolean;
 }) {
+  if (float) {
+    return (
+      <div className={cn("flex flex-col", className)}>
+        <div
+          className="nt-field-shell"
+          data-float={floatAlways ? "always" : undefined}
+          data-invalid={invalid ? "true" : undefined}
+        >
+          {children}
+          <fieldset aria-hidden className="nt-field-notch">
+            <legend className="nt-field-legend">
+              <span>{label}</span>
+            </legend>
+          </fieldset>
+          {/* A <span>, never a <label> — MiniField's controls carry their own
+              aria-label, so a <label> here would have nothing to bind to. */}
+          <span className="nt-field-label">{label}</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={cn("flex flex-col gap-2", className)}>
       <span
@@ -268,7 +354,10 @@ export function Segmented<T extends string>({
       className={cn(
         lg
           ? "flex w-full items-stretch gap-1 rounded-xl border-2 border-[#d9dcea] bg-[#f4f5fb] p-1"
-          : "inline-flex items-center gap-1.5 rounded-chip border border-hairline bg-surface-soft p-1.5 self-start",
+          : // flex-wrap + max-w-full so a many-option control (e.g. the five
+            // costing buckets) wraps onto a second line instead of overflowing
+            // its grid column and colliding with the field beside it.
+            "inline-flex max-w-full flex-wrap items-center gap-1.5 rounded-chip border border-hairline bg-surface-soft p-1.5 self-start",
         className,
       )}
       style={lg ? { boxShadow: "0 1px 2px rgba(15,23,42,0.04)" } : undefined}

@@ -328,7 +328,11 @@ export function SmWorkspace({
               {header.nextAction.hint && (
                 <span className="text-[13px] text-ink-muted">{header.nextAction.hint}</span>
               )}
-              {header.nextAction.tab && (
+              {/* Only while the next step is somewhere ELSE. Once you are on
+                  that tab it already shows its own call to action ("Generate
+                  quotation"), so Go would be a second button that does nothing
+                  but re-select the tab you are looking at. */}
+              {header.nextAction.tab && header.nextAction.tab !== tab && (
                 <button
                   type="button"
                   onClick={() => header.nextAction?.tab && setTab(header.nextAction.tab as TabKey)}

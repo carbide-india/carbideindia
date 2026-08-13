@@ -40,6 +40,7 @@ import {
 } from "@/components/inquiries/form-field";
 import type { EmployeeOption } from "@/lib/queries/employees";
 import type { ClientOption, ClientAutofill } from "@/lib/queries/clients";
+import { ViewPdfButton } from "@/components/forms/view-pdf-button";
 
 /** Form-level schema: the register form always requires a Sample No. A sample
  *  is logged for a client (client-first flow) before any enquiry exists. */
@@ -397,7 +398,7 @@ export function SampleForm({
         inlineHint
       >
         <div className="grid grid-cols-6 gap-3 max-lg:grid-cols-3 max-md:grid-cols-2 items-start">
-          <Field label="Client" labelOnly>
+          <Field label="Client" labelOnly float>
             <Controller
               control={control}
               name="clientId"
@@ -415,7 +416,7 @@ export function SampleForm({
               )}
             />
           </Field>
-          <Field id="smp-date" label="Date">
+          <Field id="smp-date" label="Date" float>
             <input
               id="smp-date"
               type="date"
@@ -423,7 +424,7 @@ export function SampleForm({
               {...register("sampleDate")}
             />
           </Field>
-          <Field id="smp-no" label="Sample No" required>
+          <Field id="smp-no" label="Sample No" required float>
             <input
               id="smp-no"
               type="text"
@@ -434,7 +435,7 @@ export function SampleForm({
               {...register("sampleNo")}
             />
           </Field>
-          <Field label="Sample Location" labelOnly>
+          <Field label="Sample Location" labelOnly float>
             <Controller
               control={control}
               name="location"
@@ -450,7 +451,7 @@ export function SampleForm({
               )}
             />
           </Field>
-          <Field label="Sample Status" labelOnly>
+          <Field label="Sample Status" labelOnly float>
             <Controller
               control={control}
               name="sampleStatus"
@@ -464,7 +465,7 @@ export function SampleForm({
               )}
             />
           </Field>
-          <Field label="Responsible Person" labelOnly>
+          <Field label="Responsible Person" labelOnly float>
             <Controller
               control={control}
               name="responsiblePersonId"
@@ -509,7 +510,7 @@ export function SampleForm({
           </div>
         )}
 
-        <Field id="smp-notes" label="Sample Notes">
+        <Field id="smp-notes" label="Sample Notes" float>
           <Controller
             control={control}
             name="sampleNotes"
@@ -587,7 +588,7 @@ export function SampleForm({
                 <div className="flex items-start pt-[30px] text-[14px] font-bold text-ink-strong max-xl:col-span-2 max-sm:col-span-1 max-xl:pt-0">
                   {row.label}
                 </div>
-                <MiniField label="Status">
+                <MiniField label="Status" float>
                   <Controller
                     control={control}
                     name={row.status}
@@ -603,7 +604,7 @@ export function SampleForm({
                     )}
                   />
                 </MiniField>
-                <MiniField label="Location">
+                <MiniField label="Location" float>
                   <Controller
                     control={control}
                     name={row.location}
@@ -619,7 +620,7 @@ export function SampleForm({
                     )}
                   />
                 </MiniField>
-                <MiniField label="Completed On">
+                <MiniField label="Completed On" float>
                   <input
                     type="date"
                     className="nt-input w-full"
@@ -627,7 +628,7 @@ export function SampleForm({
                     {...register(row.completed)}
                   />
                 </MiniField>
-                <MiniField label="Notes">
+                <MiniField label="Notes" float>
                   <Controller
                     control={control}
                     name={row.notes}
@@ -654,7 +655,7 @@ export function SampleForm({
       {/* ── 4 · Reports & Processing ─────────────────────────────────── */}
       <SectionCard title="Reports & Processing">
         <div className="grid grid-cols-[1fr_auto_auto] gap-5 max-lg:grid-cols-1 items-start">
-        <Field label="Sample Reports Uploaded">
+        <Field label="Sample Reports Uploaded" float>
           <Controller
             control={control}
             name="reportsUploaded"
@@ -702,7 +703,7 @@ export function SampleForm({
           />
         </Field>
 
-          <Field id="smp-processed" label="Samples Processed Date">
+          <Field id="smp-processed" label="Samples Processed Date" float>
             <input
               id="smp-processed"
               type="date"
@@ -710,7 +711,7 @@ export function SampleForm({
               {...register("processedDate")}
             />
           </Field>
-          <Field id="smp-sm-folder" label="Reports in SM Folder">
+          <Field id="smp-sm-folder" label="Reports in SM Folder" float>
             <Controller
               control={control}
               name="reportsInSmFolder"
@@ -729,7 +730,7 @@ export function SampleForm({
           </Field>
         </div>
 
-        <Field id="smp-process-notes" label="Sample Process Notes">
+        <Field id="smp-process-notes" label="Sample Process Notes" float>
           <Controller
             control={control}
             name="processNotes"
@@ -760,6 +761,7 @@ export function SampleForm({
         style={{ borderTop: "1px solid var(--color-hairline)" }}
       >
         <span className="text-[11px] text-ink-subtle">Ctrl / ⌘ + Enter to save</span>
+        <ViewPdfButton title="Sample Register" />
         <button
           type="submit"
           // Block submit while photo uploads are still in flight, else the row

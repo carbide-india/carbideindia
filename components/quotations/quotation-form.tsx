@@ -34,6 +34,7 @@ import {
 } from "@/components/inquiries/form-field";
 import { useFormDraft } from "@/components/drafts/use-form-draft";
 import { useKeyboardForm } from "@/components/forms/use-keyboard-form";
+import { ViewPdfButton } from "@/components/forms/view-pdf-button";
 
 /** RHF holds the schema's *input* shape (pre-transform); zodResolver hands the
  *  parsed *output* (defaults applied, `""` folded to `undefined`) to the submit
@@ -340,7 +341,7 @@ export function QuotationForm({
         inlineHint
       >
         <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1 items-start">
-          <Field label="Enquiry (SM)" labelOnly required>
+          <Field label="Enquiry (SM)" labelOnly required float>
             <Controller
               control={control}
               name="inquiryId"
@@ -361,7 +362,7 @@ export function QuotationForm({
             />
           </Field>
 
-          <Field id="qt-no" label="Quote No">
+          <Field id="qt-no" label="Quote No" float>
             <input
               id="qt-no"
               type="text"
@@ -448,7 +449,7 @@ export function QuotationForm({
               <Field
                 id={`lines.${index}.custProductName`}
                 label="Customer Product Name"
-                className="col-span-2"
+                className="col-span-2" float
               >
                 <input
                   id={`lines.${index}.custProductName`}
@@ -460,7 +461,7 @@ export function QuotationForm({
               </Field>
               <Field
                 id={`lines.${index}.qty`}
-                label="Qty"
+                label="Qty" float
               >
                 <input
                   id={`lines.${index}.qty`}
@@ -475,7 +476,7 @@ export function QuotationForm({
               </Field>
               <Field
                 id={`lines.${index}.custDrawingNo`}
-                label="Customer Drawing No"
+                label="Customer Drawing No" float
               >
                 <input
                   id={`lines.${index}.custDrawingNo`}
@@ -486,7 +487,7 @@ export function QuotationForm({
               </Field>
               <Field
                 id={`lines.${index}.drawingRevisionNo`}
-                label="Drawing Revision No"
+                label="Drawing Revision No" float
               >
                 <input
                   id={`lines.${index}.drawingRevisionNo`}
@@ -495,7 +496,7 @@ export function QuotationForm({
                   {...register(`lines.${index}.drawingRevisionNo`)}
                 />
               </Field>
-              <Field id={`lines.${index}.partNo`} label="Part No">
+              <Field id={`lines.${index}.partNo`} label="Part No" float>
                 <input
                   id={`lines.${index}.partNo`}
                   type="text"
@@ -505,7 +506,7 @@ export function QuotationForm({
               </Field>
               <Field
                 id={`lines.${index}.gradeNameForCust`}
-                label="Grade Name for Customer"
+                label="Grade Name for Customer" float
               >
                 <input
                   id={`lines.${index}.gradeNameForCust`}
@@ -516,7 +517,7 @@ export function QuotationForm({
               </Field>
               <Field
                 id={`lines.${index}.gradeCustomer`}
-                label="Grade (Customer)"
+                label="Grade (Customer)" float
               >
                 <input
                   id={`lines.${index}.gradeCustomer`}
@@ -525,7 +526,7 @@ export function QuotationForm({
                   {...register(`lines.${index}.gradeCustomer`)}
                 />
               </Field>
-              <Field id={`lines.${index}.tolerance`} label="Tolerance">
+              <Field id={`lines.${index}.tolerance`} label="Tolerance" float>
                 <input
                   id={`lines.${index}.tolerance`}
                   type="text"
@@ -533,7 +534,7 @@ export function QuotationForm({
                   {...register(`lines.${index}.tolerance`)}
                 />
               </Field>
-              <Field id={`lines.${index}.condition`} label="Condition">
+              <Field id={`lines.${index}.condition`} label="Condition" float>
                 <input
                   id={`lines.${index}.condition`}
                   type="text"
@@ -552,7 +553,7 @@ export function QuotationForm({
                 Pricing
               </p>
               <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
-                <MiniField label={ready ? "Final Cost (from approved costing)" : "Final Cost"}>
+                <MiniField label={ready ? "Final Cost (from approved costing)" : "Final Cost"} float>
                   <MoneyInput
                     aria-label={`Final cost line ${index + 1}`}
                     readOnly={ready}
@@ -565,13 +566,13 @@ export function QuotationForm({
                     {...register(`lines.${index}.finalCost`, moneyRegister)}
                   />
                 </MiniField>
-                <MiniField label="Negotiation">
+                <MiniField label="Negotiation" float>
                   <MoneyInput
                     aria-label={`Negotiation line ${index + 1}`}
                     {...register(`lines.${index}.negotiation`, moneyRegister)}
                   />
                 </MiniField>
-                <MiniField label="Quote Price">
+                <MiniField label="Quote Price" float>
                   <MoneyInput
                     aria-label={`Quote price line ${index + 1}`}
                     {...register(`lines.${index}.quotePrice`, moneyRegister)}
@@ -591,7 +592,7 @@ export function QuotationForm({
               <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
                 <Field
                   id={`lines.${index}.developmentTime`}
-                  label="Development Time"
+                  label="Development Time" float
                 >
                   <input
                     id={`lines.${index}.developmentTime`}
@@ -603,7 +604,7 @@ export function QuotationForm({
                 </Field>
                 <Field
                   id={`lines.${index}.deliveryTime`}
-                  label="Delivery Time"
+                  label="Delivery Time" float
                 >
                   <input
                     id={`lines.${index}.deliveryTime`}
@@ -613,7 +614,7 @@ export function QuotationForm({
                     {...register(`lines.${index}.deliveryTime`)}
                   />
                 </Field>
-                <Field id={`lines.${index}.validity`} label="Validity">
+                <Field id={`lines.${index}.validity`} label="Validity" float>
                   <input
                     id={`lines.${index}.validity`}
                     type="text"
@@ -656,8 +657,12 @@ export function QuotationForm({
           . Move it through Need Info / Pending Approval / Quotation Approved
           from the register.
         </p>
-        <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1 items-start">
-          <Field label="Costing Done Status" labelOnly>
+        {/* 12-col so the controls get the width they actually need: the costing
+            bucket picker is five options wide and takes its own row, then the
+            two-option Quote Sent sits beside the link input. Equal thirds made
+            the bucket picker overflow into its neighbour. */}
+        <div className="grid grid-cols-12 gap-4 max-md:grid-cols-1 items-start">
+          <Field className="col-span-12" label="Costing Done Status" labelOnly float>
             <Controller
               control={control}
               name="costingDoneStatus"
@@ -672,7 +677,7 @@ export function QuotationForm({
               )}
             />
           </Field>
-          <Field label="Quote Sent" labelOnly>
+          <Field className="col-span-4 max-lg:col-span-5" label="Quote Sent" labelOnly float>
             <Controller
               control={control}
               name="quoteSent"
@@ -687,7 +692,7 @@ export function QuotationForm({
               )}
             />
           </Field>
-          <Field id="qt-link" label="Quotation Link">
+          <Field className="col-span-8 max-lg:col-span-7" id="qt-link" label="Quotation Link" float>
             <input
               id="qt-link"
               type="url"
@@ -735,6 +740,7 @@ export function QuotationForm({
         <span className="text-[11px] text-ink-subtle">
           Ctrl / &#8984; + Enter to save
         </span>
+        <ViewPdfButton title="Quotation" />
         <button
           type="submit"
           disabled={pending || hasBlockedLine}

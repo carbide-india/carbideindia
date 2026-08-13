@@ -102,15 +102,21 @@ export default async function DashboardPage({ searchParams }: PageProps) {
                 counts={myDay}
               />
             )}
-            <KpiStrip kpis={data.kpis} summary={data.wmsSummary} />
-            <div className="mx-auto max-w-[1600px] px-12 max-md:px-4 mt-12 grid grid-cols-2 max-lg:grid-cols-1 gap-6">
-              <StatusDistributionChart
-                data={data.statusDistribution}
-                labels={statusLabels}
-                tones={statusTones}
-                isAdmin={Boolean(me?.isAdmin)}
-              />
-              <TopPerformersSection performers={data.topPerformers} />
+            {/* The KPI grid and the two analytics panels share ONE band: six
+                cards 3-across on the left, Status Distribution above Top
+                Performers on the right. Below xl they stack into one column so
+                neither side gets squeezed. */}
+            <div className="mx-auto mt-10 grid max-w-[1600px] grid-cols-1 gap-6 px-12 max-md:px-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)] xl:items-start">
+              <KpiStrip kpis={data.kpis} summary={data.wmsSummary} />
+              <div className="flex flex-col gap-6">
+                <StatusDistributionChart
+                  data={data.statusDistribution}
+                  labels={statusLabels}
+                  tones={statusTones}
+                  isAdmin={Boolean(me?.isAdmin)}
+                />
+                <TopPerformersSection performers={data.topPerformers} />
+              </div>
             </div>
             <StatusTable rows={data.statusTable} view={filters.view} />
             <AgingHeatmap rows={data.agingTable} cellTasks={data.agingHeatmapData.byCell} />
