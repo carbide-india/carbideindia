@@ -479,67 +479,6 @@ export async function getCostingLineIdentity(
 }
 
 /**
- * Product lines that are ELIGIBLE to be costed - i.e. the line's per-item
- * feasibility has been CONFIRMED (inquiry_items.feasibility_confirmed = true, the
- * step after Lock Dimensions). This is the strong per-item gate that replaces the
- * old inquiry-level proceed_to_costing filter. Powers the picker shown when
- * /costings/new is opened without a target line (e.g. the Forms launcher
- * "Costing" tile or the register's "New Costing" button). Flags lines that
- * already carry a chosen costing so the picker can badge them.
- */
-export interface CostableInquiryItem {
-  inquiryItemId: string;
-  inquiryId: string;
-  smNumber: string | null;
-  companyName: string | null;
-  custProductName: string | null;
-  alreadyCosted: boolean;
-}
-
-export async function listCostableInquiryItems(): Promise<CostableInquiryItem[]> {
-  const rows = await db
-    .select({
-      inquiryItemId: inquiryItems.id,
-      inquiryId: inquiryItems.inquiryId,
-      smNumber: inquiries.smNumber,
-      companyName: inquiries.companyName,
-      custProductName: inquiryItems.custProductName,
-      sortOrder: inquiryItems.sortOrder,
-      createdAt: inquiries.createdAt,
-    })
-    .from(inquiryItems)
-    .innerJoin(inquiries, eq(inquiryItems.inquiryId, inquiries.id))
-    .where(eq(inquiryItems.feasibilityConfirmed, true))
-    .orderBy(desc(inquiries.createdAt), asc(inquiryItems.sortOrder));
-
-  if (rows.length === 0) return [];
-
-  // One extra query to badge lines that already have a chosen costing.
-  const chosen = await db
-    .select({ inquiryItemId: costings.inquiryItemId })
-    .from(costings)
-    .where(
-      and(
-        eq(costings.isChosen, true),
-        inArray(
-          costings.inquiryItemId,
-          rows.map((r) => r.inquiryItemId),
-        ),
-      ),
-    );
-  const costedSet = new Set(chosen.map((c) => c.inquiryItemId));
-
-  return rows.map((r) => ({
-    inquiryItemId: r.inquiryItemId,
-    inquiryId: r.inquiryId,
-    smNumber: r.smNumber,
-    companyName: r.companyName,
-    custProductName: r.custProductName,
-    alreadyCosted: costedSet.has(r.inquiryItemId),
-  }));
-}
-
-/**
  * All costings for an inquiry, ordered by item sort order then creation time.
  * Used on the SM detail page costing tab.
  */

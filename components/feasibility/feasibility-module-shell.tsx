@@ -11,16 +11,11 @@ import {
   LayoutGrid,
   ClipboardList,
   Circle,
-  CircleHelp,
-  CircleX,
-  Clock3,
-  CircleCheck,
   GitCompareArrows,
-  Undo2,
-  PencilLine,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
+import { BUCKET_ICONS } from "@/components/layout/bucket-icon";
 import { HubSearch } from "@/components/hub/hub-search";
 import { ModuleTitleBadge } from "@/components/layout/module-title-badge";
 import { NotificationBell } from "@/components/notifications/notification-bell";
@@ -46,18 +41,10 @@ interface StatusNav {
   Icon: typeof Circle;
 }
 
-/** One icon per house bucket — Secondary's sidebar uses the SAME five/six. */
-export const BUCKET_ICONS = {
-  not_started: Circle,
-  draft: PencilLine,
-  need_info: CircleHelp,
-  pending_approval: Clock3,
-  approved: CircleCheck,
-  // Distinct from Not Feasible: "the approver sent it back", not "this cannot
-  // be made". Same distinction the rose/red tones carry.
-  not_approved: Undo2,
-  not_feasible: CircleX,
-} as const;
+/** Re-exported so Secondary's shell keeps its existing import path. The map
+ *  itself now lives in components/layout/bucket-icon.tsx, shared with every
+ *  other module sidebar — one glyph per bucket, everywhere. */
+export { BUCKET_ICONS };
 
 /**
  * The Primary sidebar filters, built straight off FEASIBILITY_STAGE_BUCKETS so

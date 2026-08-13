@@ -85,12 +85,14 @@ export function buildNegotiationSidebarTiles(
   count: number;
   href: string;
   active: boolean;
+  group?: "all" | "bucket" | "flag";
 }[] {
   const anyFilter =
     active.status !== null || active.stage !== null || active.axis !== null || active.sent !== null;
   return [
     {
       key: "all",
+      group: "all" as const,
       label: "All Negotiations",
       tone: "brand",
       count: dashboard.total,
@@ -107,6 +109,9 @@ export function buildNegotiationSidebarTiles(
     })),
     {
       key: "outcome",
+      // A second AXIS, not a bucket — won/lost/follow-up rows sit here instead
+      // of on the house buckets, so it must not read as one of them.
+      group: "flag" as const,
       label: "Commercial Outcome",
       tone: "stone",
       count: dashboard.outcomeTotal.count,

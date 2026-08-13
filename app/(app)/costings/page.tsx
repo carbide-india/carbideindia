@@ -69,6 +69,7 @@ export default async function CostingsPage({
   const tiles: BucketTile[] = [
     {
       key: "all",
+      group: "all",
       label: "Costable Lines",
       tone: "slate",
       count: all.length,
@@ -92,6 +93,9 @@ export default async function CostingsPage({
     })),
     {
       key: "overdue",
+      // Cross-cutting: an overdue line is ALSO in one of the buckets, so it
+      // must never look like a bucket of its own.
+      group: "flag",
       label: "Overdue",
       tone: "red",
       count: overdueRows.length,

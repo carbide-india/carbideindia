@@ -71,6 +71,7 @@ export default async function FeasibilityDashboardPage({
   const tiles: BucketTile[] = [
     {
       key: "all",
+      group: "all",
       label: "All Enquiries",
       tone: "slate",
       count: all.length,
@@ -108,6 +109,7 @@ export default async function FeasibilityDashboardPage({
 
   tiles.push({
     key: "variance",
+    group: "flag",
     label: "Spec Variance",
     tone: "amber",
     count: varianceSms.length,

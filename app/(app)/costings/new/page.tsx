@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/auth/current";
 import {
   getCostingContext,
   getCostingSpecForItem,
-  listCostableInquiryItems,
+  listCostingRegister,
 } from "@/lib/queries/costings";
 import { listVendorOptions, getVendorHistories } from "@/lib/queries/vendors";
 import { listMasterOptions } from "@/lib/queries/masters";
@@ -32,11 +32,13 @@ export default async function NewCostingPage({ searchParams }: PageProps) {
   // register's "New Costing" button), show a picker of feasibility-approved
   // lines instead of a dead-end 404.
   if (!UUID_RE.test(inquiryItemId) || !UUID_RE.test(inquiryId)) {
-    const costable = await listCostableInquiryItems();
+    // Same rows as the Costing Register, so a line's status on the picker can
+    // never disagree with its status there — one query, two views.
+    const costable = await listCostingRegister();
     return (
       <EnquiryModuleShell title="Costing Master" userMenu={<UserMenuServer />}>
         <div className="w-full">
-          <CostingTargetPicker items={costable} />
+          <CostingTargetPicker rows={costable} />
         </div>
       </EnquiryModuleShell>
     );

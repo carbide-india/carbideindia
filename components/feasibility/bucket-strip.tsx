@@ -27,6 +27,15 @@ export interface BucketTile {
   sub?: string;
   /** Optional short title attribute explaining how the count is derived. */
   hint?: string;
+  /**
+   * How the sidebar groups this tile (the strip itself renders them all alike):
+   *   "all"    the stage total — becomes the parent destination
+   *   "bucket" a mutually-exclusive house bucket (the default)
+   *   "flag"   a CROSS-CUTTING view (Overdue, Not Sent, Spec Variance,
+   *            Commercial Outcome). These do not add into the total, so they
+   *            sit apart from the buckets and must never look like one.
+   */
+  group?: "all" | "bucket" | "flag";
 }
 
 export function BucketStrip({ tiles, ariaLabel }: { tiles: BucketTile[]; ariaLabel: string }) {

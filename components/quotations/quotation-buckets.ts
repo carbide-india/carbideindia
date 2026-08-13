@@ -96,6 +96,8 @@ export interface QuotationBucketTile {
   /** True for the `Not Sent` tile: a flag that combines with a bucket rather
    *  than a mutually-exclusive bucket of its own. */
   crossCutting?: boolean;
+  /** How the sidebar groups this tile — see `BucketTile` in bucket-strip. */
+  group?: "all" | "bucket" | "flag";
 }
 
 /** `/quotations` with the given filter parts, omitting empty ones. */
@@ -121,6 +123,7 @@ export function buildQuotationBucketTiles(
   const tiles: QuotationBucketTile[] = [
     {
       key: "all",
+      group: "all",
       label: "All Quotations",
       count: counts.total,
       // Not a status: the "All" tile wears the brand indigo, which follows the
@@ -145,6 +148,7 @@ export function buildQuotationBucketTiles(
 
   tiles.push({
     key: "not_sent",
+    group: "flag",
     label: "Not Sent",
     count: counts.notSent,
     // Unsent is a "waiting on us" state, same tone as Need Info.
