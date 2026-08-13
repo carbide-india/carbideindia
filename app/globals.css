@@ -1661,7 +1661,42 @@ select.nt-input {
   box-shadow: none;
 }
 
-/* The visible outline, and the gap the label drops into. */
+/* The control lives in an explicit wrapper element.
+   Everything else inside a shell is decoration (the notch, the label), so the
+   content rules can target ONE class instead of guessing with
+   `:not(fieldset):not(label)`. That guess is what broke every MiniField in the
+   app: MiniField renders its label as a <span> (its controls carry their own
+   aria-label, so a <label> would have nothing to bind to), the <span> matched
+   the content selector at higher specificity than `.nt-field-label`, and
+   `position: relative` beat `position: absolute` — dropping the label into
+   normal flow BELOW the box. */
+.nt-field-body {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+/* An .nt-input carries its own 11px top padding, so the label sitting on the
+   top border clears its text. Custom content (chip rows, radio groups,
+   composite controls) has none — reserve the room. Keyed on whether the shell
+   holds an .nt-input ANYWHERE, not just as a direct child: fields that wrap
+   their input in a positioning div (unit suffixes, adornments) would otherwise
+   get the padding twice and stand 8px taller than the field beside them. */
+.nt-field-shell:not(:has(.nt-input)) > .nt-field-body {
+  padding-top: 8px;
+}
+
+/* Anything the call site renders AFTER the control — a validation message, a
+   hint, a small affordance — is stacked below the outline by `Field`, never
+   inside it. Text inside the box collides with the border and reads as a bug. */
+.nt-field-aside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 5px 2px 0;
+}
+
+/* The visible outline, with a permanent gap cut for the label. */
 .nt-field-notch {
   position: absolute;
   inset: 0;
@@ -1676,93 +1711,59 @@ select.nt-input {
 .nt-field-legend {
   padding: 0;
   width: auto;
-  max-width: 0.01px; /* closed: no gap while the label sits inside */
+  /* Never wider than the box: a long label in a narrow grid column would
+     otherwise cut the border past the corner radius. */
+  max-width: calc(100% - 12px);
   height: 11px;
   font-size: 11.5px;
   font-weight: 700;
   visibility: hidden; /* takes space (cuts the border) without painting */
   white-space: nowrap;
-  transition: max-width 140ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  overflow: hidden;
 }
 .nt-field-legend > span {
   display: inline-block;
   padding: 0 6px;
 }
 
-/* The real label. Starts centred inside the box, reading as a placeholder. */
+/* The label sits ON the top border — always.
+   It used to rest inside the box like a placeholder and float up on focus.
+   That animation cost more than it bought: it collided with select values,
+   number spinners and unit suffixes in narrow columns, it left neighbouring
+   fields at different label positions in the same row, and every call site had
+   to declare `floatAlways` correctly or ship an overlap. One resting position,
+   decided here, cannot be got wrong by a call site. */
 .nt-field-label {
   position: absolute;
   left: 15px;
-  top: 50%;
+  top: 0;
   z-index: 2;
+  max-width: calc(100% - 22px);
   transform: translateY(-50%);
   transform-origin: left center;
   pointer-events: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-family: var(--font-sans, system-ui, sans-serif);
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 11.5px;
+  font-weight: 700;
   line-height: 1;
-  color: #8a90a0;
-  transition:
-    top 140ms cubic-bezier(0.2, 0.7, 0.3, 1),
-    font-size 140ms cubic-bezier(0.2, 0.7, 0.3, 1),
-    color 140ms ease;
+  color: var(--color-ink-soft, #4b5563);
+  transition: color 140ms ease;
 }
 .nt-field-req { color: #d32f2f; }
 
-/* WHEN THE LABEL FLOATS — decided automatically, so a call site cannot get it
-   wrong and leave a label sitting on top of its own control:
-     1. the field is focused;
-     2. a plain <input> is non-empty (:not(:placeholder-shown));
-     3. the shell holds NO plain <input placeholder> at all — i.e. a popover
-        Select (a <button>), a native <select>, a NotesField <textarea>, a radio
-        group, chips, or an input that declares no placeholder. None of those
-        can report "empty", so resting the label inside would overlap their
-        content. They stay permanently floated, exactly as the reference does
-        for Position Applied For / Date of Birth / Gender.
-   `data-float="always"` remains an explicit override. */
-.nt-field-shell:focus-within .nt-field-label,
-.nt-field-shell:has(input.nt-input:not(:placeholder-shown)) .nt-field-label,
-.nt-field-shell:not(:has(input.nt-input[placeholder])) .nt-field-label,
-.nt-field-shell[data-float="always"] .nt-field-label {
-  top: 0;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--color-ink-soft, #4b5563);
+/* Numeric fields: the native spinner crowds a narrow column and lands on top
+   of unit suffixes (mm / kg / ₹). ERP quantities are typed, not stepped. */
+.nt-field-shell input[type="number"]::-webkit-outer-spin-button,
+.nt-field-shell input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
-.nt-field-shell:focus-within .nt-field-legend,
-.nt-field-shell:has(input.nt-input:not(:placeholder-shown)) .nt-field-legend,
-.nt-field-shell:not(:has(input.nt-input[placeholder])) .nt-field-legend,
-.nt-field-shell[data-float="always"] .nt-field-legend {
-  max-width: 100%;
-}
-
-/* An .nt-input carries its own 11px top padding, so the label sitting on the
-   border clears its text. Custom content (chip rows, radio groups, composite
-   controls, the NotesField wrapper) has no such padding and would be overlapped
-   by the floated label — reserve the room. Scoped to shells whose direct child
-   is NOT an .nt-input, so plain fields are untouched. */
-.nt-field-shell > *:not(fieldset):not(label) {
-  position: relative;
-  z-index: 1;
-}
-.nt-field-shell:not(:has(> .nt-input)) > *:not(fieldset):not(label) {
-  padding-top: 10px;
-}
-
-/* A real placeholder ("e.g. Sandvik Hard Materials") stays invisible while the
-   label is resting inside the box — otherwise the two texts sit on top of each
-   other. It fades in as a hint the moment the label floats clear, which is what
-   makes "click it and it shifts up, giving space to write" read correctly.
-   The attribute is still present, so :placeholder-shown keeps detecting empty. */
-.nt-field-shell .nt-input::placeholder {
-  opacity: 0;
-  transition: opacity 140ms ease;
-}
-.nt-field-shell:focus-within .nt-input::placeholder,
-.nt-field-shell:not(:has(input.nt-input[placeholder])) .nt-input::placeholder,
-.nt-field-shell[data-float="always"] .nt-input::placeholder {
-  opacity: 1;
+.nt-field-shell input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 .nt-field-shell:hover .nt-field-notch { border-color: #9aa2bd; }
@@ -1778,7 +1779,6 @@ select.nt-input {
 
 @media (prefers-reduced-motion: reduce) {
   .nt-field-label,
-  .nt-field-legend,
   .nt-field-notch {
     transition: none;
   }

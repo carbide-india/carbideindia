@@ -14,6 +14,11 @@ import {
 import { clientIpFromHeaders, isIpAllowed, IP_BYPASS_EMAILS } from "@/lib/ip-gate";
 import { parseAllowedIpsEnv, parseCidr } from "@/lib/access-control-ip";
 import { AdminKpiTile } from "@/components/admin/admin-kpi-tile";
+import {
+  getEnforcementReadiness,
+  isPermissionsEnforced,
+} from "@/lib/auth/enforcement";
+import { AccessControlEnforcement } from "@/components/admin/access-control-enforcement";
 import { AccessControlCurrentIp } from "@/components/admin/access-control-current-ip";
 import { AccessControlEntryTable } from "@/components/admin/access-control-entry-table";
 import { AccessControlEnvPanel } from "@/components/admin/access-control-env-panel";
@@ -34,6 +39,10 @@ export default async function AccessControlPage() {
   const activeEntries = entries.filter((e) => e.isActive);
   const activeCidrs = activeEntries.map((e) => e.cidr);
 
+  const [permissionsEnforced, readiness] = await Promise.all([
+    isPermissionsEnforced(),
+    getEnforcementReadiness(),
+  ]);
   const [events, sightings, decision] = await Promise.all([
     listAccessControlEvents(12),
     listRecentSignInIps(activeCidrs, 8),
@@ -89,6 +98,12 @@ export default async function AccessControlPage() {
       </header>
 
       <div className="flex flex-col gap-6">
+        {/* Fine-grained permission enforcement — the switch that makes the
+            Roles & Permissions matrix actually govern access. Guarded by a
+            readiness count so it can never be flipped while somebody would be
+            left with no access at all. */}
+        <AccessControlEnforcement enforced={permissionsEnforced} readiness={readiness} />
+
         <AccessControlCurrentIp
           ip={callerIp}
           envAdmits={envAdmits}

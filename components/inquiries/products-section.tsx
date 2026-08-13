@@ -688,7 +688,18 @@ function ProductMasterSelect({
   const id = `${name}`;
   const empty = options.length === 0;
   return (
-    <Field id={id} label={label} float>
+    <Field
+      id={id}
+      label={label}
+      float
+      /* Only worth saying when it is actionable. Repeating it under all seven
+         selects added a line of noise per field and read as clutter; when the
+         list has options, where they came from is not the user's problem.
+         Masters moved out of the admin console into their own module in the
+         forms/masters redesign (/admin/masters is now only a redirect), so
+         name the real destination — the admin sidebar has no Masters entry. */
+      hint={empty ? "Add options in the Masters module" : undefined}
+    >
       <Controller
         control={control}
         name={name}
@@ -705,10 +716,6 @@ function ProductMasterSelect({
           />
         )}
       />
-      {/* Masters moved out of the admin console into their own module in the
-          forms/masters redesign (/admin/masters is now only a redirect), so
-          name the real destination — the admin sidebar has no Masters entry. */}
-      <p className="text-[12px] text-ink-subtle">Managed in the Masters module</p>
     </Field>
   );
 }

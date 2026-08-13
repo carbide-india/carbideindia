@@ -585,7 +585,9 @@ export function SampleForm({
             >
               {/* Everything on one line - name · Status · Location · Completed · Notes. */}
               <div className="grid grid-cols-[96px_160px_160px_160px_minmax(200px,1fr)] items-start gap-3 max-xl:grid-cols-2 max-sm:grid-cols-1">
-                <div className="flex items-start pt-[30px] text-[14px] font-bold text-ink-strong max-xl:col-span-2 max-sm:col-span-1 max-xl:pt-0">
+                {/* Aligned to the middle of a 42px field box, not to a stacked
+                    label that no longer exists. */}
+                <div className="flex items-start pt-[12px] text-[14px] font-bold text-ink-strong max-xl:col-span-2 max-sm:col-span-1 max-xl:pt-0">
                   {row.label}
                 </div>
                 <MiniField label="Status" float>

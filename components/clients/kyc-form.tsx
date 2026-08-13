@@ -2067,6 +2067,10 @@ function CardUpload({
   const inputRef = React.useRef<HTMLInputElement>(null);
   return (
     <Field label={label} labelOnly float>
+      {/* One wrapper, because `Field` treats its FIRST child as the control and
+          stacks the rest under the box — the hidden file input alone would
+          leave an empty outline with the tile floating beneath it. */}
+      <div>
       <input
         ref={inputRef}
         type="file"
@@ -2117,6 +2121,7 @@ function CardUpload({
           </span>
         </button>
       )}
+      </div>
     </Field>
   );
 }
@@ -2156,19 +2161,21 @@ function OtherDocsUpload({
   const inputRef = React.useRef<HTMLInputElement>(null);
   return (
     <Field label="Other" labelOnly float>
-      <input
-        ref={inputRef}
-        type="file"
-        multiple
-        accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
-        className="hidden"
-        aria-label="Other documents"
-        onChange={(e) => {
-          onPick(e.target.files);
-          e.target.value = ""; // allow re-picking the same file after a remove
-        }}
-      />
+      {/* The hidden input lives inside the visible wrapper: `Field` puts only
+          its first child inside the outline. */}
       <div className="flex flex-wrap items-start gap-3">
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
+          className="hidden"
+          aria-label="Other documents"
+          onChange={(e) => {
+            onPick(e.target.files);
+            e.target.value = ""; // allow re-picking the same file after a remove
+          }}
+        />
         {urls.map((url) => (
           <div
             key={url}

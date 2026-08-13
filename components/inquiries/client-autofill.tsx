@@ -116,7 +116,10 @@ export function ExistingClientPicker({
   }
 
   return (
-    <Field id="inq-client" label="Existing Client" required>
+    /* `float` so this lines up with Company Name / Export / SM Number beside it
+       — a stacked label in a row of floating ones pushed its box a label-height
+       lower than every neighbour. */
+    <Field id="inq-client" label="Existing Client" required float>
       <div className="flex items-center gap-3">
         <div className="flex-1">
           <Select

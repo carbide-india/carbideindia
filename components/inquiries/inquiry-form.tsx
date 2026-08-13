@@ -399,7 +399,9 @@ export function InquiryForm({
               error={errors.clientId?.message}
             />
           </div>
-          <div className="pt-[26px] max-md:w-full max-md:pt-0">
+          {/* No top offset any more: every field in this row is a floating-label
+              box of the same height, so the button lines up with the row top. */}
+          <div className="max-md:w-full">
             <a
               href="/clients/new"
               title="Onboard a new client (opens the Client KYC form)"
@@ -439,7 +441,10 @@ export function InquiryForm({
           </div>
           <div className="w-[160px] max-md:w-full">
             <Field id="inq-sm" label="SM Number" float>
-              <div className="flex min-h-[42px] items-center rounded-lg border border-[#dcdce8] bg-[#f4f5f9] px-3 py-2 text-[12px] leading-snug text-[#9aa0ab]">
+              {/* `nt-input` so it is exactly as tall as the fields beside it;
+                  inside a shell it draws no border or fill of its own, so the
+                  second outline this used to have is gone. */}
+              <div className="nt-input flex items-center text-[12.5px] leading-snug text-[#9aa0ab]">
                 Auto-generated on save
               </div>
             </Field>

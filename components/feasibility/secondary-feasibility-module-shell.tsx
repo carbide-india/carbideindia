@@ -25,6 +25,7 @@ import {
 } from "@/db/enums";
 import { BUCKET_ICONS } from "@/components/feasibility/feasibility-module-shell";
 import { cn } from "@/lib/utils";
+import { NextModuleButton } from "@/components/layout/next-module-button";
 
 /**
  * Secondary Feasibility module shell — its OWN chrome, separate from the Primary
@@ -201,6 +202,7 @@ export function SecondaryFeasibilityModuleShell({
             </nav>
 
             <div className="mt-auto flex w-full flex-col gap-1.5">
+              <NextModuleButton collapsed={collapsed} />
               <span
                 title="Support - coming soon"
                 className={cn(

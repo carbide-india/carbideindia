@@ -17,8 +17,8 @@ export function Field({
   className,
   labelOnly,
   float,
-  floatAlways,
   invalid,
+  hint,
 }: {
   id?: string;
   label: string;
@@ -43,24 +43,27 @@ export function Field({
    */
   float?: boolean;
   /**
-   * Keep the label permanently floated. Required for any control with no empty
-   * TEXT state — popover selects, native selects, date inputs, radio groups,
-   * read-only computed fields — and for inputs carrying a real placeholder,
-   * which would otherwise collide with the resting label.
+   * @deprecated No-op. The label is always on the border now — see the
+   * `.nt-field-label` note in globals.css. Kept so the ~400 call sites that
+   * pass it still compile.
    */
   floatAlways?: boolean;
   /** Paints the outline in the error role. */
   invalid?: boolean;
+  /** Muted line rendered under the box (e.g. where options are managed). */
+  hint?: React.ReactNode;
 }) {
   if (float) {
+    // Convention: the CONTROL is the first child. Anything after it — a
+    // validation message, a helper line, a "same as company" shortcut — is
+    // stacked under the box rather than left inside the outline, where it
+    // used to overlap the border and read as a broken field.
+    const [control, ...aside] = React.Children.toArray(children);
+    const hasAside = aside.length > 0 || hint != null;
     return (
       <div className={cn("flex flex-col", className)}>
-        <div
-          className="nt-field-shell"
-          data-float={floatAlways ? "always" : undefined}
-          data-invalid={invalid ? "true" : undefined}
-        >
-          {children}
+        <div className="nt-field-shell" data-invalid={invalid ? "true" : undefined}>
+          <div className="nt-field-body">{control}</div>
           {/* Decorative: cuts the gap the label sits in. The real label is the
               sibling below, so screen readers never see this duplicate. */}
           <fieldset aria-hidden className="nt-field-notch">
@@ -71,11 +74,22 @@ export function Field({
               </span>
             </legend>
           </fieldset>
-          <label htmlFor={labelOnly ? undefined : id} className="nt-field-label">
+          {/* `title` so a label truncated in a narrow column is still readable. */}
+          <label
+            htmlFor={labelOnly ? undefined : id}
+            className="nt-field-label"
+            title={label}
+          >
             {label}
             {required && <span className="nt-field-req"> *</span>}
           </label>
         </div>
+        {hasAside && (
+          <div className="nt-field-aside">
+            {aside}
+            {hint != null && <p className="text-[12px] text-ink-subtle">{hint}</p>}
+          </div>
+        )}
       </div>
     );
   }
@@ -111,8 +125,8 @@ export function MiniField({
   children,
   className,
   float,
-  floatAlways,
   invalid,
+  hint,
 }: {
   label: string;
   children: React.ReactNode;
@@ -123,20 +137,20 @@ export function MiniField({
    * different label styles side by side (Costing is nearly half MiniField).
    */
   float?: boolean;
-  /** Keep the label floated: controls with no empty TEXT state. */
+  /** @deprecated No-op — the label is always on the border. */
   floatAlways?: boolean;
   /** Paints the outline in the error role. */
   invalid?: boolean;
+  /** Muted line rendered under the box. */
+  hint?: React.ReactNode;
 }) {
   if (float) {
+    const [control, ...aside] = React.Children.toArray(children);
+    const hasAside = aside.length > 0 || hint != null;
     return (
       <div className={cn("flex flex-col", className)}>
-        <div
-          className="nt-field-shell"
-          data-float={floatAlways ? "always" : undefined}
-          data-invalid={invalid ? "true" : undefined}
-        >
-          {children}
+        <div className="nt-field-shell" data-invalid={invalid ? "true" : undefined}>
+          <div className="nt-field-body">{control}</div>
           <fieldset aria-hidden className="nt-field-notch">
             <legend className="nt-field-legend">
               <span>{label}</span>
@@ -144,8 +158,16 @@ export function MiniField({
           </fieldset>
           {/* A <span>, never a <label> — MiniField's controls carry their own
               aria-label, so a <label> here would have nothing to bind to. */}
-          <span className="nt-field-label">{label}</span>
+          <span className="nt-field-label" title={label}>
+            {label}
+          </span>
         </div>
+        {hasAside && (
+          <div className="nt-field-aside">
+            {aside}
+            {hint != null && <p className="text-[12px] text-ink-subtle">{hint}</p>}
+          </div>
+        )}
       </div>
     );
   }

@@ -3,10 +3,14 @@
 import { z } from "zod";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { ipAllowlistEntries, orgSettings, settingsEvents } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth/current";
+import {
+  PERMISSIONS_ENFORCED_FLAG,
+  getEnforcementReadiness,
+} from "@/lib/auth/enforcement";
 import { recordAudit } from "@/lib/audit/record";
 import { clientIpFromHeaders } from "@/lib/ip-gate";
 import {
@@ -625,4 +629,70 @@ async function isEnforcementOn(): Promise<boolean> {
     .where(eq(orgSettings.id, 1))
     .limit(1);
   return row?.enforced ?? false;
+}
+
+/**
+ * Flip the master permission-enforcement switch (Access Control).
+ *
+ * Guarded the same way the UI is: enabling is refused while an active non-admin
+ * employee holds no role, because that would lock them out of the whole app the
+ * instant it flipped. Disabling is ALWAYS allowed — it is the rollback, and it
+ * must never be blocked by the same check that guards enabling.
+ *
+ * Stored in `org_settings.workflow_flags`, the existing admin-owned flag map, so
+ * turning it on or off needs no deploy.
+ */
+export async function setPermissionsEnforced(
+  enabled: boolean,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const me = await requireAdmin();
+  if (typeof enabled !== "boolean") return { ok: false, error: "Invalid value." };
+
+  if (enabled) {
+    const readiness = await getEnforcementReadiness();
+    if (!readiness.safeToEnable) {
+      return {
+        ok: false,
+        error: `${readiness.employeesWithoutRole} active employee(s) hold no role — assign roles before enforcing.`,
+      };
+    }
+  }
+
+  try {
+    await db
+      .update(orgSettings)
+      .set({
+        workflowFlags: sql`coalesce(${orgSettings.workflowFlags}, '{}'::jsonb) || ${JSON.stringify(
+          { [PERMISSIONS_ENFORCED_FLAG]: enabled },
+        )}::jsonb`,
+        updatedAt: new Date(),
+      })
+      .where(eq(orgSettings.id, 1));
+  } catch (err) {
+    console.error("[setPermissionsEnforced]", err);
+    return { ok: false, error: "Could not update enforcement - please try again." };
+  }
+
+  await recordSettingsEvent(me.id, enabled);
+  // Enforcement changes what EVERY page may show, so clear the whole app.
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/** Append-only trail of who flipped the switch and when. */
+async function recordSettingsEvent(actorId: string, enabled: boolean): Promise<void> {
+  try {
+    await db.insert(settingsEvents).values({
+      actorId,
+      scope: "access_control",
+      targetId: PERMISSIONS_ENFORCED_FLAG,
+      eventType: enabled ? "permissions_enforced_on" : "permissions_enforced_off",
+      fromValue: { enabled: !enabled },
+      toValue: { enabled },
+      note: `Permission enforcement turned ${enabled ? "ON" : "OFF"}`,
+    });
+  } catch (err) {
+    // The trail is important but must never block the switch itself.
+    console.error("[setPermissionsEnforced] audit write failed", err);
+  }
 }

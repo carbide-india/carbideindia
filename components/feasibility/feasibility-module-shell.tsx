@@ -25,6 +25,7 @@ import { ModuleTitleBadge } from "@/components/layout/module-title-badge";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { FEASIBILITY_STAGE_BUCKETS, FEASIBILITY_STATUS_LABELS } from "@/db/enums";
 import { cn } from "@/lib/utils";
+import { NextModuleButton } from "@/components/layout/next-module-button";
 
 /**
  * Primary Feasibility module shell — its own chrome (like the other form
@@ -201,6 +202,7 @@ export function FeasibilityModuleShell({
             </nav>
 
             <div className="mt-auto flex w-full flex-col gap-1.5">
+              <NextModuleButton collapsed={collapsed} />
               <span
                 title="Support - coming soon"
                 className={cn(
