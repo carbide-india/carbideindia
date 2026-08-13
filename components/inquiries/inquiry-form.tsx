@@ -42,25 +42,6 @@ import { COUNTRIES } from "@/lib/data/geo";
 import { ViewPdfButton } from "@/components/forms/view-pdf-button";
 
 /** Field label with an optional action (e.g. inline "+ Add") on the right. */
-function LabelWithAdd({ label, add }: { label: string; add?: React.ReactNode }) {
-  return (
-    <div className="mb-2 flex items-center justify-between gap-2">
-      <label
-        className="font-bold"
-        style={{
-          fontFamily: "var(--font-sans), system-ui, sans-serif",
-          fontSize: 14,
-          letterSpacing: "-0.005em",
-          color: "var(--color-ink-strong)",
-        }}
-      >
-        {label}
-      </label>
-      {add}
-    </div>
-  );
-}
-
 /** RHF holds the schema's *input* shape (pre-transform); zodResolver hands
  *  the parsed *output* (with `quantityUom` defaulted, `""` folded to
  *  `undefined`) to the submit handler - which is exactly what createInquiry
@@ -513,10 +494,12 @@ export function InquiryForm({
         </div>
 
         <div className="grid grid-cols-5 gap-3 max-lg:grid-cols-3 max-md:grid-cols-2">
-          <div className="flex flex-col">
-            <LabelWithAdd
-              label="Currency"
-              add={
+          <Field
+            id="inq-currency"
+            label="Currency"
+            labelOnly
+            float
+            action={
                 <InlineOptionAdd
                   title="Currency"
                   add={async (n) => {
@@ -528,8 +511,8 @@ export function InquiryForm({
                     setValue("currency", v);
                   }}
                 />
-              }
-            />
+            }
+          >
             <Controller
               control={control}
               name="currency"
@@ -545,11 +528,13 @@ export function InquiryForm({
                 />
               )}
             />
-          </div>
-          <div className="flex flex-col">
-            <LabelWithAdd
-              label="Country"
-              add={
+          </Field>
+          <Field
+            id="inq-country"
+            label="Country"
+            labelOnly
+            float
+            action={
                 <InlineOptionAdd
                   title="Country"
                   add={async (n) => {
@@ -561,8 +546,8 @@ export function InquiryForm({
                     setValue("country", v);
                   }}
                 />
-              }
-            />
+            }
+          >
             <Controller
               control={control}
               name="country"
@@ -578,7 +563,7 @@ export function InquiryForm({
                 />
               )}
             />
-          </div>
+          </Field>
           {watch("country") === "India" ? (
             <>
               <Field id="inq-state" label="State" float>

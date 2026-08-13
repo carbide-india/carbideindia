@@ -187,25 +187,6 @@ const CREDIT_LIMIT_PRESET = ["50000", "100000", "250000", "500000", "1000000"];
 const QTY_DEVIATION_PRESET = ["±5%", "±10%", "±15%", "±20%", "As per PO"];
 
 /** Field label with an optional action (e.g. inline "+ Add") on the right. */
-function AddLabelRow({ label, add }: { label: string; add?: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-2">
-      <span
-        className="font-bold"
-        style={{
-          fontFamily: "var(--font-sans), system-ui, sans-serif",
-          fontSize: 14,
-          letterSpacing: "-0.005em",
-          color: "var(--color-ink-strong)",
-        }}
-      >
-        {label}
-      </span>
-      {add}
-    </div>
-  );
-}
-
 /**
  * Map a KYC country to its default currency - drives the auto-populate of the
  * Currency field when a Country is picked (Registration & Tax section).
@@ -1190,19 +1171,11 @@ export function KycForm({
             <Field id="kyc-cemail" label="Email" float>
               <input id="kyc-cemail" type="email" className="nt-input" {...register("contactEmail")} />
             </Field>
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between gap-2">
-                <span
-                  className="font-bold"
-                  style={{
-                    fontFamily: "var(--font-sans), system-ui, sans-serif",
-                    fontSize: 14,
-                    letterSpacing: "-0.005em",
-                    color: "var(--color-ink-strong)",
-                  }}
-                >
-                  Designation
-                </span>
+            <Field
+              label="Designation"
+              labelOnly
+              float
+              action={
                 <InlineOptionAdd
                   title="Designation"
                   placeholder="e.g. Purchase Manager"
@@ -1215,7 +1188,8 @@ export function KycForm({
                     setValue("contactDesignation", v, { shouldDirty: true });
                   }}
                 />
-              </div>
+              }
+            >
               <Controller
                 control={control}
                 name="contactDesignation"
@@ -1231,21 +1205,13 @@ export function KycForm({
                   />
                 )}
               />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between gap-2">
-                <span
-                  className="font-bold"
-                  style={{
-                    fontFamily: "var(--font-sans), system-ui, sans-serif",
-                    fontSize: 14,
-                    letterSpacing: "-0.005em",
-                    color: "var(--color-ink-strong)",
-                  }}
-                >
-                  Department
-                </span>
-                {isAdmin && (
+            </Field>
+            <Field
+              label="Department"
+              labelOnly
+              float
+              action={
+                isAdmin ? (
                   <InlineOptionAdd
                     title="Department"
                     add={async (n) => {
@@ -1259,8 +1225,9 @@ export function KycForm({
                       setValue("departmentId", id, { shouldDirty: true });
                     }}
                   />
-                )}
-              </div>
+                ) : undefined
+              }
+            >
               <Controller
                 control={control}
                 name="departmentId"
@@ -1277,7 +1244,7 @@ export function KycForm({
                   />
                 )}
               />
-            </div>
+            </Field>
           </div>
           <Field id="kyc-cnotes" label="Contact Notes" float>
             <Controller
@@ -1557,13 +1524,14 @@ export function KycForm({
         hint="Payment terms, credit limits, freight and logistics details."
       >
         <div className="grid grid-cols-6 gap-3 max-lg:grid-cols-3 max-md:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <AddLabelRow
-              label="Payment Terms"
-              add={termAdd("payment_terms", "Payment Term", (v) =>
-                setValue("paymentTerms", v, { shouldDirty: true }),
-              )}
-            />
+          <Field
+            label="Payment Terms"
+            labelOnly
+            float
+            action={termAdd("payment_terms", "Payment Term", (v) =>
+              setValue("paymentTerms", v, { shouldDirty: true }),
+            )}
+          >
             <Controller
               control={control}
               name="paymentTerms"
@@ -1577,14 +1545,15 @@ export function KycForm({
                 />
               )}
             />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <AddLabelRow
-              label="Freight Charges"
-              add={termAdd("freight_charges", "Freight Charge", (v) =>
-                setValue("freightCharges", v, { shouldDirty: true }),
-              )}
-            />
+          </Field>
+          <Field
+            label="Freight Charges"
+            labelOnly
+            float
+            action={termAdd("freight_charges", "Freight Charge", (v) =>
+              setValue("freightCharges", v, { shouldDirty: true }),
+            )}
+          >
             <Controller
               control={control}
               name="freightCharges"
@@ -1598,14 +1567,15 @@ export function KycForm({
                 />
               )}
             />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <AddLabelRow
-              label="Credit Days"
-              add={termAdd("credit_days", "Credit Days value", (v) =>
-                setValue("creditDays", v as never, { shouldDirty: true }),
-              )}
-            />
+          </Field>
+          <Field
+            label="Credit Days"
+            labelOnly
+            float
+            action={termAdd("credit_days", "Credit Days value", (v) =>
+              setValue("creditDays", v as never, { shouldDirty: true }),
+            )}
+          >
             <Controller
               control={control}
               name="creditDays"
@@ -1622,14 +1592,15 @@ export function KycForm({
                 />
               )}
             />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <AddLabelRow
-              label="Credit Limit"
-              add={termAdd("credit_limit", "Credit Limit value", (v) =>
-                setValue("creditLimit", v as never, { shouldDirty: true }),
-              )}
-            />
+          </Field>
+          <Field
+            label="Credit Limit"
+            labelOnly
+            float
+            action={termAdd("credit_limit", "Credit Limit value", (v) =>
+              setValue("creditLimit", v as never, { shouldDirty: true }),
+            )}
+          >
             <Controller
               control={control}
               name="creditLimit"
@@ -1646,14 +1617,15 @@ export function KycForm({
                 />
               )}
             />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <AddLabelRow
-              label="Transporter"
-              add={termAdd("transporter", "Transporter", (v) =>
-                setValue("transporter", v, { shouldDirty: true }),
-              )}
-            />
+          </Field>
+          <Field
+            label="Transporter"
+            labelOnly
+            float
+            action={termAdd("transporter", "Transporter", (v) =>
+              setValue("transporter", v, { shouldDirty: true }),
+            )}
+          >
             <Controller
               control={control}
               name="transporter"
@@ -1667,14 +1639,15 @@ export function KycForm({
                 />
               )}
             />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <AddLabelRow
-              label="Quantity Deviation"
-              add={termAdd("qty_deviation", "Quantity Deviation", (v) =>
-                setValue("qtyDeviation", v, { shouldDirty: true }),
-              )}
-            />
+          </Field>
+          <Field
+            label="Quantity Deviation"
+            labelOnly
+            float
+            action={termAdd("qty_deviation", "Quantity Deviation", (v) =>
+              setValue("qtyDeviation", v, { shouldDirty: true }),
+            )}
+          >
             <Controller
               control={control}
               name="qtyDeviation"
@@ -1688,7 +1661,7 @@ export function KycForm({
                 />
               )}
             />
-          </div>
+          </Field>
         </div>
 
         {/* Other References + Client Notes side by side to save vertical space. */}

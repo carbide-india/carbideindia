@@ -157,7 +157,11 @@ export function FeasibilityModuleShell({
               {!collapsed && <span className="text-[22px] font-extrabold leading-none tracking-tight text-[#3f3f94]">Carbide India</span>}
             </Link>
 
-            <nav className="mt-4 flex w-full flex-col gap-1.5">
+            {/* Scrolls on its own so the footer below stays pinned in view —
+                a 100vh aside with `overflow-hidden` otherwise clips the
+                "Go to next module" button away on the longer modules. */}
+            <div className="mt-4 flex min-h-0 w-full flex-1 flex-col overflow-y-auto">
+            <nav className="flex w-full flex-col gap-1.5">
               {(() => {
                 const base = cn(
                   "flex h-[42px] items-center rounded-lg text-[13.5px] transition",
@@ -200,8 +204,9 @@ export function FeasibilityModuleShell({
                 );
               })()}
             </nav>
+            </div>
 
-            <div className="mt-auto flex w-full flex-col gap-1.5">
+            <div className="mt-3 flex w-full shrink-0 flex-col gap-1.5 border-t border-[#e5e7eb] pt-3">
               <NextModuleButton collapsed={collapsed} />
               <span
                 title="Support - coming soon"

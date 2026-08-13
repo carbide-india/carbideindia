@@ -19,6 +19,7 @@ export function Field({
   float,
   invalid,
   hint,
+  action,
 }: {
   id?: string;
   label: string;
@@ -52,6 +53,13 @@ export function Field({
   invalid?: boolean;
   /** Muted line rendered under the box (e.g. where options are managed). */
   hint?: React.ReactNode;
+  /**
+   * Small affordance pinned to the top-right of the outline — mirrors the
+   * label on the left. Use for a "+ Add" that creates a dropdown option
+   * inline. Keeps the field the same height as its neighbours, which a
+   * label-row above the box does not.
+   */
+  action?: React.ReactNode;
 }) {
   if (float) {
     // Convention: the CONTROL is the first child. Anything after it — a
@@ -83,6 +91,7 @@ export function Field({
             {label}
             {required && <span className="nt-field-req"> *</span>}
           </label>
+          {action != null && <div className="nt-field-action">{action}</div>}
         </div>
         {hasAside && (
           <div className="nt-field-aside">
@@ -127,6 +136,7 @@ export function MiniField({
   float,
   invalid,
   hint,
+  action,
 }: {
   label: string;
   children: React.ReactNode;
@@ -143,6 +153,8 @@ export function MiniField({
   invalid?: boolean;
   /** Muted line rendered under the box. */
   hint?: React.ReactNode;
+  /** Small affordance pinned to the top-right of the outline. */
+  action?: React.ReactNode;
 }) {
   if (float) {
     const [control, ...aside] = React.Children.toArray(children);
@@ -161,6 +173,7 @@ export function MiniField({
           <span className="nt-field-label" title={label}>
             {label}
           </span>
+          {action != null && <div className="nt-field-action">{action}</div>}
         </div>
         {hasAside && (
           <div className="nt-field-aside">

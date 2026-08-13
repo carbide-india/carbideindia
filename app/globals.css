@@ -1754,6 +1754,22 @@ select.nt-input {
 }
 .nt-field-req { color: #d32f2f; }
 
+/* Optional affordance pinned to the top-right of the outline — the mirror of
+   the label on the left (a "+ Add" that creates a dropdown option without
+   leaving the form). On the border rather than above it, so a field carrying
+   one is exactly as tall as every other field in the row. The background is
+   the card token, matching the SectionCard these always sit on. */
+.nt-field-action {
+  position: absolute;
+  right: 10px;
+  top: 0;
+  z-index: 3;
+  transform: translateY(-50%);
+  padding: 0 4px;
+  line-height: 1;
+  background: var(--color-surface-card, #ffffff);
+}
+
 /* Numeric fields: the native spinner crowds a narrow column and lands on top
    of unit suffixes (mm / kg / ₹). ERP quantities are typed, not stepped. */
 .nt-field-shell input[type="number"]::-webkit-outer-spin-button,

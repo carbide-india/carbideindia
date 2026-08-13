@@ -380,7 +380,12 @@ export function EnquiryModuleShell({
                 )}
               </Link>
 
-              <nav className="mt-4 flex w-full flex-col gap-1.5">
+              {/* Scrolls on its own so the footer below stays pinned in view.
+                  Without this the nav pushed "Go to next module" past the
+                  bottom of a 100vh aside with `overflow-hidden`, which clipped
+                  it away entirely on the longer modules (KYC, Costing). */}
+              <div className="mt-4 flex min-h-0 w-full flex-1 flex-col overflow-y-auto">
+              <nav className="flex w-full flex-col gap-1.5">
                 {nav.map((n, i) => {
                   const prev = nav[i - 1];
                   // A greyed divider separates each section (overview / create /
@@ -436,8 +441,9 @@ export function EnquiryModuleShell({
               {sidebarExtra && !collapsed && (
                 <div className="mt-5 w-full">{sidebarExtra}</div>
               )}
+              </div>
 
-              <div className="mt-auto flex w-full flex-col gap-1.5">
+              <div className="mt-3 flex w-full shrink-0 flex-col gap-1.5 border-t border-[#e5e7eb] pt-3">
                 <NextModuleButton collapsed={collapsed} />
                 <span
                   title="Support - coming soon"

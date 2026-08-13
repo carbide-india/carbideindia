@@ -40,7 +40,9 @@ export function NextModuleButton({ collapsed }: { collapsed?: boolean }) {
       href={next.href as Route}
       title={collapsed ? `Next: ${next.label}` : undefined}
       className={cn(
-        "group flex h-[42px] items-center rounded-lg border border-[#c7cae6] bg-white text-[13px] font-bold text-[#3f3f94] transition-all hover:border-[#3f3f94] hover:bg-[#f3f3fb]",
+        // Tinted rather than white: this is the pipeline's forward action and
+        // has to be findable at a glance in a long sidebar.
+        "group flex h-[46px] items-center rounded-lg border-[1.5px] border-[#3f3f94] bg-[#eef0fb] text-[13px] font-bold text-[#3f3f94] transition-all hover:bg-[#3f3f94] hover:text-white",
         collapsed ? "justify-center px-0" : "gap-2 px-3",
       )}
     >
@@ -50,7 +52,7 @@ export function NextModuleButton({ collapsed }: { collapsed?: boolean }) {
       />
       {!collapsed && (
         <span className="flex min-w-0 flex-col leading-tight">
-          <span className="text-[10px] font-black uppercase tracking-[0.12em] text-[#9aa0ab]">
+          <span className="text-[10px] font-black uppercase tracking-[0.12em] opacity-70">
             Next module
           </span>
           <span className="truncate">{next.label}</span>

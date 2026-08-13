@@ -78,6 +78,32 @@ describe("Field (float)", () => {
     expect(shellOf(container).contains(aside)).toBe(false);
   });
 
+  it("pins an action inside the shell, not above it", () => {
+    // A "+ Add" rendered as a label row ABOVE the box made the field taller
+    // than every neighbour in the grid. It belongs on the border.
+    const { container } = render(
+      <Field label="Designation" labelOnly float action={<button>Add</button>}>
+        <button aria-label="Designation" className="nt-input" />
+      </Field>,
+    );
+    const shell = shellOf(container);
+    const action = shell.querySelector(".nt-field-action")!;
+    expect(action.parentElement).toBe(shell);
+    // Not in the body (would be inside the outline) and not in the aside
+    // (would sit below the box and re-introduce the height difference).
+    expect(shell.querySelector(".nt-field-body")!.contains(action)).toBe(false);
+    expect(container.querySelector(".nt-field-aside")).toBeNull();
+  });
+
+  it("renders no action wrapper when the caller passes none", () => {
+    const { container } = render(
+      <Field label="Department" labelOnly float action={undefined}>
+        <button aria-label="Department" className="nt-input" />
+      </Field>,
+    );
+    expect(container.querySelector(".nt-field-action")).toBeNull();
+  });
+
   it("keeps the htmlFor association, and drops it for popover selects", () => {
     const { container: withFor } = render(
       <Field id="k" label="Date" float>
