@@ -5,7 +5,7 @@ import {
   type SecondaryFeasibilityQueueRow,
 } from "@/lib/queries/feasibility";
 import { SecondaryFeasibilityQueueTable } from "@/components/feasibility/secondary-feasibility-queue-table";
-import { BucketStrip, type BucketTile } from "@/components/feasibility/bucket-strip";
+import type { BucketTile } from "@/components/feasibility/bucket-strip";
 import {
   SECONDARY_FEASIBILITY_STAGE_BUCKETS,
   SECONDARY_FEASIBILITY_STATUS_COLORS,
@@ -116,8 +116,6 @@ export default async function SecondaryFeasibilityPage({
           </p>
         </div>
       </header>
-
-      <BucketStrip tiles={tiles} ariaLabel="Secondary Feasibility buckets" />
 
       <SecondaryFeasibilityQueueTable rows={rows} />
     </div>

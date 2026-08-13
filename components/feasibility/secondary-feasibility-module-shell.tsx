@@ -68,9 +68,17 @@ function queueHrefFor(status: string): Route {
 export function SecondaryFeasibilityModuleShell({
   children,
   userMenu,
+  counts,
 }: {
   children: ReactNode;
   userMenu?: ReactNode;
+  /**
+   * Bucket -> count for the status filters, plus `all`. Supplied by the module
+   * layout. The bucket STRIP that used to carry these numbers was the same list
+   * twice over and has been dropped, so the sidebar is now the only place they
+   * appear — omitting them would simply lose the information.
+   */
+  counts?: Record<string, number>;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -170,6 +178,11 @@ export function SecondaryFeasibilityModuleShell({
                       {!collapsed && <span className="truncate">Secondary Feasibility</span>}
                     </Link>
                     <div className={cn("flex flex-col gap-1", collapsed ? "" : "ml-3 border-l border-[#e5e7eb] pl-2")}>
+                      {!collapsed && counts?.all !== undefined && (
+                        <p className="px-3.5 pb-0.5 text-[10.5px] font-bold uppercase tracking-[0.1em] text-[#9aa0ab]">
+                          {counts.all} line{counts.all === 1 ? "" : "s"} by status
+                        </p>
+                      )}
                       {SECONDARY_STATUS_NAV.map((n) => {
                         const isActive = onQueue && activeStatus === n.status;
                         return (
@@ -183,7 +196,21 @@ export function SecondaryFeasibilityModuleShell({
                             )}
                           >
                             <n.Icon className="h-[17px] w-[17px] shrink-0" />
-                            {!collapsed && <span className="truncate">{n.label}</span>}
+                            {!collapsed && (
+                              <>
+                                <span className="min-w-0 flex-1 truncate">{n.label}</span>
+                                {counts?.[n.status] !== undefined && (
+                                  <span
+                                    className={cn(
+                                      "shrink-0 tabular-nums font-black",
+                                      isActive ? "" : "text-[#6b7280]",
+                                    )}
+                                  >
+                                    {counts[n.status]}
+                                  </span>
+                                )}
+                              </>
+                            )}
                           </Link>
                         );
                       })}

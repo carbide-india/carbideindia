@@ -10,6 +10,7 @@ import type {
   RecheckState,
 } from "@/db/enums";
 import type { SecondaryFeasibilityStatus } from "@/db/enums";
+import { feasibilityBucketOf } from "@/lib/feasibility/stage-buckets";
 import {
   computeSpecVariance,
   collectMasterIds,
@@ -773,5 +774,49 @@ export async function getInquiryVarianceRows(
     const current: SpecSnapshot = it;
     out[it.id] = computeSpecVariance(it.baseline as SpecSnapshot, current, labels);
   }
+  return out;
+}
+
+/**
+ * Bucket counts for the Primary Feasibility sidebar.
+ *
+ * A dedicated GROUP BY rather than `listFeasibilityQueue().length`: the sidebar
+ * lives in the module LAYOUT, which renders on every route in the module, while
+ * the full queue is only needed by the queue page itself. Counting in SQL keeps
+ * the layout cheap on the detail pages.
+ */
+export async function getFeasibilityBucketCounts(): Promise<Record<string, number>> {
+  const rows = await db
+    .select({ status: inquiries.feasibilityStatus, n: sql<number>`count(*)::int` })
+    .from(inquiries)
+    .where(eq(inquiries.isArchived, false))
+    .groupBy(inquiries.feasibilityStatus);
+
+  const out: Record<string, number> = {};
+  let total = 0;
+  for (const r of rows) {
+    // Legacy statuses fold onto the bucket that superseded them, exactly as the
+    // queue page does — otherwise the sidebar would under-count.
+    const bucket = feasibilityBucketOf(r.status);
+    out[bucket] = (out[bucket] ?? 0) + r.n;
+    total += r.n;
+  }
+  out.all = total;
+  return out;
+}
+
+/**
+ * Bucket counts for the Secondary Feasibility sidebar. Counts LINES (the stage's
+ * unit is the product line, not the enquiry), over the same population the
+ * queue lists, so the sidebar and the table can never disagree.
+ */
+export async function getSecondaryFeasibilityBucketCounts(): Promise<Record<string, number>> {
+  const rows = await listSecondaryFeasibilityQueue();
+  const out: Record<string, number> = { all: rows.length };
+  // `bucket`, not the raw column: legacy stamps fold in there, so the sidebar
+  // counts exactly what the register groups by.
+  for (const r of rows) out[r.bucket] = (out[r.bucket] ?? 0) + 1;
+  // Spec Variance is cross-cutting — a line with drift is ALSO in a bucket.
+  out.variance = rows.reduce((n, r) => (r.varianceCount > 0 ? n + 1 : n), 0);
   return out;
 }

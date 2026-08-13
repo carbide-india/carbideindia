@@ -99,11 +99,7 @@ export default async function QuotationsPage({ searchParams }: PageProps) {
           </Link>
         </div>
 
-        <QuotationBucketStrip
-          counts={counts}
-          selection={selection}
-          readyToQuote={readyToQuote}
-        />
+        <QuotationBucketStrip readyToQuote={readyToQuote} />
 
         <QuotationTable rows={rows} filtered={Boolean(filterLabel)} />
       </div>

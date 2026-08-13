@@ -18,14 +18,14 @@ import { formatInr } from "@/lib/format";
  * The /negotiations dashboard header — "what is left" at the negotiation stage.
  *
  * Three bands, each answering a different question Manan asked:
- *  1. HOUSE BUCKETS  Not Started → Draft → Need Info → Pending Approval →
- *     Negotiation Approved, plus an explicit "Commercial Outcome" tile for the
- *     rows that sit on the second axis instead. Buckets + Outcome = Total, so no
- *     row is ever silently missing from the strip.
- *  2. VOLUME  "इतना तो मैंने भेज दिया, इतना नेगोशिएशन स्टेज में है" — how much has
+ *  1. VOLUME  "इतना तो मैंने भेज दिया, इतना नेगोशिएशन स्टेज में है" — how much has
  *     actually gone out (PI issued) against how much is still open, in ₹.
- *  3. AXES  the PI pipeline stage counts and the individual outcome counts, as
+ *  2. AXES  the PI pipeline stage counts and the individual outcome counts, as
  *     dense chips.
+ *
+ * The house buckets used to lead this strip; they were the sidebar list a second
+ * time and were dropped on 2026-08-13. What is left is exactly what the sidebar
+ * CANNOT show: money, and the two secondary axes.
  *
  * Every tile and chip is a link into the same register filtered to exactly the
  * rows it counted, and clicking the active one clears the filter. Colours come
@@ -128,36 +128,6 @@ export function NegotiationBucketStrip({ dashboard, active, shownCount }: Props)
 
   return (
     <section aria-label="Negotiation pipeline" className="mb-5 flex flex-col gap-2.5">
-      {/* ── Band 1: the five house buckets + the outcome axis ─────────── */}
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 xl:grid-cols-7">
-        <Tile
-          label="All Negotiations"
-          value={d.total}
-          tone="brand"
-          sub={anyFilter ? `${shownCount} shown` : compactInr(d.totalValue)}
-          href={hrefFor({})}
-          activeNow={!anyFilter}
-        />
-        {NEGOTIATION_STAGE_BUCKETS.map((s) => (
-          <Tile
-            key={s}
-            label={NEGOTIATION_STATUS_LABELS[s]}
-            value={d.counts[s]}
-            tone={NEGOTIATION_STATUS_COLORS[s]}
-            href={active.status === s ? hrefFor({}) : hrefFor({ status: s })}
-            activeNow={active.status === s}
-          />
-        ))}
-        <Tile
-          label="Commercial Outcome"
-          value={d.outcomeTotal.count}
-          tone="stone"
-          sub="won / lost / follow-up"
-          href={active.axis === "outcome" ? hrefFor({}) : hrefFor({ axis: "outcome" })}
-          activeNow={active.axis === "outcome"}
-        />
-      </div>
-
       {/* ── Band 2: volume — sent vs still in negotiation vs won ───────── */}
       <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
         <ValueTile

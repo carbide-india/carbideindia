@@ -1,7 +1,7 @@
 import { requireUser } from "@/lib/auth/current";
 import { listFeasibilityQueue, type FeasibilityQueueItem } from "@/lib/queries/feasibility";
 import { FeasibilityQueueTable } from "@/components/feasibility/feasibility-queue-table";
-import { BucketStrip, type BucketTile } from "@/components/feasibility/bucket-strip";
+import type { BucketTile } from "@/components/feasibility/bucket-strip";
 import {
   FEASIBILITY_STAGE_BUCKETS,
   FEASIBILITY_STATUS_COLORS,
@@ -144,8 +144,6 @@ export default async function FeasibilityDashboardPage({
           )}
         </p>
       </header>
-
-      <BucketStrip tiles={tiles} ariaLabel="Primary Feasibility buckets" />
 
       <FeasibilityQueueTable rows={rows} />
     </div>

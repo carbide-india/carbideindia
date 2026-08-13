@@ -6,7 +6,7 @@ import { requireUser } from "@/lib/auth/current";
 import { listCostingRegister } from "@/lib/queries/costings";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
 import { UserMenuServer } from "@/components/header/user-menu-server";
-import { BucketStrip, type BucketTile } from "@/components/feasibility/bucket-strip";
+import type { BucketTile } from "@/components/feasibility/bucket-strip";
 import { SidebarBuckets } from "@/components/layout/sidebar-buckets";
 import {
   COSTING_DONE_STATUS_COLORS,
@@ -91,19 +91,6 @@ export default async function CostingsPage({
           ? "Costable lines with no cost sheet yet, plus sheets explicitly set back to Not Started — the work still outstanding."
           : `Product lines whose costing is ${COSTING_DONE_STATUS_LABELS[b]}.`,
     })),
-    {
-      key: "overdue",
-      // Cross-cutting: an overdue line is ALSO in one of the buckets, so it
-      // must never look like a bucket of its own.
-      group: "flag",
-      label: "Overdue",
-      tone: "red",
-      count: overdueRows.length,
-      href: href(`overdue=${OVERDUE_PARAM}`),
-      active: overdueOnly,
-      sub: "past target date",
-      hint: "Cost sheets whose target date is before today and which are not yet approved. Un-dated costings are never counted here.",
-    },
   ];
 
   const heading = overdueOnly
@@ -164,8 +151,6 @@ export default async function CostingsPage({
             New Costing
           </Link>
         </header>
-
-        <BucketStrip tiles={tiles} ariaLabel="Costing buckets" />
 
         <CostingTable rows={rows} />
       </div>
