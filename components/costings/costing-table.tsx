@@ -35,6 +35,10 @@ import type { CostingRegisterRow } from "@/lib/queries/costings";
 
 interface Props {
   rows: CostingRegisterRow[];
+  /** Rendered inside the toolbar row — see RegisterHeading. */
+  heading?: React.ReactNode;
+  /** The page's primary action, at the end of the toolbar row. */
+  actions?: React.ReactNode;
 }
 
 /** Deleting a costing is admin-only (`requireAdmin` throws for everyone else). */
@@ -81,7 +85,7 @@ function targetBand(r: CostingRegisterRow): string {
  * The expanded panel behind each row lists every cost sheet on the line: both
  * routes, every revision (Costing 1 / 2 / 3), oldest first.
  */
-export function CostingTable({ rows }: Props) {
+export function CostingTable({ rows, heading, actions }: Props) {
   const router = useRouter();
 
   // Selection ids are inquiry_item ids (the row unit), but every write below
@@ -462,6 +466,8 @@ export function CostingTable({ rows }: Props) {
     <RegisterDataTable<CostingRegisterRow>
       tableKey="costings"
       rows={rows}
+      heading={heading}
+      actions={actions}
       getRowId={(r) => r.id}
       columns={columns}
       getOpenHref={(r) =>

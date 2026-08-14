@@ -32,6 +32,10 @@ export const NEW_SALES_ORDER_ROUTE: Route = "/sales-orders/new";
 
 interface Props {
   rows: SalesOrderListItem[];
+  /** Rendered inside the toolbar row — see RegisterHeading. */
+  heading?: React.ReactNode;
+  /** The page's primary action, at the end of the toolbar row. */
+  actions?: React.ReactNode;
 }
 
 function moneyText(value: string | null): string {
@@ -56,7 +60,7 @@ function soDate(r: SalesOrderListItem): Date {
  * RegisterDataTable. The SO has no clean status enum, so the bulk action is a
  * legit two-way SO-Sent toggle.
  */
-export function SoTable({ rows }: Props) {
+export function SoTable({ rows, heading, actions }: Props) {
   const router = useRouter();
 
   // Per-row actions menu: Open + a destructive Delete. Delete is a HARD delete
@@ -259,6 +263,8 @@ export function SoTable({ rows }: Props) {
     <RegisterDataTable<SalesOrderListItem>
       tableKey="sales-orders"
       rows={rows}
+      heading={heading}
+      actions={actions}
       getRowId={(r) => r.id}
       columns={columns}
       getOpenHref={(r) => `/sales-orders/${r.id}` as Route}

@@ -1,11 +1,10 @@
-import { Layers } from "lucide-react";
 import { requireUser } from "@/lib/auth/current";
 import {
   listSecondaryFeasibilityQueue,
   type SecondaryFeasibilityQueueRow,
 } from "@/lib/queries/feasibility";
 import { SecondaryFeasibilityQueueTable } from "@/components/feasibility/secondary-feasibility-queue-table";
-import type { BucketTile } from "@/components/feasibility/bucket-strip";
+import { RegisterHeading } from "@/components/registers/register-heading";
 import {
   SECONDARY_FEASIBILITY_STAGE_BUCKETS,
   SECONDARY_FEASIBILITY_STATUS_COLORS,
@@ -51,40 +50,6 @@ export default async function SecondaryFeasibilityPage({
       ? all.filter((r) => selected.includes(r.bucket))
       : all;
 
-  const href = (qs: string) => (qs ? `/secondary-feasibility?${qs}` : "/secondary-feasibility");
-
-  const tiles: BucketTile[] = [
-    {
-      key: "all",
-      label: "All Lines",
-      tone: "slate",
-      count: all.length,
-      href: href(""),
-      active: !selected && !varianceOnly,
-      sub: "past Primary",
-      hint: "Every product line whose enquiry has started or cleared Primary Feasibility.",
-    },
-    ...SECONDARY_FEASIBILITY_STAGE_BUCKETS.map<BucketTile>((b) => ({
-      key: b,
-      label: SECONDARY_FEASIBILITY_STATUS_LABELS[b],
-      tone: SECONDARY_FEASIBILITY_STATUS_COLORS[b],
-      count: all.reduce((n, r) => (r.bucket === b ? n + 1 : n), 0),
-      href: href(`status=${b}`),
-      active: selected?.length === 1 && selected[0] === b,
-      hint: `Product lines whose Secondary Feasibility is ${SECONDARY_FEASIBILITY_STATUS_LABELS[b]}.`,
-    })),
-    {
-      key: "variance",
-      label: "Spec Variance",
-      tone: "amber",
-      count: varianceLines.length,
-      href: href(`variance=${VARIANCE_PARAM}`),
-      active: varianceOnly,
-      sub: `of ${comparableLines} comparable`,
-      hint: "Lines whose current spec differs from the frozen Primary Feasibility baseline. Open the row's Variance button to see exactly what differed.",
-    },
-  ];
-
   const heading = varianceOnly
     ? "Spec Variance"
     : selected?.length === 1 && selected[0]
@@ -95,29 +60,22 @@ export default async function SecondaryFeasibilityPage({
 
   return (
     <div className="mx-auto w-full max-w-[1600px]">
-      <header className="mb-5 flex items-center gap-3">
-        <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#eef2ff] text-[#3f3f94]">
-          <Layers className="h-[22px] w-[22px]" strokeWidth={2.1} />
-        </span>
-        <div>
-          <h1 className="text-[24px] font-black leading-none tracking-tight text-[#3f3f94]">
-            Secondary Feasibility
-            {heading && <span className="ml-2 text-[16px] font-bold text-ink-subtle">· {heading}</span>}
-          </h1>
-          <p className="mt-1.5 text-[13px] text-ink-subtle">
-            {heading && <span className="font-semibold text-ink-soft">Showing {rows.length} of </span>}
-            {all.length} product line{all.length === 1 ? "" : "s"} whose enquiry has started or
-            cleared Primary Feasibility.
-            {varianceOnly && comparableLines === 0 && (
-              <span className="ml-1 font-semibold text-ink-soft">
-                No line has a frozen Primary baseline yet, so nothing is comparable.
-              </span>
-            )}
-          </p>
-        </div>
-      </header>
-
-      <SecondaryFeasibilityQueueTable rows={rows} />
+      <SecondaryFeasibilityQueueTable
+        rows={rows}
+        heading={
+          <RegisterHeading
+            title="Secondary Feasibility"
+            count={rows.length}
+            unit="line"
+            filterLabel={heading}
+          />
+        }
+      />
+      {varianceOnly && comparableLines === 0 && (
+        <p className="mt-3 text-[13px] font-semibold text-ink-soft">
+          No line has a frozen Primary baseline yet, so nothing is comparable.
+        </p>
+      )}
     </div>
   );
 }

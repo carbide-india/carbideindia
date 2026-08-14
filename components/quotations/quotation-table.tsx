@@ -55,6 +55,10 @@ interface Props {
   /** True when the page pre-filtered the rows from a dashboard tile - the
    *  empty state then says so instead of claiming the register is empty. */
   filtered?: boolean;
+  /** Rendered inside the toolbar row — see RegisterHeading. */
+  heading?: React.ReactNode;
+  /** The page's primary action, at the end of the toolbar row. */
+  actions?: React.ReactNode;
 }
 
 /** Live pickers hide the deprecated costing values (kept in the enum only so
@@ -279,7 +283,7 @@ function ProductCell({ row }: { row: QuotationListItem }) {
  * shared RegisterDataTable. All sort / search / faceted-filter / export /
  * bulk-status runs client-side over the rows the page loads.
  */
-export function QuotationTable({ rows, filtered = false }: Props) {
+export function QuotationTable({ rows, filtered = false, heading, actions }: Props) {
   const router = useRouter();
 
   // Per-row actions menu: Open + a destructive Delete. Delete is a HARD delete
@@ -499,6 +503,8 @@ export function QuotationTable({ rows, filtered = false }: Props) {
     <RegisterDataTable<QuotationListItem>
       tableKey="quotations"
       rows={rows}
+      heading={heading}
+      actions={actions}
       getRowId={(r) => r.id}
       columns={columns}
       getOpenHref={(r) => `/quotations/${r.id}` as Route}

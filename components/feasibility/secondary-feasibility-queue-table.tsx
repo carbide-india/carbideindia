@@ -33,8 +33,11 @@ import type { SecondaryFeasibilityQueueRow } from "@/lib/queries/feasibility";
  */
 export function SecondaryFeasibilityQueueTable({
   rows,
+  heading,
 }: {
   rows: SecondaryFeasibilityQueueRow[];
+  /** Rendered inside the toolbar row — see RegisterHeading. */
+  heading?: React.ReactNode;
 }) {
   const [varianceRow, setVarianceRow] = React.useState<SecondaryFeasibilityQueueRow | null>(null);
 
@@ -187,6 +190,7 @@ export function SecondaryFeasibilityQueueTable({
       <RegisterDataTable<SecondaryFeasibilityQueueRow>
         tableKey="feasibility-secondary"
         rows={rows}
+      heading={heading}
         getRowId={(r) => r.inquiryItemId}
         columns={columns}
         getOpenHref={(r) => hrefFor(r.inquiryId)}

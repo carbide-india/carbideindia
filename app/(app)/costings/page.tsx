@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { Plus } from "lucide-react";
 import { CostingTable } from "@/components/costings/costing-table";
+import { RegisterHeading } from "@/components/registers/register-heading";
 import { requireUser } from "@/lib/auth/current";
 import { listCostingRegister } from "@/lib/queries/costings";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
@@ -115,44 +116,32 @@ export default async function CostingsPage({
       }
     >
       <div className="mx-auto w-full max-w-[1600px]">
-        <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-[26px] font-black leading-none tracking-tight text-[#3f3f94]">
-              Costing Register
-              {heading && (
-                <span className="ml-2 text-[16px] font-bold text-ink-subtle">· {heading}</span>
-              )}
-            </h1>
-            <p className="mt-1.5 text-[13px] text-ink-subtle">
-              {heading && (
-                <span className="font-semibold text-ink-soft">Showing {rows.length} of </span>
-              )}
-              {all.length} costable product line{all.length === 1 ? "" : "s"} on live
-              enquiries
-              {noSheet > 0 && (
-                <span className="font-semibold text-ink-soft">
-                  {" "}
-                  · {noSheet} still to cost
-                </span>
-              )}
-              .
-            </p>
-          </div>
-          <Link
-            href={"/costings/new" as Route}
-            className="inline-flex items-center gap-2 rounded-chip px-5 py-2.5 text-[14px] text-white transition-transform hover:-translate-y-px"
-            style={{
-              background: "linear-gradient(135deg, rgb(63,63,148), rgb(47,47,111))",
-              boxShadow: "0 6px 16px rgba(63,63,148,0.32)",
-              fontWeight: 800,
-            }}
-          >
-            <Plus size={16} strokeWidth={2.4} />
-            New Costing
-          </Link>
-        </header>
-
-        <CostingTable rows={rows} />
+        <CostingTable
+          rows={rows}
+          heading={
+            <RegisterHeading
+              title="Costing Register"
+              count={rows.length}
+              unit="line"
+              filterLabel={
+                heading ?? (noSheet > 0 ? `${noSheet} still to cost` : null)
+              }
+            />
+          }
+          actions={
+            <Link
+              href={"/costings/new" as Route}
+              className="inline-flex h-9 items-center gap-1.5 rounded-pill px-4 text-[13px] font-extrabold text-white transition-transform hover:-translate-y-px"
+              style={{
+                background: "linear-gradient(135deg, rgb(63,63,148), rgb(47,47,111))",
+                boxShadow: "0 4px 12px rgba(63,63,148,0.30)",
+              }}
+            >
+              <Plus size={15} strokeWidth={2.4} />
+              New Costing
+            </Link>
+          }
+        />
       </div>
     </EnquiryModuleShell>
   );

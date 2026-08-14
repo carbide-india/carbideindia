@@ -5,6 +5,7 @@ import {
   NEW_SALES_ORDER_ROUTE,
 } from "@/components/sales-orders/so-table";
 import { SoBucketStrip } from "@/components/sales-orders/so-bucket-strip";
+import { RegisterHeading } from "@/components/registers/register-heading";
 import { requireUser } from "@/lib/auth/current";
 import { listSalesOrders } from "@/lib/queries/sales-orders";
 import {
@@ -101,37 +102,6 @@ export default async function SalesOrdersPage({ searchParams }: PageProps) {
       bulkUpload={bulkUpload}
     >
       <div className="mx-auto w-full max-w-[1600px]">
-        <header className="mb-5 flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-[26px] font-black leading-none tracking-tight text-[#3f3f94]">
-              Sales Order Register
-              {filterLabels.length > 0 && (
-                <span className="ml-2 text-[16px] font-bold text-ink-subtle">
-                  · {filterLabels.join(" · ")}
-                </span>
-              )}
-            </h1>
-            <p className="mt-1.5 text-[12.5px] font-semibold tabular-nums text-[#6b7280]">
-              {filterLabels.length > 0
-                ? `${rows.length} of ${all.length} ${all.length === 1 ? "sales order" : "sales orders"}`
-                : `${all.length} ${all.length === 1 ? "sales order" : "sales orders"}`}
-            </p>
-          </div>
-          <Link
-            href={NEW_SALES_ORDER_ROUTE}
-            className="inline-flex items-center gap-2 rounded-chip px-5 py-2.5 text-[14px] text-white transition-transform hover:-translate-y-px"
-            style={{
-              background:
-                "linear-gradient(135deg, rgb(63,63,148), rgb(47,47,111))",
-              boxShadow: "0 6px 16px rgba(63,63,148,0.32)",
-              fontWeight: 800,
-            }}
-          >
-            <Plus size={16} strokeWidth={2.4} />
-            New Sales Order
-          </Link>
-        </header>
-
         <SoBucketStrip
           buckets={buckets}
           outputs={outputs}
@@ -140,7 +110,34 @@ export default async function SalesOrdersPage({ searchParams }: PageProps) {
           total={all.length}
         />
 
-        <SoTable rows={rows} />
+        <SoTable
+          rows={rows}
+          heading={
+            <RegisterHeading
+              title="Sales Order Register"
+              count={rows.length}
+              unit="sales order"
+              filterLabel={
+                filterLabels.length > 0
+                  ? `${filterLabels.join(" · ")} of ${all.length}`
+                  : null
+              }
+            />
+          }
+          actions={
+            <Link
+              href={NEW_SALES_ORDER_ROUTE}
+              className="inline-flex h-9 items-center gap-1.5 rounded-pill px-4 text-[13px] font-extrabold text-white transition-transform hover:-translate-y-px"
+              style={{
+                background: "linear-gradient(135deg, rgb(63,63,148), rgb(47,47,111))",
+                boxShadow: "0 4px 12px rgba(63,63,148,0.30)",
+              }}
+            >
+              <Plus size={15} strokeWidth={2.4} />
+              New Sales Order
+            </Link>
+          }
+        />
       </div>
     </EnquiryModuleShell>
   );

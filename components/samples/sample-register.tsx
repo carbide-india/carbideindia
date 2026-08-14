@@ -44,6 +44,10 @@ export const NEW_SAMPLE_ROUTE = "/samples/new" as Route;
 interface Props {
   rows: SampleListItem[];
   employees: EmployeeOption[];
+  /** Rendered inside the filter row — see RegisterHeading. */
+  heading?: React.ReactNode;
+  /** The page's primary action, at the end of the filter row. */
+  actions?: React.ReactNode;
 }
 
 /** Colour token → hex (shared for sample + stage status dots/chips). */
@@ -160,7 +164,7 @@ const COLS_STORAGE_KEY = "carbide.samples.hiddenCols";
  * / enquiry-link), a Columns menu, a heavy bordered table with frozen Sample No +
  * Company, a left-pinned ⋮ row menu, row-click Quick View, and CSV export.
  */
-export function SampleRegister({ rows, employees }: Props) {
+export function SampleRegister({ rows, employees, heading, actions }: Props) {
   const [quickView, setQuickView] = React.useState<SampleListItem | null>(null);
 
   const stats = React.useMemo(() => {
@@ -286,8 +290,10 @@ export function SampleRegister({ rows, employees }: Props) {
         <StatCard label="Processed" value={stats.processed} selected={status === "processed"} onClick={() => setStatus(status === "processed" ? "" : "processed")} />
       </div>
 
-      {/* Filter bar ------------------------------------------------------- */}
-      <div className="mb-4 flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]">
+      {/* Filter bar — the register's name and CTA ride this row rather than a
+          header block above it, so the table starts higher. */}
+      <div className="mb-3 flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]">
+        {heading && <div className="mr-1 flex shrink-0 items-baseline gap-2">{heading}</div>}
         <label className="relative w-[220px] min-w-[180px] flex-1">
           <Search size={14} strokeWidth={2.2} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[#9aa0ab]" />
           <input
@@ -356,6 +362,7 @@ export function SampleRegister({ rows, employees }: Props) {
             Clear Filters
           </button>
         )}
+        {actions}
       </div>
 
       {/* Table ------------------------------------------------------------ */}

@@ -1,12 +1,8 @@
 import { requireUser } from "@/lib/auth/current";
 import { listFeasibilityQueue, type FeasibilityQueueItem } from "@/lib/queries/feasibility";
 import { FeasibilityQueueTable } from "@/components/feasibility/feasibility-queue-table";
-import type { BucketTile } from "@/components/feasibility/bucket-strip";
-import {
-  FEASIBILITY_STAGE_BUCKETS,
-  FEASIBILITY_STATUS_COLORS,
-  FEASIBILITY_STATUS_LABELS,
-} from "@/db/enums";
+import { RegisterHeading } from "@/components/registers/register-heading";
+import { FEASIBILITY_STAGE_BUCKETS, FEASIBILITY_STATUS_LABELS } from "@/db/enums";
 import { LEGACY_BUCKET, feasibilityBucketOf } from "@/lib/feasibility/stage-buckets";
 
 export const dynamic = "force-dynamic";
@@ -66,59 +62,6 @@ export default async function FeasibilityDashboardPage({
       ? all.filter((r) => bucketOf.get(r.id) === activeBucket)
       : all;
 
-  const href = (qs: string) => (qs ? `/feasibility?${qs}` : "/feasibility");
-
-  const tiles: BucketTile[] = [
-    {
-      key: "all",
-      group: "all",
-      label: "All Enquiries",
-      tone: "slate",
-      count: all.length,
-      href: href(""),
-      active: !activeBucket && !varianceOnly,
-      sub: "live, not archived",
-      hint: "Every live (non-archived) enquiry — a fresh enquiry starts at Not Started.",
-    },
-    ...FEASIBILITY_STAGE_BUCKETS.map<BucketTile>((b) => ({
-      key: b,
-      label: FEASIBILITY_STATUS_LABELS[b],
-      tone: FEASIBILITY_STATUS_COLORS[b],
-      count: countIn(b),
-      href: href(`status=${b}`),
-      active: activeBucket === b,
-      hint: `Enquiries whose Primary Feasibility status is ${FEASIBILITY_STATUS_LABELS[b]}.`,
-    })),
-  ];
-
-  // Legacy tile — only rendered when rows actually sit on a deprecated status
-  // that has no house bucket, so the strip still sums to the total.
-  const legacyCount = countIn(LEGACY_BUCKET);
-  if (legacyCount > 0) {
-    tiles.push({
-      key: LEGACY_BUCKET,
-      label: "Legacy Status",
-      tone: "stone",
-      count: legacyCount,
-      href: href(`status=${LEGACY_BUCKET}`),
-      active: activeBucket === LEGACY_BUCKET,
-      sub: "no house bucket",
-      hint: "Rows still on Need Help / Primary Feasibility Done — set a house status on them.",
-    });
-  }
-
-  tiles.push({
-    key: "variance",
-    group: "flag",
-    label: "Spec Variance",
-    tone: "amber",
-    count: varianceSms.length,
-    href: href(`variance=${VARIANCE_PARAM}`),
-    active: varianceOnly,
-    sub: `${varianceLineTotal} of ${comparableLineTotal} line${comparableLineTotal === 1 ? "" : "s"}`,
-    hint: "Enquiries with ≥1 product line whose spec differs from the frozen Primary baseline.",
-  });
-
   const heading = varianceOnly
     ? "Spec Variance"
     : activeBucket
@@ -127,25 +70,25 @@ export default async function FeasibilityDashboardPage({
 
   return (
     <div className="mx-auto w-full max-w-[1600px]">
-      <header className="mb-5">
-        <h1 className="text-[26px] font-black leading-none tracking-tight text-[#3f3f94]">
-          Primary Feasibility
-          {heading && <span className="ml-2 text-[16px] font-bold text-ink-subtle">· {heading}</span>}
-        </h1>
-        <p className="mt-1.5 text-[13px] text-ink-subtle">
-          {heading && (
-            <span className="font-semibold text-ink-soft">Showing {rows.length} of </span>
-          )}
-          {all.length} enquir{all.length === 1 ? "y" : "ies"} in Primary Feasibility.
-          {varianceOnly && comparableLineTotal === 0 && (
-            <span className="ml-1 font-semibold text-ink-soft">
-              No line has a frozen Primary baseline yet, so nothing is comparable.
-            </span>
-          )}
+      {/* The name + count ride INSIDE the toolbar row (see RegisterHeading) —
+          the stacked header they used to sit in cost ~70px of the fold before
+          a single record was visible. */}
+      <FeasibilityQueueTable
+        rows={rows}
+        heading={
+          <RegisterHeading
+            title="Primary Feasibility"
+            count={rows.length}
+            unit="enquiry"
+            filterLabel={heading}
+          />
+        }
+      />
+      {varianceOnly && comparableLineTotal === 0 && (
+        <p className="mt-3 text-[13px] font-semibold text-ink-soft">
+          No line has a frozen Primary baseline yet, so nothing is comparable.
         </p>
-      </header>
-
-      <FeasibilityQueueTable rows={rows} />
+      )}
     </div>
   );
 }

@@ -38,7 +38,14 @@ function ChecksBar({ done, total }: { done: number; total: number }) {
   );
 }
 
-export function FeasibilityQueueTable({ rows }: { rows: FeasibilityQueueItem[] }) {
+export function FeasibilityQueueTable({
+  rows,
+  heading,
+}: {
+  rows: FeasibilityQueueItem[];
+  /** Rendered inside the toolbar row — see RegisterHeading. */
+  heading?: React.ReactNode;
+}) {
   const hrefFor = React.useCallback((id: string): Route => `/feasibility/${id}` as Route, []);
 
   const columns = React.useMemo<RegisterColumn<FeasibilityQueueItem>[]>(
@@ -216,6 +223,7 @@ export function FeasibilityQueueTable({ rows }: { rows: FeasibilityQueueItem[] }
     <RegisterDataTable<FeasibilityQueueItem>
       tableKey="feasibility"
       rows={rows}
+      heading={heading}
       getRowId={(r) => r.id}
       columns={columns}
       getOpenHref={(r) => hrefFor(r.id)}

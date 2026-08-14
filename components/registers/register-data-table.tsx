@@ -298,6 +298,19 @@ export interface RegisterDataTableProps<TRow> {
    * scroll - the rest of the fields live in the expanded panel.
    */
   renderExpanded?: (row: TRow) => React.ReactNode;
+  /**
+   * The page's own title, rendered INSIDE the toolbar row rather than in a
+   * block above it.
+   *
+   * A register used to spend three stacked rows before any data: an <h1>, a
+   * count sub-line, then the search/filter bar. On a laptop that is most of the
+   * fold gone before the first record. Passing the heading here puts the name
+   * and the controls on one line and gives the rows back the space.
+   */
+  heading?: React.ReactNode;
+  /** The page's primary action (e.g. "New Quotation"), rendered at the end of
+   *  the toolbar row. */
+  actions?: React.ReactNode;
   emptyTitle: string;
   emptyHint?: string;
 }
@@ -348,6 +361,8 @@ export function RegisterDataTable<TRow>({
   bulkDelete,
   rowMenu,
   rowMenuPlacement = "right",
+  heading,
+  actions,
   hideToolbarSearch = false,
   externalQuery,
   onExternalQueryClear,
@@ -757,7 +772,8 @@ export function RegisterDataTable<TRow>({
   return (
     <div>
       {/* Toolbar ------------------------------------------------------------- */}
-      <div className="mb-4 flex items-center gap-1.5 flex-wrap">
+      <div className="mb-3 flex items-center gap-1.5 flex-wrap">
+        {heading && <div className="mr-1 flex shrink-0 items-baseline gap-2">{heading}</div>}
         {!hideToolbarSearch && (
           <label className="relative flex-1 min-w-[190px] max-w-[240px]">
             <Search
@@ -869,6 +885,10 @@ export function RegisterDataTable<TRow>({
               Export
             </button>
           )}
+          {/* The page's own CTA ("New Costing", "New Quotation", …) — on the
+              toolbar row rather than in a header block above it, so the whole
+              register is one line of chrome instead of three. */}
+          {actions}
         </div>
       </div>
 

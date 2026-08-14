@@ -35,6 +35,10 @@ export const NEW_NEGOTIATION_ROUTE: Route = "/negotiations/new";
 
 interface Props {
   rows: NegotiationListItem[];
+  /** Rendered inside the toolbar row — see RegisterHeading. */
+  heading?: React.ReactNode;
+  /** The page's primary action, at the end of the toolbar row. */
+  actions?: React.ReactNode;
 }
 
 function moneyText(value: string | null): string {
@@ -70,7 +74,7 @@ const STATUS_OPTION_ORDER = [
  * RegisterDataTable. The status column sorts by ENUM ORDER (pipeline position),
  * not the label alphabetical, so sorting reflects the negotiation lifecycle.
  */
-export function NegotiationTable({ rows }: Props) {
+export function NegotiationTable({ rows, heading, actions }: Props) {
   const router = useRouter();
 
   // Per-row actions menu: Open + a destructive Delete. Delete is a HARD delete
@@ -286,6 +290,8 @@ export function NegotiationTable({ rows }: Props) {
     <RegisterDataTable<NegotiationListItem>
       tableKey="negotiations"
       rows={rows}
+      heading={heading}
+      actions={actions}
       getRowId={(r) => r.id}
       columns={columns}
       getOpenHref={(r) => `/negotiations/${r.id}` as Route}

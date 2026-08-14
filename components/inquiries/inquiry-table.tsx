@@ -49,6 +49,10 @@ function YesNo({ value, yes = "Yes", no = "No" }: { value: boolean | null; yes?:
 interface Props {
   rows: InquiryListItem[];
   employees: EmployeeOption[];
+  /** Rendered inside the toolbar row — see RegisterHeading. */
+  heading?: React.ReactNode;
+  /** The page's primary action, at the end of the toolbar row. */
+  actions?: React.ReactNode;
   /**
    * "enquiry" (default) is the Enquiry Register - enquiry columns only.
    * "feasibility" is the Primary Feasibility queue - shows the feasibility
@@ -65,7 +69,7 @@ interface Props {
  * rows at most). The sales-person filter matches on the joined name, which is
  * all the row carries.
  */
-export function InquiryTable({ rows, employees, variant = "enquiry" }: Props) {
+export function InquiryTable({ rows, employees, variant = "enquiry", heading, actions }: Props) {
   const hrefFor = React.useCallback(
     (id: string): Route =>
       (variant === "feasibility"
@@ -422,6 +426,8 @@ export function InquiryTable({ rows, employees, variant = "enquiry" }: Props) {
     <RegisterDataTable<InquiryListItem>
       tableKey="enquiries"
       rows={rows}
+      heading={heading}
+      actions={actions}
       getRowId={(r) => r.id}
       columns={columns}
       getOpenHref={(r) => hrefFor(r.id)}
