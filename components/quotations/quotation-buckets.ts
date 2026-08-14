@@ -146,22 +146,11 @@ export function buildQuotationBucketTiles(
     });
   }
 
-  tiles.push({
-    key: "not_sent",
-    group: "flag",
-    label: "Not Sent",
-    count: counts.notSent,
-    // Unsent is a "waiting on us" state, same tone as Need Info.
-    tone: QUOTATION_STATUS_COLORS.need_info,
-    href: href(bucket, !notSentOnly),
-    active: notSentOnly,
-    sub:
-      counts.approvedNotSent > 0
-        ? `${counts.approvedNotSent} approved & unsent`
-        : undefined,
-    crossCutting: true,
-  });
-
+  // "Not Sent" USED TO BE A TILE HERE, removed 2026-08-13. It was the third
+  // place to answer one question: the register table already carries a
+  // "Quote sent" Yes/No column filter AND a bulk setter, so a sidebar row for
+  // it was a filter competing with a filter. `?sent=no` still resolves, so the
+  // links that used it are unbroken.
   return tiles;
 }
 
