@@ -15,6 +15,10 @@ import type { CustomerPoRegisterRow } from "@/lib/queries/proforma-invoices";
 
 interface Props {
   rows: CustomerPoRegisterRow[];
+  /** Rendered inside the toolbar row — see RegisterHeading. */
+  heading?: React.ReactNode;
+  /** The page's primary action, at the end of the toolbar row. */
+  actions?: React.ReactNode;
 }
 
 /** PI↔PO reconciliation tone chip. matched → green, mismatch → red, else slate. */
@@ -51,7 +55,7 @@ function moneyNumber(value: string | null): number {
  * the PI numbers issued for it. The Match column carries the PI↔PO reconciliation
  * tone chip; a link to the PO document and to the source negotiation sit inline.
  */
-export function CustomerPoRegisterTable({ rows }: Props) {
+export function CustomerPoRegisterTable({ rows, heading, actions }: Props) {
   const columns = React.useMemo<RegisterColumn<CustomerPoRegisterRow>[]>(
     () => [
       {
@@ -225,6 +229,8 @@ export function CustomerPoRegisterTable({ rows }: Props) {
       filters={filters}
       exportFilename="customer-po-register"
       emptyTitle="No customer POs received yet."
+      heading={heading}
+      actions={actions}
       emptyHint="Once a negotiation logs a customer purchase order it appears here, reconciled against its proforma invoices."
     />
   );

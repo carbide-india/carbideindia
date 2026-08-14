@@ -32,6 +32,10 @@ export const NEW_MEETING_ROUTE: Route = "/meetings/new";
 interface Props {
   rows: ClientMeetingListItem[];
   employees: EmployeeOption[];
+  /** Rendered inside the toolbar row — see RegisterHeading. */
+  heading?: React.ReactNode;
+  /** The page's primary action, at the end of the toolbar row. */
+  actions?: React.ReactNode;
 }
 
 /** Midnight-today, local - a follow-up dated strictly before this reads as
@@ -48,7 +52,7 @@ function isPastDue(d: Date): boolean {
  * alphabetical). Next Follow-Up renders in red/semibold when already in the
  * past, an at-a-glance "you owe this client a call" cue.
  */
-export function MeetingTable({ rows, employees }: Props) {
+export function MeetingTable({ rows, employees, heading, actions }: Props) {
   const router = useRouter();
 
   // Per-row actions menu: Open + a destructive Delete. Meetings have no
@@ -256,6 +260,8 @@ export function MeetingTable({ rows, employees }: Props) {
       }}
       emptyTitle="No meetings logged yet - record the first client visit."
       emptyHint="Daily client-visit log with sales, contact and outcome details appears here."
+      heading={heading}
+      actions={actions}
     />
   );
 }

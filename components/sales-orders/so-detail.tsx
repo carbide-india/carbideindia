@@ -18,6 +18,8 @@ import { formatDate, formatInr } from "@/lib/format";
 import { fireToast } from "@/lib/toast";
 import { Field, MiniField, SectionCard, Segmented } from "@/components/inquiries/form-field";
 import { MoneyInput } from "@/components/ui/money-input";
+import { SoIssueCard } from "@/components/sales-orders/so-issue-card";
+import type { CustomerPoRevision } from "@/db/schema";
 
 /** Slim link block for the header - resolved server-side from inquiryId. */
 export interface SalesOrderInquiryLink {
@@ -31,6 +33,10 @@ interface Props {
   employees: EmployeeOption[];
   inquiryLink: SalesOrderInquiryLink | null;
   lines: SalesOrderLineWithSpec[];
+  /** Superseded customer POs, newest first — the Client PO card's history. */
+  poHistory: CustomerPoRevision[];
+  /** Employee names by id, for the "issued by" / "replaced by" lines. */
+  employeeNames: Record<string, string>;
 }
 
 const SO_SENT_OPTIONS = [
@@ -95,7 +101,14 @@ const NUMERIC_KEYS = new Set<keyof SoEditValues>(["quotePrice", "qty"]);
  * Open Register), read cards for Quote Summary + Customer PO + SO Docs plus ONE
  * dirty-only edit form (mirrors the quotation/negotiation detail).
  */
-export function SoDetail({ salesOrder, employees, inquiryLink, lines }: Props) {
+export function SoDetail({
+  salesOrder,
+  employees,
+  inquiryLink,
+  lines,
+  poHistory,
+  employeeNames,
+}: Props) {
   const router = useRouter();
   const [sentPending, startSentTransition] = React.useTransition();
 
@@ -252,17 +265,15 @@ export function SoDetail({ salesOrder, employees, inquiryLink, lines }: Props) {
             </div>
           </SectionCard>
 
-          {/* Customer PO (read) */}
-          <SectionCard title="Customer PO">
-            <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-              <ReadStat label="Customer PO No" value={salesOrder.customerPoNo ?? "-"} />
-              <ReadStat
-                label="Customer PO Date"
-                value={salesOrder.customerPoDate ? formatDate(salesOrder.customerPoDate) : "-"}
-              />
-              <ReadLink label="Customer PO Link" href={salesOrder.customerPoLink} />
-            </div>
-          </SectionCard>
+          {/* Client PO + the two Issue events + Revise SO. This replaced the
+              read-only "Customer PO" card: it shows the same three fields and
+              adds the operations that act on them, so the PO is not stated in
+              one place and changed in another. */}
+          <SoIssueCard
+            salesOrder={salesOrder}
+            poHistory={poHistory}
+            employeeNames={employeeNames}
+          />
 
           {/* SO Docs (read) */}
           <SectionCard title="Sales Order Docs">

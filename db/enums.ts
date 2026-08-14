@@ -654,8 +654,8 @@ export const NEGOTIATION_STATUSES = [
 ] as const;
 export type NegotiationStatus = (typeof NEGOTIATION_STATUSES)[number];
 export const NEGOTIATION_STATUS_LABELS: Record<NegotiationStatus, string> = {
-  to_start: "Not Started", follow_up: "Follow up", revision: "Revision", verbal_yes: "Verbal Yes",
-  order_won: "Order Won", order_lost: "Order Lost", order_abandoned: "Order Abandoned",
+  to_start: "Not Started", follow_up: "Follow Up", revision: "Revise Quote", verbal_yes: "Verbal Yes",
+  order_won: "Won", order_lost: "Lost", order_abandoned: "Abandoned",
   need_help: "Need Help", on_hold: "On Hold",
   draft: "Draft", need_info: "Need Info", pending_approval: "Pending Approval",
   negotiation_approved: "Negotiation Approved", not_approved: "Not Approved",
@@ -667,11 +667,48 @@ export const NEGOTIATION_STATUS_COLORS: Record<NegotiationStatus, string> = {
   draft: "blue", need_info: "amber", pending_approval: "purple", negotiation_approved: "green",
   not_approved: "rose",
 };
-/** The five house buckets of the Negotiation stage, in display order. The
- *  outcome values above stay available as a separate axis on the detail page. */
+/**
+ * The Negotiation board's columns (Hetesh, 2026-08-13).
+ *
+ * DELIBERATELY NOT the house ladder every other stage uses. Negotiation does not
+ * track an approval, it tracks a commercial conversation, and it ends in an
+ * OUTCOME rather than a sign-off: a deal is Won, Lost or Abandoned, never
+ * "approved". `negotiation_approved` / `not_approved` stay in the enum for data
+ * compatibility and the approver gate still refuses them from anyone else, but
+ * they are not columns on this board.
+ */
 export const NEGOTIATION_STAGE_BUCKETS = [
-  "to_start", "draft", "need_info", "pending_approval", "not_approved", "negotiation_approved",
+  "to_start", "need_info", "follow_up", "revision",
+  "order_won", "order_lost", "order_abandoned",
 ] as const satisfies readonly NegotiationStatus[];
+
+/**
+ * Ageing views, computed from how long a negotiation has sat untouched — never
+ * stored. CROSS-CUTTING: a deal that has been in Follow Up for 40 days is in
+ * both Follow Up and "After 1 Month", so these must never look like columns
+ * that sum to a total.
+ */
+export const NEGOTIATION_AGEING_BUCKETS = [
+  { key: "after_15_days", label: "After 15 Days", days: 15 },
+  { key: "after_1_month", label: "After 1 Month", days: 30 },
+  { key: "after_2_months", label: "After 2 Months", days: 60 },
+] as const;
+export type NegotiationAgeingKey = (typeof NEGOTIATION_AGEING_BUCKETS)[number]["key"];
+
+/** Why a deal was lost. Manan's list, 2026-08-13. */
+export const LOST_REASONS = [
+  "rate_issue", "credit_period_issue", "time_line_issue",
+  "quality_issue", "technical_issue", "others",
+] as const;
+export type LostReason = (typeof LOST_REASONS)[number];
+export const LOST_REASON_LABELS: Record<LostReason, string> = {
+  rate_issue: "Rate Issue",
+  credit_period_issue: "Credit Period Issue",
+  time_line_issue: "Time Line Issue",
+  quality_issue: "Quality Issue",
+  technical_issue: "Technical Issue",
+  others: "Others",
+};
 
 // Negotiation STAGE (Proforma Invoice lifecycle) — the linear pipeline a
 // negotiation walks through: Quote Send → PI Issued → Negotiation Awarded →

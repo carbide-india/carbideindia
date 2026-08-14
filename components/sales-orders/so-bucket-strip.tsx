@@ -55,32 +55,11 @@ export function SoBucketStrip({
 }: Props) {
   return (
     <div className="mb-5 flex flex-col gap-2.5">
-      {/* ── Stage buckets ────────────────────────────────────────────── */}
-      <div>
-        <StripLabel>Stage</StripLabel>
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
-          <StatTile
-            label="All Sales Orders"
-            value={total}
-            tone="brand"
-            href={hrefFor(null, activeOutput)}
-            active={activeStatus === null}
-          />
-          {buckets.map((b) => (
-            <StatTile
-              key={b.status}
-              label={b.label}
-              value={b.count}
-              tone={b.tone}
-              href={hrefFor(
-                activeStatus === b.status ? null : b.status,
-                activeOutput,
-              )}
-              active={activeStatus === b.status}
-            />
-          ))}
-        </div>
-      </div>
+      {/* The STAGE BUCKET band used to lead this strip and was dropped on
+          2026-08-14 — once the register grew the sidebar distribution every
+          other stage has, this was the same list twice on one screen. The
+          output split stays: the sidebar shows only the two "issued" views,
+          and the pending halves are the ones you act on. */}
 
       {/* ── Dual output ──────────────────────────────────────────────── */}
       <div>
@@ -89,7 +68,7 @@ export function SoBucketStrip({
         </StripLabel>
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
           <StatTile
-            label="Customer Copy Pending"
+            label="Not Issued to Customer"
             value={outputs.customerPending}
             tone="amber"
             href={hrefFor(
@@ -99,7 +78,7 @@ export function SoBucketStrip({
             active={activeOutput === "customer_pending"}
           />
           <StatTile
-            label="Customer Copy Sent"
+            label="SO Issued to Customer"
             value={outputs.customerSent}
             tone="green"
             href={hrefFor(
@@ -109,7 +88,7 @@ export function SoBucketStrip({
             active={activeOutput === "customer_sent"}
           />
           <StatTile
-            label="Factory Copy Pending"
+            label="Not Issued to Production"
             value={outputs.factoryPending}
             tone="amber"
             href={hrefFor(
@@ -119,7 +98,7 @@ export function SoBucketStrip({
             active={activeOutput === "factory_pending"}
           />
           <StatTile
-            label="Factory Copy Sent"
+            label="SO Issued to Production"
             value={outputs.factorySent}
             tone="green"
             href={hrefFor(

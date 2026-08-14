@@ -1,10 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const createInvitation = vi.fn().mockResolvedValue({ id: "inv_1" });
-vi.mock("@clerk/nextjs/server", () => ({
-  clerkClient: vi.fn().mockResolvedValue({
-    invitations: { createInvitation },
-  }),
+// Invitations run through Firebase, not Clerk: create (or reuse) the account,
+// mint a password-reset link, pull its oobCode out and email OUR accept-invite
+// URL instead of Firebase's own page.
+const createUser = vi.fn().mockResolvedValue({ uid: "fb-1" });
+const generatePasswordResetLink = vi
+  .fn()
+  .mockResolvedValue("https://firebase.test/action?oobCode=CODE123&mode=resetPassword");
+vi.mock("@/lib/firebase/admin", () => ({
+  adminAuth: {
+    createUser: (...a: unknown[]) => createUser(...a),
+    generatePasswordResetLink: (...a: unknown[]) => generatePasswordResetLink(...a),
+  },
+}));
+
+const sendInviteEmail = vi.fn().mockResolvedValue(undefined);
+vi.mock("@/lib/email/resend", () => ({
+  sendInviteEmail: (...a: unknown[]) => sendInviteEmail(...a),
 }));
 
 vi.mock("@/lib/auth/current", () => ({
@@ -48,16 +60,27 @@ vi.mock("@/lib/db", () => {
   };
 });
 
-vi.mock("next/cache", () => ({ revalidatePath: vi.fn(), updateTag: vi.fn() }));
+vi.mock("next/cache", () => ({
+  revalidatePath: vi.fn(),
+  updateTag: vi.fn(),
+  // Something in the import chain wraps a query in unstable_cache. Passing the
+  // function straight through means the test exercises the real query path
+  // rather than a cache stub that could hide a bug.
+  unstable_cache: <T>(fn: T) => fn,
+}));
 vi.mock("@/lib/cache-tags", () => ({ CACHE_TAGS: { employees: "employees" } }));
 
 beforeEach(() => {
-  createInvitation.mockClear().mockResolvedValue({ id: "inv_1" });
+  createUser.mockClear().mockResolvedValue({ uid: "fb-1" });
+  generatePasswordResetLink
+    .mockClear()
+    .mockResolvedValue("https://firebase.test/action?oobCode=CODE123&mode=resetPassword");
+  sendInviteEmail.mockClear().mockResolvedValue(undefined);
   insertedValues.length = 0;
 });
 
-describe("inviteEmployee (Clerk invitation flow)", () => {
-  it("inserts the row WITHOUT a clerk_user_id and sends a Clerk invitation", async () => {
+describe("inviteEmployee (Firebase invitation flow)", () => {
+  it("inserts the row WITHOUT an auth identity and emails an onboarding link", async () => {
     const { inviteEmployee } = await import("@/app/(admin)/admin/employees/actions");
     const res = await inviteEmployee({
       name: "Dev User",
@@ -74,21 +97,23 @@ describe("inviteEmployee (Clerk invitation flow)", () => {
     // happens by email on first sign-in.
     const employeeInsert = insertedValues.find((v) => "email" in v);
     expect(employeeInsert).toMatchObject({ email: "dev@carbide.test" });
+    expect(employeeInsert).not.toHaveProperty("firebaseUid");
     expect(employeeInsert).not.toHaveProperty("clerkUserId");
     expect(employeeInsert).not.toHaveProperty("password");
 
-    expect(createInvitation).toHaveBeenCalledWith(
-      expect.objectContaining({
-        emailAddress: "dev@carbide.test",
-        notify: true,
-        ignoreExisting: true,
-        redirectUrl: expect.stringMatching(/^https?:\/\/.+\/login$/),
-      }),
+    expect(createUser).toHaveBeenCalledWith(
+      expect.objectContaining({ email: "dev@carbide.test", emailVerified: false }),
     );
+    // The invitee must land on OUR card, carrying the code Firebase minted —
+    // not on Firebase's own reset page, which knows nothing about this app.
+    const [to, name, url] = sendInviteEmail.mock.calls[0] as [string, string, string];
+    expect(to).toBe("dev@carbide.test");
+    expect(name).toBe("Dev User");
+    expect(url).toMatch(/\/accept-invite\?oobCode=CODE123$/);
   });
 
   it("keeps the row and returns a warning when the invitation email fails", async () => {
-    createInvitation.mockRejectedValueOnce(new Error("Clerk is down"));
+    sendInviteEmail.mockRejectedValueOnce(new Error("Resend is down"));
     const { inviteEmployee } = await import("@/app/(admin)/admin/employees/actions");
     const res = await inviteEmployee({
       name: "Dev User",

@@ -31,11 +31,15 @@ export interface BucketTile {
    * How the sidebar groups this tile (the strip itself renders them all alike):
    *   "all"    the stage total — becomes the parent destination
    *   "bucket" a mutually-exclusive house bucket (the default)
-   *   "flag"   a CROSS-CUTTING view (Overdue, Not Sent, Spec Variance,
-   *            Commercial Outcome). These do not add into the total, so they
-   *            sit apart from the buckets and must never look like one.
+   *   "flag"   a CROSS-CUTTING view (Overdue, Not Sent, Spec Variance, ageing).
+   *            These do not add into the total, so they sit apart from the
+   *            buckets and must never look like one.
+   *   "exit"   where work LEAVES the stage. Most stages have exactly one and it
+   *            is found by meaning (statusBucketOf === "approved"); mark tiles
+   *            explicitly only where that fails — Negotiation exits three ways
+   *            (Won / Lost / Abandoned) and approves none of them.
    */
-  group?: "all" | "bucket" | "flag";
+  group?: "all" | "bucket" | "flag" | "exit";
 }
 
 export function BucketStrip({ tiles, ariaLabel }: { tiles: BucketTile[]; ariaLabel: string }) {

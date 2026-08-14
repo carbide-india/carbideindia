@@ -5,6 +5,7 @@ import { MeetingTable } from "@/components/meetings/meeting-table";
 import { requireUser } from "@/lib/auth/current";
 import { listClientMeetings } from "@/lib/queries/client-meetings";
 import { listEmployeeOptions } from "@/lib/queries/employees";
+import { RegisterHeading } from "@/components/registers/register-heading";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
 import { UserMenuServer } from "@/components/header/user-menu-server";
 
@@ -38,31 +39,26 @@ export default async function MeetingsPage() {
       bulkUpload={bulkUpload}
     >
       <div className="mx-auto w-full max-w-[1600px]">
-        <header className="mb-5 flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-[26px] font-black leading-none tracking-tight text-[#3f3f94]">
-              Meeting Register
-            </h1>
-            <p className="mt-1.5 text-[12.5px] font-semibold tabular-nums text-[#6b7280]">
-              {rows.length} {rows.length === 1 ? "meeting" : "meetings"}
-            </p>
-          </div>
-          <Link
-            href={"/meetings/new" as Route}
-            className="inline-flex items-center gap-2 rounded-chip px-5 py-2.5 text-[14px] text-white transition-transform hover:-translate-y-px"
-            style={{
-              background:
-                "linear-gradient(135deg, rgb(63,63,148), rgb(47,47,111))",
-              boxShadow: "0 6px 16px rgba(63,63,148,0.32)",
-              fontWeight: 800,
-            }}
-          >
-            <Plus size={16} strokeWidth={2.4} />
-            New Meeting
-          </Link>
-        </header>
-
-        <MeetingTable rows={rows} employees={employees} />
+        <MeetingTable
+          rows={rows}
+          employees={employees}
+          heading={
+            <RegisterHeading title="Meeting Register" count={rows.length} unit="meeting" />
+          }
+          actions={
+            <Link
+              href={"/meetings/new" as Route}
+              className="inline-flex h-9 items-center gap-1.5 rounded-pill px-4 text-[13px] font-extrabold text-white transition-transform hover:-translate-y-px"
+              style={{
+                background: "linear-gradient(135deg, rgb(63,63,148), rgb(47,47,111))",
+                boxShadow: "0 4px 12px rgba(63,63,148,0.30)",
+              }}
+            >
+              <Plus size={15} strokeWidth={2.4} />
+              New Meeting
+            </Link>
+          }
+        />
       </div>
     </EnquiryModuleShell>
   );

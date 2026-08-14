@@ -142,12 +142,13 @@ describe("the gate covers every stage's approved bucket", () => {
   // The point of the suffix rule: adding a stage must not silently leave its
   // approval ungated. If a new stage names its approved value differently,
   // this fails and tells whoever added it to teach statusBucketOf about it.
+  // Negotiation is absent BY DESIGN — its columns are commercial outcomes, so
+  // it has no approval bucket for the gate to cover. Asserted below instead.
   const STAGES: [string, readonly string[]][] = [
     ["primary feasibility", FEASIBILITY_STAGE_BUCKETS],
     ["secondary feasibility", SECONDARY_FEASIBILITY_STAGE_BUCKETS],
     ["costing", COSTING_STAGE_BUCKETS],
     ["quotation", QUOTATION_STAGE_BUCKETS],
-    ["negotiation", NEGOTIATION_STAGE_BUCKETS],
   ];
 
   it.each(STAGES)("%s gates its approved and not-approved buckets", (_name, buckets) => {
@@ -163,6 +164,19 @@ describe("the gate covers every stage's approved bucket", () => {
     // where the stage has one.
     expect(open.length).toBeGreaterThanOrEqual(4);
     for (const b of open) {
+      expect(approvalRefusal({ status: b }, EMPLOYEE), b).toBeNull();
+    }
+  });
+
+  it("negotiation gates nothing — anyone can move a deal to any column", () => {
+    // Won / Lost / Abandoned are what the CUSTOMER decided, reported by the
+    // salesperson who was on the call. Gating that behind Alok would mean a
+    // lost deal sits in Follow Up until someone signs off on the bad news.
+    const gated = (NEGOTIATION_STAGE_BUCKETS as readonly string[]).filter((b) =>
+      isApproverBucket(statusBucketOf(b)),
+    );
+    expect(gated).toEqual([]);
+    for (const b of NEGOTIATION_STAGE_BUCKETS) {
       expect(approvalRefusal({ status: b }, EMPLOYEE), b).toBeNull();
     }
   });

@@ -21,13 +21,23 @@ import { statusBucketOf } from "@/lib/approval/gate";
  * cannot drift again.
  */
 
+/**
+ * NEGOTIATION IS DELIBERATELY ABSENT from this list (Hetesh, 2026-08-13).
+ *
+ * Every stage here ends in a SIGN-OFF: someone approves the work and it hands
+ * over. Negotiation ends in an OUTCOME — the deal is Won, Lost or Abandoned,
+ * and no amount of internal approval decides which. Forcing it into the ladder
+ * would put an "approved" bucket on a screen where nothing is ever approved.
+ *
+ * Its own shape is asserted at the bottom of this file, so the exception is
+ * pinned rather than merely unstated.
+ */
 const STAGES: [string, readonly string[]][] = [
   ["enquiry", ENQUIRY_STAGE_BUCKETS],
   ["primary feasibility", FEASIBILITY_STAGE_BUCKETS],
   ["secondary feasibility", SECONDARY_FEASIBILITY_STAGE_BUCKETS],
   ["costing", COSTING_STAGE_BUCKETS],
   ["quotation", QUOTATION_STAGE_BUCKETS],
-  ["negotiation", NEGOTIATION_STAGE_BUCKETS],
   ["sales order", SALES_ORDER_STAGE_BUCKETS],
 ];
 
@@ -85,5 +95,37 @@ describe("stage bucket order", () => {
     for (const [name, buckets] of STAGES) {
       expect(new Set(buckets).size, name).toBe(buckets.length);
     }
+  });
+});
+
+describe("negotiation is the stated exception", () => {
+  const buckets = NEGOTIATION_STAGE_BUCKETS as readonly string[];
+
+  it("still starts on its not-started bucket", () => {
+    expect(buckets[0]).toBe("to_start");
+  });
+
+  it("carries no approval bucket at all", () => {
+    // Not "approved last" — approved NOWHERE. A deal is not signed off.
+    expect(buckets.filter((b) => statusBucketOf(b) === "approved")).toEqual([]);
+    expect(buckets).not.toContain("pending_approval");
+    expect(buckets).not.toContain("not_approved");
+  });
+
+  it("ends on the three commercial outcomes, in that order", () => {
+    expect(buckets.slice(-3)).toEqual(["order_won", "order_lost", "order_abandoned"]);
+  });
+
+  it("lists the working states before the outcomes", () => {
+    expect(buckets.slice(0, -3)).toEqual([
+      "to_start",
+      "need_info",
+      "follow_up",
+      "revision",
+    ]);
+  });
+
+  it("lists no bucket twice", () => {
+    expect(new Set(buckets).size).toBe(buckets.length);
   });
 });

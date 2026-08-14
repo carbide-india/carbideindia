@@ -405,14 +405,26 @@ export async function setSalesOrderCopySent(
   copy: string,
   sent: boolean,
 ): Promise<ActionResult> {
-  await requireUser();
   if (!isUuid(id)) return { ok: false, error: "Invalid sales order id." };
   const parsed = SetCopySentSchema.safeParse({ copy, sent });
   if (!parsed.success) return { ok: false, error: "Invalid value" };
+  // Stamp WHO issued it and WHEN, and clear the stamp when the flag is taken
+  // back down — a sent-at left behind on an un-sent order reads as fact.
+  const me = await requireUser();
+  const now = parsed.data.sent ? new Date() : null;
+  const by = parsed.data.sent ? me.id : null;
   const patch =
     parsed.data.copy === "factory"
-      ? { productionSoSent: parsed.data.sent }
-      : { customerSoSent: parsed.data.sent };
+      ? {
+          productionSoSent: parsed.data.sent,
+          productionSoSentAt: now,
+          productionSoSentById: by,
+        }
+      : {
+          customerSoSent: parsed.data.sent,
+          customerSoSentAt: now,
+          customerSoSentById: by,
+        };
   try {
     await db
       .update(salesOrders)

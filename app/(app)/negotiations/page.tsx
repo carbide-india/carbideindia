@@ -11,22 +11,30 @@ import {
   type NegotiationStripFilters,
 } from "@/components/negotiations/negotiation-bucket-strip";
 import { requireUser } from "@/lib/auth/current";
-import { getNegotiationDashboard, listNegotiations } from "@/lib/queries/negotiations";
+import {
+  getNegotiationAgeingCounts,
+  getNegotiationDashboard,
+  listNegotiations,
+} from "@/lib/queries/negotiations";
 import {
   NEGOTIATION_OPEN_STATUSES,
-  NEGOTIATION_OUTCOMES,
+  NEGOTIATION_OFF_BOARD_STATUSES,
 } from "@/lib/negotiations/buckets";
 import {
+  NEGOTIATION_AGEING_BUCKETS,
   NEGOTIATION_STAGES,
   NEGOTIATION_STAGE_LABELS,
   NEGOTIATION_STATUSES,
   NEGOTIATION_STATUS_LABELS,
+  type NegotiationAgeingKey,
   type NegotiationStage,
   type NegotiationStatus,
 } from "@/db/enums";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
 import { UserMenuServer } from "@/components/header/user-menu-server";
 import { SidebarBuckets } from "@/components/layout/sidebar-buckets";
+import { NegotiationMiniBoard } from "@/components/negotiations/negotiation-mini-board";
+import { listNegotiationBoard } from "@/lib/queries/negotiation-board";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +42,7 @@ export const dynamic = "force-dynamic";
 function axisStatuses(
   axis: "outcome" | "open" | null,
 ): readonly NegotiationStatus[] | undefined {
-  if (axis === "outcome") return NEGOTIATION_OUTCOMES;
+  if (axis === "outcome") return NEGOTIATION_OFF_BOARD_STATUSES;
   if (axis === "open") return NEGOTIATION_OPEN_STATUSES;
   return undefined;
 }
@@ -45,6 +53,7 @@ interface PageProps {
     stage?: string;
     axis?: string;
     sent?: string;
+    ageing?: string;
   }>;
 }
 
@@ -77,12 +86,19 @@ export default async function NegotiationsPage({ searchParams }: PageProps) {
   const axis =
     sp.axis === "outcome" || sp.axis === "open" ? (sp.axis as "outcome" | "open") : null;
   const sent = sp.sent === "1" ? true : sp.sent === "0" ? false : null;
+  const ageing =
+    (NEGOTIATION_AGEING_BUCKETS.find((b) => b.key === sp.ageing)?.key as
+      | NegotiationAgeingKey
+      | undefined) ?? null;
 
-  const active: NegotiationStripFilters = { status, stage, axis, sent };
+  const active: NegotiationStripFilters = { status, stage, axis, sent, ageing };
 
-  const [dashboard, rows] = await Promise.all([
+  const [dashboard, ageingCounts, boardCards, rows] = await Promise.all([
     getNegotiationDashboard(),
+    getNegotiationAgeingCounts(),
+    listNegotiationBoard(),
     listNegotiations({
+      ageing: ageing ?? undefined,
       status: status ?? undefined,
       // The Outcome / In-Negotiation tiles are SETS of statuses, so they drill
       // through statusIn. An explicit ?status= always wins over the axis filter.
@@ -94,16 +110,17 @@ export default async function NegotiationsPage({ searchParams }: PageProps) {
 
   const filterLabel = [
     status ? NEGOTIATION_STATUS_LABELS[status] : null,
-    !status && axis === "outcome" ? "Commercial Outcome" : null,
+    !status && axis === "outcome" ? "Not on the board" : null,
     !status && axis === "open" ? "In Negotiation" : null,
     stage ? NEGOTIATION_STAGE_LABELS[stage] : null,
     sent === true ? "PI issued" : sent === false ? "No PI issued" : null,
+    ageing ? (NEGOTIATION_AGEING_BUCKETS.find((b) => b.key === ageing)?.label ?? null) : null,
   ]
     .filter((v): v is string => v !== null)
     .join(" · ");
 
   // Same derivation as the header strip — the sidebar just renders it densely.
-  const sidebarTiles = buildNegotiationSidebarTiles(dashboard, active);
+  const sidebarTiles = buildNegotiationSidebarTiles(dashboard, active, ageingCounts);
 
   return (
     <EnquiryModuleShell
@@ -114,8 +131,10 @@ export default async function NegotiationsPage({ searchParams }: PageProps) {
           tiles={sidebarTiles.filter((t) => t.key !== "all")}
           ariaLabel="Negotiation status distribution"
           unit="negotiation"
+          exitsBeforeFlags
         />
       }
+      sidebarExtra={<NegotiationMiniBoard cards={boardCards} />}
     >
       <div className="mx-auto w-full max-w-[1600px]">
         <NegotiationBucketStrip

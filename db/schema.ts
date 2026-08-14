@@ -38,6 +38,7 @@ import {
   STAGE_STATUSES,
   COSTING_DONE_STATUSES,
   NEGOTIATION_STATUSES,
+  LOST_REASONS,
   NEGOTIATION_STAGES,
   SECONDARY_FEASIBILITY_STATUSES,
   QUOTATION_STATUSES,
@@ -1163,6 +1164,7 @@ export type NewSample = typeof samples.$inferInsert;
 // ── Quotation / Negotiation / Sales Order (Phase 4) ─────────────
 export const costingDoneStatusEnum = pgEnum("costing_done_status", COSTING_DONE_STATUSES);
 export const negotiationStatusEnum = pgEnum("negotiation_status", NEGOTIATION_STATUSES);
+export const lostReasonEnum = pgEnum("lost_reason", LOST_REASONS);
 export const negotiationStageEnum = pgEnum("negotiation_stage", NEGOTIATION_STAGES);
 
 // ── Costing module (Phase C) ────────────────────────────────────
@@ -1537,6 +1539,22 @@ export const negotiations = pgTable("negotiations", {
   validity: text("validity"),
   quotationLink: text("quotation_link"),
   negotiationStatus: negotiationStatusEnum("negotiation_status").notNull().default("to_start"),
+  /**
+   * Why the deal was lost. Captured together with `lostReasonRemarks` the moment
+   * the status becomes `order_lost` — a lost deal with no reason teaches nobody
+   * anything, and by the time someone asks, the person who lost it has moved on.
+   */
+  lostReason: lostReasonEnum("lost_reason"),
+  lostReasonRemarks: text("lost_reason_remarks"),
+  /**
+   * When someone last actually WORKED this deal (added a remark or moved it),
+   * as opposed to `updatedAt`, which any write touches. The After 15 Days /
+   * 1 Month / 2 Months views are computed from this, so a cosmetic edit must not
+   * make a stale deal look fresh.
+   */
+  lastActivityAt: timestamp("last_activity_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
   negotiationNotes: text("negotiation_notes"),
   // Proforma Invoice pipeline (2026-08-02). `negotiationStage` is the linear PI
   // lifecycle (Quote Send → PI Issued → Negotiation Awarded → Customer PO
@@ -1557,6 +1575,42 @@ export const negotiations = pgTable("negotiations", {
 }, (t) => [index("negotiations_inquiry_idx").on(t.inquiryId), index("negotiations_status_idx").on(t.negotiationStatus)]);
 export type Negotiation = typeof negotiations.$inferSelect;
 export type NewNegotiation = typeof negotiations.$inferInsert;
+
+/**
+ * Negotiation remarks — APPEND-ONLY (Manan, 2026-08-13).
+ *
+ * Every status move on the board demands a remark, and the remark is written
+ * here with the status it accompanied. There is deliberately no update or delete
+ * path: the whole value of the thread is that you can read backwards through a
+ * deal and see what was said at each step. An editable history would let the
+ * story be rewritten after the fact, which is exactly what a lost-deal
+ * post-mortem must not allow.
+ *
+ * Newest first on screen — the board card shows the most recent on top with the
+ * older ones beneath it.
+ */
+export const negotiationRemarks = pgTable(
+  "negotiation_remarks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    negotiationId: uuid("negotiation_id")
+      .notNull()
+      .references(() => negotiations.id, { onDelete: "cascade" }),
+    /** The status this remark was written against — what the board looked like
+     *  at the moment it was said, which stays true even after the deal moves on. */
+    status: negotiationStatusEnum("status").notNull(),
+    /** The previous status, so the thread reads as "Follow Up → Revise Quote". */
+    fromStatus: negotiationStatusEnum("from_status"),
+    body: text("body").notNull(),
+    authorId: uuid("author_id").references(() => employees.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("negotiation_remarks_thread_idx").on(t.negotiationId, t.createdAt),
+  ],
+);
+export type NegotiationRemark = typeof negotiationRemarks.$inferSelect;
+export type NewNegotiationRemark = typeof negotiationRemarks.$inferInsert;
 
 export const negotiationItems = pgTable(
   "negotiation_items",
@@ -1702,6 +1756,36 @@ export const salesOrders = pgTable("sales_orders", {
   // System-generated processing stamp (2026-08-02) — e.g. "Okay for processing"
   // written when the SO is confirmed / handed to production.
   systemRemark: text("system_remark"),
+  /**
+   * Sales-order revisions (2026-08-14) — the same shape quotations and costings
+   * use. Revise SO never edits an order that has already been issued: it FREEZES
+   * that row and opens a fresh one at revision+1 pointing back at it. An issued
+   * SO is an instruction the factory may already be building against, so the
+   * version they were given has to stay readable afterwards.
+   */
+  revisionNo: integer("revision_no").notNull().default(1),
+  supersedesSalesOrderId: uuid("supersedes_sales_order_id").references(
+    (): AnyPgColumn => salesOrders.id,
+    { onDelete: "set null" },
+  ),
+  isLatestRevision: boolean("is_latest_revision").notNull().default(true),
+  revisionReason: text("revision_reason"),
+  /**
+   * Who issued each copy, and when. `customerSoSent` / `productionSoSent` were
+   * bare booleans anyone could flip; these are the evidence behind them, so
+   * "when did production get this?" has an answer that is not somebody's memory.
+   */
+  customerSoSentAt: timestamp("customer_so_sent_at", { withTimezone: true }),
+  customerSoSentById: uuid("customer_so_sent_by_id").references(() => employees.id, {
+    onDelete: "set null",
+  }),
+  productionSoSentAt: timestamp("production_so_sent_at", { withTimezone: true }),
+  productionSoSentById: uuid("production_so_sent_by_id").references(() => employees.id, {
+    onDelete: "set null",
+  }),
+  /** Revision count of the CUSTOMER's PO — bumped by Revise Cust PO. The
+   *  superseded versions live in `customer_po_revisions`. */
+  customerPoRevisionNo: integer("customer_po_revision_no").notNull().default(1),
   createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -1709,7 +1793,45 @@ export const salesOrders = pgTable("sales_orders", {
   index("sales_orders_inquiry_idx").on(t.inquiryId),
   // Phase 7 — negotiation→SO lineage lookup.
   index("sales_orders_negotiation_idx").on(t.negotiationId),
+  index("sales_orders_revision_idx").on(t.inquiryId, t.revisionNo),
 ]);
+
+/**
+ * Superseded customer POs.
+ *
+ * When a customer sends a revised PO, the previous one does not stop being a
+ * fact: it is what we accepted the order on, and a dispute about quantity or
+ * price is settled by reading it. Revise Cust PO therefore copies the current
+ * PO fields here before overwriting them on the sales order, rather than
+ * replacing history in place.
+ *
+ * Append-only in the database (migration 0079), for the same reason the
+ * negotiation thread is.
+ */
+export const customerPoRevisions = pgTable(
+  "customer_po_revisions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    salesOrderId: uuid("sales_order_id")
+      .notNull()
+      .references(() => salesOrders.id, { onDelete: "cascade" }),
+    /** Which revision this WAS — 1 is the PO originally attached. */
+    revisionNo: integer("revision_no").notNull(),
+    customerPoNo: text("customer_po_no"),
+    customerPoDate: timestamp("customer_po_date", { withTimezone: true }),
+    customerPoLink: text("customer_po_link"),
+    /** Why it was replaced — the customer's stated change, in our words. */
+    reason: text("reason"),
+    supersededById: uuid("superseded_by_id").references(() => employees.id, {
+      onDelete: "set null",
+    }),
+    supersededAt: timestamp("superseded_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("customer_po_revisions_so_idx").on(t.salesOrderId, t.revisionNo)],
+);
+export type CustomerPoRevision = typeof customerPoRevisions.$inferSelect;
 export type SalesOrder = typeof salesOrders.$inferSelect;
 export type NewSalesOrder = typeof salesOrders.$inferInsert;
 

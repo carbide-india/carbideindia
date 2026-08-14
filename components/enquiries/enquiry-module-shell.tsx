@@ -5,19 +5,20 @@ import { usePathname } from "next/navigation";
 import { Fragment, useState } from "react";
 import type { Route } from "next";
 import {
-  HelpCircle,
-  FileText,
-  FilePlus2,
-  LifeBuoy,
   ArrowLeft,
-  LayoutDashboard,
   Contact,
-  Truck,
   FileCheck2,
-  SlidersHorizontal,
-  Trash2,
+  FilePlus2,
+  FileText,
+  HelpCircle,
+  KanbanSquare,
+  LayoutDashboard,
+  LifeBuoy,
   PanelLeftClose,
   PanelLeftOpen,
+  SlidersHorizontal,
+  Trash2,
+  Truck,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { HubSearch } from "@/components/hub/hub-search";
@@ -145,6 +146,7 @@ function navFor(pathname: string): NavDef[] {
             !p.startsWith(`${reg.href}/recycle-bin`) &&
             !p.startsWith(`${reg.href}/vendors`) &&
             !p.startsWith(`${reg.href}/po-register`) &&
+            !p.startsWith(`${reg.href}/board`) &&
             !p.startsWith(`${reg.href}/custom`)),
       };
     })(),
@@ -182,6 +184,16 @@ function navFor(pathname: string): NavDef[] {
     // /negotiations/po-register so the Negotiation sidebar stays on it (records).
     ...(familySeg(pathname) === "negotiations"
       ? ([
+          {
+            // The board is a second VIEW of the register, so it sits with it —
+            // same rows, arranged by where the conversation stands.
+            label: "Negotiation Board",
+            href: "/negotiations/board" as Route,
+            Icon: KanbanSquare,
+            ready: true,
+            active: (p: string) => p.startsWith("/negotiations/board"),
+            group: "records" as const,
+          },
           {
             label: "Customer PO Register",
             href: "/negotiations/po-register" as Route,

@@ -14,7 +14,7 @@ import {
   NEGOTIATION_STATUS_LABELS,
   NEGOTIATION_STATUS_COLORS,
 } from "@/db/enums";
-import { NEGOTIATION_OUTCOMES } from "@/lib/negotiations/buckets";
+import { NEGOTIATION_OFF_BOARD_STATUSES } from "@/lib/negotiations/buckets";
 import { formatInr, formatDate } from "@/lib/format";
 import { Chip } from "@/components/inquiries/chip";
 import {
@@ -66,7 +66,7 @@ function negotiationDate(r: NegotiationListItem): Date {
  */
 const STATUS_OPTION_ORDER = [
   ...NEGOTIATION_STAGE_BUCKETS,
-  ...NEGOTIATION_OUTCOMES,
+  ...NEGOTIATION_OFF_BOARD_STATUSES,
 ] as const;
 
 /**

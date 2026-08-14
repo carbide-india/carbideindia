@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, notInArray, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   negotiations,
@@ -12,14 +12,18 @@ import {
 import type {
   CostingDoneStatus,
   CostingRoute,
+  NegotiationAgeingKey,
   NegotiationStage,
   NegotiationStatus,
 } from "@/db/enums";
+import { NEGOTIATION_AGEING_BUCKETS } from "@/db/enums";
 import {
   buildNegotiationDashboard,
+  NEGOTIATION_CLOSED_STATUSES,
   type NegotiationDashboard,
   type NegotiationGroupRow,
 } from "@/lib/negotiations/buckets";
+import { countAgeing } from "@/lib/negotiations/ageing";
 import {
   resolveSpecsByItemId,
   resolveCustomerAskByInquiryItemId,
@@ -87,6 +91,13 @@ export interface NegotiationFilters {
   stage?: NegotiationStage;
   /** true = only rows with at least one PI issued; false = only rows with none. */
   piSent?: boolean;
+  /**
+   * "After 15 Days / 1 Month / 2 Months" — OPEN deals untouched for at least
+   * that long. Cross-cutting: it narrows whatever status filter is also set
+   * rather than replacing it, because "which Follow Ups have gone cold" is the
+   * question people actually ask.
+   */
+  ageing?: NegotiationAgeingKey;
   q?: string;
 }
 
@@ -121,6 +132,19 @@ export async function listNegotiations(
         ? sql`${negotiations.piIterationCount} > 0`
         : sql`${negotiations.piIterationCount} = 0`,
     );
+  }
+  if (filters.ageing) {
+    const days = NEGOTIATION_AGEING_BUCKETS.find((b) => b.key === filters.ageing)?.days;
+    if (days !== undefined) {
+      // Closed deals are excluded here for the same reason ageingKeysFor()
+      // excludes them: nobody chases a deal that is already won or lost.
+      conds.push(
+        sql`${negotiations.lastActivityAt} <= now() - make_interval(days => ${days})`,
+      );
+      conds.push(
+        notInArray(negotiations.negotiationStatus, [...NEGOTIATION_CLOSED_STATUSES]),
+      );
+    }
   }
   if (filters.q) {
     const like = `%${filters.q.replace(/[%_]/g, (m) => `\\${m}`)}%`;
@@ -164,6 +188,26 @@ export async function listNegotiations(
  * The fold into buckets / outcomes / volume tiles is the pure
  * `buildNegotiationDashboard`, which is unit-tested.
  */
+/**
+ * How many OPEN deals have gone quiet, per ageing view.
+ *
+ * Two columns over the whole table, folded by the pure `countAgeing` — the same
+ * function the board uses, so the sidebar and the board can never disagree about
+ * what counts as stale. The thresholds overlap by design (a 70-day deal is in
+ * all three), so these deliberately do not sum to anything.
+ */
+export async function getNegotiationAgeingCounts(): Promise<
+  Record<NegotiationAgeingKey, number>
+> {
+  const rows = await db
+    .select({
+      negotiationStatus: negotiations.negotiationStatus,
+      lastActivityAt: negotiations.lastActivityAt,
+    })
+    .from(negotiations);
+  return countAgeing(rows);
+}
+
 export async function getNegotiationDashboard(): Promise<NegotiationDashboard> {
   const piSentSql = sql<boolean>`${negotiations.piIterationCount} > 0`;
   const rows = await db

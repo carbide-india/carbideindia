@@ -38,6 +38,10 @@ import type { ClientGrade } from "@/db/enums";
 interface Props {
   rows: ClientRegisterRow[];
   isAdmin: boolean;
+  /** Rendered at the start of the filter row — see RegisterHeading. */
+  heading?: React.ReactNode;
+  /** The page's primary actions, at the end of the filter row. */
+  actions?: React.ReactNode;
 }
 
 // ── Frozen-column geometry (px). Left offsets are derived from these widths so
@@ -193,7 +197,7 @@ const COLS_STORAGE_KEY = "carbide.clients.hiddenCols";
  * loaded rows; the KPI row above doubles as quick filters, and a Columns menu
  * hides the optional columns.
  */
-export function ClientRegister({ rows, isAdmin }: Props) {
+export function ClientRegister({ rows, isAdmin, heading, actions }: Props) {
   const [quickView, setQuickView] = React.useState<ClientRegisterRow | null>(
     null,
   );
@@ -384,8 +388,12 @@ export function ClientRegister({ rows, isAdmin }: Props) {
         />
       </div>
 
-      {/* Filter bar - single line (scrolls horizontally if the viewport is narrow). */}
-      <div className="mb-4 flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]">
+      {/* Title, filters and the primary actions share ONE row — the page header
+          used to sit above this and cost a whole band of vertical space for a
+          title the sidebar already states. */}
+      <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+        {heading}
+        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]">
         <label className="relative w-[220px] min-w-[180px] flex-1">
           <Search
             size={14}
@@ -543,6 +551,8 @@ export function ClientRegister({ rows, isAdmin }: Props) {
             Clear Filters
           </button>
         )}
+        </div>
+        {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
       </div>
 
       {/* Table -------------------------------------------------------------- */}

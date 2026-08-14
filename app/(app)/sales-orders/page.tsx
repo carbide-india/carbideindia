@@ -25,14 +25,18 @@ import { loadLookups, specRefKinds } from "@/lib/import/lookups";
 import { salesOrderImportSpec } from "@/lib/import/specs/sales-order";
 import { commitSalesOrderImport } from "@/app/(app)/sales-orders/import/actions";
 import { BulkImportModal } from "@/components/import/bulk-import-modal";
+import { SidebarBuckets } from "@/components/layout/sidebar-buckets";
 
 export const dynamic = "force-dynamic";
 
+// The vocabulary the business uses (Hetesh, 2026-08-13: "Show SO Issued to
+// Production. Show SO Issued to Cust separately"). "Copy Sent" described the
+// document; "Issued" describes the event people actually track.
 const OUTPUT_LABELS: Record<string, string> = {
-  customer_pending: "Customer Copy Pending",
-  customer_sent: "Customer Copy Sent",
-  factory_pending: "Factory Copy Pending",
-  factory_sent: "Factory Copy Sent",
+  customer_pending: "Not Issued to Customer",
+  customer_sent: "SO Issued to Customer",
+  factory_pending: "Not Issued to Production",
+  factory_sent: "SO Issued to Production",
 };
 
 interface PageProps {
@@ -95,11 +99,60 @@ export default async function SalesOrdersPage({ searchParams }: PageProps) {
       />
     ) : null;
 
+  // The same status-wise distribution every other stage carries. The two issue
+  // views are FLAGS, not buckets: an order can be issued to production and to
+  // the customer at once, so they cross-cut the stage buckets rather than
+  // partitioning them, and must never look like a sixth and seventh bucket.
+  const hrefWith = (status: string | null, output: string | null) => {
+    const p = new URLSearchParams();
+    if (status) p.set("status", status);
+    if (output) p.set("output", output);
+    const qs = p.toString();
+    return qs ? `/sales-orders?${qs}` : "/sales-orders";
+  };
+  const sidebarTiles = [
+    ...buckets.map((b) => ({
+      key: b.status as string,
+      label: b.label,
+      tone: b.tone,
+      count: b.count,
+      href: hrefWith(activeStatus === b.status ? null : b.status, activeOutput),
+      active: activeStatus === b.status,
+    })),
+    {
+      key: "factory_sent",
+      group: "flag" as const,
+      label: OUTPUT_LABELS.factory_sent!,
+      tone: "amber",
+      count: outputs.factorySent,
+      hint: "Orders whose factory copy has been issued",
+      href: hrefWith(activeStatus, activeOutput === "factory_sent" ? null : "factory_sent"),
+      active: activeOutput === "factory_sent",
+    },
+    {
+      key: "customer_sent",
+      group: "flag" as const,
+      label: OUTPUT_LABELS.customer_sent!,
+      tone: "amber",
+      count: outputs.customerSent,
+      hint: "Orders whose customer copy has been issued",
+      href: hrefWith(activeStatus, activeOutput === "customer_sent" ? null : "customer_sent"),
+      active: activeOutput === "customer_sent",
+    },
+  ];
+
   return (
     <EnquiryModuleShell
       title="Sales Order Register"
       userMenu={<UserMenuServer />}
       bulkUpload={bulkUpload}
+      registerChildren={
+        <SidebarBuckets
+          tiles={sidebarTiles}
+          ariaLabel="Sales order status distribution"
+          unit="sales order"
+        />
+      }
     >
       <div className="mx-auto w-full max-w-[1600px]">
         <SoBucketStrip

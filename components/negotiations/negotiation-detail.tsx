@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
-import { ArrowLeft, ArrowUpRight, Loader2, Plus } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Loader2, MessageSquare, Plus } from "lucide-react";
 import {
   NEGOTIATION_STAGE_BUCKETS,
   NEGOTIATION_STATUS_LABELS,
@@ -25,7 +25,7 @@ import {
 import type { UpdateNegotiationInput } from "@/lib/validators/negotiation";
 import {
   isNegotiationApprovedForSo,
-  NEGOTIATION_OUTCOMES,
+  NEGOTIATION_OFF_BOARD_STATUSES,
 } from "@/lib/negotiations/buckets";
 import type { EmployeeOption } from "@/lib/queries/employees";
 import { formatDate, formatInr } from "@/lib/format";
@@ -33,6 +33,7 @@ import { fireToast } from "@/lib/toast";
 import { Field, MiniField, SectionCard } from "@/components/inquiries/form-field";
 import { StatusPicker } from "@/components/inquiries/status-picker";
 import { MoneyInput } from "@/components/ui/money-input";
+import { NegotiationThreadPanel } from "@/components/negotiations/negotiation-thread";
 import {
   QuoteSendHeader,
   type QuoteSendSummary,
@@ -78,7 +79,7 @@ interface Props {
  */
 const STATUS_PICKER_ORDER: readonly NegotiationStatus[] = [
   ...NEGOTIATION_STAGE_BUCKETS,
-  ...NEGOTIATION_OUTCOMES,
+  ...NEGOTIATION_OFF_BOARD_STATUSES,
 ];
 
 /** numeric-string → ₹, em-dash when unset/unparseable. */
@@ -145,6 +146,7 @@ export function NegotiationDetail({
   revisableCostings,
 }: Props) {
   const router = useRouter();
+  const [threadOpen, setThreadOpen] = React.useState(false);
 
   // Product name per enquiry line, for the revise-costing picker. Read-through
   // from the provenance inquiry line, falling back to the Item spec (§2.4).
@@ -366,6 +368,24 @@ export function NegotiationDetail({
             </p>
           </SectionCard>
 
+          {/* The append-only remark thread. Distinct from Negotiation Notes
+              above, which is one editable free-text field on the record — this
+              is the running history of the conversation, and nothing in it can
+              be changed after the fact. */}
+          <SectionCard
+            title="Negotiation Remarks"
+            hint="Every board move adds one, newest first. Nothing here can be edited or removed."
+          >
+            <button
+              type="button"
+              onClick={() => setThreadOpen(true)}
+              className="inline-flex h-9 items-center gap-2 rounded-pill border-[1.5px] border-[#c9cbe0] px-4 text-[13px] font-extrabold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#efeffb]"
+            >
+              <MessageSquare size={14} strokeWidth={2.4} />
+              Open remark thread
+            </button>
+          </SectionCard>
+
           {/* Negotiation Lines (read-only) */}
           {lines.length > 0 && (
             <SectionCard
@@ -538,6 +558,15 @@ export function NegotiationDetail({
           </Link>
         </aside>
       </div>
+
+      {threadOpen && (
+        <NegotiationThreadPanel
+          negotiationId={negotiation.id}
+          title={inquiryLink?.smNumber ?? negotiation.negotiationNo}
+          subtitle={negotiation.companyName}
+          onClose={() => setThreadOpen(false)}
+        />
+      )}
     </div>
   );
 }

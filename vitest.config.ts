@@ -24,6 +24,9 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./"),
+      // See tests/stubs/server-only.js — the real package throws outside a
+      // "react-server" resolution, which no plain Node test run has.
+      "server-only": path.resolve(__dirname, "./tests/stubs/server-only.js"),
     },
   },
 });

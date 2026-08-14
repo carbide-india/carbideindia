@@ -12,7 +12,7 @@ import {
   isNegotiationBucket,
   isNegotiationOpen,
   NEGOTIATION_OPEN_STATUSES,
-  NEGOTIATION_OUTCOMES,
+  NEGOTIATION_OFF_BOARD_STATUSES,
   type NegotiationGroupRow,
 } from "@/lib/negotiations/buckets";
 
@@ -33,19 +33,36 @@ describe("negotiation axes", () => {
   it("splits every enum value into exactly one axis", () => {
     for (const s of NEGOTIATION_STATUSES) {
       const inBucket = isNegotiationBucket(s);
-      const inOutcome = NEGOTIATION_OUTCOMES.includes(s);
+      const inOutcome = NEGOTIATION_OFF_BOARD_STATUSES.includes(s);
       expect(inBucket !== inOutcome).toBe(true);
     }
-    expect(NEGOTIATION_STAGE_BUCKETS.length + NEGOTIATION_OUTCOMES.length).toBe(
+    expect(NEGOTIATION_STAGE_BUCKETS.length + NEGOTIATION_OFF_BOARD_STATUSES.length).toBe(
       NEGOTIATION_STATUSES.length,
     );
   });
 
-  it("keeps the outcome axis in enum order and retains order_won", () => {
-    expect(NEGOTIATION_OUTCOMES).toContain("order_won");
-    expect(NEGOTIATION_OUTCOMES).toContain("order_lost");
-    const idx = NEGOTIATION_OUTCOMES.map((s) => NEGOTIATION_STATUSES.indexOf(s));
+  it("keeps the off-board set in enum order", () => {
+    const idx = NEGOTIATION_OFF_BOARD_STATUSES.map((s) => NEGOTIATION_STATUSES.indexOf(s));
     expect(idx).toEqual([...idx].sort((a, b) => a - b));
+  });
+
+  it("puts the three outcomes ON the board, not off it", () => {
+    // They used to sit on the off-board axis, when the board ran the house
+    // approval ladder instead. Won / Lost / Abandoned are columns now, so a
+    // deal reaching one is IN the workflow, not a leftover to be migrated.
+    for (const s of ["order_won", "order_lost", "order_abandoned"] as const) {
+      expect(isNegotiationBucket(s), s).toBe(true);
+      expect(NEGOTIATION_OFF_BOARD_STATUSES, s).not.toContain(s);
+    }
+  });
+
+  it("leaves the retired approval ladder off the board", () => {
+    // Nothing new can reach these; the register still lists them so the rows
+    // are not invisible, but they get no column.
+    for (const s of ["draft", "pending_approval", "negotiation_approved"] as const) {
+      expect(NEGOTIATION_OFF_BOARD_STATUSES, s).toContain(s);
+      expect(isNegotiationBucket(s), s).toBe(false);
+    }
   });
 
   it("treats only won / lost / abandoned as closed", () => {
@@ -78,12 +95,12 @@ describe("buildNegotiationDashboard", () => {
     expect(d.total).toBe(0);
     expect(d.totalValue).toBe(0);
     expect(d.bucketTotal).toBe(0);
-    expect(d.outcomeTotal).toEqual({ count: 0, value: 0 });
+    expect(d.offBoardTotal).toEqual({ count: 0, value: 0 });
     for (const s of NEGOTIATION_STATUSES) expect(d.counts[s]).toBe(0);
     for (const s of NEGOTIATION_STAGES) expect(d.stages[s]).toBe(0);
   });
 
-  it("never loses a row: total === buckets + outcomes", () => {
+  it("never loses a row: total === board columns + off-board", () => {
     const d = buildNegotiationDashboard([
       g("to_start", 5),
       g("draft", 3),
@@ -95,9 +112,11 @@ describe("buildNegotiationDashboard", () => {
       g("on_hold", 2),
     ]);
     expect(d.total).toBe(30);
-    expect(d.bucketTotal).toBe(15);
-    expect(d.outcomeTotal.count).toBe(15);
-    expect(d.bucketTotal + d.outcomeTotal.count).toBe(d.total);
+    // On the board: to_start 5 + need_info 2 + order_won 7 + follow_up 6.
+    expect(d.bucketTotal).toBe(20);
+    // Off it: draft 3 + pending_approval 4 + negotiation_approved 1 + on_hold 2.
+    expect(d.offBoardTotal.count).toBe(10);
+    expect(d.bucketTotal + d.offBoardTotal.count).toBe(d.total);
   });
 
   it("sums a status split across several stage / pi-sent groups", () => {

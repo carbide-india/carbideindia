@@ -533,6 +533,20 @@
       "when": 1786695270932,
       "tag": "0077_revision_send_back",
       "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1786697012236,
+      "tag": "0078_negotiation_remarks_lost_reason",
+      "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1786703051351,
+      "tag": "0079_sales_order_revisions",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { listCustomerPoRevisions } from "@/app/(app)/sales-orders/issue-actions";
 import { requireUser } from "@/lib/auth/current";
 import {
   getSalesOrderById,
@@ -50,7 +51,7 @@ export default async function SalesOrderDetailPage({ params }: PageProps) {
 
   // The linked enquiry (SM repo) supplies the header SM chip + number, and the
   // seed list lets us flag products added to the enquiry after this sales order.
-  const [employees, inquiry, lines, seeds, lineNotes] = await Promise.all([
+  const [employees, inquiry, lines, seeds, lineNotes, poHistory] = await Promise.all([
     listEmployeeOptions(),
     salesOrder.inquiryId
       ? getInquiryById(salesOrder.inquiryId)
@@ -61,7 +62,13 @@ export default async function SalesOrderDetailPage({ params }: PageProps) {
       : Promise.resolve([]),
     // Per-line factory notes for the dual-output panel (factory copy only).
     getSalesOrderLineNotes(salesOrder.id),
+    // Superseded customer POs — the Client PO card's history trail.
+    listCustomerPoRevisions(salesOrder.id),
   ]);
+
+  // Names for the "issued by" / "replaced by" lines. Built here rather than
+  // joined per query: the employee list is already loaded and tiny.
+  const employeeNames = Object.fromEntries(employees.map((e) => [e.id, e.name]));
 
   const inquiryLink: SalesOrderInquiryLink | null = inquiry
     ? {
@@ -101,6 +108,8 @@ export default async function SalesOrderDetailPage({ params }: PageProps) {
         employees={employees}
         inquiryLink={inquiryLink}
         lines={lines}
+        poHistory={poHistory}
+        employeeNames={employeeNames}
       />
       {/* One SO, two outputs — stage bucket + customer/factory copies. */}
       <SoOutputsCard

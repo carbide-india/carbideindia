@@ -34,6 +34,10 @@ interface Props {
   /** Route prefix for all row links. Vendors are maintained under the Forms
    *  module at /vendors (the old /costings/vendors routes were removed). */
   basePath?: string;
+  /** Rendered inside the toolbar row — see RegisterHeading. */
+  heading?: React.ReactNode;
+  /** The page's primary actions, at the end of the toolbar row. */
+  actions?: React.ReactNode;
 }
 
 /**
@@ -48,6 +52,8 @@ export function VendorRegister({
   rows,
   isAdmin,
   basePath = "/vendors",
+  heading,
+  actions,
 }: Props) {
   const router = useRouter();
 
@@ -357,6 +363,8 @@ export function VendorRegister({
       <RegisterDataTable<VendorRegisterRow>
         tableKey="vendors"
         rows={visibleRows}
+        heading={heading}
+        actions={actions}
         getRowId={(r) => r.id}
         columns={columns}
         getOpenHref={(r) => `${basePath}/${r.id}` as Route}

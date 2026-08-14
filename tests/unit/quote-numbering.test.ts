@@ -41,6 +41,10 @@ vi.mock("@/lib/db", () => {
           ) => Promise.resolve(rows).then(resolve, reject),
         };
       },
+      // lib/queries/negotiations.ts builds a grouped SUBQUERY at module scope,
+      // so importing the action under test evaluates this chain immediately —
+      // before any test runs. It only needs to not throw; nothing reads it here.
+      groupBy: () => ({ as: (alias: string) => ({ alias }) }),
     }),
   }));
   // createQuotation/createNegotiation/createSalesOrder wrap the header + line
@@ -115,7 +119,14 @@ beforeEach(() => {
 describe("createQuotation", () => {
   it("derives quoteNo SM9579-Q01 and copies the autofetch snapshot", async () => {
     selectQueue.push([{ n: 0 }]); // existing quotations count
-    const res = await createQuotation({ inquiryId: INQUIRY_UUID });
+    // The costing hard-gate is off here on purpose: this fixture's autofill
+    // carries no inquiry_item, so every line would be blocked for want of a
+    // locked costing and the test would stop being about NUMBERING. The gate
+    // has its own coverage.
+    const res = await createQuotation(
+      { inquiryId: INQUIRY_UUID },
+      { enforceCostingGate: false },
+    );
     expect(res).toEqual({ ok: true, id: "row-1", quoteNo: "SM9579-Q01" });
 
     // Header inserts are objects; the quotation_items line insert pushes an
@@ -140,7 +151,10 @@ describe("createQuotation", () => {
   it("bumps the suffix and retries on a 23505 collision", async () => {
     selectQueue.push([{ n: 0 }]);
     insertErrors.push({ code: "23505", constraint: "quotations_quote_no_unique" });
-    const res = await createQuotation({ inquiryId: INQUIRY_UUID });
+    const res = await createQuotation(
+      { inquiryId: INQUIRY_UUID },
+      { enforceCostingGate: false }, // same reason as above
+    );
     expect(res).toEqual({ ok: true, id: "row-1", quoteNo: "SM9579-Q02" });
     const headerInserts = insertCalls.filter((c) => !Array.isArray(c));
     expect(headerInserts).toHaveLength(2);

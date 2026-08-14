@@ -2,16 +2,22 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import {
+  NEGOTIATION_AGEING_BUCKETS,
   NEGOTIATION_STAGES,
   NEGOTIATION_STAGE_BUCKETS,
   NEGOTIATION_STAGE_COLORS,
   NEGOTIATION_STAGE_LABELS,
   NEGOTIATION_STATUS_COLORS,
   NEGOTIATION_STATUS_LABELS,
+  type NegotiationAgeingKey,
   type NegotiationStage,
   type NegotiationStatus,
 } from "@/db/enums";
-import { NEGOTIATION_OUTCOMES, type NegotiationDashboard } from "@/lib/negotiations/buckets";
+import {
+  NEGOTIATION_CLOSED_STATUSES,
+  NEGOTIATION_OFF_BOARD_STATUSES,
+  type NegotiationDashboard,
+} from "@/lib/negotiations/buckets";
 import { formatInr } from "@/lib/format";
 
 /**
@@ -41,7 +47,12 @@ export interface NegotiationStripFilters {
   axis: "outcome" | "open" | null;
   /** true = only rows with a PI issued. */
   sent: boolean | null;
+  /** An ageing view — open deals untouched for 15 / 30 / 60 days. */
+  ageing: NegotiationAgeingKey | null;
 }
+
+/** Won / Lost / Abandoned, for O(1) "is this an exit column?" checks. */
+const NEGOTIATION_CLOSED_SET: ReadonlySet<string> = new Set(NEGOTIATION_CLOSED_STATUSES);
 
 interface Props {
   dashboard: NegotiationDashboard;
@@ -66,6 +77,7 @@ function hrefFor(f: Partial<NegotiationStripFilters>): Route {
   if (f.stage) p.set("stage", f.stage);
   if (f.axis) p.set("axis", f.axis);
   if (f.sent !== null && f.sent !== undefined) p.set("sent", f.sent ? "1" : "0");
+  if (f.ageing) p.set("ageing", f.ageing);
   const qs = p.toString();
   return (qs ? `/negotiations?${qs}` : "/negotiations") as Route;
 }
@@ -78,6 +90,8 @@ function hrefFor(f: Partial<NegotiationStripFilters>): Route {
 export function buildNegotiationSidebarTiles(
   dashboard: NegotiationDashboard,
   active: NegotiationStripFilters,
+  /** Open deals per ageing view — see getNegotiationAgeingCounts(). */
+  ageing: Record<NegotiationAgeingKey, number>,
 ): {
   key: string;
   label: string;
@@ -85,10 +99,15 @@ export function buildNegotiationSidebarTiles(
   count: number;
   href: string;
   active: boolean;
-  group?: "all" | "bucket" | "flag";
+  hint?: string;
+  group?: "all" | "bucket" | "flag" | "exit";
 }[] {
   const anyFilter =
-    active.status !== null || active.stage !== null || active.axis !== null || active.sent !== null;
+    active.status !== null ||
+    active.stage !== null ||
+    active.axis !== null ||
+    active.sent !== null ||
+    active.ageing !== null;
   return [
     {
       key: "all",
@@ -106,15 +125,33 @@ export function buildNegotiationSidebarTiles(
       count: dashboard.counts[s],
       href: active.status === s ? hrefFor({}) : hrefFor({ status: s }),
       active: active.status === s,
+      // Won / Lost / Abandoned are where a deal LEAVES negotiation. They sit
+      // below the divider, apart from the states you still work in.
+      ...(NEGOTIATION_CLOSED_SET.has(s) ? { group: "exit" as const } : {}),
+    })),
+    // Ageing narrows whatever else is set, so these keep the current status.
+    ...NEGOTIATION_AGEING_BUCKETS.map((b) => ({
+      key: b.key as string,
+      group: "flag" as const,
+      label: b.label,
+      tone: "amber",
+      count: ageing[b.key],
+      hint: `Open deals untouched for ${b.days} days or more`,
+      href:
+        active.ageing === b.key
+          ? hrefFor({ ...active, ageing: null })
+          : hrefFor({ ...active, ageing: b.key }),
+      active: active.ageing === b.key,
     })),
     {
       key: "outcome",
-      // A second AXIS, not a bucket — won/lost/follow-up rows sit here instead
-      // of on the house buckets, so it must not read as one of them.
+      // A second AXIS, not a bucket — legacy rows on a retired status sit here
+      // instead of on a column, so it must not read as one of them.
       group: "flag" as const,
-      label: "Commercial Outcome",
+      label: "Not on the board",
       tone: "stone",
-      count: dashboard.outcomeTotal.count,
+      count: dashboard.offBoardTotal.count,
+      hint: "Rows on a retired status, with no column of their own",
       href: active.axis === "outcome" ? hrefFor({}) : hrefFor({ axis: "outcome" }),
       active: active.axis === "outcome",
     },
@@ -173,8 +210,8 @@ export function NegotiationBucketStrip({ dashboard, active, shownCount }: Props)
             />
           ))}
         </ChipGroup>
-        <ChipGroup title="Commercial Outcome">
-          {NEGOTIATION_OUTCOMES.map((s) => (
+        <ChipGroup title="Not on the board">
+          {NEGOTIATION_OFF_BOARD_STATUSES.map((s) => (
             <CountChip
               key={s}
               label={NEGOTIATION_STATUS_LABELS[s]}
