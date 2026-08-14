@@ -147,11 +147,6 @@ export function SecondaryFeasibilityModuleShell({
           )}
         >
           <div className={cn("flex h-full flex-col py-4", collapsed ? "w-[72px] items-center px-2" : "w-[260px] px-4")}>
-            <Link href={"/hub" as Route} className="flex flex-col items-center gap-1 px-1" aria-label="Carbide India hub">
-              <img src="/brand/logo.png" alt="" className={cn("w-auto", collapsed ? "h-10" : "h-24")} style={{ display: "block" }} />
-              {!collapsed && <span className="text-[22px] font-extrabold leading-none tracking-tight text-[#3f3f94]">Carbide India</span>}
-            </Link>
-
             {/* Scrolls on its own so the footer below stays pinned in view —
                 a 100vh aside with `overflow-hidden` otherwise clips the
                 "Go to next module" button away on the longer modules. */}
