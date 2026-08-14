@@ -67,16 +67,14 @@ describe("buildQuotationBucketTiles", () => {
     { status: "quotation_approved", quoteSent: false, n: 3 },
   ]);
 
-  it("renders All + the five house buckets + Not Sent, in that order", () => {
+  it("renders All + the house buckets, and NO Not-Sent tile", () => {
+    // "Not Sent" was dropped on 2026-08-13: the register table already carries a
+    // "Quote sent" Yes/No column filter and a bulk setter, so a tile for it was
+    // a filter competing with a filter — and it sat among buckets while not
+    // being one, so the strip never summed to its own total.
     const tiles = buildQuotationBucketTiles(counts, NO_SELECTION);
-    expect(tiles.map((t) => t.key)).toEqual([
-      "all",
-      ...QUOTATION_STAGE_BUCKETS,
-      "not_sent",
-    ]);
-    expect(tiles.filter((t) => t.crossCutting).map((t) => t.key)).toEqual([
-      "not_sent",
-    ]);
+    expect(tiles.map((t) => t.key)).toEqual(["all", ...QUOTATION_STAGE_BUCKETS]);
+    expect(tiles.some((t) => t.crossCutting)).toBe(false);
   });
 
   it("takes every bucket tone from the enum colour map", () => {
@@ -98,9 +96,6 @@ describe("buildQuotationBucketTiles", () => {
     expect(tiles.find((t) => t.key === "draft")?.href).toBe(
       "/quotations?bucket=draft",
     );
-    expect(tiles.find((t) => t.key === "not_sent")?.href).toBe(
-      "/quotations?sent=no",
-    );
     expect(tiles.find((t) => t.key === "all")?.href).toBe("/quotations");
   });
 
@@ -109,33 +104,25 @@ describe("buildQuotationBucketTiles", () => {
       bucket: "draft",
       notSentOnly: true,
     });
-    // Clicking the active bucket drops the bucket but keeps ?sent=no ...
+    // Clicking the active bucket drops the bucket but keeps ?sent=no — the flag
+    // still combines with a bucket even though it no longer has a tile, because
+    // the register's own "Quote sent" filter writes the same parameter.
     expect(tiles.find((t) => t.key === "draft")?.href).toBe(
       "/quotations?sent=no",
     );
-    // ... and clicking Not Sent drops the flag but keeps the bucket.
-    expect(tiles.find((t) => t.key === "not_sent")?.href).toBe(
-      "/quotations?bucket=draft",
-    );
-    // Not Sent combines with a bucket rather than replacing it.
     expect(tiles.find((t) => t.key === "need_info")?.href).toBe(
       "/quotations?bucket=need_info&sent=no",
     );
   });
 
-  it("shows the approved-and-unsent slice as the Not Sent sub-line", () => {
-    const tiles = buildQuotationBucketTiles(counts, NO_SELECTION);
-    expect(tiles.find((t) => t.key === "not_sent")?.sub).toBe(
-      "3 approved & unsent",
-    );
-  });
-
-  it("omits the sub-line when nothing approved is waiting", () => {
+  it("still counts the approved-and-unsent slice, tile or no tile", () => {
+    // The tile is gone but the number is not: it is the one that says "we
+    // approved a price and never sent it", which is the actionable one.
+    expect(counts.approvedNotSent).toBe(3);
     const c = foldQuotationBucketCounts([
       { status: "draft", quoteSent: false, n: 2 },
     ]);
-    const tiles = buildQuotationBucketTiles(c, NO_SELECTION);
-    expect(tiles.find((t) => t.key === "not_sent")?.sub).toBeUndefined();
+    expect(c.approvedNotSent).toBe(0);
   });
 });
 

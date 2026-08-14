@@ -9,8 +9,18 @@ import {
   quotationItems,
   negotiations,
   salesOrders,
+  inquiries,
   type NewQuotation,
 } from "@/db/schema";
+import { siteUrl } from "@/lib/site-url";
+import {
+  resolveRecipients,
+  sendQuotationEmail,
+} from "@/lib/email/send-quotation";
+import {
+  loadLogo,
+  renderQuotationPdf,
+} from "@/app/(app)/quotations/[id]/quotation.pdf/route";
 import { requireUser } from "@/lib/auth/current";
 import { approvalRefusal } from "@/lib/approval/gate";
 import {
@@ -597,4 +607,100 @@ export async function setQuotationStatusBulk(
   }
   revalidatePath("/quotations");
   return { ok: true };
+}
+
+/**
+ * Send the quotation to the customer.
+ *
+ * Replaces the hand-flipped "Quote Sent" Yes/No, which recorded a claim rather
+ * than a send. Here the flag is only ever set BY the send: the PDF is rendered,
+ * the mail goes out through Resend, and only then are `quote_sent`, the
+ * timestamp, the sender and the exact recipient list stamped. If the mail
+ * fails, nothing is written — a quote that says "Sent" and never went is worse
+ * than one that says nothing.
+ *
+ * Any signed-in employee may send (Hetesh, 2026-08-13). Sending is not an
+ * approval, so it is not behind the approver flag.
+ */
+export async function sendQuotation(input: {
+  id: string;
+  /** Extra addresses typed in the send dialog, on top of the enquiry's. */
+  extraTo?: string | null;
+  extraCc?: string | null;
+  /** Optional covering note shown above the summary in the email. */
+  message?: string | null;
+}): Promise<
+  { ok: true; to: string[]; cc: string[] } | { ok: false; error: string }
+> {
+  const me = await requireUser();
+  if (!isUuid(input.id)) return { ok: false, error: "Invalid quotation id." };
+
+  const [quotation] = await db
+    .select()
+    .from(quotations)
+    .where(eq(quotations.id, input.id))
+    .limit(1);
+  if (!quotation) return { ok: false, error: "Quotation not found." };
+
+  // Recipients come from the ENQUIRY, which is where the contact person and the
+  // CC list are captured.
+  const [enquiry] = await db
+    .select({
+      contactEmail: inquiries.contactEmail,
+      ccEmails: inquiries.ccEmails,
+    })
+    .from(inquiries)
+    .where(eq(inquiries.id, quotation.inquiryId))
+    .limit(1);
+
+  const { to, cc } = resolveRecipients({
+    contactEmail: enquiry?.contactEmail,
+    ccEmails: enquiry?.ccEmails,
+    extraTo: input.extraTo,
+    extraCc: input.extraCc,
+  });
+  if (to.length === 0) {
+    return {
+      ok: false,
+      error:
+        "No recipient address. Add a contact email on the enquiry, or type one in the To box.",
+    };
+  }
+
+  const pdf = await renderQuotationPdf(quotation, { logo: await loadLogo(siteUrl()) });
+
+  const sent = await sendQuotationEmail({
+    quotation,
+    to,
+    cc,
+    pdf,
+    senderName: me.name,
+    message: input.message,
+  });
+  if (!sent.ok) return { ok: false, error: sent.error };
+
+  try {
+    await db
+      .update(quotations)
+      .set({
+        quoteSent: true,
+        quoteSentAt: new Date(),
+        quoteSentById: me.id,
+        quoteSentTo: { to, cc },
+        updatedAt: new Date(),
+      })
+      .where(eq(quotations.id, input.id));
+  } catch (err) {
+    // The mail is already gone; say so rather than reporting a clean failure.
+    console.error("[sendQuotation] sent but could not stamp the record", err);
+    return {
+      ok: false,
+      error:
+        "The quotation was emailed, but the record could not be updated. Set Quote Sent manually.",
+    };
+  }
+
+  revalidatePath("/quotations");
+  revalidatePath(`/quotations/${input.id}`);
+  return { ok: true, to, cc };
 }

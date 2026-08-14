@@ -519,6 +519,13 @@
       "when": 1786631040788,
       "tag": "0074_needy_master_chief",
       "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1786694116925,
+      "tag": "0076_quotation_send_record",
+      "breakpoints": true
     }
   ]
 }

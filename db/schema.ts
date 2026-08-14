@@ -1430,7 +1430,23 @@ export const quotations = pgTable("quotations", {
   // above: this is the bucket the register groups + counts by.
   quotationStatus: quotationStatusEnum("quotation_status").notNull().default("not_started"),
   quotationLink: text("quotation_link"),
+  /**
+   * Whether the quote has gone to the customer.
+   *
+   * Until 2026-08-13 this was a Yes/No somebody flipped by hand, so it recorded
+   * a CLAIM rather than a send. It is now stamped by `sendQuotation` alongside
+   * the three columns below, which say when, by whom, and to which addresses —
+   * a flag with no evidence behind it is worse than no flag.
+   */
   quoteSent: boolean("quote_sent").notNull().default(false),
+  quoteSentAt: timestamp("quote_sent_at", { withTimezone: true }),
+  quoteSentById: uuid("quote_sent_by_id").references(() => employees.id, {
+    onDelete: "set null",
+  }),
+  /** The addresses it actually went to, To first then CC — the audit trail for
+   *  "who got this quote?", which the enquiry's contact fields cannot answer
+   *  later because they can be edited after the send. */
+  quoteSentTo: jsonb("quote_sent_to").$type<{ to: string[]; cc: string[] }>(),
   createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

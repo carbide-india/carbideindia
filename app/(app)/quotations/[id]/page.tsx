@@ -14,6 +14,9 @@ import {
 } from "@/components/quotations/quotation-detail";
 import { SyncProductsBanner } from "@/components/pipeline/sync-products-banner";
 import { syncProductsFromEnquiry } from "@/app/(app)/quotations/actions";
+import { SendQuoteButton } from "@/components/quotations/send-quote-button";
+import { resolveRecipients } from "@/lib/email/quotation-recipients";
+import { formatDateTime } from "@/lib/format";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
 import { UserMenuServer } from "@/components/header/user-menu-server";
 
@@ -77,9 +80,27 @@ export default async function QuotationDetailPage({ params }: PageProps) {
   const revisionMap = await getLatestCostingRevisionsForItems([...presentIds]);
   const latestCostings = Object.fromEntries(revisionMap);
 
+  // Resolve the send recipients SERVER-side so the preview shows exactly what
+  // the send will use — a dialog that guesses would be worse than none.
+  const { to, cc } = resolveRecipients({
+    contactEmail: inquiry?.contactEmail,
+    ccEmails: inquiry?.ccEmails,
+  });
+
   return (
     <EnquiryModuleShell title="Quotation" userMenu={<UserMenuServer />}>
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <SendQuoteButton
+            quotationId={quotation.id}
+            quoteNo={quotation.quoteNo}
+            approved={quotation.quotationStatus === "quotation_approved"}
+            alreadySent={quotation.quoteSent}
+            sentAt={quotation.quoteSentAt ? formatDateTime(quotation.quoteSentAt) : null}
+            to={to}
+            cc={cc}
+          />
+        </div>
         <SyncProductsBanner
           missingCount={missingCount}
           recordId={quotation.id}
