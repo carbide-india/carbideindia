@@ -10,8 +10,6 @@ import {
   ListTodo,
   SquareKanban,
   LifeBuoy,
-  LayoutGrid,
-  ArrowLeft,
   PanelLeftClose,
   PanelLeftOpen,
   type LucideIcon,
@@ -88,14 +86,6 @@ export function WmsModuleShell({
               {collapsed ? <PanelLeftOpen className="h-[20px] w-[20px]" /> : <PanelLeftClose className="h-[20px] w-[20px]" />}
             </span>
           </button>
-          <Link
-            href={"/hub" as Route}
-            className="group flex h-9 shrink-0 items-center gap-2 rounded-lg border border-[#dcdce8] bg-white px-3 text-[13px] font-bold text-[#3a4152] transition hover:border-[#3f3f94] hover:text-[#3f3f94]"
-            aria-label="Back to hub"
-          >
-            <LayoutGrid className="h-[17px] w-[17px]" strokeWidth={2.4} />
-            Hub
-          </Link>
           <span className="max-md:hidden">
             <NavHistoryButtons />
           </span>

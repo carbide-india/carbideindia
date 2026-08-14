@@ -43,6 +43,73 @@ export async function listFormDrafts(kind: FormDraftKind): Promise<FormDraftList
   }));
 }
 
+export interface ResumableDraft {
+  id: string;
+  payload: Record<string, unknown>;
+  updatedAt: Date;
+}
+
+/**
+ * The current user's most recent unfinished draft for one form kind.
+ *
+ * This is what makes autosave a real safety net rather than a write-only pile.
+ * Before it, a draft could only be reached from the "Unfinished Forms" list, and
+ * every visit to a new-form page minted a FRESH draft id — so the store grew a
+ * row per abandoned visit (57 unfinished quotation forms against 2 actual
+ * quotations) and nobody ever resumed one. The new-form page now picks this up
+ * and carries on with the SAME draft, so a form has one draft, not a trail.
+ *
+ * Returns null when there is nothing to resume, or when what is there is empty.
+ */
+export async function getLatestFormDraft(
+  kind: FormDraftKind,
+): Promise<ResumableDraft | null> {
+  const me = await requireUser();
+  const rows = await db
+    .select({
+      id: formDrafts.id,
+      payload: formDrafts.payload,
+      updatedAt: formDrafts.updatedAt,
+    })
+    .from(formDrafts)
+    .where(
+      and(
+        eq(formDrafts.ownerId, me.id),
+        eq(formDrafts.formKey, kind),
+        isNull(formDrafts.deletedAt),
+      ),
+    )
+    .orderBy(desc(formDrafts.updatedAt))
+    .limit(1);
+
+  const row = rows[0];
+  if (!row) return null;
+  const payload = (row.payload ?? {}) as Record<string, unknown>;
+  // An autosave that captured nothing is not worth offering to resume.
+  if (genericCompleteness(payload) === 0) return null;
+  return { id: row.id, payload, updatedAt: row.updatedAt };
+}
+
+/**
+ * What a new-form page should resume, if anything. One call per page so all
+ * seven forms behave identically:
+ *   ?fresh=1     → nothing (the explicit "start over" escape hatch)
+ *   ?draft=<id>  → that exact draft, if it is the caller's
+ *   otherwise    → the caller's latest unfinished draft for this form
+ */
+export async function resolveDraftToResume(
+  kind: FormDraftKind,
+  draftParam: string | undefined,
+  fresh: boolean,
+): Promise<ResumableDraft | null> {
+  if (fresh) return null;
+  if (draftParam) {
+    const payload = await getFormDraft(kind, draftParam);
+    return payload ? { id: draftParam, payload, updatedAt: new Date() } : null;
+  }
+  return getLatestFormDraft(kind);
+}
+
 /** A single ACTIVE draft's raw form payload - only if it belongs to the user. */
 export async function getFormDraft(
   kind: FormDraftKind,

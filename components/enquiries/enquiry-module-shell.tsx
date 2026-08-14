@@ -11,7 +11,6 @@ import {
   LifeBuoy,
   ArrowLeft,
   LayoutDashboard,
-  LayoutGrid,
   Contact,
   Truck,
   FileCheck2,
@@ -331,16 +330,6 @@ export function EnquiryModuleShell({
               Back to Forms
             </Link>
           )}
-          {/* Hub sits immediately before the module title. */}
-          <Link
-            href={"/hub" as Route}
-            className="group flex h-10 shrink-0 items-center gap-2 rounded-lg bg-[#3f3f94] px-4 text-[15px] font-extrabold text-white shadow-[0_4px_12px_rgba(63,63,148,0.38)] ring-1 ring-white/10 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(63,63,148,0.52)] hover:brightness-110 active:translate-y-0 active:scale-95"
-            aria-label="Back to hub"
-          >
-            <ArrowLeft className="h-[16px] w-[16px] transition-transform duration-200 group-hover:-translate-x-0.5" strokeWidth={2.6} />
-            <LayoutGrid className="h-[19px] w-[19px]" strokeWidth={2.4} />
-            Hub
-          </Link>
         </div>
 
         {/* Middle zone - centered search. */}

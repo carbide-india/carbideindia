@@ -1,7 +1,8 @@
 import { SampleForm } from "@/components/samples/sample-form";
 import type { SampleFormValues } from "@/components/samples/sample-form";
 import { requireUser, getCurrentEmployee } from "@/lib/auth/current";
-import { getFormDraft } from "@/lib/queries/form-drafts";
+import { resolveDraftToResume } from "@/lib/queries/form-drafts";
+import { ResumedDraftNote } from "@/components/drafts/resumed-draft-note";
 import { listEmployeeOptions } from "@/lib/queries/employees";
 import { listCustomOptionsMap } from "@/lib/queries/custom-lists";
 import { listClientOptions } from "@/lib/queries/clients";
@@ -15,7 +16,7 @@ import { BulkImportModal } from "@/components/import/bulk-import-modal";
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  searchParams: Promise<{ draft?: string }>;
+  searchParams: Promise<{ draft?: string; fresh?: string }>;
 }
 
 export default async function NewSamplePage({ searchParams }: PageProps) {
@@ -28,8 +29,11 @@ export default async function NewSamplePage({ searchParams }: PageProps) {
   const clients = await listClientOptions();
 
   const sp = await searchParams;
-  const draftParam = typeof sp.draft === "string" ? sp.draft : undefined;
-  const draftPayload = draftParam ? await getFormDraft("sample", draftParam) : null;
+  const resume = await resolveDraftToResume(
+    "sample",
+    typeof sp.draft === "string" ? sp.draft : undefined,
+    sp.fresh === "1",
+  );
 
   // Admins get a Bulk Upload entry in the sidebar (opens the sample import modal).
   const importLookups = me?.isAdmin ? await loadLookups(specRefKinds(sampleImportSpec.fields)) : null;
@@ -52,6 +56,7 @@ export default async function NewSamplePage({ searchParams }: PageProps) {
       bulkUpload={bulkUpload}
     >
       <div className="w-full">
+        {resume && <ResumedDraftNote updatedAt={resume.updatedAt} newRoute="/samples/new" />}
         <SampleForm
           employees={employees}
           clients={clients}
@@ -59,8 +64,8 @@ export default async function NewSamplePage({ searchParams }: PageProps) {
           stageLocationOptions={customLists.stage_location}
           reportOptions={customLists.sample_report}
           enableDrafts
-          resumeDraftId={draftPayload ? draftParam : undefined}
-          initialValues={draftPayload ? (draftPayload as Partial<SampleFormValues>) : undefined}
+          resumeDraftId={resume?.id}
+          initialValues={resume?.payload as Partial<SampleFormValues> | undefined}
         />
       </div>
     </EnquiryModuleShell>

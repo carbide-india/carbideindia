@@ -1,6 +1,7 @@
 import { KycForm, type KycFormValues } from "@/components/clients/kyc-form";
 import { requireUser, getCurrentEmployee } from "@/lib/auth/current";
-import { getFormDraft } from "@/lib/queries/form-drafts";
+import { resolveDraftToResume } from "@/lib/queries/form-drafts";
+import { ResumedDraftNote } from "@/components/drafts/resumed-draft-note";
 import { listMasterOptions } from "@/lib/queries/masters";
 import { listEmployeeOptions } from "@/lib/queries/employees";
 import { listCustomOptionsMap } from "@/lib/queries/custom-lists";
@@ -22,13 +23,16 @@ export const dynamic = "force-dynamic";
 export default async function NewClientKycPage({
   searchParams,
 }: {
-  searchParams: Promise<{ draft?: string }>;
+  searchParams: Promise<{ draft?: string; fresh?: string }>;
 }) {
   await requireUser();
   const me = await getCurrentEmployee();
   const sp = await searchParams;
-  const draftParam = typeof sp.draft === "string" ? sp.draft : undefined;
-  const draftPayload = draftParam ? await getFormDraft("kyc", draftParam) : null;
+  const resume = await resolveDraftToResume(
+    "kyc",
+    typeof sp.draft === "string" ? sp.draft : undefined,
+    sp.fresh === "1",
+  );
   const [customerTypes, industryTypes, productTypes, departments, employees, kycLists] =
     await Promise.all([
       listMasterOptions("customer_type"),
@@ -61,6 +65,7 @@ export default async function NewClientKycPage({
       bulkUpload={bulkUpload}
     >
       <div className="w-full">
+        {resume && <ResumedDraftNote updatedAt={resume.updatedAt} newRoute="/clients/new" />}
         <KycForm
           customerTypes={customerTypes}
           industryTypes={industryTypes}
@@ -81,8 +86,8 @@ export default async function NewClientKycPage({
           countryOptions={kycLists["country"]}
           currencyOptions={kycLists["currency"]}
           enableDrafts
-          resumeDraftId={draftPayload ? draftParam : undefined}
-          initialValues={draftPayload ? (draftPayload as Partial<KycFormValues>) : undefined}
+          resumeDraftId={resume?.id}
+          initialValues={resume?.payload as Partial<KycFormValues> | undefined}
         />
       </div>
     </EnquiryModuleShell>

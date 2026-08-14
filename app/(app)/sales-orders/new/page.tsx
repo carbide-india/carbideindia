@@ -1,6 +1,7 @@
 import { SoForm } from "@/components/sales-orders/so-form";
 import type { SoFormValues } from "@/components/sales-orders/so-form";
-import { getFormDraft } from "@/lib/queries/form-drafts";
+import { resolveDraftToResume } from "@/lib/queries/form-drafts";
+import { ResumedDraftNote } from "@/components/drafts/resumed-draft-note";
 import { requireUser, getCurrentEmployee } from "@/lib/auth/current";
 import { listInquiryOptions } from "@/lib/queries/inquiries";
 import { listQuotationOptions } from "@/lib/queries/quotes";
@@ -16,13 +17,12 @@ import { BulkImportModal } from "@/components/import/bulk-import-modal";
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  searchParams: Promise<{ draft?: string }>;
+  searchParams: Promise<{ draft?: string; fresh?: string }>;
 }
 
 export default async function NewSalesOrderPage({ searchParams }: PageProps) {
   await requireUser();
   const sp = await searchParams;
-  const draftParam = typeof sp.draft === "string" ? sp.draft : undefined;
   // Phase 8 - when the Negotiation flag is ON, order_won auto-provisions the SO
   // via advanceStage; disable this standalone form to avoid a double-provision.
   // Flag OFF (default) ⇒ no-op, form renders as today.
@@ -38,7 +38,11 @@ export default async function NewSalesOrderPage({ searchParams }: PageProps) {
     ? await loadLookups(specRefKinds(salesOrderImportSpec.fields))
     : null;
 
-  const draftPayload = draftParam ? await getFormDraft("sales-order", draftParam) : null;
+  const resume = await resolveDraftToResume(
+    "sales-order",
+    typeof sp.draft === "string" ? sp.draft : undefined,
+    sp.fresh === "1",
+  );
 
   // Admins get a Bulk Upload entry in the sidebar (opens the sales-order import modal).
   const bulkUpload =
@@ -59,13 +63,16 @@ export default async function NewSalesOrderPage({ searchParams }: PageProps) {
       bulkUpload={bulkUpload}
     >
       <div className="w-full">
+        {resume && (
+          <ResumedDraftNote updatedAt={resume.updatedAt} newRoute="/sales-orders/new" />
+        )}
         <SoForm
           inquiries={inquiries}
           quotations={quotations}
           employees={employees}
           enableDrafts
-          resumeDraftId={draftPayload ? draftParam : undefined}
-          initialValues={draftPayload ? (draftPayload as Partial<SoFormValues>) : undefined}
+          resumeDraftId={resume?.id}
+          initialValues={resume?.payload as Partial<SoFormValues> | undefined}
         />
       </div>
     </EnquiryModuleShell>

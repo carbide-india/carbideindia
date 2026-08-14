@@ -1,7 +1,8 @@
 import { NegotiationForm } from "@/components/negotiations/negotiation-form";
 import type { NegotiationFormValues } from "@/components/negotiations/negotiation-form";
 import { requireUser, getCurrentEmployee } from "@/lib/auth/current";
-import { getFormDraft } from "@/lib/queries/form-drafts";
+import { resolveDraftToResume } from "@/lib/queries/form-drafts";
+import { ResumedDraftNote } from "@/components/drafts/resumed-draft-note";
 import { listInquiryOptions } from "@/lib/queries/inquiries";
 import { listQuotationOptions } from "@/lib/queries/quotes";
 import { listEmployeeOptions } from "@/lib/queries/employees";
@@ -16,14 +17,17 @@ import { BulkImportModal } from "@/components/import/bulk-import-modal";
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  searchParams: Promise<{ draft?: string }>;
+  searchParams: Promise<{ draft?: string; fresh?: string }>;
 }
 
 export default async function NewNegotiationPage({ searchParams }: PageProps) {
   await requireUser();
   const sp = await searchParams;
-  const draftParam = typeof sp.draft === "string" ? sp.draft : undefined;
-  const draftPayload = draftParam ? await getFormDraft("negotiation", draftParam) : null;
+  const resume = await resolveDraftToResume(
+    "negotiation",
+    typeof sp.draft === "string" ? sp.draft : undefined,
+    sp.fresh === "1",
+  );
   // Phase 8 - when the Quotation flag is ON, sending a quote auto-provisions the
   // negotiation via advanceStage; disable this standalone form to avoid a
   // double-provision. Flag OFF (default) ⇒ no-op, form renders as today.
@@ -58,13 +62,16 @@ export default async function NewNegotiationPage({ searchParams }: PageProps) {
       bulkUpload={bulkUpload}
     >
       <div className="w-full">
+        {resume && (
+          <ResumedDraftNote updatedAt={resume.updatedAt} newRoute="/negotiations/new" />
+        )}
         <NegotiationForm
           inquiries={inquiries}
           quotations={quotations}
           employees={employees}
           enableDrafts
-          resumeDraftId={draftPayload ? draftParam : undefined}
-          initialValues={draftPayload ? (draftPayload as Partial<NegotiationFormValues>) : undefined}
+          resumeDraftId={resume?.id}
+          initialValues={resume?.payload as Partial<NegotiationFormValues> | undefined}
         />
       </div>
     </EnquiryModuleShell>

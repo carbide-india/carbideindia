@@ -133,8 +133,16 @@ export function EnquiryLaunchpad({ isAdmin = false }: { isAdmin?: boolean }) {
       {/* ── Hero - a big logo card on the left, a gap, then a narrower purple
             banner. The whole group is centred on the page. ── */}
       <div className="mx-auto flex w-full max-w-[1120px] items-center gap-5 max-md:gap-3">
-        {/* Floating big logo (on the page background, to the left of the bar). */}
-        <div className="relative z-10 hidden shrink-0 rounded-2xl border border-[#e3e5ec] bg-white px-5 py-3 shadow-[0_16px_34px_-10px_rgba(15,23,42,0.4)] sm:block">
+        {/* Floating big logo (on the page background, to the left of the bar).
+            Clicking the brand IS the way back to the Hub — the separate "Hub"
+            button was removed from every module header on 2026-08-13, so the
+            name has to carry it. */}
+        <Link
+          href={"/hub" as Route}
+          aria-label="Back to the Hub"
+          title="Back to the Hub"
+          className="relative z-10 hidden shrink-0 rounded-2xl border border-[#e3e5ec] bg-white px-5 py-3 shadow-[0_16px_34px_-10px_rgba(15,23,42,0.4)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#3f3f94] hover:shadow-[0_20px_40px_-10px_rgba(63,63,148,0.45)] sm:block"
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/brand/logo.png"
@@ -142,7 +150,7 @@ export function EnquiryLaunchpad({ isAdmin = false }: { isAdmin?: boolean }) {
             className="h-[96px] w-auto max-md:h-[70px]"
             style={{ display: "block" }}
           />
-        </div>
+        </Link>
 
         {/* Purple banner - shrunk; begins to the right of the logo, separated by a gap. */}
         <div

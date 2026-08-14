@@ -8,7 +8,8 @@ import { commitQuotationImport } from "@/app/(app)/quotations/import/actions";
 import { BulkImportModal } from "@/components/import/bulk-import-modal";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
 import { UserMenuServer } from "@/components/header/user-menu-server";
-import { getFormDraft } from "@/lib/queries/form-drafts";
+import { resolveDraftToResume } from "@/lib/queries/form-drafts";
+import { ResumedDraftNote } from "@/components/drafts/resumed-draft-note";
 import type { QuotationFormValues } from "@/components/quotations/quotation-form";
 
 export const dynamic = "force-dynamic";
@@ -16,12 +17,18 @@ export const dynamic = "force-dynamic";
 export default async function NewQuotationPage({
   searchParams,
 }: {
-  searchParams: Promise<{ draft?: string }>;
+  searchParams: Promise<{ draft?: string; fresh?: string }>;
 }) {
   await requireUser();
   const sp = await searchParams;
-  const draftParam = typeof sp.draft === "string" ? sp.draft : undefined;
-  const draftPayload = draftParam ? await getFormDraft("quotation", draftParam) : null;
+  // Resume the last unfinished draft automatically, and carry on with the SAME
+  // draft id rather than minting a new one — that is what stops the store
+  // growing a row per abandoned visit.
+  const resume = await resolveDraftToResume(
+    "quotation",
+    typeof sp.draft === "string" ? sp.draft : undefined,
+    sp.fresh === "1",
+  );
   const me = await getCurrentEmployee();
   const [inquiries, employees] = await Promise.all([
     listInquiryOptions(),
@@ -50,14 +57,15 @@ export default async function NewQuotationPage({
       }
     >
       <div className="w-full">
+        {resume && (
+          <ResumedDraftNote updatedAt={resume.updatedAt} newRoute="/quotations/new" />
+        )}
         <QuotationForm
           inquiries={inquiries}
           employees={employees}
           enableDrafts
-          resumeDraftId={draftPayload ? draftParam : undefined}
-          initialValues={
-            draftPayload ? (draftPayload as Partial<QuotationFormValues>) : undefined
-          }
+          resumeDraftId={resume?.id}
+          initialValues={resume?.payload as Partial<QuotationFormValues> | undefined}
         />
       </div>
     </EnquiryModuleShell>

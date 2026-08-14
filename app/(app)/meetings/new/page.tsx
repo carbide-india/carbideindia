@@ -10,20 +10,24 @@ import { loadLookups, specRefKinds } from "@/lib/import/lookups";
 import { meetingImportSpec } from "@/lib/import/specs/meeting";
 import { commitMeetingImport } from "@/app/(app)/meetings/import/actions";
 import { BulkImportModal } from "@/components/import/bulk-import-modal";
-import { getFormDraft } from "@/lib/queries/form-drafts";
+import { resolveDraftToResume } from "@/lib/queries/form-drafts";
+import { ResumedDraftNote } from "@/components/drafts/resumed-draft-note";
 
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  searchParams: Promise<{ draft?: string }>;
+  searchParams: Promise<{ draft?: string; fresh?: string }>;
 }
 
 export default async function NewMeetingPage({ searchParams }: PageProps) {
   const me = await requireUser();
   const currentEmployee = await getCurrentEmployee();
   const sp = await searchParams;
-  const draftParam = typeof sp.draft === "string" ? sp.draft : undefined;
-  const draftPayload = draftParam ? await getFormDraft("meeting", draftParam) : null;
+  const resume = await resolveDraftToResume(
+    "meeting",
+    typeof sp.draft === "string" ? sp.draft : undefined,
+    sp.fresh === "1",
+  );
   const [employees, clients, customerTypes] = await Promise.all([
     listEmployeeOptions(),
     listClientOptions(),
@@ -53,6 +57,7 @@ export default async function NewMeetingPage({ searchParams }: PageProps) {
       bulkUpload={bulkUpload}
     >
       <div className="w-full">
+        {resume && <ResumedDraftNote updatedAt={resume.updatedAt} newRoute="/meetings/new" />}
         <MeetingForm
           defaultSalesPersonId={me.id}
           defaultSalesName={me.name}
@@ -61,8 +66,8 @@ export default async function NewMeetingPage({ searchParams }: PageProps) {
           clients={clients}
           customerTypes={customerTypes}
           enableDrafts
-          resumeDraftId={draftPayload ? draftParam : undefined}
-          initialValues={draftPayload ? (draftPayload as Partial<MeetingFormValues>) : undefined}
+          resumeDraftId={resume?.id}
+          initialValues={resume?.payload as Partial<MeetingFormValues> | undefined}
         />
       </div>
     </EnquiryModuleShell>
