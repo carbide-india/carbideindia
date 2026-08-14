@@ -22,7 +22,7 @@ import {
 import type { ReactNode } from "react";
 import { HubSearch } from "@/components/hub/hub-search";
 import { HistoryNav } from "@/components/layout/history-nav";
-import { ModuleTitleBadge } from "@/components/layout/module-title-badge";
+import { ModuleBrand } from "@/components/layout/module-brand";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { draftKindForSegment, FORM_DRAFT_META } from "@/lib/drafts/form-drafts";
 import { customEditorForSegment } from "@/lib/custom-lists/registry";
@@ -320,28 +320,24 @@ export function EnquiryModuleShell({
               Back-to-Forms, driving real history navigation with depth-aware
               enable/disable. */}
           <HistoryNav />
-          {showSidebar && (
-            <Link
-              href={"/enquiries" as Route}
-              className="group flex h-9 shrink-0 items-center gap-2 rounded-lg bg-[#3f3f94] px-3.5 text-[13.5px] font-bold text-white shadow-[0_4px_12px_rgba(63,63,148,0.38)] ring-1 ring-white/10 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(63,63,148,0.52)] hover:brightness-110 active:translate-y-0 active:scale-95"
-              aria-label="Back to all forms"
-            >
-              <ArrowLeft className="h-[17px] w-[17px] transition-transform duration-200 group-hover:-translate-x-0.5" />
-              Back to Forms
-            </Link>
-          )}
+          <ModuleBrand collapsed={collapsed} />
         </div>
 
-        {/* Middle zone - centered search. */}
+        {/* Middle zone - the search takes the whole row between brand and icons. */}
         <HubSearch />
-
-        {/* Module title - centered in the gap between the search and the icons. */}
-        <div className="flex flex-1 items-center justify-center">
-          <ModuleTitleBadge title={pageTitle} align="start" />
-        </div>
 
         {/* Right zone - actions. */}
         <div className="flex shrink-0 items-center justify-end gap-2.5">
+          {showSidebar && (
+            <Link
+              href={"/enquiries" as Route}
+              className="group flex h-9 shrink-0 items-center gap-1.5 rounded-lg border-[1.5px] border-[#c7cae6] bg-white px-3 text-[13px] font-bold text-[#3f3f94] transition-colors hover:border-[#3f3f94] hover:bg-[#f3f3fb] max-md:hidden"
+              aria-label="Back to all forms"
+            >
+              <ArrowLeft className="h-[15px] w-[15px] transition-transform duration-200 group-hover:-translate-x-0.5" strokeWidth={2.6} />
+              Back to Forms
+            </Link>
+          )}
           <NotificationBell />
           <span
             title="Help - coming soon"

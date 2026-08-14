@@ -17,11 +17,14 @@ export function HubSearch() {
   }
 
   return (
-    <div className="flex flex-1 justify-center">
+    // No max-width: the search takes the whole top row between the brand and
+    // the icons. The 580px cap left a large dead gap once the module-title pill
+    // was removed from the middle of the header.
+    <div className="flex min-w-0 flex-1">
       <button
         type="button"
         onClick={openPalette}
-        className="group flex h-[50px] w-full max-w-[580px] items-center gap-3 rounded-xl border-[1.5px] border-[#c9c9ea] bg-[#f7f7fd] px-4 text-left shadow-[inset_0_1px_3px_rgba(63,63,148,0.07)] transition-all duration-200 hover:border-[#3f3f94] hover:bg-white hover:shadow-[0_2px_12px_rgba(63,63,148,0.15)] focus-visible:border-[#3f3f94] focus-visible:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3f3f94]/25"
+        className="group flex h-[42px] w-full items-center gap-3 rounded-xl border-[1.5px] border-[#c9c9ea] bg-[#f7f7fd] px-4 text-left shadow-[inset_0_1px_3px_rgba(63,63,148,0.07)] transition-all duration-200 hover:border-[#3f3f94] hover:bg-white hover:shadow-[0_2px_12px_rgba(63,63,148,0.15)] focus-visible:border-[#3f3f94] focus-visible:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3f3f94]/25"
         aria-label="Open search"
       >
         <Search className="h-[20px] w-[20px] shrink-0 text-[#9aa0ab] transition-colors group-hover:text-[#3f3f94]" />

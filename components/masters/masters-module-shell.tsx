@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { HubSearch } from "@/components/hub/hub-search";
-import { ModuleTitleBadge } from "@/components/layout/module-title-badge";
+import { ModuleBrand } from "@/components/layout/module-brand";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { MASTER_KINDS, MASTER_KIND_LABELS, type MasterKind } from "@/db/enums";
 import { cn } from "@/lib/utils";
@@ -86,9 +86,8 @@ export function MastersModuleShell({
 
       {/* ── Top header bar (full width) ─────────────────────────── */}
       <header className="sticky top-0 z-40 flex h-[60px] shrink-0 items-center gap-4 border-b border-[#e5e7eb] bg-white px-4">
-        {/* Left zone - toggle + Hub. The module title now sits to the RIGHT of
-            the search box (after HubSearch, before the icons). */}
-        <div className="flex min-w-0 flex-1 items-center gap-3">
+        {/* Left zone - toggle + the brand, sitting directly above the sidebar. */}
+        <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}
@@ -105,15 +104,11 @@ export function MastersModuleShell({
               )}
             </span>
           </button>
+          <ModuleBrand collapsed={collapsed} />
         </div>
 
-        {/* Middle zone - centered search. */}
+        {/* Middle zone - the search takes the whole row between brand and icons. */}
         <HubSearch />
-
-        {/* Module title - centered in the gap between the search and the icons. */}
-        <div className="flex flex-1 items-center justify-center">
-          <ModuleTitleBadge title={pageTitle} align="start" />
-        </div>
 
         {/* Right zone - actions. */}
         <div className="flex shrink-0 items-center justify-end gap-2.5">

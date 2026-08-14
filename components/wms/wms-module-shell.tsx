@@ -17,7 +17,7 @@ import {
 import { GlobalSearch } from "@/components/header/global-search";
 import { NavHistoryButtons } from "@/components/layout/nav-history-buttons";
 import { AdminPill } from "@/components/header/admin-pill";
-import { ModuleTitleBadge } from "@/components/layout/module-title-badge";
+import { ModuleBrand } from "@/components/layout/module-brand";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { cn } from "@/lib/utils";
 
@@ -74,7 +74,8 @@ export function WmsModuleShell({
     <div className="flex min-h-screen flex-col bg-[#f4f5f7]">
       {/* Top header */}
       <header className="sticky top-0 z-40 flex h-[60px] shrink-0 items-center gap-4 border-b border-[#e5e7eb] bg-white px-4">
-        <div className="flex min-w-0 flex-1 items-center gap-3">
+        {/* Left — toggle + the brand, sitting directly above the sidebar. */}
+        <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}
@@ -86,17 +87,13 @@ export function WmsModuleShell({
               {collapsed ? <PanelLeftOpen className="h-[20px] w-[20px]" /> : <PanelLeftClose className="h-[20px] w-[20px]" />}
             </span>
           </button>
+          <ModuleBrand collapsed={collapsed} />
           <span className="max-md:hidden">
             <NavHistoryButtons />
           </span>
         </div>
 
         <GlobalSearch />
-
-        {/* Module title - centered in the gap between the search and the icons. */}
-        <div className="flex flex-1 items-center justify-center">
-          <ModuleTitleBadge title="WMS" align="start" />
-        </div>
 
         <div className="flex shrink-0 items-center justify-end gap-2.5">
           <NotificationBell />

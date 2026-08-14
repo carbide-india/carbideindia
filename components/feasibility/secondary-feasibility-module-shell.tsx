@@ -16,7 +16,7 @@ import {
   PanelLeftOpen,
 } from "lucide-react";
 import { HubSearch } from "@/components/hub/hub-search";
-import { ModuleTitleBadge } from "@/components/layout/module-title-badge";
+import { ModuleBrand } from "@/components/layout/module-brand";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import {
   SECONDARY_FEASIBILITY_STAGE_BUCKETS,
@@ -91,7 +91,7 @@ export function SecondaryFeasibilityModuleShell({
     <div className="flex min-h-screen flex-col bg-[#f4f5f7]">
       {/* Top header */}
       <header className="sticky top-0 z-40 flex h-[60px] shrink-0 items-center gap-4 border-b border-[#e5e7eb] bg-white px-4">
-        <div className="flex min-w-0 flex-1 items-center gap-3">
+        <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}
@@ -103,24 +103,20 @@ export function SecondaryFeasibilityModuleShell({
               {collapsed ? <PanelLeftOpen className="h-[20px] w-[20px]" /> : <PanelLeftClose className="h-[20px] w-[20px]" />}
             </span>
           </button>
-          <Link
-            href={"/enquiries" as Route}
-            className="group flex h-9 shrink-0 items-center gap-2 rounded-lg bg-[#3f3f94] px-3.5 text-[13.5px] font-bold text-white shadow-[0_4px_12px_rgba(63,63,148,0.38)] ring-1 ring-white/10 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(63,63,148,0.52)] hover:brightness-110 active:translate-y-0 active:scale-95"
-            aria-label="Back to all forms"
-          >
-            <ArrowLeft className="h-[16px] w-[16px] transition-transform duration-200 group-hover:-translate-x-0.5" strokeWidth={2.6} />
-            Back to Forms
-          </Link>
+          <ModuleBrand collapsed={collapsed} />
         </div>
 
         <HubSearch />
 
-        {/* Module title - centered in the gap between the search and the icons. */}
-        <div className="flex flex-1 items-center justify-center">
-          <ModuleTitleBadge title="Secondary Feasibility" align="start" />
-        </div>
-
         <div className="flex shrink-0 items-center justify-end gap-2.5">
+          <Link
+            href={"/enquiries" as Route}
+            className="group flex h-9 shrink-0 items-center gap-1.5 rounded-lg border-[1.5px] border-[#c7cae6] bg-white px-3 text-[13px] font-bold text-[#3f3f94] transition-colors hover:border-[#3f3f94] hover:bg-[#f3f3fb] max-md:hidden"
+            aria-label="Back to all forms"
+          >
+            <ArrowLeft className="h-[15px] w-[15px] transition-transform duration-200 group-hover:-translate-x-0.5" strokeWidth={2.6} />
+            Back to Forms
+          </Link>
           <NotificationBell />
           <span title="Help - coming soon" className="grid h-9 w-9 cursor-default place-items-center rounded-full text-[#9aa0ab]">
             <HelpCircle className="h-[18px] w-[18px]" />
