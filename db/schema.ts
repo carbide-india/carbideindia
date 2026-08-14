@@ -1284,6 +1284,15 @@ export const costings = pgTable(
     isLatestRevision: boolean("is_latest_revision").notNull().default(true),
     revisionReason: text("revision_reason"),
     revisedFromNegotiationId: uuid("revised_from_negotiation_id").references((): AnyPgColumn => negotiations.id, { onDelete: "set null" }),
+    /**
+     * The QUOTATION that sent this costing back, when Quotation pressed
+     * "Revise Costing" (2026-08-13). The mirror of
+     * `revisedFromNegotiationId` — recorded separately rather than folded into
+     * one "revised from" column because the two say different things about
+     * WHY the price moved, and the costing register shows a different chip for
+     * each ("sent back by Quotation" vs "customer negotiated").
+     */
+    revisedFromQuotationId: uuid("revised_from_quotation_id").references((): AnyPgColumn => quotations.id, { onDelete: "set null" }),
     createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -1439,6 +1448,20 @@ export const quotations = pgTable("quotations", {
    * a flag with no evidence behind it is worse than no flag.
    */
   quoteSent: boolean("quote_sent").notNull().default(false),
+  /**
+   * Quotation revisions (2026-08-13), the same shape costings already use: a
+   * revise never edits the sent quote, it FREEZES it and opens a fresh row at
+   * revision+1 pointing back at the one it replaces. What you quoted the
+   * customer has to stay readable after you re-quote them, and `quote_sent_to`
+   * on the superseded row is the record of who saw that price.
+   */
+  revisionNo: integer("revision_no").notNull().default(1),
+  supersedesQuotationId: uuid("supersedes_quotation_id").references(
+    (): AnyPgColumn => quotations.id,
+    { onDelete: "set null" },
+  ),
+  isLatestRevision: boolean("is_latest_revision").notNull().default(true),
+  revisionReason: text("revision_reason"),
   quoteSentAt: timestamp("quote_sent_at", { withTimezone: true }),
   quoteSentById: uuid("quote_sent_by_id").references(() => employees.id, {
     onDelete: "set null",

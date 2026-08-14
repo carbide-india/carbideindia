@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ArrowUpRight, Calculator, CircleDot, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, Calculator, CircleDot, Trash2, Undo2 } from "lucide-react";
 import {
   COSTING_ROUTE_LABELS,
   COSTING_DONE_STATUS_LABELS,
@@ -581,6 +581,16 @@ function CostingLinePanel({ row }: { row: CostingRegisterRow }) {
                 {c.isLatestRevision && g.sheets.length > 1 && (
                   <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-ink-subtle">
                     latest
+                  </span>
+                )}
+                {/* Who sent it back. A revision that exists because Quotation
+                    rejected the price reads differently from one somebody
+                    opened themselves, and that is the first thing a coster
+                    needs to know before touching it. */}
+                {c.revisedFromQuotationId && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#fdf6e7] px-2 py-0.5 text-[10.5px] font-black uppercase tracking-wide text-[#8a5a08]">
+                    <Undo2 size={10} strokeWidth={3} />
+                    Sent back by Quotation
                   </span>
                 )}
                 {c.revisionReason && (

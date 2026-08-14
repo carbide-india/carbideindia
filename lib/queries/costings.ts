@@ -231,6 +231,9 @@ export interface CostingRegisterCosting {
   isLatestRevision: boolean;
   revisionNo: number;
   revisionReason: string | null;
+  /** Set when Quotation pressed "Revise Costing" — this revision exists because
+   *  the quote stage sent it back, which the register shows as its own chip. */
+  revisedFromQuotationId: string | null;
   finalCostPerPiece: string | null;
   quoteValue: string | null;
   targetDate: Date | null;
@@ -324,6 +327,7 @@ export async function listCostingRegister(
       isLatestRevision: costings.isLatestRevision,
       revisionNo: costings.revisionNo,
       revisionReason: costings.revisionReason,
+      revisedFromQuotationId: costings.revisedFromQuotationId,
       finalCostPerPiece: costings.finalCostPerPiece,
       quoteValue: costings.quoteValue,
       targetDate: costings.targetDate,
@@ -345,6 +349,7 @@ export async function listCostingRegister(
       isLatestRevision: c.isLatestRevision,
       revisionNo: c.revisionNo,
       revisionReason: c.revisionReason,
+      revisedFromQuotationId: c.revisedFromQuotationId,
       finalCostPerPiece: c.finalCostPerPiece,
       quoteValue: c.quoteValue,
       targetDate: c.targetDate,

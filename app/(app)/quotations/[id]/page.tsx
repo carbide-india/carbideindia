@@ -15,6 +15,7 @@ import {
 import { SyncProductsBanner } from "@/components/pipeline/sync-products-banner";
 import { syncProductsFromEnquiry } from "@/app/(app)/quotations/actions";
 import { SendQuoteButton } from "@/components/quotations/send-quote-button";
+import { ReviseButton } from "@/components/quotations/revise-buttons";
 import { resolveRecipients } from "@/lib/email/quotation-recipients";
 import { formatDateTime } from "@/lib/format";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
@@ -91,6 +92,18 @@ export default async function QuotationDetailPage({ params }: PageProps) {
     <EnquiryModuleShell title="Quotation" userMenu={<UserMenuServer />}>
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
         <div className="flex flex-wrap items-center justify-end gap-2">
+          <ReviseButton
+            kind="costing"
+            quotationId={quotation.id}
+            disabled={!quotation.isLatestRevision}
+            disabledHint="This is a superseded revision — open the latest one."
+          />
+          <ReviseButton
+            kind="quotation"
+            quotationId={quotation.id}
+            disabled={!quotation.isLatestRevision}
+            disabledHint="This is a superseded revision — open the latest one."
+          />
           <SendQuoteButton
             quotationId={quotation.id}
             quoteNo={quotation.quoteNo}

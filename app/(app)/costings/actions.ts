@@ -1623,6 +1623,8 @@ const ReviseCostingSchema = z.object({
     .max(2000, "Reason is too long."),
   /** Back-link when the revision was triggered by a negotiation. */
   negotiationId: z.string().uuid().nullable().optional(),
+  /** Back-link when Quotation pressed "Revise Costing" and sent it back. */
+  quotationId: z.string().uuid().nullable().optional(),
 });
 
 export type ReviseCostingInput = z.infer<typeof ReviseCostingSchema>;
@@ -1731,6 +1733,7 @@ export async function reviseCosting(
         isLatestRevision: true,
         revisionReason: v.reason,
         revisedFromNegotiationId: v.negotiationId ?? null,
+        revisedFromQuotationId: v.quotationId ?? null,
         // The copy is unapproved work in progress.
         costingDoneStatus: "draft",
         isLocked: false,
