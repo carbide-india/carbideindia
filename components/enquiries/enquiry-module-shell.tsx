@@ -8,7 +8,6 @@ import {
   HelpCircle,
   FileText,
   FilePlus2,
-  Files,
   LifeBuoy,
   ArrowLeft,
   LayoutDashboard,
@@ -92,10 +91,9 @@ function registerFor(pathname: string): { label: string; href: string } {
 // Client Master family, otherwise the Enquiry family.
 function navFor(pathname: string): NavDef[] {
   const newForm = newFormRoute(pathname);
-  // Each form family has its OWN drafts page (kyc/sample/…); enquiry keeps its
-  // dedicated /enquiries/drafts. /contacts maps to the clients family.
+  // Which form family this route belongs to; drives the create label and the
+  // per-form Recycle Bin. /contacts maps to the clients family.
   const draftKind = draftKindForSegment(familySeg(pathname));
-  const draftsRoute = draftKind ? FORM_DRAFT_META[draftKind].draftsRoute : "/enquiries/drafts";
   // Per-form Recycle Bin - only the generic-draft forms have one (enquiry uses
   // its own draft store without recycling).
   const recycleBinRoute = draftKind ? FORM_DRAFT_META[draftKind].recycleBinRoute : null;
@@ -119,28 +117,18 @@ function navFor(pathname: string): NavDef[] {
       active: (p) => p.startsWith(newForm),
       group: "create",
     },
-    // Unfinished Forms — only for families that actually keep a draft store
-    // (any draftKind form, or the Enquiry family with its own store). The
-    // Vendors family has no auto-save draft, so it shows no entry.
+    // "Unfinished Forms" USED TO SIT HERE and was removed on 2026-08-13.
     //
-    // NOT called "Drafts": every stage also has a DRAFT status bucket, and the
-    // two are unrelated — this holds forms somebody started typing and never
-    // saved, the bucket holds real saved records. One word for two things was
-    // the single biggest source of confusion in the module.
-    ...(draftKind ||
-    familySeg(pathname) === "enquiries" ||
-    familySeg(pathname) === "inquiries"
-      ? ([
-          {
-            label: "Unfinished Forms",
-            href: draftsRoute as Route,
-            Icon: Files,
-            ready: true,
-            active: (p: string) => p.startsWith(draftsRoute),
-            group: "create" as const,
-          },
-        ] as NavDef[])
-      : []),
+    // It was not a second view of the Draft bucket, it was a pile of autosave
+    // residue: every visit to a new-form page mints a fresh draft id and starts
+    // saving, so opening the form and typing one character leaves a row. The
+    // numbers said it plainly — 57 unfinished quotation forms against 2 real
+    // quotations, 25 unfinished negotiations against 0 negotiations. Nobody was
+    // resuming them; the list was only ever growing.
+    //
+    // The DRAFT bucket is the real one: a saved record somebody deliberately
+    // parked. Autosave still runs (see components/drafts/use-form-draft.ts) and
+    // the /…/drafts routes still resolve — only the sidebar entry is gone.
     (() => {
       const reg = registerFor(pathname);
       return {
