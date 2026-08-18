@@ -29,6 +29,7 @@ import { draftKindForSegment, FORM_DRAFT_META } from "@/lib/drafts/form-drafts";
 import { customEditorForSegment } from "@/lib/custom-lists/registry";
 import { cn } from "@/lib/utils";
 import { ModuleStepButtons } from "@/components/layout/next-module-button";
+import { ModuleTitleSlot } from "@/components/shell/module-title";
 
 interface NavDef {
   /** Stable handle — `"register"` is where `registerChildren` is nested. */
@@ -83,6 +84,21 @@ const REGISTERS: Record<string, { label: string; href: string }> = {
   meetings: { label: "Meeting Register", href: "/meetings" },
   vendors: { label: "Vendor Register", href: "/vendors" },
 };
+/**
+ * The stage board per form family. Every pipeline module has one; the masters
+ * (clients, samples, vendors) do not — a board of records that never change
+ * status would just be a slower register.
+ */
+const BOARD_NAV: Record<string, { label: string; href: string }> = {
+  enquiries: { label: "Enquiry Board", href: "/enquiries/board" },
+  feasibility: { label: "Feasibility Board", href: "/feasibility/board" },
+  "secondary-feasibility": { label: "Secondary Board", href: "/secondary-feasibility/board" },
+  costings: { label: "Costing Board", href: "/costings/board" },
+  quotations: { label: "Quotation Board", href: "/quotations/board" },
+  negotiations: { label: "Negotiation Board", href: "/negotiations/board" },
+  "sales-orders": { label: "Sales Order Board", href: "/sales-orders/board" },
+};
+
 function registerFor(pathname: string): { label: string; href: string } {
   return REGISTERS[familySeg(pathname)] ?? { label: "Enquiry Register", href: "/enquiries/register" };
 }
@@ -109,14 +125,25 @@ function navFor(pathname: string): NavDef[] {
   const custom = customEditorForSegment(familySeg(pathname));
   const items: NavDef[] = [
     { label: "Dashboard", href: "/hub" as Route, Icon: LayoutDashboard, ready: false, group: "overview" },
-    {
-      label: createLabel,
-      href: newForm as Route,
-      Icon: FilePlus2,
-      ready: true,
-      active: (p) => p.startsWith(newForm),
-      group: "create",
-    },
+    // Costing has NO "create" entry, and deliberately so. You do not invent a
+    // costing out of nothing — you pick a product line that hasn't been costed,
+    // which is exactly what the register's Not Started bucket already lists
+    // ("costable lines with no cost sheet yet"). "Cost a New Line" was a second
+    // door onto that same list: same rows, same action ("Start costing" sits on
+    // every register row), one extra hop. Every other form really is created
+    // from blank, so they keep theirs.
+    ...(familySeg(pathname) === "costings"
+      ? []
+      : ([
+          {
+            label: createLabel,
+            href: newForm as Route,
+            Icon: FilePlus2,
+            ready: true,
+            active: (p: string) => p.startsWith(newForm),
+            group: "create" as const,
+          },
+        ] as NavDef[])),
     // "Unfinished Forms" USED TO SIT HERE and was removed on 2026-08-13.
     //
     // It was not a second view of the Draft bucket, it was a pile of autosave
@@ -180,20 +207,30 @@ function navFor(pathname: string): NavDef[] {
           },
         ] as NavDef[])
       : []),
+    // The stage BOARD — every pipeline module has one now, not just
+    // Negotiation. It is a second view of the same register (same rows,
+    // arranged by status), so it sits beside it in `records`. The href comes
+    // from the shared registry so a board can never be linked at a path that
+    // doesn't exist.
+    ...((): NavDef[] => {
+      const seg = familySeg(pathname);
+      const board = BOARD_NAV[seg];
+      if (!board) return [];
+      return [
+        {
+          label: board.label,
+          href: board.href as Route,
+          Icon: KanbanSquare,
+          ready: true,
+          active: (p: string) => p.startsWith(board.href),
+          group: "records" as const,
+        },
+      ];
+    })(),
     // Customer PO Register - only in the Negotiation family. Lives under
     // /negotiations/po-register so the Negotiation sidebar stays on it (records).
     ...(familySeg(pathname) === "negotiations"
       ? ([
-          {
-            // The board is a second VIEW of the register, so it sits with it —
-            // same rows, arranged by where the conversation stands.
-            label: "Negotiation Board",
-            href: "/negotiations/board" as Route,
-            Icon: KanbanSquare,
-            ready: true,
-            active: (p: string) => p.startsWith("/negotiations/board"),
-            group: "records" as const,
-          },
           {
             label: "Customer PO Register",
             href: "/negotiations/po-register" as Route,
@@ -307,9 +344,16 @@ export function EnquiryModuleShell({
     <div className="flex min-h-screen flex-col bg-[#f4f5f7]">
       {/* ── Top header bar (full width) ─────────────────────────── */}
       <header className="sticky top-0 z-40 flex h-[60px] shrink-0 items-center gap-4 border-b border-[#e5e7eb] bg-white px-4">
-        {/* Left zone - toggle, Back-to-Forms, Hub. The module title now sits to
-            the RIGHT of the search box (after HubSearch, before the icons). */}
-        <div className="flex min-w-0 flex-1 items-center gap-3">
+        {/* Left zone - toggle, history, brand. Sized to the sidebar (minus the
+            header's own px-4) so the module title that follows starts exactly
+            where the white side panel ends. min-w, not w: if the brand ever
+            needs more room the title slides right rather than being clipped. */}
+        <div
+          className={cn(
+            "flex shrink-0 items-center gap-3",
+            showSidebar && (collapsed ? "min-w-[56px]" : "min-w-[232px]"),
+          )}
+        >
           {showSidebar && (
             <button
               type="button"
@@ -335,8 +379,16 @@ export function EnquiryModuleShell({
           <ModuleBrand collapsed={collapsed} />
         </div>
 
-        {/* Middle zone - the search takes the whole row between brand and icons. */}
-        <HubSearch />
+        {/* Module title — published by the page (a register names itself) with
+            the route-derived module name as the fallback. */}
+        <div className="flex min-w-0 shrink items-center">
+          <ModuleTitleSlot fallback={pageTitle} />
+        </div>
+
+        {/* Search - pushed to the right, just before the action icons. */}
+        <div className="ml-auto flex min-w-0 flex-1 justify-end pl-4">
+          <HubSearch />
+        </div>
 
         {/* Right zone - actions. */}
         <div className="flex shrink-0 items-center justify-end gap-2.5">
@@ -355,7 +407,7 @@ export function EnquiryModuleShell({
             title="Help - coming soon"
             className="grid h-9 w-9 cursor-default place-items-center rounded-full text-[#9aa0ab]"
           >
-            <HelpCircle className="h-[18px] w-[18px]" />
+            <HelpCircle className="h-[16px] w-[16px]" />
           </span>
           {userMenu}
         </div>
@@ -372,15 +424,15 @@ export function EnquiryModuleShell({
               collapsed ? "w-[72px]" : "w-[248px]",
             )}
           >
-            <div className={cn("flex h-full flex-col py-4", collapsed ? "w-[72px] items-center px-2" : "w-[248px] px-4")}>
+            <div className={cn("flex h-full flex-col py-3", collapsed ? "w-[72px] items-center px-2" : "w-[248px] px-4")}>
               {/* Big brand logo → hub, wordmark stacked beneath. Enlarged while
                   the surrounding spacing is tightened so the nav stays put. */}
               {/* Scrolls on its own so the footer below stays pinned in view.
                   Without this the nav pushed "Go to next module" past the
                   bottom of a 100vh aside with `overflow-hidden`, which clipped
                   it away entirely on the longer modules (KYC, Costing). */}
-              <div className="mt-4 flex min-h-0 w-full flex-1 flex-col overflow-y-auto">
-              <nav className="flex w-full flex-col gap-1.5">
+              <div className="mt-2.5 flex min-h-0 w-full flex-1 flex-col overflow-y-auto">
+              <nav className="flex w-full flex-col gap-1">
                 {nav.map((n, i) => {
                   const prev = nav[i - 1];
                   // A greyed divider separates each section (overview / create /
@@ -389,8 +441,8 @@ export function EnquiryModuleShell({
                     i > 0 && !!n.group && !!prev?.group && n.group !== prev.group;
                   const isActive = n.ready && (n.active ? n.active(pathname) : false);
                   const base = cn(
-                    "flex h-[44px] items-center rounded-lg text-[14px] transition",
-                    collapsed ? "justify-center px-0" : "gap-3 px-3.5",
+                    "flex h-[34px] items-center rounded-lg text-[12.5px] transition",
+                    collapsed ? "justify-center px-0" : "gap-2.5 px-3",
                   );
                   return (
                     <Fragment key={n.label}>
@@ -400,7 +452,7 @@ export function EnquiryModuleShell({
                           title={collapsed ? n.label : "Coming soon"}
                           className={`${base} cursor-default font-semibold text-[#b3b8c2]`}
                         >
-                          <n.Icon className="h-[19px] w-[19px]" />
+                          <n.Icon className="h-[16px] w-[16px]" />
                           {!collapsed && n.label}
                         </span>
                       ) : (
@@ -413,7 +465,7 @@ export function EnquiryModuleShell({
                               : `${base} font-semibold text-[#3a4152] hover:bg-[#efeffb] hover:text-[#3f3f94]`
                           }
                         >
-                          <n.Icon className="h-[19px] w-[19px]" />
+                          <n.Icon className="h-[16px] w-[16px]" />
                           {!collapsed && n.label}
                         </Link>
                       )}
@@ -439,20 +491,20 @@ export function EnquiryModuleShell({
                   distribution). Hidden while collapsed — there is no room for
                   labelled counts in a 72px rail. */}
               {sidebarExtra && !collapsed && (
-                <div className="mt-5 w-full">{sidebarExtra}</div>
+                <div className="mt-3 w-full">{sidebarExtra}</div>
               )}
               </div>
 
-              <div className="mt-3 flex w-full shrink-0 flex-col gap-1.5 border-t border-[#e5e7eb] pt-3">
+              <div className="mt-2 flex w-full shrink-0 flex-col gap-1 border-t border-[#e5e7eb] pt-2">
                 <ModuleStepButtons collapsed={collapsed} />
                 <span
                   title="Support - coming soon"
                   className={cn(
                     "flex h-[44px] cursor-default items-center rounded-lg text-[14px] font-semibold text-[#9aa0ab]",
-                    collapsed ? "justify-center px-0" : "gap-3 px-3.5",
+                    collapsed ? "justify-center px-0" : "gap-2.5 px-3",
                   )}
                 >
-                  <LifeBuoy className="h-[19px] w-[19px]" />
+                  <LifeBuoy className="h-[16px] w-[16px]" />
                   {!collapsed && "Support"}
                 </span>
               </div>

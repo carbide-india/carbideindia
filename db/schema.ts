@@ -1612,6 +1612,42 @@ export const negotiationRemarks = pgTable(
 export type NegotiationRemark = typeof negotiationRemarks.$inferSelect;
 export type NewNegotiationRemark = typeof negotiationRemarks.$inferInsert;
 
+/**
+ * Why a record moved on a stage board — one table for every stage.
+ *
+ * Every board drag demands a remark, so this is the trail of WHY work moved,
+ * not just where it ended up. Deliberately generic (`module` + `record_id`)
+ * rather than a per-stage table: the stages already keep their own status
+ * enums, and adding six near-identical remark tables would mean six migrations
+ * and six queries to answer one question.
+ *
+ * Statuses are stored as TEXT, not a pg enum, precisely because each module has
+ * a different one — the value is validated against that module's bucket list in
+ * the move action before it is written.
+ *
+ * Negotiation keeps `negotiation_remarks` (above): it carries the Lost Reason
+ * and already has a thread UI reading it. This table serves the other stages.
+ */
+export const stageRemarks = pgTable(
+  "stage_remarks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** Which stage board — "enquiry", "feasibility", "costing", … */
+    module: text("module").notNull(),
+    /** The row that moved. Not an FK: it points at a different table per module. */
+    recordId: uuid("record_id").notNull(),
+    /** Where it came from, so the thread reads "Draft → Pending Approval". */
+    fromStatus: text("from_status"),
+    toStatus: text("to_status").notNull(),
+    body: text("body").notNull(),
+    authorId: uuid("author_id").references(() => employees.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("stage_remarks_record_idx").on(t.module, t.recordId, t.createdAt)],
+);
+export type StageRemark = typeof stageRemarks.$inferSelect;
+export type NewStageRemark = typeof stageRemarks.$inferInsert;
+
 export const negotiationItems = pgTable(
   "negotiation_items",
   {
@@ -2085,6 +2121,16 @@ export const documents = pgTable(
     // or a job card, but never to a vendor. Mirrors the clientId shape (cascade);
     // vendors are deactivate-only so the cascade never actually fires.
     vendorId: uuid("vendor_id").references(() => vendors.id, { onDelete: "cascade" }),
+    // Sales-order attachments (2026-08) — above all the CUSTOMER PO. The sales
+    // order already recorded the PO's number, date and a `customer_po_link`,
+    // but a link means the document has to live somewhere else and be pasted
+    // in, so the PO that a whole order rests on was the one document the system
+    // never actually held. Filed here rather than as a public blob URL because
+    // a customer PO carries prices and terms: documents are private blobs
+    // fetched through presigned URLs.
+    salesOrderId: uuid("sales_order_id").references((): AnyPgColumn => salesOrders.id, {
+      onDelete: "cascade",
+    }),
     // Phase 7 (§11 / §13) — polymorphic FKs to the three downstream entities so
     // a document (PO route sheet, e-way bill, tax invoice PDF, delivery note) is
     // filed against the record it belongs to. Forward refs (tables defined below)
@@ -2107,6 +2153,7 @@ export const documents = pgTable(
     index("documents_client_idx").on(t.clientId),
     index("documents_item_idx").on(t.itemId),
     index("documents_vendor_idx").on(t.vendorId),
+    index("documents_sales_order_idx").on(t.salesOrderId),
     index("documents_job_card_idx").on(t.jobCardId),
     index("documents_production_order_idx").on(t.productionOrderId),
     index("documents_dispatch_idx").on(t.dispatchId),

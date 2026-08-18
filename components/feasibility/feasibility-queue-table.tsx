@@ -189,6 +189,9 @@ export function FeasibilityQueueTable({
 
   const filters = React.useMemo<FilterConfig<FeasibilityQueueItem>[]>(
     () => [
+      { id: "companyName", label: "Company", type: "select" },
+      { id: "export", label: "Export", type: "select" },
+      { id: "checkedByName", label: "Checked By", type: "select" },
       {
         id: "status",
         label: "Status",

@@ -10,6 +10,10 @@ import type {
   RecheckState,
 } from "@/db/enums";
 import type { SecondaryFeasibilityStatus } from "@/db/enums";
+import {
+  FEASIBILITY_STAGE_BUCKETS,
+  SECONDARY_FEASIBILITY_STAGE_BUCKETS,
+} from "@/db/enums";
 import { feasibilityBucketOf } from "@/lib/feasibility/stage-buckets";
 import {
   computeSpecVariance,
@@ -793,6 +797,9 @@ export async function getFeasibilityBucketCounts(): Promise<Record<string, numbe
     .groupBy(inquiries.feasibilityStatus);
 
   const out: Record<string, number> = {};
+  // Seed every bucket at zero so an empty one prints "0" rather than nothing —
+  // see the note in getSecondaryFeasibilityBucketCounts.
+  for (const b of FEASIBILITY_STAGE_BUCKETS) out[b] = 0;
   let total = 0;
   for (const r of rows) {
     // Legacy statuses fold onto the bucket that superseded them, exactly as the
@@ -813,6 +820,11 @@ export async function getFeasibilityBucketCounts(): Promise<Record<string, numbe
 export async function getSecondaryFeasibilityBucketCounts(): Promise<Record<string, number>> {
   const rows = await listSecondaryFeasibilityQueue();
   const out: Record<string, number> = { all: rows.length };
+  // Seed EVERY bucket at zero. The sidebar only prints a count it actually has
+  // (`counts?.[status] !== undefined`), so an untouched bucket used to render
+  // blank — which reads as "unknown / broken", not "empty", and is exactly what
+  // makes an empty bucket look like a bug when you open it.
+  for (const b of SECONDARY_FEASIBILITY_STAGE_BUCKETS) out[b] = 0;
   // `bucket`, not the raw column: legacy stamps fold in there, so the sidebar
   // counts exactly what the register groups by.
   for (const r of rows) out[r.bucket] = (out[r.bucket] ?? 0) + 1;

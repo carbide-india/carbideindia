@@ -531,10 +531,18 @@ export async function setFeasibilityStatusBulk(
   const refusal = approvalRefusal({ status }, me);
   if (refusal) return { ok: false, error: refusal };
   try {
-    await db
+    const updated = await db
       .update(inquiries)
       .set({ feasibilityStatus: status as FeasibilityStatus, updatedAt: new Date() })
-      .where(inArray(inquiries.id, ids));
+      .where(inArray(inquiries.id, ids))
+      .returning({ id: inquiries.id });
+
+    if (updated.length === 0) {
+      return {
+        ok: false,
+        error: "Those enquiries no longer exist - refresh the register and try again.",
+      };
+    }
   } catch {
     return { ok: false, error: "Could not update the selected enquiries." };
   }

@@ -189,15 +189,21 @@ export function EnquiryLaunchpad({ isAdmin = false }: { isAdmin?: boolean }) {
         </div>
       </div>
 
-      {/* ── Card grid - compact, centred, prominently outlined so all 8 fit. ── */}
-      <div className="mx-auto mt-5 grid max-w-[1120px] grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {/* ── Card grid — five across, so the eleven modules read as 5 · 5 · 1.
+            The one-line description each card used to carry is gone: with the
+            module named and numbered in pipeline order, the sentence underneath
+            was read once and then skipped forever, while costing three lines of
+            height per card. It survives as the card's hover title, so nothing
+            is actually lost. ── */}
+      <div className="mx-auto mt-5 grid max-w-[1120px] grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
         {forms.map((f, i) => {
           const n = String(i + 1).padStart(2, "0");
           return (
             <Link
               key={f.key}
               href={f.href}
-              className="group relative flex flex-col items-center overflow-hidden rounded-2xl border border-[#e3e5ec] bg-white p-4 text-center transition-all duration-200 hover:-translate-y-1 hover:border-[#3f3f94] hover:shadow-[0_18px_36px_-16px_rgba(63,63,148,0.4)]"
+              title={f.desc}
+              className="group relative flex flex-col items-center overflow-hidden rounded-2xl border border-[#e3e5ec] bg-white p-3 text-center transition-all duration-200 hover:-translate-y-1 hover:border-[#3f3f94] hover:shadow-[0_18px_36px_-16px_rgba(63,63,148,0.4)]"
             >
               {/* Stage number - corner badge. */}
               <span
@@ -208,26 +214,24 @@ export function EnquiryLaunchpad({ isAdmin = false }: { isAdmin?: boolean }) {
               </span>
 
               <div
-                className="grid size-12 place-items-center rounded-xl text-white transition-transform duration-200 group-hover:scale-105"
+                className="grid size-11 place-items-center rounded-xl text-white transition-transform duration-200 group-hover:scale-105"
                 style={{ background: CARD_GRAD, boxShadow: "0 8px 18px -6px rgba(63,63,148,0.45)" }}
               >
-                <f.Icon className="h-[22px] w-[22px]" strokeWidth={1.9} />
+                <f.Icon className="h-[20px] w-[20px]" strokeWidth={1.9} />
               </div>
 
-              <h3 className="mt-2.5 text-[16px] font-extrabold tracking-tight text-[#1e2340]">
+              {/* min-h holds the two-line names ("Secondary Feasibility") level
+                  with the one-line ones, so every START FORM sits on one line. */}
+              <h3 className="mt-2 flex min-h-[34px] items-center text-[14px] font-extrabold leading-tight tracking-tight text-[#1e2340]">
                 {f.title}
               </h3>
 
-              <p className="mt-1.5 min-h-[40px] flex-1 text-[12.5px] font-medium leading-snug text-[#5b6070]">
-                {f.desc}
-              </p>
-
               <span
-                className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-[#eef1fb] px-3 text-[11.5px] font-bold tracking-[0.08em] text-[#3f3f94] transition-all duration-200 group-hover:bg-transparent group-hover:text-white group-hover:[background:linear-gradient(135deg,#4a4ab5,#2f2f6f)] group-hover:shadow-[0_8px_18px_-6px_rgba(63,63,148,0.5)]"
+                className="mt-2 inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-lg bg-[#eef1fb] px-2 text-[10.5px] font-bold tracking-[0.06em] text-[#3f3f94] transition-all duration-200 group-hover:bg-transparent group-hover:text-white group-hover:[background:linear-gradient(135deg,#4a4ab5,#2f2f6f)] group-hover:shadow-[0_8px_18px_-6px_rgba(63,63,148,0.5)]"
                 style={{ fontFamily: MONO }}
               >
-                START FORM
-                <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+                START
+                <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-1" />
               </span>
             </Link>
           );

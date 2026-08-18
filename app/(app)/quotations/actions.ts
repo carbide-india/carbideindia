@@ -597,10 +597,18 @@ export async function setQuotationStatusBulk(
   const refusal = approvalRefusal({ status }, me);
   if (refusal) return { ok: false, error: refusal };
   try {
-    await db
+    const updated = await db
       .update(quotations)
       .set({ costingDoneStatus: status as CostingDoneStatus, updatedAt: new Date() })
-      .where(inArray(quotations.id, ids));
+      .where(inArray(quotations.id, ids))
+      .returning({ id: quotations.id });
+
+    if (updated.length === 0) {
+      return {
+        ok: false,
+        error: "Those quotations no longer exist - refresh the register and try again.",
+      };
+    }
   } catch (err) {
     console.error("[setQuotationStatusBulk] failed", err);
     return { ok: false, error: "Could not update the statuses. Please try again." };

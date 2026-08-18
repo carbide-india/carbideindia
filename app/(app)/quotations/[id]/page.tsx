@@ -91,29 +91,6 @@ export default async function QuotationDetailPage({ params }: PageProps) {
   return (
     <EnquiryModuleShell title="Quotation" userMenu={<UserMenuServer />}>
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <ReviseButton
-            kind="costing"
-            quotationId={quotation.id}
-            disabled={!quotation.isLatestRevision}
-            disabledHint="This is a superseded revision — open the latest one."
-          />
-          <ReviseButton
-            kind="quotation"
-            quotationId={quotation.id}
-            disabled={!quotation.isLatestRevision}
-            disabledHint="This is a superseded revision — open the latest one."
-          />
-          <SendQuoteButton
-            quotationId={quotation.id}
-            quoteNo={quotation.quoteNo}
-            approved={quotation.quotationStatus === "quotation_approved"}
-            alreadySent={quotation.quoteSent}
-            sentAt={quotation.quoteSentAt ? formatDateTime(quotation.quoteSentAt) : null}
-            to={to}
-            cc={cc}
-          />
-        </div>
         <SyncProductsBanner
           missingCount={missingCount}
           recordId={quotation.id}
@@ -126,6 +103,33 @@ export default async function QuotationDetailPage({ params }: PageProps) {
           inquiryLink={inquiryLink}
           lines={lines}
           latestCostings={latestCostings}
+          /* Rendered on the title line rather than in a strip of their own —
+             see the header note in QuotationDetail. */
+          actions={
+            <>
+              <ReviseButton
+                kind="costing"
+                quotationId={quotation.id}
+                disabled={!quotation.isLatestRevision}
+                disabledHint="This is a superseded revision — open the latest one."
+              />
+              <ReviseButton
+                kind="quotation"
+                quotationId={quotation.id}
+                disabled={!quotation.isLatestRevision}
+                disabledHint="This is a superseded revision — open the latest one."
+              />
+              <SendQuoteButton
+                quotationId={quotation.id}
+                quoteNo={quotation.quoteNo}
+                approved={quotation.quotationStatus === "quotation_approved"}
+                alreadySent={quotation.quoteSent}
+                sentAt={quotation.quoteSentAt ? formatDateTime(quotation.quoteSentAt) : null}
+                to={to}
+                cc={cc}
+              />
+            </>
+          }
         />
       </div>
     </EnquiryModuleShell>

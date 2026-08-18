@@ -1,12 +1,14 @@
 import "server-only";
 import { and, asc, desc, eq, ilike, inArray, or } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { getDocumentDownloadUrls } from "@/lib/storage/blob";
 import {
   salesOrders,
   salesOrderItems,
   inquiries,
   inquiryItems,
   employees,
+  documents,
   masterOptions,
   type SalesOrder,
   type SalesOrderItem,
@@ -298,5 +300,61 @@ export async function getSalesOrderLineNotes(
     productName: l.ask.custProductName,
     itemCode: l.spec.itemCode,
     productionNotes: l.productionNotes,
+  }));
+}
+
+/** One file attached to a sales order (above all, the customer PO). */
+export interface SalesOrderDocument {
+  id: string;
+  title: string;
+  mimeType: string | null;
+  sizeBytes: number | null;
+  uploadedByName: string | null;
+  createdAt: Date;
+  /** Presigned, short-lived. Null when presigning is unavailable. */
+  downloadUrl: string | null;
+}
+
+/**
+ * Files attached to one sales order, newest first.
+ *
+ * Mirrors `getVendorDocuments`: the blobs are PRIVATE, so a download URL has to
+ * be presigned per request rather than stored. If presigning is unavailable the
+ * list still renders — the row is the record, the link is a convenience.
+ */
+export async function getSalesOrderDocuments(
+  salesOrderId: string,
+): Promise<SalesOrderDocument[]> {
+  const rows = await db
+    .select({
+      id: documents.id,
+      title: documents.title,
+      storagePath: documents.storagePath,
+      mimeType: documents.mimeType,
+      sizeBytes: documents.sizeBytes,
+      uploadedByName: employees.name,
+      createdAt: documents.createdAt,
+    })
+    .from(documents)
+    .leftJoin(employees, eq(documents.uploadedById, employees.id))
+    .where(eq(documents.salesOrderId, salesOrderId))
+    .orderBy(desc(documents.createdAt))
+    .limit(500);
+
+  let urlByPath = new Map<string, string>();
+  try {
+    urlByPath = await getDocumentDownloadUrls(rows.map((r) => r.storagePath));
+  } catch {
+    // presigning unavailable (e.g. missing BLOB_READ_WRITE_TOKEN) — degrade.
+  }
+
+  return rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    mimeType: r.mimeType,
+    sizeBytes: r.sizeBytes,
+    uploadedByName: r.uploadedByName ?? null,
+    createdAt: r.createdAt,
+    downloadUrl: urlByPath.get(r.storagePath) ?? null,
   }));
 }

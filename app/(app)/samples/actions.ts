@@ -254,10 +254,18 @@ export async function setSampleStatusBulk(
     return { ok: false, error: "Invalid status" };
   }
   try {
-    await db
+    const updated = await db
       .update(samples)
       .set({ sampleStatus: status as SampleStatus, updatedAt: new Date() })
-      .where(inArray(samples.id, ids));
+      .where(inArray(samples.id, ids))
+      .returning({ id: samples.id });
+
+    if (updated.length === 0) {
+      return {
+        ok: false,
+        error: "Those samples no longer exist - refresh the register and try again.",
+      };
+    }
   } catch (err) {
     console.error("[setSampleStatusBulk] failed", err);
     return { ok: false, error: "Could not update the statuses. Please try again." };

@@ -142,9 +142,16 @@ export function SecondaryFeasibilityQueueTable({
         cell: (r) => <span className="text-ink-soft">{r.secVerdict ?? "—"}</span>,
       },
       {
+        // The costing gate: a line only reaches Costing once this is true (see
+        // lib/queries/costings.ts). Set automatically by "Mark Secondary
+        // Feasibility Done", never by hand. Hidden by default because once the
+        // data is consistent it just restates "Secondary Feasibility Approved";
+        // switch it on from the Columns menu when you need to know why a line
+        // is (or isn't) costable.
         id: "confirmed",
         header: "Confirmed",
         width: "124px",
+        defaultHidden: true,
         sortValue: (r) => (r.feasibilityConfirmed ? 1 : 0),
         exportValue: (r) => (r.feasibilityConfirmed ? "Confirmed" : "—"),
         cell: (r) =>
@@ -160,6 +167,9 @@ export function SecondaryFeasibilityQueueTable({
 
   const filters = React.useMemo<FilterConfig<SecondaryFeasibilityQueueRow>[]>(
     () => [
+      { id: "companyName", label: "Company", type: "select" },
+      { id: "productName", label: "Product", type: "select" },
+      { id: "secVerdict", label: "Verdict", type: "select" },
       {
         id: "secondaryStatus",
         label: "Secondary",

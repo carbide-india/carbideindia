@@ -519,10 +519,18 @@ export async function setEnquiryStatusBulk(
     return { ok: false, error: "Invalid status" };
   }
   try {
-    await db
+    const updated = await db
       .update(inquiries)
       .set({ enquiryStatus: status as EnquiryStatus, updatedAt: new Date() })
-      .where(inArray(inquiries.id, ids));
+      .where(inArray(inquiries.id, ids))
+      .returning({ id: inquiries.id });
+
+    if (updated.length === 0) {
+      return {
+        ok: false,
+        error: "Those enquiries no longer exist - refresh the register and try again.",
+      };
+    }
   } catch (err) {
     console.error("[setEnquiryStatusBulk] failed", err);
     return { ok: false, error: "Could not update the statuses. Please try again." };
@@ -612,10 +620,18 @@ export async function setFeasibilityStatusBulk(
     return { ok: false, error: "Invalid feasibility status" };
   }
   try {
-    await db
+    const updated = await db
       .update(inquiries)
       .set({ feasibilityStatus: status as FeasibilityStatus, updatedAt: new Date() })
-      .where(inArray(inquiries.id, ids));
+      .where(inArray(inquiries.id, ids))
+      .returning({ id: inquiries.id });
+
+    if (updated.length === 0) {
+      return {
+        ok: false,
+        error: "Those enquiries no longer exist - refresh the register and try again.",
+      };
+    }
   } catch (err) {
     console.error("[setFeasibilityStatusBulk] failed", err);
     return { ok: false, error: "Could not update the feasibility statuses. Please try again." };

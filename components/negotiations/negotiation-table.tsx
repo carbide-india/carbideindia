@@ -3,8 +3,6 @@
 import * as React from "react";
 import Link from "next/link";
 import type { Route } from "next";
-import { useRouter } from "next/navigation";
-import { ArrowUpRight, Trash2 } from "lucide-react";
 import {
   NEGOTIATION_STAGES,
   NEGOTIATION_STAGE_BUCKETS,
@@ -21,12 +19,9 @@ import {
   RegisterDataTable,
   type RegisterColumn,
   type FilterConfig,
-  type RowMenuItem,
 } from "@/components/registers/register-data-table";
-import { fireToast } from "@/lib/toast";
 import {
   setNegotiationStatusBulk,
-  deleteNegotiation,
   deleteNegotiationsBulk,
 } from "@/app/(app)/negotiations/actions";
 import type { NegotiationListItem } from "@/lib/queries/negotiations";
@@ -75,46 +70,11 @@ const STATUS_OPTION_ORDER = [
  * not the label alphabetical, so sorting reflects the negotiation lifecycle.
  */
 export function NegotiationTable({ rows, heading, actions }: Props) {
-  const router = useRouter();
 
   // Per-row actions menu: Open + a destructive Delete. Delete is a HARD delete
   // (negotiations have no record-level recycle bin), so it confirms first and
   // the server action refuses when a proforma invoice was issued from it or a
   // sales order was won off it.
-  const rowMenu = React.useCallback(
-    (r: NegotiationListItem): RowMenuItem<NegotiationListItem>[] => [
-      {
-        key: "open",
-        label: "Open",
-        Icon: ArrowUpRight,
-        href: `/negotiations/${r.id}` as Route,
-      },
-      {
-        key: "delete",
-        label: "Delete",
-        Icon: Trash2,
-        danger: true,
-        onSelect: async (row) => {
-          if (
-            !window.confirm(
-              `Delete negotiation ${row.negotiationNo}? This can't be undone.`,
-            )
-          ) {
-            return;
-          }
-          const res = await deleteNegotiation(row.id);
-          if (res.ok) {
-            fireToast({ message: `Deleted ${row.negotiationNo}.` });
-            router.refresh();
-          } else {
-            fireToast({ message: res.error, type: "error" });
-          }
-        },
-      },
-    ],
-    [router],
-  );
-
   const columns = React.useMemo<RegisterColumn<NegotiationListItem>[]>(
     () => [
       {
@@ -279,7 +239,7 @@ export function NegotiationTable({ rows, heading, actions }: Props) {
       {
         id: "enquiryDate",
         label: "Enquiry date",
-        type: "dateRange",
+        type: "period",
         accessor: (r) => negotiationDate(r),
       },
     ],
@@ -297,7 +257,6 @@ export function NegotiationTable({ rows, heading, actions }: Props) {
       getOpenHref={(r) => `/negotiations/${r.id}` as Route}
       filters={filters}
       exportFilename="negotiations"
-      rowMenu={rowMenu}
       bulkAction={{
         label: "Set status",
         options: STATUS_OPTION_ORDER.map((s) => ({

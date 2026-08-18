@@ -353,10 +353,18 @@ export async function setNegotiationStatusBulk(
   const refusal = approvalRefusal({ status }, me);
   if (refusal) return { ok: false, error: refusal };
   try {
-    await db
+    const updated = await db
       .update(negotiations)
       .set({ negotiationStatus: status as NegotiationStatus, updatedAt: new Date() })
-      .where(inArray(negotiations.id, ids));
+      .where(inArray(negotiations.id, ids))
+      .returning({ id: negotiations.id });
+
+    if (updated.length === 0) {
+      return {
+        ok: false,
+        error: "Those negotiations no longer exist - refresh the register and try again.",
+      };
+    }
   } catch (err) {
     console.error("[setNegotiationStatusBulk] failed", err);
     return { ok: false, error: "Could not update the statuses. Please try again." };

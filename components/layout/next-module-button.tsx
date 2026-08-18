@@ -44,18 +44,18 @@ export function ModuleStepButtons({ collapsed }: { collapsed?: boolean }) {
           <Link
             href={prev.href as Route}
             title={`Previous: ${prev.label}`}
-            className="grid h-[38px] w-[38px] place-items-center rounded-lg border border-[#c7cae6] bg-white text-[#5b6076] transition-colors hover:border-[#3f3f94] hover:text-[#3f3f94]"
+            className="grid h-[32px] w-[32px] place-items-center rounded-lg border border-[#c7cae6] bg-white text-[#5b6076] transition-colors hover:border-[#3f3f94] hover:text-[#3f3f94]"
           >
-            <ArrowLeft className="h-[17px] w-[17px]" strokeWidth={2.6} />
+            <ArrowLeft className="h-[15px] w-[15px]" strokeWidth={2.6} />
           </Link>
         )}
         {next && (
           <Link
             href={next.href as Route}
             title={`Next: ${next.label}`}
-            className="grid h-[38px] w-[38px] place-items-center rounded-lg border-[1.5px] border-[#3f3f94] bg-[#eef0fb] text-[#3f3f94] transition-colors hover:bg-[#3f3f94] hover:text-white"
+            className="grid h-[32px] w-[32px] place-items-center rounded-lg border-[1.5px] border-[#3f3f94] bg-[#eef0fb] text-[#3f3f94] transition-colors hover:bg-[#3f3f94] hover:text-white"
           >
-            <ArrowRight className="h-[17px] w-[17px]" strokeWidth={2.6} />
+            <ArrowRight className="h-[15px] w-[15px]" strokeWidth={2.6} />
           </Link>
         )}
       </div>
@@ -63,20 +63,20 @@ export function ModuleStepButtons({ collapsed }: { collapsed?: boolean }) {
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1">
       {prev && (
         // Quieter than "next": going back is a correction, going forward is the
         // flow. Same footprint so the pair reads as one control.
         <Link
           href={prev.href as Route}
-          className="group flex h-[46px] items-center gap-2 rounded-lg border border-[#c7cae6] bg-white px-3 text-[13px] font-bold text-[#5b6076] transition-all hover:border-[#3f3f94] hover:text-[#3f3f94]"
+          className="group flex h-[38px] items-center gap-2 rounded-lg border border-[#c7cae6] bg-white px-3 text-[13px] font-bold text-[#5b6076] transition-all hover:border-[#3f3f94] hover:text-[#3f3f94]"
         >
           <ArrowLeft
-            className="h-[17px] w-[17px] shrink-0 transition-transform group-hover:-translate-x-0.5"
+            className="h-[15px] w-[15px] shrink-0 transition-transform group-hover:-translate-x-0.5"
             strokeWidth={2.6}
           />
           <span className="flex min-w-0 flex-col leading-tight">
-            <span className="text-[10px] font-black uppercase tracking-[0.12em] opacity-60">
+            <span className="text-[9px] font-black uppercase tracking-[0.1em] opacity-60">
               Previous module
             </span>
             <span className="truncate">{prev.label}</span>
@@ -88,14 +88,14 @@ export function ModuleStepButtons({ collapsed }: { collapsed?: boolean }) {
           href={next.href as Route}
           // Tinted rather than white: this is the pipeline's forward action and
           // has to be findable at a glance in a long sidebar.
-          className="group flex h-[46px] items-center gap-2 rounded-lg border-[1.5px] border-[#3f3f94] bg-[#eef0fb] px-3 text-[13px] font-bold text-[#3f3f94] transition-all hover:bg-[#3f3f94] hover:text-white"
+          className="group flex h-[38px] items-center gap-2 rounded-lg border-[1.5px] border-[#3f3f94] bg-[#eef0fb] px-3 text-[13px] font-bold text-[#3f3f94] transition-all hover:bg-[#3f3f94] hover:text-white"
         >
           <ArrowRight
-            className="h-[17px] w-[17px] shrink-0 transition-transform group-hover:translate-x-0.5"
+            className="h-[15px] w-[15px] shrink-0 transition-transform group-hover:translate-x-0.5"
             strokeWidth={2.6}
           />
           <span className="flex min-w-0 flex-col leading-tight">
-            <span className="text-[10px] font-black uppercase tracking-[0.12em] opacity-70">
+            <span className="text-[9px] font-black uppercase tracking-[0.1em] opacity-70">
               Next module
             </span>
             <span className="truncate">{next.label}</span>

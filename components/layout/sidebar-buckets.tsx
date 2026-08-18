@@ -32,7 +32,6 @@ import { cn } from "@/lib/utils";
 export function SidebarBuckets({
   tiles,
   ariaLabel,
-  unit,
   exitsBeforeFlags = false,
 }: {
   tiles: BucketTile[];
@@ -50,10 +49,13 @@ export function SidebarBuckets({
    */
   exitsBeforeFlags?: boolean;
   /**
-   * What one count counts — "line", "quotation", … Stated once above the rows
-   * because the module's numbers count DIFFERENT things (the register counts
-   * product lines, a costing counts cost sheets), and a bare number invites
-   * exactly the "why don't these add up?" confusion.
+   * What one count counts — "line", "quotation", …
+   *
+   * No longer rendered: it drove a "N lines by status" caption above the rows,
+   * which cost a line of vertical space on every module for a label the row
+   * labels already imply. Kept in the signature so the callers that pass it
+   * still compile, and so the unit is recorded where it can be brought back
+   * (as a tooltip, say) without re-threading it through every shell.
    */
   unit?: string;
 }) {
@@ -70,25 +72,19 @@ export function SidebarBuckets({
   const approved = rest.find((t) => statusBucketOf(t.key) === "approved") ?? null;
   const exits = tagged.length > 0 ? tagged : approved ? [approved] : [];
   const working = rest.filter((t) => !exits.includes(t));
-  const total = parent?.count ?? rest.reduce((n, t) => n + t.count, 0);
 
   return (
-    <nav className="flex w-full flex-col gap-1.5" aria-label={ariaLabel}>
+    <nav className="flex w-full flex-col gap-1" aria-label={ariaLabel}>
       {parent && <BucketRow tile={parent} />}
 
-      <div className="ml-3 flex flex-col gap-1 border-l border-[#e5e7eb] pl-2">
-        {unit && (
-          <p className="px-3.5 pb-0.5 text-[10.5px] font-bold uppercase tracking-[0.1em] text-[#9aa0ab]">
-            {total} {total === 1 ? unit : `${unit}s`} by status
-          </p>
-        )}
+      <div className="ml-3 flex flex-col gap-0.5 border-l border-[#e5e7eb] pl-2">
         {working.map((t) => (
           <BucketRow key={t.key} tile={t} nested />
         ))}
       </div>
 
       {(flags.length > 0 || exits.length > 0) && (
-        <div className="my-1 h-[1.5px] rounded-full bg-[#c2c7d6]" />
+        <div className="my-0.5 h-[1.5px] rounded-full bg-[#c2c7d6]" />
       )}
       {exitsBeforeFlags && exits.map((t) => <BucketRow key={t.key} tile={t} exit />)}
       {flags.map((t) => (
@@ -146,8 +142,8 @@ function BucketRow({
           : undefined
       }
       className={cn(
-        "flex h-[42px] items-center gap-3 rounded-lg px-3.5 text-[13.5px] transition",
-        nested && "h-[38px] text-[13px]",
+        "flex h-[34px] items-center gap-2.5 rounded-lg px-3 text-[12.5px] transition",
+        nested && "h-[30px] text-[12px]",
         tile.active
           ? "bg-[#3f3f94] font-bold text-white shadow-[0_2px_8px_rgba(63,63,148,0.30)]"
           : flag
@@ -159,7 +155,7 @@ function BucketRow({
               : "font-semibold text-[#3a4152] hover:bg-[#efeffb] hover:text-[#3f3f94]",
       )}
     >
-      <Icon className={cn("shrink-0", nested ? "h-[17px] w-[17px]" : "h-[18px] w-[18px]")} />
+      <Icon className={cn("shrink-0", nested ? "h-[15px] w-[15px]" : "h-[16px] w-[16px]")} />
       <span className="min-w-0 flex-1 truncate">{tile.label}</span>
       <span
         className={cn(

@@ -444,8 +444,10 @@ export function RegisterDataTable<TRow>({
     return () => clearTimeout(t);
   }, [query]);
 
-  // select filter id -> chosen value (""/undefined = all); dateRange id -> {from,to}
-  const [selectFilters, setSelectFilters] = React.useState<Record<string, string>>({});
+  // select filter id -> chosen values (empty/absent = all). `select` filters are
+  // multi-choice (tick as many values as you want); `period` uses at most one.
+  // dateRange id -> {from,to}
+  const [selectFilters, setSelectFilters] = React.useState<Record<string, string[]>>({});
   const [dateFilters, setDateFilters] = React.useState<
     Record<string, { from: string; to: string }>
   >({});
@@ -468,6 +470,39 @@ export function RegisterDataTable<TRow>({
     [columns],
   );
 
+  // Options for every `select` filter. A filter may declare its own fixed list
+  // (status enums, priorities — where the full set should show even when no row
+  // uses a value yet); otherwise the choices are DERIVED from the loaded rows,
+  // which is what makes open-ended facets — Company, Product, Checked By —
+  // one-liners to add on any register.
+  const derivedOptions = React.useMemo(() => {
+    const out = new Map<string, { value: string; label: string }[]>();
+    for (const f of filters) {
+      if (f.type !== "select" || f.options) continue;
+      const acc = filterAccessor(f);
+      const seen = new Set<string>();
+      for (const r of rows) {
+        const v = asText(acc(r) as string).trim();
+        if (v) seen.add(v);
+      }
+      out.set(
+        f.id,
+        [...seen]
+          .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+          .map((v) => ({ value: v, label: v })),
+      );
+    }
+    return out;
+    // filterAccessor derives from columns/filters, both already deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, filters, columns]);
+
+  const optionsFor = React.useCallback(
+    (f: FilterConfig<TRow>): { value: string; label: string }[] =>
+      f.options ?? derivedOptions.get(f.id) ?? [],
+    [derivedOptions],
+  );
+
   // Pre-filter rows in the browser before handing them to TanStack. (Global
   // search + faceted select + date-range all live here so the table model only
   // ever sees the rows that should be visible.)
@@ -485,12 +520,14 @@ export function RegisterDataTable<TRow>({
 
     for (const f of filters) {
       if (f.type === "select") {
+        // Multi-choice: a row matches if its value is any of the ticked ones.
         const chosen = selectFilters[f.id];
-        if (!chosen) continue;
+        if (!chosen || chosen.length === 0) continue;
+        const picked = new Set(chosen);
         const acc = filterAccessor(f);
-        out = out.filter((r) => asText(acc(r) as string) === chosen);
+        out = out.filter((r) => picked.has(asText(acc(r) as string)));
       } else if (f.type === "period") {
-        const chosen = selectFilters[f.id];
+        const chosen = selectFilters[f.id]?.[0];
         if (!chosen) continue;
         const { from, to } = periodRange(chosen);
         if (!from && !to) continue;
@@ -718,7 +755,7 @@ export function RegisterDataTable<TRow>({
 
   const hasActiveFilters =
     Boolean(debouncedQuery) ||
-    Object.values(selectFilters).some(Boolean) ||
+    Object.values(selectFilters).some((v) => v.length > 0) ||
     Object.values(dateFilters).some((r) => r.from || r.to);
 
   function clearFilters() {
@@ -804,21 +841,34 @@ export function RegisterDataTable<TRow>({
         )}
 
         {filters.map((f) =>
-          f.type === "select" || f.type === "period" ? (
+          f.type === "select" ? (
+            // Multi-choice facet: tick as many values as you want. Options are
+            // the filter's own list, or derived from the rows when it has none.
+            <FilterMenu
+              key={f.id}
+              label={f.label}
+              options={optionsFor(f)}
+              selected={selectFilters[f.id] ?? []}
+              onChange={(vals) =>
+                setSelectFilters((s) => ({ ...s, [f.id]: vals }))
+              }
+            />
+          ) : f.type === "period" ? (
             <select
               key={f.id}
-              value={selectFilters[f.id] ?? ""}
+              value={selectFilters[f.id]?.[0] ?? ""}
               onChange={(e) =>
-                setSelectFilters((s) => ({ ...s, [f.id]: e.target.value }))
+                setSelectFilters((s) => ({
+                  ...s,
+                  [f.id]: e.target.value ? [e.target.value] : [],
+                }))
               }
               aria-label={f.label}
-              className="rounded-chip border border-hairline bg-surface-card px-2.5 py-2 text-[13px] text-ink-strong outline-none focus:border-brand"
+              className="h-9 rounded-chip border border-hairline bg-surface-card px-2.5 text-[13px] text-ink-strong outline-none focus:border-brand"
               style={{ boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)" }}
             >
-              <option value="">
-                {f.type === "period" ? "Any time" : `All ${f.label.toLowerCase()}`}
-              </option>
-              {(f.type === "period" ? PERIOD_OPTIONS : f.options ?? []).map((o) => (
+              <option value="">Any time</option>
+              {PERIOD_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
                 </option>
@@ -872,7 +922,10 @@ export function RegisterDataTable<TRow>({
           </button>
         )}
 
-        <div className="flex items-center gap-2">
+        {/* Right-hand group — Columns / Export / the page CTA. `ml-auto` keeps
+            it on the SAME line as the search and filters (hard right) instead
+            of wrapping onto a second row. */}
+        <div className="ml-auto flex items-center gap-2">
           <ColumnsMenu table={table} columns={columns} />
           {showExport && (
             <button
@@ -1024,10 +1077,27 @@ export function RegisterDataTable<TRow>({
                       // (checkbox, links, action buttons).
                       const t = e.target as HTMLElement;
                       if (t.closest("button, a, input, select, [role='checkbox']")) return;
+                      // The second click of a double-click is handled by
+                      // onDoubleClick below — without this an expandable row
+                      // would toggle twice on its way to opening.
+                      if (e.detail > 1) return;
                       if (renderExpanded) {
                         row.toggleExpanded();
                         return;
                       }
+                      if (onRowOpen) {
+                        onRowOpen(row.original);
+                        return;
+                      }
+                      router.push(href);
+                    }}
+                    // Double-click ALWAYS opens the record, on every register.
+                    // On a register whose rows expand in place (quotations,
+                    // costings) a single click belongs to the expander, so
+                    // without this the only way in was the row menu.
+                    onDoubleClick={(e) => {
+                      const t = e.target as HTMLElement;
+                      if (t.closest("button, a, input, select, [role='checkbox']")) return;
                       if (onRowOpen) {
                         onRowOpen(row.original);
                         return;
@@ -1264,6 +1334,124 @@ function RowMenu<TRow>({
   );
 }
 
+/**
+ * One faceted filter, as a tick-box menu.
+ *
+ * Multi-choice on purpose: "show me Nashik AND Pune", "Alok's checks AND
+ * Akash's" is the normal question, and the old single-value <select> could only
+ * ever answer half of it. The trigger reports the state at a glance — the label
+ * alone when nothing is picked, the value itself when exactly one is, and a
+ * count beyond that — so an active filter is never invisible.
+ *
+ * Long facets (Company, Product) get a search box; short ones don't need it.
+ */
+function FilterMenu({
+  label,
+  options,
+  selected,
+  onChange,
+}: {
+  label: string;
+  options: { value: string; label: string }[];
+  selected: string[];
+  onChange: (values: string[]) => void;
+}) {
+  const [search, setSearch] = React.useState("");
+  const showSearch = options.length > 8;
+
+  const visible = React.useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return q ? options.filter((o) => o.label.toLowerCase().includes(q)) : options;
+  }, [options, search]);
+
+  const toggle = (value: string) =>
+    onChange(
+      selected.includes(value)
+        ? selected.filter((v) => v !== value)
+        : [...selected, value],
+    );
+
+  const active = selected.length > 0;
+  const triggerText =
+    selected.length === 0
+      ? `All ${label.toLowerCase()}`
+      : selected.length === 1
+        ? (options.find((o) => o.value === selected[0])?.label ?? selected[0]!)
+        : `${label}: ${selected.length}`;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label={label}
+          className={`inline-flex h-9 max-w-[190px] items-center gap-1.5 rounded-chip border px-2.5 text-[13px] font-semibold outline-none transition-all ${
+            active
+              ? "border-brand bg-brand/[0.07] text-brand"
+              : "border-hairline bg-surface-card text-ink-strong hover:border-hairline-strong"
+          }`}
+          style={{ boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)" }}
+        >
+          <span className="truncate">{triggerText}</span>
+          <ChevronsUpDown size={13} strokeWidth={2.2} className="shrink-0 opacity-60" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="max-h-[320px] w-[240px] overflow-y-auto">
+        <div className="flex items-center justify-between gap-2 px-1">
+          <DropdownMenuLabel>{label}</DropdownMenuLabel>
+          {active && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                onChange([]);
+              }}
+              className="pr-1 text-[12px] font-semibold text-ink-subtle transition-colors hover:text-ink-strong"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
+        {showSearch && (
+          <div className="px-1 pb-1">
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.stopPropagation()}
+              placeholder={`Search ${label.toLowerCase()}`}
+              aria-label={`Search ${label}`}
+              className="w-full rounded-lg border border-hairline bg-surface-card px-2 py-1.5 text-[13px] text-ink-strong outline-none placeholder:text-ink-subtle focus:border-brand"
+            />
+          </div>
+        )}
+
+        {visible.length === 0 ? (
+          <div className="px-2 py-2 text-[13px] text-ink-subtle">No matches</div>
+        ) : (
+          visible.map((o) => (
+            <DropdownMenuItem
+              key={o.value}
+              onSelect={(e) => {
+                e.preventDefault();
+                toggle(o.value);
+              }}
+            >
+              <span className="inline-flex w-4 justify-center">
+                {selected.includes(o.value) ? (
+                  <Check size={14} strokeWidth={2.6} />
+                ) : null}
+              </span>
+              <span className="truncate">{o.label}</span>
+            </DropdownMenuItem>
+          ))
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function ColumnsMenu<TRow>({
   table,
   columns,
@@ -1335,15 +1523,9 @@ function BulkBar({
       <span className="text-[13px] font-bold text-ink-strong tabular-nums">
         {count} selected
       </span>
-      <button
-        type="button"
-        onClick={onExportSelected}
-        className="inline-flex items-center gap-1.5 h-8 px-3 rounded-pill text-[13px] font-bold border border-hairline bg-surface-card text-ink-soft hover:border-brand hover:text-brand transition-all"
-      >
-        <Download size={13} strokeWidth={2.2} />
-        Export Selected
-      </button>
 
+      {/* What you DO to the selection comes first (Set status → Apply); the
+          exports and Clear sit together on the far right. */}
       {bulkActions.map((action, i) => (
         <BulkActionGroup
           key={`${action.label}-${i}`}
@@ -1365,8 +1547,17 @@ function BulkBar({
 
       <button
         type="button"
+        onClick={onExportSelected}
+        className="ml-auto inline-flex items-center gap-1.5 h-8 px-3 rounded-pill text-[13px] font-bold border border-hairline bg-surface-card text-ink-soft hover:border-brand hover:text-brand transition-all"
+      >
+        <Download size={13} strokeWidth={2.2} />
+        Export Selected
+      </button>
+
+      <button
+        type="button"
         onClick={onClear}
-        className="ml-auto text-[13px] font-semibold text-ink-subtle hover:text-ink-strong transition-colors"
+        className="text-[13px] font-semibold text-ink-subtle hover:text-ink-strong transition-colors"
       >
         Clear Selection
       </button>

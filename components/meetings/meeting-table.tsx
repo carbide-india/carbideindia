@@ -3,8 +3,6 @@
 import * as React from "react";
 import Link from "next/link";
 import type { Route } from "next";
-import { useRouter } from "next/navigation";
-import { ArrowUpRight, Trash2 } from "lucide-react";
 import {
   MEETING_PURPOSES,
   MEETING_PURPOSE_LABELS,
@@ -16,9 +14,7 @@ import {
   RegisterDataTable,
   type RegisterColumn,
   type FilterConfig,
-  type RowMenuItem,
 } from "@/components/registers/register-data-table";
-import { fireToast } from "@/lib/toast";
 import {
   setMeetingPurposeBulk,
   deleteClientMeeting,
@@ -53,46 +49,11 @@ function isPastDue(d: Date): boolean {
  * past, an at-a-glance "you owe this client a call" cue.
  */
 export function MeetingTable({ rows, employees, heading, actions }: Props) {
-  const router = useRouter();
 
   // Per-row actions menu: Open + a destructive Delete. Meetings have no
   // record-level recycle bin and no deleted_at column, so this is a HARD
   // delete - it confirms first, and the server action refuses any row a
   // downstream record depends on.
-  const rowMenu = React.useCallback(
-    (r: ClientMeetingListItem): RowMenuItem<ClientMeetingListItem>[] => [
-      {
-        key: "open",
-        label: "Open",
-        Icon: ArrowUpRight,
-        href: `/meetings/${r.id}` as Route,
-      },
-      {
-        key: "delete",
-        label: "Delete",
-        Icon: Trash2,
-        danger: true,
-        onSelect: async (row) => {
-          if (
-            !window.confirm(
-              `Delete meeting ${row.meetingNo}? This can't be undone.`,
-            )
-          ) {
-            return;
-          }
-          const res = await deleteClientMeeting(row.id);
-          if (res.ok) {
-            fireToast({ message: `Deleted ${row.meetingNo}.` });
-            router.refresh();
-          } else {
-            fireToast({ message: res.error, type: "error" });
-          }
-        },
-      },
-    ],
-    [router],
-  );
-
   const columns = React.useMemo<RegisterColumn<ClientMeetingListItem>[]>(
     () => [
       {
@@ -211,7 +172,7 @@ export function MeetingTable({ rows, employees, heading, actions }: Props) {
       {
         id: "meetingDate",
         label: "Meeting date",
-        type: "dateRange",
+        type: "period",
         accessor: (r) => r.meetingDate,
       },
     ],
@@ -227,7 +188,6 @@ export function MeetingTable({ rows, employees, heading, actions }: Props) {
       getOpenHref={(r) => `/meetings/${r.id}` as Route}
       filters={filters}
       exportFilename="meetings"
-      rowMenu={rowMenu}
       bulkAction={{
         label: "Set purpose",
         options: MEETING_PURPOSES.map((p) => ({

@@ -129,8 +129,11 @@ export default async function CostingsPage({
             />
           }
           actions={
+            /* Lands on Not Started — the lines with no cost sheet yet — rather
+               than a separate picker page listing the same rows. Each row there
+               carries "Start costing", which opens a fresh sheet against it. */
             <Link
-              href={"/costings/new" as Route}
+              href={href("bucket=not_done") as Route}
               className="inline-flex h-9 items-center gap-1.5 rounded-pill px-4 text-[13px] font-extrabold text-white transition-transform hover:-translate-y-px"
               style={{
                 background: "linear-gradient(135deg, rgb(63,63,148), rgb(47,47,111))",
@@ -138,7 +141,7 @@ export default async function CostingsPage({
               }}
             >
               <Plus size={15} strokeWidth={2.4} />
-              New Costing
+              Cost a Line
             </Link>
           }
         />

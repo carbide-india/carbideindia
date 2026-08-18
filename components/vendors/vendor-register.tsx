@@ -98,6 +98,8 @@ export function VendorRegister({
     () => [
       {
         id: "vendorCode",
+        width: "110px",
+        pinnedLeft: true,
         header: "Code",
         searchable: true,
         sortValue: (r) => r.vendorCode ?? "",
@@ -114,6 +116,8 @@ export function VendorRegister({
       },
       {
         id: "name",
+        width: "190px",
+        pinnedLeft: true,
         header: "Name",
         searchable: true,
         sortValue: (r) => r.name,
@@ -254,6 +258,7 @@ export function VendorRegister({
 
   const filters = React.useMemo<FilterConfig<VendorRegisterRow>[]>(
     () => [
+      { id: "paymentTerms", label: "Payment Terms", type: "select" },
       {
         id: "status",
         label: "Status",

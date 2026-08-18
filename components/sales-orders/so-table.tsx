@@ -118,6 +118,8 @@ export function SoTable({ rows, heading, actions }: Props) {
     () => [
       {
         id: "soNo",
+        width: "110px",
+        pinnedLeft: true,
         header: "SO No",
         searchable: true,
         sortValue: (r) => r.soNo,
@@ -133,6 +135,8 @@ export function SoTable({ rows, heading, actions }: Props) {
       },
       {
         id: "companyName",
+        width: "190px",
+        pinnedLeft: true,
         header: "Company",
         searchable: true,
         sortValue: (r) => r.companyName ?? "",
@@ -229,6 +233,8 @@ export function SoTable({ rows, heading, actions }: Props) {
 
   const filters = React.useMemo<FilterConfig<SalesOrderListItem>[]>(
     () => [
+      { id: "companyName", label: "Company", type: "select" },
+      { id: "salesOrderStatus", label: "Status", type: "select" },
       {
         id: "customerSoSent",
         label: "Customer copy",
@@ -252,7 +258,7 @@ export function SoTable({ rows, heading, actions }: Props) {
       {
         id: "enquiryDate",
         label: "Enquiry date",
-        type: "dateRange",
+        type: "period",
         accessor: (r) => soDate(r),
       },
     ],

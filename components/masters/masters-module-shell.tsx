@@ -30,6 +30,7 @@ import type { ReactNode } from "react";
 import { HubSearch } from "@/components/hub/hub-search";
 import { ModuleBrand } from "@/components/layout/module-brand";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { ModuleTitleSlot } from "@/components/shell/module-title";
 import { MASTER_KINDS, MASTER_KIND_LABELS, type MasterKind } from "@/db/enums";
 import { cn } from "@/lib/utils";
 
@@ -87,7 +88,7 @@ export function MastersModuleShell({
       {/* ── Top header bar (full width) ─────────────────────────── */}
       <header className="sticky top-0 z-40 flex h-[60px] shrink-0 items-center gap-4 border-b border-[#e5e7eb] bg-white px-4">
         {/* Left zone - toggle + the brand, sitting directly above the sidebar. */}
-        <div className="flex shrink-0 items-center gap-2">
+        <div className={cn("flex shrink-0 items-center gap-2", collapsed ? "min-w-[56px]" : "min-w-[232px]")}>
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}
@@ -108,7 +109,16 @@ export function MastersModuleShell({
         </div>
 
         {/* Middle zone - the search takes the whole row between brand and icons. */}
-        <HubSearch />
+
+        {/* Module title — published by the page, sitting where the sidebar ends. */}
+        <div className="flex min-w-0 shrink items-center">
+          <ModuleTitleSlot fallback={pageTitle} />
+        </div>
+
+        {/* Search - pushed right, just before the action icons. */}
+        <div className="ml-auto flex min-w-0 flex-1 justify-end pl-4">
+          <HubSearch />
+        </div>
 
         {/* Right zone - actions. */}
         <div className="flex shrink-0 items-center justify-end gap-2.5">
@@ -117,7 +127,7 @@ export function MastersModuleShell({
             title="Help - coming soon"
             className="grid h-9 w-9 cursor-default place-items-center rounded-full text-[#9aa0ab]"
           >
-            <HelpCircle className="h-[18px] w-[18px]" />
+            <HelpCircle className="h-[16px] w-[16px]" />
           </span>
           {userMenu}
         </div>
@@ -147,7 +157,7 @@ export function MastersModuleShell({
               {/* Product Master (the Item Master) sits at the very top. */}
               {(() => {
                 const base = cn(
-                  "mst-nav-item flex h-[44px] items-center rounded-xl border text-[13.5px] transition",
+                  "mst-nav-item flex h-[44px] items-center rounded-xl border text-[12.5px] transition",
                   collapsed ? "justify-center px-0" : "gap-3 px-3.5",
                 );
                 const isActive =
@@ -162,7 +172,7 @@ export function MastersModuleShell({
                         : `${base} border-[#e6e8ec] bg-white font-semibold text-[#3a4152] hover:border-[#c9c9ea] hover:bg-[#f4f4fd] hover:text-[#3f3f94]`
                     }
                   >
-                    <Boxes className="h-[18px] w-[18px] shrink-0" />
+                    <Boxes className="h-[16px] w-[16px] shrink-0" />
                     {!collapsed && "Product Master"}
                   </Link>
                 );
@@ -172,7 +182,7 @@ export function MastersModuleShell({
                 const isActive = pathname === `/masters/${kind}`;
                 const Icon = KIND_ICON[kind];
                 const base = cn(
-                  "mst-nav-item flex h-[44px] items-center rounded-xl border text-[13.5px] transition",
+                  "mst-nav-item flex h-[44px] items-center rounded-xl border text-[12.5px] transition",
                   collapsed ? "justify-center px-0" : "gap-3 px-3.5",
                 );
                 return (
@@ -187,7 +197,7 @@ export function MastersModuleShell({
                         : `${base} border-[#e6e8ec] bg-white font-semibold text-[#3a4152] hover:border-[#c9c9ea] hover:bg-[#f4f4fd] hover:text-[#3f3f94]`
                     }
                   >
-                    <Icon className="h-[18px] w-[18px] shrink-0" />
+                    <Icon className="h-[16px] w-[16px] shrink-0" />
                     {!collapsed && MASTER_KIND_LABELS[kind]}
                   </Link>
                 );

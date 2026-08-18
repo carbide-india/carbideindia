@@ -32,7 +32,7 @@
     "ssot-lint": "tsx scripts/ci/ssot-lint.ts",
     "precheck:drift": "tsx --env-file=.env.local scripts/precheck-snapshot-drift.ts",
     "report:shapes": "tsx --env-file=.env.local scripts/report-unresolvable-shapes.ts",
-    "backfill:feas-confirmed": "tsx --env-file=.env.local scripts/backfill-feasibility-confirmed.ts",
+    "unconfirm:unreviewed": "tsx --env-file=.env.local scripts/unconfirm-unreviewed-lines.ts",
     "gen:icons": "python scripts/gen-pwa-icons.py",
     "db:migrate:legacy-drizzle-kit": "node --env-file=.env.local node_modules/drizzle-kit/bin.cjs migrate",
     "start:lan": "next start -H 0.0.0.0 -p 3000"

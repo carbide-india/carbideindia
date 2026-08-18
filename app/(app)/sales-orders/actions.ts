@@ -387,10 +387,18 @@ export async function setSalesOrderStatusBulk(
   const parsed = SetSalesOrderStatusSchema.safeParse({ status: value });
   if (!parsed.success) return { ok: false, error: "Invalid status." };
   try {
-    await db
+    const updated = await db
       .update(salesOrders)
       .set({ salesOrderStatus: parsed.data.status, updatedAt: new Date() })
-      .where(inArray(salesOrders.id, ids));
+      .where(inArray(salesOrders.id, ids))
+      .returning({ id: salesOrders.id });
+
+    if (updated.length === 0) {
+      return {
+        ok: false,
+        error: "Those sales orders no longer exist - refresh the register and try again.",
+      };
+    }
   } catch (err) {
     console.error("[setSalesOrderStatusBulk] failed", err);
     return { ok: false, error: "Could not update the sales orders. Please try again." };

@@ -104,6 +104,7 @@ export function InquiryTable({ rows, employees, variant = "enquiry", heading, ac
     () => [
       {
         id: "smNumber",
+        pinnedLeft: true,
         header: "SM No.",
         width: "96px",
         searchable: true,
@@ -357,6 +358,9 @@ export function InquiryTable({ rows, employees, variant = "enquiry", heading, ac
 
   const filters = React.useMemo<FilterConfig<InquiryListItem>[]>(
     () => [
+      { id: "companyName", label: "Company", type: "select" },
+      { id: "departmentName", label: "Department", type: "select" },
+      { id: "currency", label: "Currency", type: "select" },
       variant === "feasibility"
         ? {
             id: "feasibilityStatus",

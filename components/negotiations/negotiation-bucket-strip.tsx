@@ -197,7 +197,9 @@ export function NegotiationBucketStrip({ dashboard, active, shownCount }: Props)
       </div>
 
       {/* ── Band 3: the two secondary axes, as dense chips ─────────────── */}
-      <div className="flex flex-col gap-2 rounded-xl border border-hairline bg-surface-card px-3 py-2.5 sm:flex-row sm:items-start sm:gap-6">
+      {/* Stacked, not side by side — see ChipGroup: each axis gets the full
+          card width so its chips stay on a single line. */}
+      <div className="flex flex-col gap-1.5 rounded-xl border border-hairline bg-surface-card px-3 py-2">
         <ChipGroup title="PI Pipeline">
           {NEGOTIATION_STAGES.map((s) => (
             <CountChip
@@ -210,18 +212,31 @@ export function NegotiationBucketStrip({ dashboard, active, shownCount }: Props)
             />
           ))}
         </ChipGroup>
-        <ChipGroup title="Not on the board">
-          {NEGOTIATION_OFF_BOARD_STATUSES.map((s) => (
-            <CountChip
-              key={s}
-              label={NEGOTIATION_STATUS_LABELS[s]}
-              value={d.counts[s]}
-              tone={NEGOTIATION_STATUS_COLORS[s]}
-              href={active.status === s ? hrefFor({}) : hrefFor({ status: s })}
-              activeNow={active.status === s}
-            />
-          ))}
-        </ChipGroup>
+        {/* Off-board statuses are LEGACY: enum values with no column on the
+            board, left by earlier versions of this module. They are shown so
+            the arithmetic stays honest (Total = board columns + off-board) —
+            but only when at least one deal is actually sitting in one. With
+            none, this was seven chips all reading 0, a whole line spent
+            saying "nothing is in any of these dead states". */}
+        {NEGOTIATION_OFF_BOARD_STATUSES.some((s) => (d.counts[s] ?? 0) > 0) && (
+          <ChipGroup
+            title="Legacy status"
+            hint="Deals still stamped with a status that has no column on the board — from earlier versions of this module. Open one and move it onto the board."
+          >
+            {NEGOTIATION_OFF_BOARD_STATUSES.filter((s) => (d.counts[s] ?? 0) > 0).map(
+              (s) => (
+                <CountChip
+                  key={s}
+                  label={NEGOTIATION_STATUS_LABELS[s]}
+                  value={d.counts[s]}
+                  tone={NEGOTIATION_STATUS_COLORS[s]}
+                  href={active.status === s ? hrefFor({}) : hrefFor({ status: s })}
+                  activeNow={active.status === s}
+                />
+              ),
+            )}
+          </ChipGroup>
+        )}
       </div>
     </section>
   );
@@ -352,13 +367,38 @@ function ValueTile({
   );
 }
 
-function ChipGroup({ title, children }: { title: string; children: ReactNode }) {
+/**
+ * One axis of chips on ONE line: its name in a fixed-width gutter, the chips
+ * beside it.
+ *
+ * The two groups used to sit side by side, each with its title stacked above
+ * its chips — which gave every group only half the width, so "Not on the
+ * board" (seven states) always wrapped to a second row and the strip ate four
+ * lines. Stacked full-width rows with an inline title give each axis the whole
+ * card, and the fixed gutter keeps both rows' chips left-aligned with each
+ * other.
+ */
+function ChipGroup({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  /** Explains the axis on hover — "Legacy status" needs one. */
+  hint?: string;
+  children: ReactNode;
+}) {
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink-subtle">
+    <div className="flex min-w-0 items-center gap-2.5">
+      <span
+        title={hint}
+        className={`w-[108px] shrink-0 text-[10px] font-bold uppercase leading-tight tracking-[0.1em] text-ink-subtle${
+          hint ? " cursor-help" : ""
+        }`}
+      >
         {title}
       </span>
-      <div className="flex flex-wrap items-center gap-1.5">{children}</div>
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">{children}</div>
     </div>
   );
 }
@@ -383,7 +423,7 @@ function CountChip({
     <Link
       href={href}
       aria-current={activeNow ? "true" : undefined}
-      className="inline-flex items-center gap-1.5 rounded-pill border px-2.5 py-1 text-[11.5px] font-bold whitespace-nowrap transition-colors"
+      className="inline-flex items-center gap-1 rounded-pill border px-2 py-0.5 text-[11px] font-bold whitespace-nowrap transition-colors"
       style={{
         background: activeNow
           ? `color-mix(in srgb, var(--color-${tone}) 18%, transparent)`

@@ -1,11 +1,12 @@
 "use client";
 
 import * as React from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
-import { AlertTriangle, ArrowLeft, ArrowUpRight, Loader2, Plus } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowUpRight, Loader2 } from "lucide-react";
 import {
   COSTING_DONE_STATUSES,
   COSTING_DONE_STATUS_LABELS,
@@ -50,6 +51,9 @@ interface Props {
   /** LATEST costing revision per `inquiry_item_id`, resolved server-side.
    *  Lines with no costing are simply absent. */
   latestCostings: Record<string, LatestCostingRevision>;
+  /** Revise / Send buttons, rendered on the title line rather than a row of
+   *  their own — see the header note in the component. */
+  actions?: ReactNode;
 }
 
 const QUOTE_SENT_OPTIONS = [
@@ -106,10 +110,17 @@ const MONEY_KEYS = new Set<keyof QuotationEditValues>([
 ]);
 
 /**
- * Quotation detail - breadcrumb + header (quoteNo, company · enquiry date ·
- * linked SM chip · costing-done chip · New Quotation), sticky sidebar (Costing
- * Done StatusPicker, Quote Sent, Created/by, Open Register), and read cards for
- * Pricing + Timeline plus ONE dirty-only edit form (mirrors the sample detail).
+ * Quotation detail — a two-line header over ONE full-width column.
+ *
+ * Line 1 is identity + control: back-link, quote number, the Quotation Status
+ * and Costing pickers, and the Revise / Send actions. Line 2 is the facts:
+ * company, enquiry date, linked SM, quote-sent, created/by, updated, document.
+ *
+ * It used to be five stacked rows plus a sticky side card, and the card mostly
+ * repeated what the header already said — the status appeared twice (a chip AND
+ * a picker), and "Open Register" duplicated the breadcrumb. Everything below is
+ * now one column of banded cards, the same shape every other record uses,
+ * rather than a main column and a panel that had to be read together.
  */
 export function QuotationDetail({
   quotation,
@@ -117,6 +128,7 @@ export function QuotationDetail({
   inquiryLink,
   lines,
   latestCostings,
+  actions,
 }: Props) {
   const router = useRouter();
 
@@ -173,106 +185,111 @@ export function QuotationDetail({
     }
   });
 
-  const statusTone =
-    COSTING_DONE_STATUS_COLORS[quotation.costingDoneStatus] ?? "slate";
-  const bucketTone =
-    QUOTATION_STATUS_COLORS[quotation.quotationStatus] ?? "slate";
-
   return (
     <div className="flex flex-col gap-6">
-      {/* ── Breadcrumb ──────────────────────────────────────────────── */}
-      <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-[13px]">
-        <Link
-          href={"/quotations" as Route}
-          className="inline-flex items-center gap-1.5 font-semibold text-ink-muted hover:text-ink-strong transition-colors"
-        >
-          <ArrowLeft size={14} strokeWidth={2.4} />
-          Quotations
-        </Link>
-        <span aria-hidden className="text-ink-subtle">
-          ·
-        </span>
-        <span
-          aria-current="page"
-          className="text-ink-subtle"
-          style={{ fontFamily: "var(--font-mono)", fontSize: 12.5 }}
-        >
-          {quotation.quoteNo}
-        </span>
-      </nav>
+      {/* ── Header ─ exactly two lines ───────────────────────────
+          Line 1: where you came from, what this is, its two live statuses, and
+          what you can DO to it. Line 2: the facts about it.
 
-      {/* ── Header ──────────────────────────────────────────────────── */}
-      <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4 -mt-2">
-        <div className="min-w-0">
-          <h1 className="font-mono text-[40px] leading-tight tracking-tight text-ink-strong">
+          This replaced five stacked rows (an actions strip, a breadcrumb, a
+          40px number, a chip line, and a sidebar card repeating the same
+          facts). The status PICKERS now sit on line 1, so the read-only chips
+          that used to duplicate them are gone — one control per fact, not a
+          chip and a picker saying the same thing in two places. */}
+      <header className="flex flex-col gap-1.5">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <Link
+            href={"/quotations" as Route}
+            className="inline-flex shrink-0 items-center gap-1.5 text-[13px] font-semibold text-ink-muted transition-colors hover:text-ink-strong"
+          >
+            <ArrowLeft size={14} strokeWidth={2.4} />
+            Quotations
+          </Link>
+          <h1 className="font-mono text-[24px] font-bold leading-none tracking-tight text-ink-strong">
             {quotation.quoteNo}
           </h1>
-          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[14.5px] text-ink-muted">
-            {quotation.companyName ?? "-"}
-            <span aria-hidden className="text-ink-subtle">
-              ·
+          <StatusPicker
+            value={quotation.quotationStatus}
+            options={QUOTATION_STAGE_BUCKETS}
+            labels={QUOTATION_STATUS_LABELS}
+            tones={QUOTATION_STATUS_COLORS}
+            onPick={(next) => setQuotationBucket(quotation.id, next)}
+            ariaLabel="Quotation status"
+          />
+          <span className="inline-flex items-center gap-1.5">
+            <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-ink-subtle">
+              Costing
             </span>
-            {quotation.enquiryDate ? formatDate(quotation.enquiryDate) : "No enquiry date"}
-            {inquiryLink && (
-              <>
-                <span aria-hidden className="text-ink-subtle">
-                  ·
-                </span>
-                <Link
-                  href={`/inquiries/${inquiryLink.id}` as Route}
-                  className="inline-flex items-center gap-1.5 rounded-pill border border-hairline bg-surface-soft px-2.5 py-1 text-[13px] font-semibold text-ink-strong hover:border-hairline-strong transition-colors"
-                >
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 12.5 }}>
-                    {inquiryLink.smNumber}
-                  </span>
-                  <ArrowUpRight size={13} strokeWidth={2.4} className="text-ink-subtle" />
-                </Link>
-              </>
-            )}
-            <span aria-hidden className="text-ink-subtle">
-              ·
-            </span>
-            {/* This stage's own bucket first, then the inherited costing state. */}
-            <span
-              className="inline-flex items-center px-2.5 py-1 rounded-pill text-[12px] font-bold"
-              style={{
-                background: `color-mix(in srgb, var(--color-${bucketTone}) 12%, transparent)`,
-                color: `var(--color-${bucketTone}-deep)`,
-                border: `1px solid color-mix(in srgb, var(--color-${bucketTone}) 30%, transparent)`,
-              }}
-            >
-              {QUOTATION_STATUS_LABELS[quotation.quotationStatus]}
-            </span>
-            <span
-              className="inline-flex items-center px-2.5 py-1 rounded-pill text-[12px] font-bold"
-              title="Costing status inherited from the upstream cost sheet"
-              style={{
-                background: `color-mix(in srgb, var(--color-${statusTone}) 12%, transparent)`,
-                color: `var(--color-${statusTone}-deep)`,
-                border: `1px solid color-mix(in srgb, var(--color-${statusTone}) 30%, transparent)`,
-              }}
-            >
-              Costing: {COSTING_DONE_STATUS_LABELS[quotation.costingDoneStatus]}
-            </span>
-          </p>
+            <StatusPicker
+              value={quotation.costingDoneStatus}
+              options={COSTING_DONE_STATUSES}
+              labels={COSTING_DONE_STATUS_LABELS}
+              tones={COSTING_DONE_STATUS_COLORS}
+              onPick={(next) => setQuotationStatus(quotation.id, next)}
+              ariaLabel="Costing done status"
+            />
+          </span>
+          {actions && (
+            <span className="ml-auto flex flex-wrap items-center gap-2">{actions}</span>
+          )}
         </div>
-        <Link
-          href={"/quotations/new" as Route}
-          className="inline-flex items-center gap-1.5 rounded-pill border border-hairline bg-surface-card px-4 py-2 text-[13.5px] font-bold text-ink-strong hover:border-hairline-strong hover:bg-surface-soft transition-colors"
-        >
-          <Plus size={14} strokeWidth={2.6} />
-          New Quotation
-        </Link>
+
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-ink-muted">
+          <span className="font-semibold text-ink-soft">{quotation.companyName ?? "-"}</span>
+          <Dot />
+          {quotation.enquiryDate ? formatDate(quotation.enquiryDate) : "No enquiry date"}
+          {inquiryLink && (
+            <>
+              <Dot />
+              <Link
+                href={`/inquiries/${inquiryLink.id}` as Route}
+                className="inline-flex items-center gap-1 font-semibold text-ink-strong hover:underline"
+                style={{ fontFamily: "var(--font-mono)", fontSize: 12.5 }}
+              >
+                {inquiryLink.smNumber}
+                <ArrowUpRight size={12} strokeWidth={2.4} className="text-ink-subtle" />
+              </Link>
+            </>
+          )}
+          <Dot />
+          Quote sent: <span className="font-semibold text-ink-soft">{quotation.quoteSent ? "Yes" : "No"}</span>
+          <Dot />
+          Created {formatDate(quotation.createdAt)}
+          {createdBy && <> by <span className="font-semibold text-ink-soft">{createdBy}</span></>}
+          <Dot />
+          Updated {formatDate(quotation.updatedAt)}
+          {quotation.quotationLink && (
+            <>
+              <Dot />
+              <a
+                href={quotation.quotationLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-semibold text-brand hover:underline"
+              >
+                Document
+                <ArrowUpRight size={12} strokeWidth={2.4} />
+              </a>
+            </>
+          )}
+        </p>
       </header>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr] items-start">
+      {/* One column, full width. The side panel is gone: its two pickers moved
+          onto the header's first line and its four facts onto the second. */}
+      <div className="flex flex-col gap-6">
         {/* ── Main column ───────────────────────────────────────────── */}
         <div className="flex flex-col gap-6 min-w-0">
           {/* ── Quoted Lines - feasibility-style banded cards ─────────── */}
           {lines.length > 0 && (
-            <section className="flex flex-col gap-4">
+            /* gap-5, not gap-4: with three products the space BETWEEN cards
+               has to read as bigger than the banding inside one. */
+            <section className="flex flex-col gap-5">
               <h2 className="text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
-                Quoted Lines
+                Products
+                <span className="ml-2 font-black tabular-nums text-ink-soft">
+                  {lines.length}
+                </span>
               </h2>
               {lines.map((line, idx) => (
                 <QuotedLineCard
@@ -292,7 +309,7 @@ export function QuotationDetail({
           {/* Editable form note */}
           {lines.length > 0 && (
             <p className="text-[13px] text-ink-muted -mt-1">
-              Editing below updates Line 1. Additional lines are shown read-only - full per-line editing is coming soon.
+              Editing below updates <strong className="font-bold text-ink-soft">Product 1</strong> only. Products 2 and up are shown read-only - full per-product editing is coming soon.
             </p>
           )}
 
@@ -423,81 +440,7 @@ export function QuotationDetail({
           </form>
         </div>
 
-        {/* ── Sticky sidebar ─────────────────────────────────────────── */}
-        <aside className="lg:sticky lg:top-24 flex flex-col gap-4 rounded-section border border-hairline bg-surface-card p-5">
-          <div className="flex flex-col gap-2">
-            {/* Quotation Status - THIS stage's bucket, the one the register
-                dashboard counts. Open Register sits beside it. */}
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
-                Quotation Status
-              </span>
-              <Link
-                href={"/quotations" as Route}
-                className="inline-flex shrink-0 items-center gap-1.5 text-[13px] font-semibold text-ink-muted transition-colors hover:text-ink-strong"
-              >
-                <ArrowLeft size={13} strokeWidth={2.4} />
-                Open Register
-              </Link>
-            </div>
-            <StatusPicker
-              value={quotation.quotationStatus}
-              options={QUOTATION_STAGE_BUCKETS}
-              labels={QUOTATION_STATUS_LABELS}
-              tones={QUOTATION_STATUS_COLORS}
-              onPick={(next) => setQuotationBucket(quotation.id, next)}
-              ariaLabel="Quotation status"
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <span className="text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
-              Costing Done
-            </span>
-            <StatusPicker
-              value={quotation.costingDoneStatus}
-              options={COSTING_DONE_STATUSES}
-              labels={COSTING_DONE_STATUS_LABELS}
-              tones={COSTING_DONE_STATUS_COLORS}
-              onPick={(next) => setQuotationStatus(quotation.id, next)}
-              ariaLabel="Costing done status"
-            />
-          </div>
-          {quotation.quotationLink && (
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
-                Quotation Link
-              </span>
-              <a
-                href={quotation.quotationLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-[13.5px] font-semibold text-brand hover:underline break-all"
-              >
-                Open document
-                <ArrowUpRight size={13} strokeWidth={2.4} />
-              </a>
-            </div>
-          )}
-          {/* The four meta facts arranged 2-up (two lines). */}
-          <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-            <SidebarRow label="Quote Sent" value={quotation.quoteSent ? "Yes" : "No"} />
-            <SidebarRow label="Created" value={formatDate(quotation.createdAt)} />
-            {createdBy && <SidebarRow label="Created By" value={createdBy} />}
-            <SidebarRow label="Last Updated" value={formatDate(quotation.updatedAt)} />
-          </div>
-        </aside>
       </div>
-    </div>
-  );
-}
-
-function SidebarRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
-        {label}
-      </span>
-      <span className="text-[14px] font-semibold text-ink-strong">{value}</span>
     </div>
   );
 }
@@ -573,11 +516,49 @@ function CostingUsedBand({
 }
 
 /** Feasibility-style section band: indigo accent bar + black uppercase heading. */
+/**
+ * The band that OPENS a product — deliberately unlike the bands inside it.
+ *
+ * Both used to be `LineBand`: the product heading and its own Pricing / Costing
+ * Used / Timeline sections were the same indigo strip at the same weight, so a
+ * quotation with three products was a stack of near-identical bands with no
+ * visible seam between one product and the next. Solid indigo with a numbered
+ * badge makes "Product 2 starts here" unmissable while the sections inside it
+ * stay quiet.
+ */
+function ProductBand({ n, title }: { n: number; title: string }) {
+  return (
+    <div
+      className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3"
+      style={{ background: "linear-gradient(135deg, #3f3f94, #2f2f6f)" }}
+    >
+      <span className="grid h-[26px] min-w-[26px] shrink-0 place-items-center rounded-full bg-white/20 px-2 text-[13px] font-black tabular-nums text-white">
+        {n}
+      </span>
+      <span className="text-[14px] font-black uppercase tracking-[0.12em] text-white">
+        Product {n}
+      </span>
+      {title && (
+        <>
+          <span aria-hidden className="text-white/40">
+            ·
+          </span>
+          <span className="min-w-0 truncate text-[13px] font-semibold text-white/85">
+            {title}
+          </span>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** A section INSIDE a product (Pricing, Costing Used, Timeline). Quieter than
+ *  ProductBand on purpose — it must never compete with the product heading. */
 function LineBand({ title }: { title: string }) {
   return (
-    <div className="flex items-center gap-2.5 border-y-2 border-[#d6d9ea] bg-[#e7e9f6] px-4 py-2.5">
-      <span className="h-4 w-1.5 shrink-0 rounded-full bg-[#3f3f94]" />
-      <span className="text-[13.5px] font-black uppercase tracking-[0.1em] text-[#3f3f94]">
+    <div className="flex items-center gap-2 border-y border-[#dfe2ee] bg-[#f3f4fa] px-4 py-1.5">
+      <span className="h-3 w-1 shrink-0 rounded-full bg-[#8b8fc4]" />
+      <span className="text-[11.5px] font-bold uppercase tracking-[0.1em] text-[#5b6076]">
         {title}
       </span>
     </div>
@@ -653,7 +634,7 @@ function QuotedLineCard({
 
   return (
     <div className="overflow-hidden rounded-section border-2 border-[#b7bcd2] bg-surface-card">
-      <LineBand title={summary ? `Line ${lineNo} · ${summary}` : `Line ${lineNo}`} />
+      <ProductBand n={lineNo} title={summary} />
       <div className={specGrid}>
         <LineCell label="Qty" value={lineDash(line.qty)} />
         <LineCell label="Part No" value={lineDash(spec.partNo)} />
@@ -685,3 +666,11 @@ function QuotedLineCard({
   );
 }
 
+/** The interpunct between facts on the header's second line. */
+function Dot() {
+  return (
+    <span aria-hidden className="text-ink-subtle">
+      ·
+    </span>
+  );
+}

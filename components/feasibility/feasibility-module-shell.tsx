@@ -13,6 +13,7 @@ import {
   GitCompareArrows,
   PanelLeftClose,
   PanelLeftOpen,
+  KanbanSquare,
 } from "lucide-react";
 import { BUCKET_ICONS } from "@/components/layout/bucket-icon";
 import { HubSearch } from "@/components/hub/hub-search";
@@ -21,6 +22,7 @@ import { NotificationBell } from "@/components/notifications/notification-bell";
 import { FEASIBILITY_STAGE_BUCKETS, FEASIBILITY_STATUS_LABELS } from "@/db/enums";
 import { cn } from "@/lib/utils";
 import { ModuleStepButtons } from "@/components/layout/next-module-button";
+import { ModuleTitleSlot } from "@/components/shell/module-title";
 
 /**
  * Primary Feasibility module shell — its own chrome (like the other form
@@ -106,7 +108,7 @@ export function FeasibilityModuleShell({
         {/* Left — toggle + the brand, which sits directly above the sidebar's
             first row. No module-title pill in the middle any more: the sidebar
             names the module one row below, and the two read as a stutter. */}
-        <div className="flex shrink-0 items-center gap-2">
+        <div className={cn("flex shrink-0 items-center gap-2", collapsed ? "min-w-[56px]" : "min-w-[232px]")}>
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}
@@ -121,7 +123,16 @@ export function FeasibilityModuleShell({
           <ModuleBrand collapsed={collapsed} />
         </div>
 
-        <HubSearch />
+
+        {/* Module title — published by the page, sitting where the sidebar ends. */}
+        <div className="flex min-w-0 shrink items-center">
+          <ModuleTitleSlot fallback={"Primary Feasibility"} />
+        </div>
+
+        {/* Search - pushed right, just before the action icons. */}
+        <div className="ml-auto flex min-w-0 flex-1 justify-end pl-4">
+          <HubSearch />
+        </div>
 
         <div className="flex shrink-0 items-center justify-end gap-2.5">
           <Link
@@ -134,7 +145,7 @@ export function FeasibilityModuleShell({
           </Link>
           <NotificationBell />
           <span title="Help - coming soon" className="grid h-9 w-9 cursor-default place-items-center rounded-full text-[#9aa0ab]">
-            <HelpCircle className="h-[18px] w-[18px]" />
+            <HelpCircle className="h-[16px] w-[16px]" />
           </span>
           {userMenu}
         </div>
@@ -148,15 +159,15 @@ export function FeasibilityModuleShell({
             collapsed ? "w-[72px]" : "w-[260px]",
           )}
         >
-          <div className={cn("flex h-full flex-col py-4", collapsed ? "w-[72px] items-center px-2" : "w-[260px] px-4")}>
+          <div className={cn("flex h-full flex-col py-3", collapsed ? "w-[72px] items-center px-2" : "w-[260px] px-4")}>
             {/* Scrolls on its own so the footer below stays pinned in view —
                 a 100vh aside with `overflow-hidden` otherwise clips the
                 "Go to next module" button away on the longer modules. */}
-            <div className="mt-4 flex min-h-0 w-full flex-1 flex-col overflow-y-auto">
-            <nav className="flex w-full flex-col gap-1.5">
+            <div className="mt-2.5 flex min-h-0 w-full flex-1 flex-col overflow-y-auto">
+            <nav className="flex w-full flex-col gap-1">
               {(() => {
                 const base = cn(
-                  "flex h-[42px] items-center rounded-lg text-[13.5px] transition",
+                  "flex h-[34px] items-center rounded-lg text-[12.5px] transition",
                   collapsed ? "justify-center px-0" : "gap-3 px-3.5",
                 );
                 const activeCls = `${base} bg-[#3f3f94] font-bold text-white shadow-[0_2px_8px_rgba(63,63,148,0.30)]`;
@@ -170,15 +181,10 @@ export function FeasibilityModuleShell({
                       title={collapsed ? "Primary Feasibility" : undefined}
                       className={primaryActive && activeStatus === "" ? activeCls : idleCls}
                     >
-                      <ClipboardList className="h-[18px] w-[18px] shrink-0" />
+                      <ClipboardList className="h-[16px] w-[16px] shrink-0" />
                       {!collapsed && <span className="truncate">Primary Feasibility</span>}
                     </Link>
-                    <div className={cn("flex flex-col gap-1", collapsed ? "" : "ml-3 border-l border-[#e5e7eb] pl-2")}>
-                      {!collapsed && counts?.all !== undefined && (
-                        <p className="px-3.5 pb-0.5 text-[10.5px] font-bold uppercase tracking-[0.1em] text-[#9aa0ab]">
-                          {counts.all} enquiry{counts.all === 1 ? "" : "s"} by status
-                        </p>
-                      )}
+                    <div className={cn("flex flex-col gap-0.5", collapsed ? "" : "ml-3 border-l border-[#e5e7eb] pl-2")}>
                       {PRIMARY_STATUS_NAV.map((n) => {
                         const isActive = primaryActive && activeStatus === n.status;
                         return (
@@ -188,10 +194,10 @@ export function FeasibilityModuleShell({
                             title={collapsed ? n.label : undefined}
                             className={cn(
                               isActive ? activeCls : idleCls,
-                              !collapsed && "h-[38px] text-[13px]",
+                              !collapsed && "h-[30px] text-[12px]",
                             )}
                           >
-                            <n.Icon className="h-[17px] w-[17px] shrink-0" />
+                            <n.Icon className="h-[15px] w-[15px] shrink-0" />
                             {!collapsed && (
                               <>
                                 <span className="min-w-0 flex-1 truncate">{n.label}</span>
@@ -212,6 +218,23 @@ export function FeasibilityModuleShell({
                       })}
                     </div>
 
+                    {/* The stage BOARD — the same queue arranged by status,
+                        with a remark demanded on every move. */}
+                    <div className="my-1 h-[1.5px] rounded-full bg-[#e5e7eb]" />
+                    <Link
+                      href={"/feasibility/board" as Route}
+                      title={collapsed ? "Feasibility Board" : undefined}
+                      className={cn(
+                        base,
+                        pathname.startsWith("/feasibility/board")
+                          ? "bg-[#3f3f94] font-bold text-white shadow-[0_2px_8px_rgba(63,63,148,0.30)]"
+                          : "font-semibold text-[#3a4152] hover:bg-[#efeffb] hover:text-[#3f3f94]",
+                      )}
+                    >
+                      <KanbanSquare className="h-[16px] w-[16px] shrink-0" />
+                      {!collapsed && <span className="truncate">Feasibility Board</span>}
+                    </Link>
+
                     {/* Destination 2 — Spec Variance. Promoted out of the status
                         filters: it is not a bucket of the queue but a standing
                         exception report ("what did somebody change after the
@@ -228,7 +251,7 @@ export function FeasibilityModuleShell({
                           : "border-[1.5px] border-[#f0d3a4] bg-[#fdf6e7] font-bold text-[#8a5a08] hover:border-[#b45309] hover:bg-[#f9ecd2]",
                       )}
                     >
-                      <GitCompareArrows className="h-[18px] w-[18px] shrink-0" />
+                      <GitCompareArrows className="h-[16px] w-[16px] shrink-0" />
                       {!collapsed && <span className="truncate">Spec Variance</span>}
                     </Link>
 
@@ -245,7 +268,7 @@ export function FeasibilityModuleShell({
                           : "border-[1.5px] border-[#b7e0c6] bg-[#eef8f2] font-bold text-[#1c7a44] hover:border-[#16a34a] hover:bg-[#e2f3ea]",
                       )}
                     >
-                      <PRIMARY_APPROVED.Icon className="h-[18px] w-[18px] shrink-0" />
+                      <PRIMARY_APPROVED.Icon className="h-[16px] w-[16px] shrink-0" />
                       {!collapsed && (
                         <>
                           <span className="min-w-0 flex-1 truncate">
@@ -265,16 +288,16 @@ export function FeasibilityModuleShell({
             </nav>
             </div>
 
-            <div className="mt-3 flex w-full shrink-0 flex-col gap-1.5 border-t border-[#e5e7eb] pt-3">
+            <div className="mt-2 flex w-full shrink-0 flex-col gap-1 border-t border-[#e5e7eb] pt-3">
               <ModuleStepButtons collapsed={collapsed} />
               <span
                 title="Support - coming soon"
                 className={cn(
-                  "flex h-[42px] cursor-default items-center rounded-lg text-[13.5px] font-semibold text-[#9aa0ab]",
+                  "flex h-[34px] cursor-default items-center rounded-lg text-[12.5px] font-semibold text-[#9aa0ab]",
                   collapsed ? "justify-center px-0" : "gap-3 px-3.5",
                 )}
               >
-                <LifeBuoy className="h-[18px] w-[18px]" />
+                <LifeBuoy className="h-[16px] w-[16px]" />
                 {!collapsed && "Support"}
               </span>
             </div>

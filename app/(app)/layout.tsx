@@ -6,6 +6,7 @@ import { IdleTimerClient } from "@/components/auth/idle-timer-client";
 import { KeyboardShortcuts } from "@/components/layout/keyboard-shortcuts";
 import { CommandPalette } from "@/components/erp/command-palette";
 import { PermissionsProvider } from "@/components/auth/permissions-provider";
+import { ModuleTitleProvider } from "@/components/shell/module-title";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   await requireUser();
@@ -23,7 +24,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       {/* App-wide ⌘K command palette (ERP Phase 3). Portal-based: renders
           nothing until opened, so existing page output is unchanged. */}
       <CommandPalette />
-      {children}
+      {/* Lets each page publish its own name into the module header (see
+          components/shell/module-title.tsx) — one provider for every shell. */}
+      <ModuleTitleProvider>{children}</ModuleTitleProvider>
     </PermissionsProvider>
   );
 }

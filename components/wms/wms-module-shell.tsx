@@ -19,6 +19,7 @@ import { NavHistoryButtons } from "@/components/layout/nav-history-buttons";
 import { AdminPill } from "@/components/header/admin-pill";
 import { ModuleBrand } from "@/components/layout/module-brand";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { ModuleTitleSlot } from "@/components/shell/module-title";
 import { cn } from "@/lib/utils";
 
 /**
@@ -75,7 +76,7 @@ export function WmsModuleShell({
       {/* Top header */}
       <header className="sticky top-0 z-40 flex h-[60px] shrink-0 items-center gap-4 border-b border-[#e5e7eb] bg-white px-4">
         {/* Left — toggle + the brand, sitting directly above the sidebar. */}
-        <div className="flex shrink-0 items-center gap-2">
+        <div className={cn("flex shrink-0 items-center gap-2", collapsed ? "min-w-[56px]" : "min-w-[232px]")}>
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}
@@ -95,7 +96,12 @@ export function WmsModuleShell({
 
         <GlobalSearch />
 
-        <div className="flex shrink-0 items-center justify-end gap-2.5">
+        {/* Module title — published by the page, sitting where the sidebar ends. */}
+        <div className="flex min-w-0 shrink items-center">
+          <ModuleTitleSlot fallback={"Work Management"} />
+        </div>
+
+        <div className="ml-auto flex shrink-0 items-center justify-end gap-2.5">
           <NotificationBell />
           {newTask}
           {isAdmin && (
@@ -115,7 +121,7 @@ export function WmsModuleShell({
             collapsed ? "w-[72px]" : "w-[248px]",
           )}
         >
-          <div className={cn("flex h-full flex-col py-4", collapsed ? "w-[72px] items-center px-2" : "w-[248px] px-4")}>
+          <div className={cn("flex h-full flex-col py-3", collapsed ? "w-[72px] items-center px-2" : "w-[248px] px-4")}>
             {!collapsed && (
               <span
                 className="mt-6 mb-2 block px-2 text-[10.5px] font-bold tracking-[0.18em] text-[#a2a8b4]"

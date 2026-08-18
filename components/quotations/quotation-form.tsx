@@ -448,7 +448,7 @@ export function QuotationForm({
             <div className="grid grid-cols-10 items-end gap-2.5 max-xl:grid-cols-5 max-md:grid-cols-2">
               <Field
                 id={`lines.${index}.custProductName`}
-                label="Customer Product Name"
+                label="Product Name"
                 className="col-span-2" float
               >
                 <input
@@ -476,7 +476,7 @@ export function QuotationForm({
               </Field>
               <Field
                 id={`lines.${index}.custDrawingNo`}
-                label="Customer Drawing No" float
+                label="Drawing No" float
               >
                 <input
                   id={`lines.${index}.custDrawingNo`}
@@ -487,7 +487,7 @@ export function QuotationForm({
               </Field>
               <Field
                 id={`lines.${index}.drawingRevisionNo`}
-                label="Drawing Revision No" float
+                label="Rev No" float
               >
                 <input
                   id={`lines.${index}.drawingRevisionNo`}
@@ -506,7 +506,7 @@ export function QuotationForm({
               </Field>
               <Field
                 id={`lines.${index}.gradeNameForCust`}
-                label="Grade Name for Customer" float
+                label="Grade Name" float
               >
                 <input
                   id={`lines.${index}.gradeNameForCust`}
@@ -517,7 +517,7 @@ export function QuotationForm({
               </Field>
               <Field
                 id={`lines.${index}.gradeCustomer`}
-                label="Grade (Customer)" float
+                label="Cust. Grade" float
               >
                 <input
                   id={`lines.${index}.gradeCustomer`}

@@ -60,6 +60,8 @@ export function CustomerPoRegisterTable({ rows, heading, actions }: Props) {
     () => [
       {
         id: "smNumber",
+        width: "96px",
+        pinnedLeft: true,
         header: "SM Number",
         searchable: true,
         sortValue: (r) => r.smNumber ?? "",
@@ -76,6 +78,8 @@ export function CustomerPoRegisterTable({ rows, heading, actions }: Props) {
       },
       {
         id: "companyName",
+        width: "190px",
+        pinnedLeft: true,
         header: "Company",
         searchable: true,
         sortValue: (r) => r.companyName ?? "",
@@ -198,6 +202,7 @@ export function CustomerPoRegisterTable({ rows, heading, actions }: Props) {
 
   const filters = React.useMemo<FilterConfig<CustomerPoRegisterRow>[]>(
     () => [
+      { id: "companyName", label: "Company", type: "select" },
       {
         id: "poMatchStatus",
         label: "Match",
@@ -212,7 +217,7 @@ export function CustomerPoRegisterTable({ rows, heading, actions }: Props) {
       {
         id: "customerPoDate",
         label: "PO date",
-        type: "dateRange",
+        type: "period",
         accessor: (r) => r.customerPoDate ?? null,
       },
     ],

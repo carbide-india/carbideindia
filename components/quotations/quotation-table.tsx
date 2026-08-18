@@ -3,13 +3,10 @@
 import * as React from "react";
 import Link from "next/link";
 import type { Route } from "next";
-import { useRouter } from "next/navigation";
 import {
   Layers,
   ChevronRight,
-  ArrowUpRight,
   AlertTriangle,
-  Trash2,
 } from "lucide-react";
 import {
   COSTING_DONE_STATUSES,
@@ -32,14 +29,11 @@ import {
   RegisterDataTable,
   type RegisterColumn,
   type FilterConfig,
-  type RowMenuItem,
 } from "@/components/registers/register-data-table";
-import { fireToast } from "@/lib/toast";
 import {
   setQuotationStatusBulk,
   setQuotationBucketBulk,
   setQuotationSentBulk,
-  deleteQuotation,
   deleteQuotationsBulk,
 } from "@/app/(app)/quotations/actions";
 import { revisionLabel } from "@/components/quotations/costing-basis";
@@ -284,45 +278,10 @@ function ProductCell({ row }: { row: QuotationListItem }) {
  * bulk-status runs client-side over the rows the page loads.
  */
 export function QuotationTable({ rows, filtered = false, heading, actions }: Props) {
-  const router = useRouter();
 
   // Per-row actions menu: Open + a destructive Delete. Delete is a HARD delete
   // (quotations have no record-level recycle bin), so it confirms first and the
   // server action refuses when a negotiation / sales order was built from it.
-  const rowMenu = React.useCallback(
-    (r: QuotationListItem): RowMenuItem<QuotationListItem>[] => [
-      {
-        key: "open",
-        label: "Open",
-        Icon: ArrowUpRight,
-        href: `/quotations/${r.id}` as Route,
-      },
-      {
-        key: "delete",
-        label: "Delete",
-        Icon: Trash2,
-        danger: true,
-        onSelect: async (row) => {
-          if (
-            !window.confirm(
-              `Delete quotation ${row.quoteNo}? This can't be undone.`,
-            )
-          ) {
-            return;
-          }
-          const res = await deleteQuotation(row.id);
-          if (res.ok) {
-            fireToast({ message: `Deleted ${row.quoteNo}.` });
-            router.refresh();
-          } else {
-            fireToast({ message: res.error, type: "error" });
-          }
-        },
-      },
-    ],
-    [router],
-  );
-
   const columns = React.useMemo<RegisterColumn<QuotationListItem>[]>(
     () => [
       {
@@ -492,7 +451,7 @@ export function QuotationTable({ rows, filtered = false, heading, actions }: Pro
       {
         id: "enquiryDate",
         label: "Enquiry date",
-        type: "dateRange",
+        type: "period",
         accessor: (r) => quoteDate(r),
       },
     ],
@@ -510,7 +469,6 @@ export function QuotationTable({ rows, filtered = false, heading, actions }: Pro
       getOpenHref={(r) => `/quotations/${r.id}` as Route}
       filters={filters}
       exportFilename="quotations"
-      rowMenu={rowMenu}
       bulkActions={[
         {
           label: "Set quotation status",

@@ -420,6 +420,8 @@ export function CostingTable({ rows, heading, actions }: Props) {
 
   const filters = React.useMemo<FilterConfig<CostingRegisterRow>[]>(
     () => [
+      { id: "companyName", label: "Company", type: "select" },
+      { id: "custProductName", label: "Product", type: "select" },
       {
         id: "bucket",
         label: "Status",
@@ -455,7 +457,7 @@ export function CostingTable({ rows, heading, actions }: Props) {
       {
         id: "createdAt",
         label: "Date",
-        type: "dateRange",
+        type: "period",
         accessor: (r) => r.createdAt,
       },
     ],

@@ -285,6 +285,11 @@ export async function setSecondaryFeasibilityStatusBulk(
   const me = await requireUser();
   const parsed = SetSecondaryStatusSchema.safeParse({ ids, status });
   if (!parsed.success) {
+    console.error("[setSecondaryStatusBulk] rejected", {
+      status,
+      idCount: ids.length,
+      issue: parsed.error.issues[0]?.message,
+    });
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid status." };
   }
   // Anyone may move a line up to Pending Approval; signing it off is the
@@ -294,11 +299,27 @@ export async function setSecondaryFeasibilityStatusBulk(
   if (refusal) return { ok: false, error: refusal };
 
   try {
-    await db
+    // `returning` so a write that matched NOTHING is reported as a failure
+    // instead of a cheerful "Updated 1 row." A silent zero-row update is the
+    // one outcome the UI could not previously tell apart from success.
+    const updated = await db
       .update(inquiryItems)
       .set({ secondaryFeasibilityStatus: parsed.data.status, updatedAt: new Date() })
-      .where(inArray(inquiryItems.id, parsed.data.ids));
-  } catch {
+      .where(inArray(inquiryItems.id, parsed.data.ids))
+      .returning({ id: inquiryItems.id });
+
+    if (updated.length === 0) {
+      console.error("[setSecondaryStatusBulk] matched 0 rows", {
+        status: parsed.data.status,
+        ids: parsed.data.ids,
+      });
+      return {
+        ok: false,
+        error: "Those product lines no longer exist — refresh the register and try again.",
+      };
+    }
+  } catch (err) {
+    console.error("[setSecondaryStatusBulk] db error", err);
     return { ok: false, error: "Could not update the selected product lines." };
   }
 

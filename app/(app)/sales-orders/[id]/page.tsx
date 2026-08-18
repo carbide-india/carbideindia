@@ -4,6 +4,7 @@ import { listCustomerPoRevisions } from "@/app/(app)/sales-orders/issue-actions"
 import { requireUser } from "@/lib/auth/current";
 import {
   getSalesOrderById,
+  getSalesOrderDocuments,
   getSalesOrderItems,
   getSalesOrderLineNotes,
 } from "@/lib/queries/sales-orders";
@@ -15,6 +16,7 @@ import {
   type SalesOrderInquiryLink,
 } from "@/components/sales-orders/so-detail";
 import { SoOutputsCard } from "@/components/sales-orders/so-outputs-card";
+import { SalesOrderDocuments } from "@/components/sales-orders/so-documents";
 import { SyncProductsBanner } from "@/components/pipeline/sync-products-banner";
 import { syncProductsFromEnquiry } from "@/app/(app)/sales-orders/actions";
 import { WorkflowStepper } from "@/components/workflow/workflow-stepper";
@@ -51,7 +53,7 @@ export default async function SalesOrderDetailPage({ params }: PageProps) {
 
   // The linked enquiry (SM repo) supplies the header SM chip + number, and the
   // seed list lets us flag products added to the enquiry after this sales order.
-  const [employees, inquiry, lines, seeds, lineNotes, poHistory] = await Promise.all([
+  const [employees, inquiry, lines, seeds, lineNotes, soDocuments, poHistory] = await Promise.all([
     listEmployeeOptions(),
     salesOrder.inquiryId
       ? getInquiryById(salesOrder.inquiryId)
@@ -62,6 +64,7 @@ export default async function SalesOrderDetailPage({ params }: PageProps) {
       : Promise.resolve([]),
     // Per-line factory notes for the dual-output panel (factory copy only).
     getSalesOrderLineNotes(salesOrder.id),
+    getSalesOrderDocuments(salesOrder.id),
     // Superseded customer POs — the Client PO card's history trail.
     listCustomerPoRevisions(salesOrder.id),
   ]);
@@ -111,6 +114,23 @@ export default async function SalesOrderDetailPage({ params }: PageProps) {
         poHistory={poHistory}
         employeeNames={employeeNames}
       />
+      {/* The customer PO itself. The order records its number, date and link;
+          this holds the document, filed against the order rather than left on
+          somebody's drive. */}
+      <section className="overflow-hidden rounded-section border-2 border-[#b7bcd2] bg-surface-card">
+        <div className="flex items-center gap-2.5 border-b-2 border-[#d6d9ea] bg-[#e7e9f6] px-4 py-2.5">
+          <span className="h-4 w-1.5 shrink-0 rounded-full bg-[#3f3f94]" />
+          <span className="text-[13.5px] font-black uppercase tracking-[0.1em] text-[#3f3f94]">
+            Customer PO &amp; Attachments
+          </span>
+        </div>
+        <SalesOrderDocuments
+          salesOrderId={salesOrder.id}
+          documents={soDocuments}
+          canEdit
+        />
+      </section>
+
       {/* One SO, two outputs — stage bucket + customer/factory copies. */}
       <SoOutputsCard
         salesOrderId={salesOrder.id}
