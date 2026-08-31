@@ -225,10 +225,7 @@ export function GroupHeader({
     <div className="flex items-center gap-3">
       <span
         className="grid h-[28px] min-w-[28px] shrink-0 place-items-center rounded-full px-2 text-[12.5px] font-extrabold text-white tabular-nums"
-        style={{
-          background: "linear-gradient(135deg, #3F3F94 0%, #6d6dcf 100%)",
-          boxShadow: "0 3px 8px -2px rgba(63,63,148,0.55)",
-        }}
+        style={{ background: "#1F2547" }}
       >
         {n}
       </span>
@@ -236,13 +233,7 @@ export function GroupHeader({
         {label}
       </span>
       {leftAction}
-      <span
-        className="h-[2px] flex-1 rounded-full"
-        style={{
-          background:
-            "linear-gradient(90deg, rgba(63,63,148,0.28) 0%, rgba(63,63,148,0.04) 60%, rgba(63,63,148,0) 100%)",
-        }}
-      />
+      <span className="h-[1.5px] flex-1 rounded-full" style={{ background: "#E2DFDC" }} />
       {action}
     </div>
   );

@@ -106,7 +106,7 @@ export function SendQuoteButton({
           alreadySent
             ? undefined
             : {
-                background: "linear-gradient(135deg, rgb(63,63,148), rgb(47,47,111))",
+                background: "#454595",
                 boxShadow: "0 4px 12px rgba(63,63,148,0.30)",
               }
         }
@@ -208,7 +208,7 @@ export function SendQuoteButton({
                   title={noRecipient ? "Add at least one To address" : undefined}
                   className="inline-flex h-9 items-center gap-2 rounded-pill px-5 text-[13px] font-extrabold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-45"
                   style={{
-                    background: "linear-gradient(135deg, rgb(63,63,148), rgb(47,47,111))",
+                    background: "#454595",
                   }}
                 >
                   {pending && (

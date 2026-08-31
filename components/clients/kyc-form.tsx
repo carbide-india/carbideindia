@@ -10,7 +10,7 @@ import { Check, Copy, FileText, ImagePlus, Loader2, Plus, X } from "lucide-react
 import { CreateClientKycSchema } from "@/lib/validators/client-kyc";
 import { createClientKyc, fetchGstDetailsAction } from "@/app/(app)/clients/actions";
 import { parseGstin, type GstinParse, GST_STATE_NAMES } from "@/lib/data/gst";
-import { AddMasterOptionModal } from "@/components/masters/add-master-option-modal";
+import { MasterMultiSelect } from "@/components/masters/master-multi-select";
 import { InlineOptionAdd } from "@/components/clients/inline-option-add";
 import { addCustomOption } from "@/app/(app)/_actions/custom-lists";
 import { CUSTOM_LISTS } from "@/lib/custom-lists/registry";
@@ -303,7 +303,7 @@ export function KycForm({
   // Locally-added Commercial & Credit terms (payment terms / freight / credit
   // days / credit limit / transporter / qty deviation) - each list is a custom
   // dropdown; the inline "+ Add" writes to it and shows the value immediately.
-  const [extraTerms, setExtraTerms] = React.useState<Record<string, string[]>>({});
+  const [extraTerms] = React.useState<Record<string, string[]>>({});
   const withExtra = React.useCallback(
     (base: readonly string[] | undefined, key: string) =>
       Array.from(new Set([...(base ?? []), ...(extraTerms[key] ?? [])].filter(Boolean))),
@@ -313,6 +313,16 @@ export function KycForm({
   const isEdit = Boolean(editClientId);
   const draftsOn = Boolean(enableDrafts) && !isEdit;
   const router = useRouter();
+
+  // Inline "Add new" for the master multi-selects (admin only): create the
+  // option, refresh so it flows back into the options list, return the result.
+  const masterCreate =
+    (kind: "customer_type" | "industry_type" | "product_type") =>
+    async (name: string) => {
+      const res = await createMasterOption({ kind, name });
+      if (res.ok) router.refresh();
+      return res;
+    };
   const [pending, startTransition] = React.useTransition();
   const [serverError, setServerError] = React.useState<string | null>(null);
 
@@ -616,22 +626,6 @@ export function KycForm({
 
   /** Inline "+ Add" for a Commercial & Credit custom dropdown: writes the value
    *  to the list, shows it instantly, and selects it via `onSelect`. */
-  function termAdd(listKey: string, title: string, onSelect: (v: string) => void) {
-    return (
-      <InlineOptionAdd
-        title={title}
-        add={async (n) => {
-          const r = await addCustomOption("kyc", listKey, n);
-          return r.ok ? { ok: true, value: n } : { ok: false, error: r.error };
-        }}
-        onAdded={(v) => {
-          setExtraTerms((p) => ({ ...p, [listKey]: [...(p[listKey] ?? []), v] }));
-          onSelect(v);
-        }}
-      />
-    );
-  }
-
   // Business-card scans live in form state via the URL fields - uploads run on
   // file-pick and never block the save. `front`/`back` track in-flight uploads.
   const cardFront = watch("businessCardFrontUrl");
@@ -765,7 +759,7 @@ export function KycForm({
   const { formProps } = useKeyboardForm();
 
   return (
-    <form onSubmit={submit} onKeyDown={formProps.onKeyDown} className="flex flex-col gap-6" noValidate>
+    <form onSubmit={submit} onKeyDown={formProps.onKeyDown} className="kyc-sheet flex flex-col gap-6" noValidate>
 
       {/* ── 1 · Identity ─────────────────────────────────────────────── */}
       <SectionCard
@@ -922,99 +916,35 @@ export function KycForm({
           </Field>
         </div>
 
-        {/* Customer Type on its own line; Industry Type stacked below it. */}
-        <div className="flex flex-col gap-4">
+        {/* The three master multi-selects share one row. */}
+        <div className="grid grid-cols-3 gap-4 max-lg:grid-cols-1">
           <MasterChips
             control={control}
             name="customerTypeIds"
             label="Customer Type"
             options={customerTypes}
-            add={isAdmin ? <AddMasterOptionModal kind="customer_type" label="Customer Type" /> : null}
+            onCreate={isAdmin ? masterCreate("customer_type") : undefined}
           />
           <MasterChips
             control={control}
             name="industryTypeIds"
             label="Industry Type"
             options={industryTypes}
-            add={isAdmin ? <AddMasterOptionModal kind="industry_type" label="Industry Type" /> : null}
+            onCreate={isAdmin ? masterCreate("industry_type") : undefined}
           />
-        </div>
-
-        {/* Product Types - uniform-width checkbox chip grid over the master. */}
-        <div className="flex flex-col gap-2">
-          <span
-            className="font-bold"
-            style={{
-              fontFamily: "var(--font-sans), system-ui, sans-serif",
-              fontSize: 14,
-              letterSpacing: "-0.005em",
-              color: "var(--color-ink-strong)",
-            }}
-          >
-            Product Types
-          </span>
           <Controller
             control={control}
             name="productTypeIds"
-            render={({ field }) => {
-              const selected = field.value ?? [];
-              return (
-                <>
-                  {productTypes.length === 0 ? (
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      <p className="text-[13px] text-ink-subtle">
-                        No product types yet.
-                      </p>
-                      {isAdmin && <AddMasterOptionModal kind="product_type" label="Product Types" />}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-7 gap-2 max-xl:grid-cols-5 max-lg:grid-cols-4 max-md:grid-cols-2">
-                      {productTypes.map((opt) => {
-                        const checked = selected.includes(opt.id);
-                        return (
-                          <button
-                            key={opt.id}
-                            type="button"
-                            role="checkbox"
-                            aria-checked={checked}
-                            onClick={() =>
-                              field.onChange(
-                                checked
-                                  ? selected.filter((id) => id !== opt.id)
-                                  : [...selected, opt.id],
-                              )
-                            }
-                            className={cn(
-                              "flex w-full items-start gap-2 rounded-chip border-[1.75px] px-2.5 py-2 text-left text-[12.5px] font-semibold leading-tight transition-colors",
-                              checked
-                                ? "border-brand bg-brand/8 text-ink-strong"
-                                : "border-[#9199b6] bg-surface-card text-ink-strong hover:border-[#6f78a0] hover:bg-[#f3f4f8]",
-                            )}
-                          >
-                            <span
-                              className={cn(
-                                "mt-[1px] inline-flex size-[16px] shrink-0 items-center justify-center rounded-[4px] border-[1.75px] transition-colors",
-                                checked
-                                  ? "bg-brand border-brand text-white"
-                                  : "border-[#9199b6] bg-white text-transparent",
-                              )}
-                            >
-                              <Check size={11} strokeWidth={3} />
-                            </span>
-                            <span className="whitespace-normal break-words">{opt.name}</span>
-                          </button>
-                        );
-                      })}
-                      {isAdmin && (
-                        <div className="flex items-center">
-                          <AddMasterOptionModal kind="product_type" label="Product Types" />
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </>
-              );
-            }}
+            render={({ field }) => (
+              <MasterMultiSelect
+                label="Product Types"
+                options={productTypes}
+                selected={field.value ?? []}
+                onChange={field.onChange}
+                onCreate={isAdmin ? masterCreate("product_type") : undefined}
+                placeholder="Select product types…"
+              />
+            )}
           />
         </div>
 
@@ -1528,9 +1458,6 @@ export function KycForm({
             label="Payment Terms"
             labelOnly
             float
-            action={termAdd("payment_terms", "Payment Term", (v) =>
-              setValue("paymentTerms", v, { shouldDirty: true }),
-            )}
           >
             <Controller
               control={control}
@@ -1550,9 +1477,6 @@ export function KycForm({
             label="Freight Charges"
             labelOnly
             float
-            action={termAdd("freight_charges", "Freight Charge", (v) =>
-              setValue("freightCharges", v, { shouldDirty: true }),
-            )}
           >
             <Controller
               control={control}
@@ -1572,9 +1496,6 @@ export function KycForm({
             label="Credit Days"
             labelOnly
             float
-            action={termAdd("credit_days", "Credit Days value", (v) =>
-              setValue("creditDays", v as never, { shouldDirty: true }),
-            )}
           >
             <Controller
               control={control}
@@ -1597,9 +1518,6 @@ export function KycForm({
             label="Credit Limit"
             labelOnly
             float
-            action={termAdd("credit_limit", "Credit Limit value", (v) =>
-              setValue("creditLimit", v as never, { shouldDirty: true }),
-            )}
           >
             <Controller
               control={control}
@@ -1622,9 +1540,6 @@ export function KycForm({
             label="Transporter"
             labelOnly
             float
-            action={termAdd("transporter", "Transporter", (v) =>
-              setValue("transporter", v, { shouldDirty: true }),
-            )}
           >
             <Controller
               control={control}
@@ -1644,9 +1559,6 @@ export function KycForm({
             label="Quantity Deviation"
             labelOnly
             float
-            action={termAdd("qty_deviation", "Quantity Deviation", (v) =>
-              setValue("qtyDeviation", v, { shouldDirty: true }),
-            )}
           >
             <Controller
               control={control}
@@ -1898,7 +1810,7 @@ export function KycForm({
           className="text-cta text-white px-8 py-4 rounded-chip transition-transform disabled:opacity-50"
           style={{
             background:
-              "linear-gradient(135deg, rgb(63, 63, 148), rgb(47, 47, 111))",
+              "#454595",
             boxShadow: "0 6px 16px rgba(63, 63, 148, 0.34)",
             fontWeight: 800,
             fontSize: 18,
@@ -1930,92 +1842,30 @@ function MasterChips({
   name,
   label,
   options,
-  add,
+  onCreate,
 }: {
   control: Control<KycFormValues>;
   name: "customerTypeIds" | "industryTypeIds";
   label: string;
   options: MasterOptionItem[];
-  /** Optional "+ Add" control rendered at the end of the chip row. */
-  add?: React.ReactNode;
+  /** Inline "Add new" in the dropdown (admin only). */
+  onCreate?: (name: string) => Promise<{ ok: boolean; error?: string }>;
 }) {
   return (
-    <div className="flex flex-col gap-2">
-      <span
-        className="font-bold"
-        style={{
-          fontFamily: "var(--font-sans), system-ui, sans-serif",
-          fontSize: 14,
-          letterSpacing: "-0.005em",
-          color: "var(--color-ink-strong)",
-        }}
-      >
-        {label}
-      </span>
-      <Controller
-        control={control}
-        name={name}
-        render={({ field }) => {
-          const selected = field.value ?? [];
-          return (
-            <>
-              {options.length === 0 ? (
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <p className="text-[13px] text-ink-subtle">
-                    No options yet.
-                  </p>
-                  {add}
-                </div>
-              ) : (
-                <div
-                  role="group"
-                  aria-label={label}
-                  className="flex flex-wrap gap-2"
-                >
-                  {options.map((opt) => {
-                    const checked = selected.includes(opt.id);
-                    return (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        role="checkbox"
-                        aria-checked={checked}
-                        onClick={() =>
-                          field.onChange(
-                            checked
-                              ? selected.filter((id) => id !== opt.id)
-                              : [...selected, opt.id],
-                          )
-                        }
-                        className={cn(
-                          "inline-flex items-center gap-2 rounded-chip border-[1.75px] px-3 py-2 text-[13px] font-semibold transition-colors",
-                          checked
-                            ? "border-brand bg-brand/8 text-ink-strong"
-                            : "border-[#9199b6] bg-surface-card text-ink-strong hover:border-[#6f78a0] hover:bg-[#f3f4f8]",
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "inline-flex size-[16px] shrink-0 items-center justify-center rounded-[4px] border-[1.75px] transition-colors",
-                            checked
-                              ? "bg-brand border-brand text-white"
-                              : "border-[#9199b6] bg-white text-transparent",
-                          )}
-                        >
-                          <Check size={11} strokeWidth={3} />
-                        </span>
-                        <span className="whitespace-nowrap">{opt.name}</span>
-                      </button>
-                    );
-                  })}
-                  {add ? <div className="self-center">{add}</div> : null}
-                </div>
-              )}
-            </>
-          );
-        }}
-      />
-    </div>
+    <Controller
+      control={control}
+      name={name}
+      render={({ field }) => (
+        <MasterMultiSelect
+          label={label}
+          options={options}
+          selected={field.value ?? []}
+          onChange={field.onChange}
+          onCreate={onCreate}
+          placeholder={`Select ${label.toLowerCase()}…`}
+        />
+      )}
+    />
   );
 }
 

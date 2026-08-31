@@ -117,8 +117,7 @@ export default async function VendorRecordPage({
               href={`/vendors/${vendor.id}/edit` as Route}
               className="inline-flex items-center gap-2 rounded-chip px-5 py-2.5 text-[14px] text-white transition-transform hover:-translate-y-px"
               style={{
-                background:
-                  "linear-gradient(135deg, rgb(63,63,148), rgb(47,47,111))",
+                background: "#454595",
                 boxShadow: "0 6px 16px rgba(63,63,148,0.32)",
                 fontWeight: 800,
               }}

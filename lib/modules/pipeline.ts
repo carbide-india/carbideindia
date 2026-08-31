@@ -106,6 +106,31 @@ export const PIPELINE_MODULES: readonly PipelineModule[] = [
     managePermission: "sales_orders.manage",
     match: ["/sales-orders"],
   },
+  // Client Meeting and Vendors are not sales-pipeline STAGES (one is an
+  // "anytime" log, the other a master), but the Forms launchpad numbers them
+  // 10 and 11 in the same sequence — so the sidebar "next module" walk continues
+  // into them rather than dead-ending on Sales Order. They keep the same
+  // `<seg>.view` / `<seg>.manage` naming as the stages above; those two keys are
+  // not in the enforcement catalogue (db/enums.ts) yet, so if permission
+  // enforcement is ever switched on they'd be skipped from the walk — which is
+  // exactly today's behaviour for them, so no regression, only an improvement
+  // while enforcement is off (the app's default).
+  {
+    key: "meeting",
+    label: "Client Meeting",
+    href: "/meetings",
+    viewPermission: "meetings.view",
+    managePermission: "meetings.manage",
+    match: ["/meetings"],
+  },
+  {
+    key: "vendors",
+    label: "Vendors",
+    href: "/vendors",
+    viewPermission: "vendors.view",
+    managePermission: "vendors.manage",
+    match: ["/vendors"],
+  },
 ];
 
 /**

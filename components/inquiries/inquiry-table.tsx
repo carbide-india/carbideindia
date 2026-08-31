@@ -119,6 +119,35 @@ export function InquiryTable({ rows, employees, variant = "enquiry", heading, ac
           </Link>
         ),
       },
+      // Company + Priority are pulled up next to SM No. and frozen with it, so the
+      // three form a sticky identity block that stays put while the rest of the
+      // row scrolls ("freeze till Priority").
+      {
+        id: "companyName",
+        pinnedLeft: true,
+        header: "Company",
+        width: "200px",
+        truncate: true,
+        searchable: true,
+        sortValue: (r) => r.companyName,
+        cell: (r) => (
+          <span className="text-ink-strong font-semibold">{r.companyName}</span>
+        ),
+      },
+      {
+        id: "priority",
+        pinnedLeft: true,
+        header: "Priority",
+        width: "104px",
+        sortValue: (r) => r.priority,
+        exportValue: (r) => INQUIRY_PRIORITY_LABELS[r.priority],
+        cell: (r) => (
+          <Chip
+            label={INQUIRY_PRIORITY_LABELS[r.priority]}
+            tone={PRIORITY_TONES[r.priority]}
+          />
+        ),
+      },
       {
         id: "enquiryDate",
         header: "Date",
@@ -128,17 +157,6 @@ export function InquiryTable({ rows, employees, variant = "enquiry", heading, ac
           <span className="tabular-nums text-ink-soft">
             {formatDate(r.enquiryDate)}
           </span>
-        ),
-      },
-      {
-        id: "companyName",
-        header: "Company",
-        width: "200px",
-        truncate: true,
-        searchable: true,
-        sortValue: (r) => r.companyName,
-        cell: (r) => (
-          <span className="text-ink-strong font-semibold">{r.companyName}</span>
         ),
       },
       {
@@ -198,19 +216,6 @@ export function InquiryTable({ rows, employees, variant = "enquiry", heading, ac
               )}
             </span>
           ),
-      },
-      {
-        id: "priority",
-        header: "Priority",
-        width: "104px",
-        sortValue: (r) => r.priority,
-        exportValue: (r) => INQUIRY_PRIORITY_LABELS[r.priority],
-        cell: (r) => (
-          <Chip
-            label={INQUIRY_PRIORITY_LABELS[r.priority]}
-            tone={PRIORITY_TONES[r.priority]}
-          />
-        ),
       },
       {
         id: "export",

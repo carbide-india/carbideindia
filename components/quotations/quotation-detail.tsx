@@ -423,7 +423,7 @@ export function QuotationDetail({
                     className="inline-flex items-center gap-2 rounded-pill px-5 py-2.5 text-[14px] font-bold text-white transition-opacity disabled:opacity-50"
                     style={{
                       background:
-                        "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
+                        "#454595",
                     }}
                   >
                     {isSubmitting && (
@@ -530,7 +530,7 @@ function ProductBand({ n, title }: { n: number; title: string }) {
   return (
     <div
       className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3"
-      style={{ background: "linear-gradient(135deg, #3f3f94, #2f2f6f)" }}
+      style={{ background: "#454595" }}
     >
       <span className="grid h-[26px] min-w-[26px] shrink-0 place-items-center rounded-full bg-white/20 px-2 text-[13px] font-black tabular-nums text-white">
         {n}

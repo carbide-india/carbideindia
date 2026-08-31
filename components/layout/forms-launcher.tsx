@@ -223,7 +223,7 @@ export function FormsLauncher({ variant }: { variant?: "drawer" }) {
 
             .fl-btn-primary {
               color: #fff;
-              background: linear-gradient(135deg, var(--color-brand), var(--color-brand-deep));
+              background: #454595;
               box-shadow: 0 1px 0 rgba(255,255,255,0.28) inset,
                           0 6px 16px -7px color-mix(in srgb, var(--color-brand) 65%, transparent);
             }

@@ -130,7 +130,7 @@ export function DraftsList({ drafts }: { drafts: DraftItem[] }) {
               className="draft-card group relative flex flex-col overflow-hidden rounded-2xl border border-[#e6e8ec] bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all duration-300 hover:-translate-y-1 hover:border-[#c7ccf5] hover:shadow-[0_16px_40px_rgba(30,47,102,0.13)]"
               style={{ animationDelay: `${0.05 + i * 0.05}s` }}
             >
-              <span className="pointer-events-none absolute inset-x-0 top-0 h-[4px] origin-left scale-x-0 bg-[linear-gradient(90deg,#3F3F94,#7b6cf0)] transition-transform duration-300 group-hover:scale-x-100" />
+              <span className="pointer-events-none absolute inset-x-0 top-0 h-[4px] origin-left scale-x-0 bg-[#454595] transition-transform duration-300 group-hover:scale-x-100" />
 
               <div className="flex items-start gap-4">
                 <CompletenessRing pct={d.completeness} />

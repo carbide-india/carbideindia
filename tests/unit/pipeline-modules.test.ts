@@ -46,8 +46,15 @@ describe("nextModuleFor", () => {
     expect(nextModuleFor("/costings", ALL)?.key).toBe("quotation");
   });
 
+  it("continues past Sales Order into Client Meeting and Vendors", () => {
+    // The launchpad numbers Meeting (10) and Vendors (11) after Sales Order, so
+    // the sidebar walk follows it instead of dead-ending on the last stage.
+    expect(nextModuleFor("/sales-orders", ALL)?.key).toBe("meeting");
+    expect(nextModuleFor("/meetings", ALL)?.key).toBe("vendors");
+  });
+
   it("ends at the last module rather than wrapping round", () => {
-    expect(nextModuleFor("/sales-orders", ALL)).toBeNull();
+    expect(nextModuleFor("/vendors", ALL)).toBeNull();
   });
 
   it("starts at the first module when the path is off-pipeline", () => {

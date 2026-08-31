@@ -14,7 +14,7 @@ import {
   type NewCostingVendorQuote,
 } from "@/db/schema";
 import { requireAdmin, requireUser } from "@/lib/auth/current";
-import { approvalRefusal, canApprove } from "@/lib/approval/gate";
+import { approvalRefusal } from "@/lib/approval/gate";
 import {
   CreateCostingSchema,
   type CreateCostingInput,
@@ -407,12 +407,11 @@ export interface ApproveCostingInput {
 export async function approveCostingDecision(
   input: ApproveCostingInput,
 ): Promise<ApproveCostingResult> {
-  // Choosing and locking the winning cost sheet IS the costing approval, so it
-  // is the approver's call — not any admin's (Manan, 2026-08-13).
+  // Costing approval is open to any signed-in user (owner request, 2026-08-29).
+  // This deliberately departs from the approver-only rule the other stages still
+  // follow (see lib/approval/gate.ts): only the costing approve/unlock actions
+  // were relaxed, so feasibility and task sign-off are unchanged.
   const me = await requireUser();
-  if (!canApprove(me)) {
-    return { ok: false, error: "Only the approver can approve a costing." };
-  }
 
   const inquiryItemId = input.inquiryItemId;
   if (!inquiryItemId) {
@@ -553,6 +552,35 @@ export async function approveCostingDecision(
   }
 }
 
+/**
+ * One-click approval from the register: approve the RECOMMENDED option (the
+ * cheapest valid route, and its recommended vendor for a bought-out win) without
+ * making the approver open the sheet. Because it never diverges from the
+ * recommendation, no override reason is needed — so the register chip can offer
+ * "Costing Approved" directly.
+ *
+ * All the real authority still lives in `approveCostingDecision` (approver-only,
+ * feasibility gate, snapshot + lock): this only resolves the recommended option
+ * and hands off to it. Choosing a NON-recommended route, or pinning a different
+ * vendor, still goes through the cost sheet where the override reason is captured.
+ */
+export async function approveCostingRecommended(
+  inquiryItemId: string,
+): Promise<ApproveCostingResult> {
+  const decision = await getCostingDecision(inquiryItemId);
+  const rec = decision.recommendation;
+  if (!rec) {
+    return {
+      ok: false,
+      error: "No completed cost sheet to approve yet — open the sheet to finish it first.",
+    };
+  }
+  return approveCostingDecision({
+    inquiryItemId,
+    approvedOption: rec.recommendedOption,
+  });
+}
+
 type UnlockCostingResult = { ok: true } | { ok: false; error: string };
 
 /**
@@ -563,11 +591,10 @@ type UnlockCostingResult = { ok: true } | { ok: false; error: string };
 export async function unlockCostingDecision(
   inquiryItemId: string,
 ): Promise<UnlockCostingResult> {
-  // Un-locking reverses an approval, so it needs the same authority.
-  const me = await requireUser();
-  if (!canApprove(me)) {
-    return { ok: false, error: "Only the approver can re-open an approved costing." };
-  }
+  // Re-opening reverses an approval; it is open to any signed-in user, to match
+  // the relaxed costing approval above (owner request, 2026-08-29) — so an
+  // approval made in the register can always be undone by whoever is working it.
+  await requireUser();
 
   if (!inquiryItemId) {
     return { ok: false, error: "Missing product line." };

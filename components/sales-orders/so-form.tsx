@@ -540,7 +540,7 @@ export function SoForm({
           className="text-cta text-white px-8 py-4 rounded-chip transition-transform disabled:opacity-50"
           style={{
             background:
-              "linear-gradient(135deg, rgb(63, 63, 148), rgb(47, 47, 111))",
+              "#454595",
             boxShadow: "0 6px 16px rgba(63, 63, 148, 0.34)",
             fontWeight: 800,
             fontSize: 18,

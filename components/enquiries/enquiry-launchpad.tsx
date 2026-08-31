@@ -14,6 +14,7 @@ import {
   CalendarCheck,
   ClipboardCheck,
   Layers,
+  LayoutGrid,
   Truck,
 } from "lucide-react";
 
@@ -129,73 +130,112 @@ export function EnquiryLaunchpad({ isAdmin = false }: { isAdmin?: boolean }) {
   // and then refused — the routes fail closed server-side either way.
   const forms = FORMS.filter((f) => !f.adminOnly || isAdmin);
   return (
-    <div>
-      {/* ── Hero - a big logo card on the left, a gap, then a narrower purple
-            banner. The whole group is centred on the page. ── */}
-      <div className="mx-auto flex w-full max-w-[1120px] items-center gap-5 max-md:gap-3">
-        {/* Floating big logo (on the page background, to the left of the bar).
-            Clicking the brand IS the way back to the Hub — the separate "Hub"
-            button was removed from every module header on 2026-08-13, so the
-            name has to carry it. */}
-        <Link
-          href={"/hub" as Route}
-          aria-label="Back to the Hub"
-          title="Back to the Hub"
-          className="relative z-10 hidden shrink-0 rounded-2xl border border-[#e3e5ec] bg-white px-5 py-3 shadow-[0_16px_34px_-10px_rgba(15,23,42,0.4)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#3f3f94] hover:shadow-[0_20px_40px_-10px_rgba(63,63,148,0.45)] sm:block"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/brand/logo.png"
-            alt="Carbide India"
-            className="h-[96px] w-auto max-md:h-[70px]"
-            style={{ display: "block" }}
-          />
-        </Link>
+    <div className="mx-auto w-full max-w-[1180px]">
+      {/* ── Hero — one cohesive card: a white logo panel hinged to a deep-indigo
+            banner, so the brand and the greeting read as a single masthead
+            rather than two floating pieces. ── */}
+      <div className="relative overflow-hidden rounded-[26px] border border-[#e6e8f4] bg-white shadow-[0_28px_60px_-30px_rgba(63,63,148,0.45)]">
+        <div className="grid items-stretch md:grid-cols-[288px_1fr]">
+          {/* Logo panel — clicking the brand IS the way back to the Hub (the
+              separate "Hub" button was removed from every module header on
+              2026-08-13, so the name has to carry it). */}
+          <Link
+            href={"/hub" as Route}
+            aria-label="Back to the Hub"
+            title="Back to the Hub"
+            className="group flex items-center justify-center border-b border-[#eef0f8] bg-[radial-gradient(120%_120%_at_0%_0%,#fbfbfe_0%,#f4f5fb_100%)] px-6 py-7 transition-colors hover:bg-[#f7f7fd] md:border-b-0 md:border-r"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/brand/logo.png"
+              alt="Carbide India"
+              className="h-[92px] w-auto transition-transform duration-200 group-hover:-translate-y-0.5 max-md:h-[68px]"
+              style={{ display: "block" }}
+            />
+          </Link>
 
-        {/* Purple banner - shrunk; begins to the right of the logo, separated by a gap. */}
-        <div
-          className="relative flex min-w-0 flex-1 items-center overflow-hidden rounded-2xl px-8 py-4 text-white max-md:px-5"
-          style={{
-            background: "linear-gradient(120deg,#3f3f94 0%,#5148c4 52%,#7b6cf0 100%)",
-            boxShadow: "0 18px 44px -14px rgba(63,63,148,0.55)",
-          }}
-        >
-          {/* Decorative glows. */}
-          <div className="pointer-events-none absolute -right-10 -top-20 h-60 w-60 rounded-full bg-white/10 blur-2xl" />
-          <div className="pointer-events-none absolute -bottom-24 left-1/3 h-52 w-52 rounded-full bg-white/10 blur-2xl" />
+          {/* Banner */}
+          <div
+            className="relative flex min-w-0 items-center overflow-hidden px-9 py-8 text-white max-md:px-6 max-md:py-7"
+            style={{
+              background:
+                "linear-gradient(120deg,#33337f 0%,#3f3f94 40%,#5b52c9 74%,#7b6cf0 100%)",
+            }}
+          >
+            {/* Decorative glows + a faint grid sheen for depth. */}
+            <div className="pointer-events-none absolute -right-16 -top-24 h-72 w-72 rounded-full bg-white/12 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-28 left-1/4 h-60 w-60 rounded-full bg-[#a99bff]/25 blur-3xl" />
+            <div
+              className="pointer-events-none absolute inset-0 opacity-[0.15]"
+              style={{
+                backgroundImage:
+                  "linear-gradient(rgba(255,255,255,0.5) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.5) 1px,transparent 1px)",
+                backgroundSize: "34px 34px",
+                maskImage: "radial-gradient(120% 100% at 100% 0%,#000 0%,transparent 70%)",
+              }}
+            />
 
-          {/* Title starts at the left · legal entity on the right. */}
-          <div className="relative flex w-full items-center justify-between gap-6 max-md:gap-3">
-            <div className="min-w-0 text-left">
-              <div className="text-[11.5px] font-bold uppercase tracking-[0.2em] text-white/70">
-                Carbide India · Sales Forms
+            <div className="relative flex w-full items-center justify-between gap-6 max-md:gap-3">
+              <div className="min-w-0 text-left">
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[10.5px] font-bold uppercase tracking-[0.2em] text-white/85 backdrop-blur-sm">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#8affc1]" />
+                  Carbide India · Sales Forms
+                </div>
+                <h1 className="mt-3 text-[32px] font-black leading-[1.05] tracking-tight max-md:text-[24px]">
+                  Select a Form to Proceed
+                </h1>
+                <p className="mt-1.5 text-[13px] font-medium text-white/70 max-md:hidden">
+                  Every step of the sales pipeline, in order — pick where you are.
+                </p>
               </div>
-              <h1 className="mt-1 text-[30px] font-black leading-tight tracking-tight max-md:text-[24px]">
-                Select a Form to Proceed!
-              </h1>
-            </div>
-            <div className="hidden shrink-0 text-center md:block">
-              <div className="text-[17px] font-black leading-tight tracking-tight text-white">
-                Yogeshwar
-              </div>
-              <div className="text-[17px] font-black leading-tight tracking-tight text-white">
-                Engineering
-              </div>
-              <div className="mt-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/70">
-                Pvt. Ltd.
+              <div className="hidden shrink-0 border-l border-white/20 pl-6 text-right lg:block">
+                <div className="text-[17px] font-black leading-tight tracking-tight text-white">
+                  Yogeshwar
+                </div>
+                <div className="text-[17px] font-black leading-tight tracking-tight text-white">
+                  Engineering
+                </div>
+                <div className="mt-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/65">
+                  Pvt. Ltd.
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
+      {/* ── Admin Panel — a single, un-numbered entry (it is not a pipeline
+            step, it is the map of them): one place to reach every form's create
+            page, register, board, drafts and recycle bin. ── */}
+      <Link
+        href={"/pipeline" as Route}
+        className="group mt-6 flex items-center gap-4 overflow-hidden rounded-[18px] border border-[#e6e8f2] bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#c7cae6] hover:shadow-[0_18px_40px_-22px_rgba(63,63,148,0.45)]"
+      >
+        <div
+          className="grid size-12 shrink-0 place-items-center rounded-2xl text-white ring-1 ring-inset ring-white/20 transition-transform duration-200 group-hover:scale-105"
+          style={{ background: CARD_GRAD, boxShadow: "0 10px 22px -8px rgba(63,63,148,0.55)" }}
+        >
+          <LayoutGrid className="h-[22px] w-[22px]" strokeWidth={1.9} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-[9.5px] font-black uppercase tracking-[0.14em] text-[#9aa0b8]">
+            Admin Panel
+          </div>
+          <h3 className="text-[15px] font-extrabold leading-tight tracking-tight text-[#1e2340]">
+            Forms Admin Panel — Pipeline Tracker
+          </h3>
+          <p className="mt-0.5 text-[12px] font-medium text-[#7a7f95] max-md:hidden">
+            Every inquiry and exactly where it sits in the process — KYC through Sales Order, done vs pending vs completed.
+          </p>
+        </div>
+        <ArrowRight className="h-5 w-5 shrink-0 text-[#3f3f94] transition-transform duration-200 group-hover:translate-x-1" />
+      </Link>
+
       {/* ── Card grid — five across, so the eleven modules read as 5 · 5 · 1.
-            The one-line description each card used to carry is gone: with the
-            module named and numbered in pipeline order, the sentence underneath
-            was read once and then skipped forever, while costing three lines of
-            height per card. It survives as the card's hover title, so nothing
-            is actually lost. ── */}
-      <div className="mx-auto mt-5 grid max-w-[1120px] grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            The one-line description each card carries survives as its hover
+            title (and now the tag chip), so the grid stays scannable while every
+            card gains a little more polish. ── */}
+      <div className="mt-4 grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
         {forms.map((f, i) => {
           const n = String(i + 1).padStart(2, "0");
           return (
@@ -203,31 +243,40 @@ export function EnquiryLaunchpad({ isAdmin = false }: { isAdmin?: boolean }) {
               key={f.key}
               href={f.href}
               title={f.desc}
-              className="group relative flex flex-col items-center overflow-hidden rounded-2xl border border-[#e3e5ec] bg-white p-3 text-center transition-all duration-200 hover:-translate-y-1 hover:border-[#3f3f94] hover:shadow-[0_18px_36px_-16px_rgba(63,63,148,0.4)]"
+              className="group relative flex flex-col overflow-hidden rounded-[18px] border border-[#e6e8f2] bg-white p-3.5 transition-all duration-200 hover:-translate-y-1.5 hover:border-[#c7cae6] hover:shadow-[0_22px_44px_-20px_rgba(63,63,148,0.5)]"
             >
-              {/* Stage number - corner badge. */}
-              <span
-                className="absolute right-3 top-3 rounded-full bg-[#eef1fb] px-2 py-0.5 text-[10px] font-black tabular-nums text-[#3f3f94]"
-                style={{ fontFamily: MONO }}
-              >
-                {n}
-              </span>
+              {/* Indigo accent bar that wipes across the top on hover. */}
+              <span className="pointer-events-none absolute inset-x-0 top-0 h-[3px] origin-left scale-x-0 bg-[linear-gradient(90deg,#4a4ab5,#7b6cf0)] transition-transform duration-300 group-hover:scale-x-100" />
 
-              <div
-                className="grid size-11 place-items-center rounded-xl text-white transition-transform duration-200 group-hover:scale-105"
-                style={{ background: CARD_GRAD, boxShadow: "0 8px 18px -6px rgba(63,63,148,0.45)" }}
-              >
-                <f.Icon className="h-[20px] w-[20px]" strokeWidth={1.9} />
+              {/* Top row — icon + stage number. */}
+              <div className="flex items-start justify-between">
+                <div
+                  className="grid size-12 place-items-center rounded-2xl text-white ring-1 ring-inset ring-white/20 transition-transform duration-200 group-hover:scale-105 group-hover:-rotate-3"
+                  style={{ background: CARD_GRAD, boxShadow: "0 10px 22px -8px rgba(63,63,148,0.55)" }}
+                >
+                  <f.Icon className="h-[21px] w-[21px]" strokeWidth={1.9} />
+                </div>
+                <span
+                  className="rounded-full bg-[#f1f2fb] px-2 py-0.5 text-[10px] font-black tabular-nums text-[#5b5bb0] transition-colors group-hover:bg-[#e7e8fb] group-hover:text-[#3f3f94]"
+                  style={{ fontFamily: MONO }}
+                >
+                  {n}
+                </span>
               </div>
 
-              {/* min-h holds the two-line names ("Secondary Feasibility") level
-                  with the one-line ones, so every START FORM sits on one line. */}
-              <h3 className="mt-2 flex min-h-[34px] items-center text-[14px] font-extrabold leading-tight tracking-tight text-[#1e2340]">
+              {/* Tag chip — the stage's family, adds context without a paragraph. */}
+              <span className="mt-3 w-fit text-[9.5px] font-black uppercase tracking-[0.12em] text-[#9aa0b8]">
+                {f.tag}
+              </span>
+
+              {/* min-h holds two-line names ("Secondary Feasibility") level with
+                  the one-line ones, so every START sits on the same row. */}
+              <h3 className="mt-0.5 flex min-h-[38px] items-start text-[14.5px] font-extrabold leading-tight tracking-tight text-[#1e2340]">
                 {f.title}
               </h3>
 
               <span
-                className="mt-2 inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-lg bg-[#eef1fb] px-2 text-[10.5px] font-bold tracking-[0.06em] text-[#3f3f94] transition-all duration-200 group-hover:bg-transparent group-hover:text-white group-hover:[background:linear-gradient(135deg,#4a4ab5,#2f2f6f)] group-hover:shadow-[0_8px_18px_-6px_rgba(63,63,148,0.5)]"
+                className="mt-2.5 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-[#eef1fb] px-2 text-[10.5px] font-bold tracking-[0.06em] text-[#3f3f94] transition-all duration-200 group-hover:text-white group-hover:[background:linear-gradient(135deg,#4a4ab5,#2f2f6f)] group-hover:shadow-[0_10px_22px_-8px_rgba(63,63,148,0.55)]"
                 style={{ fontFamily: MONO }}
               >
                 START

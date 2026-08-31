@@ -32,6 +32,9 @@ export function ModuleStepButtons({ collapsed }: { collapsed?: boolean }) {
   const allowed = allowedPermissions ? new Set(allowedPermissions) : null;
   const prev = prevModuleFor(pathname, allowed);
   const next = nextModuleFor(pathname, allowed);
+  // Cream drafting-sheet theme (every pipeline module) — the forward card gets
+  // a red left accent + warm fill instead of the indigo tint.
+  const themed = true;
 
   if (!prev && !next) return null;
 
@@ -44,7 +47,7 @@ export function ModuleStepButtons({ collapsed }: { collapsed?: boolean }) {
           <Link
             href={prev.href as Route}
             title={`Previous: ${prev.label}`}
-            className="grid h-[32px] w-[32px] place-items-center rounded-lg border border-[#c7cae6] bg-white text-[#5b6076] transition-colors hover:border-[#3f3f94] hover:text-[#3f3f94]"
+            className="grid h-[32px] w-[32px] place-items-center rounded-lg border border-[#e2dfdc] bg-white text-[#777985] transition-colors hover:border-[#454595] hover:text-[#454595]"
           >
             <ArrowLeft className="h-[15px] w-[15px]" strokeWidth={2.6} />
           </Link>
@@ -53,7 +56,7 @@ export function ModuleStepButtons({ collapsed }: { collapsed?: boolean }) {
           <Link
             href={next.href as Route}
             title={`Next: ${next.label}`}
-            className="grid h-[32px] w-[32px] place-items-center rounded-lg border-[1.5px] border-[#3f3f94] bg-[#eef0fb] text-[#3f3f94] transition-colors hover:bg-[#3f3f94] hover:text-white"
+            className="grid h-[32px] w-[32px] place-items-center rounded-lg border-[1.5px] border-[#454595] bg-[#e2dfdc] text-[#454595] transition-colors hover:bg-[#454595] hover:text-white"
           >
             <ArrowRight className="h-[15px] w-[15px]" strokeWidth={2.6} />
           </Link>
@@ -69,7 +72,12 @@ export function ModuleStepButtons({ collapsed }: { collapsed?: boolean }) {
         // flow. Same footprint so the pair reads as one control.
         <Link
           href={prev.href as Route}
-          className="group flex h-[38px] items-center gap-2 rounded-lg border border-[#c7cae6] bg-white px-3 text-[13px] font-bold text-[#5b6076] transition-all hover:border-[#3f3f94] hover:text-[#3f3f94]"
+          className={cn(
+            "group flex h-[38px] items-center gap-2 px-3 text-[13px] font-bold transition-all",
+            themed
+              ? "rounded-md border border-[#e2dfdc] bg-[#ffffff] text-[#777985] hover:border-[#777985] hover:text-[#1f2547]"
+              : "rounded-lg border border-[#e2dfdc] bg-white text-[#777985] hover:border-[#454595] hover:text-[#454595]",
+          )}
         >
           <ArrowLeft
             className="h-[15px] w-[15px] shrink-0 transition-transform group-hover:-translate-x-0.5"
@@ -87,8 +95,14 @@ export function ModuleStepButtons({ collapsed }: { collapsed?: boolean }) {
         <Link
           href={next.href as Route}
           // Tinted rather than white: this is the pipeline's forward action and
-          // has to be findable at a glance in a long sidebar.
-          className="group flex h-[38px] items-center gap-2 rounded-lg border-[1.5px] border-[#3f3f94] bg-[#eef0fb] px-3 text-[13px] font-bold text-[#3f3f94] transition-all hover:bg-[#3f3f94] hover:text-white"
+          // has to be findable at a glance in a long sidebar. On the cream sheet
+          // it reads as a drafting card with a red left rule.
+          className={cn(
+            "group flex h-[38px] items-center gap-2 px-3 text-[13px] font-bold transition-all",
+            themed
+              ? "rounded-md border border-[#e2dfdc] border-l-[3px] border-l-[#d03232] bg-[#ffffff] text-[#1f2547] hover:bg-[#e2dfdc]"
+              : "rounded-lg border-[1.5px] border-[#454595] bg-[#e2dfdc] text-[#454595] hover:bg-[#454595] hover:text-white",
+          )}
         >
           <ArrowRight
             className="h-[15px] w-[15px] shrink-0 transition-transform group-hover:translate-x-0.5"

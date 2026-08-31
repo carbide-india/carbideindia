@@ -6,8 +6,10 @@ import { Fragment, useState } from "react";
 import type { Route } from "next";
 import {
   ArrowLeft,
+  ChevronDown,
   Contact,
   FileCheck2,
+  FileClock,
   FilePlus2,
   FileText,
   HelpCircle,
@@ -90,13 +92,13 @@ const REGISTERS: Record<string, { label: string; href: string }> = {
  * status would just be a slower register.
  */
 const BOARD_NAV: Record<string, { label: string; href: string }> = {
-  enquiries: { label: "Enquiry Board", href: "/enquiries/board" },
-  feasibility: { label: "Feasibility Board", href: "/feasibility/board" },
-  "secondary-feasibility": { label: "Secondary Board", href: "/secondary-feasibility/board" },
-  costings: { label: "Costing Board", href: "/costings/board" },
-  quotations: { label: "Quotation Board", href: "/quotations/board" },
-  negotiations: { label: "Negotiation Board", href: "/negotiations/board" },
-  "sales-orders": { label: "Sales Order Board", href: "/sales-orders/board" },
+  enquiries: { label: "Enquiry Kanban", href: "/enquiries/board" },
+  feasibility: { label: "Feasibility Kanban", href: "/feasibility/board" },
+  "secondary-feasibility": { label: "Secondary Kanban", href: "/secondary-feasibility/board" },
+  costings: { label: "Costing Kanban", href: "/costings/board" },
+  quotations: { label: "Quotation Kanban", href: "/quotations/board" },
+  negotiations: { label: "Negotiation Kanban", href: "/negotiations/board" },
+  "sales-orders": { label: "Sales Order Kanban", href: "/sales-orders/board" },
 };
 
 function registerFor(pathname: string): { label: string; href: string } {
@@ -113,6 +115,14 @@ function navFor(pathname: string): NavDef[] {
   // Per-form Recycle Bin - only the generic-draft forms have one (enquiry uses
   // its own draft store without recycling).
   const recycleBinRoute = draftKind ? FORM_DRAFT_META[draftKind].recycleBinRoute : null;
+  // Per-form Drafts (unfinished, autosaved forms). The 7 generic-draft forms
+  // read their route from the meta; Enquiry keeps its own draft store at a fixed
+  // path. Everything else (e.g. vendors) has no draft list.
+  const draftsRoute = draftKind
+    ? FORM_DRAFT_META[draftKind].draftsRoute
+    : familySeg(pathname) === "enquiries" || familySeg(pathname) === "inquiries"
+      ? "/enquiries/drafts"
+      : null;
   // "Create New Form" reads as the specific form (e.g. "Create New Enquiry").
   const createLabel = draftKind
     ? (FORM_DRAFT_META[draftKind].createLabel ??
@@ -241,6 +251,20 @@ function navFor(pathname: string): NavDef[] {
           },
         ] as NavDef[])
       : []),
+    // Drafts - the form's unfinished, autosaved records. Sits next to Recycle
+    // Bin in the housekeeping group at the bottom of the sidebar.
+    ...(draftsRoute
+      ? ([
+          {
+            label: "Drafts",
+            href: draftsRoute as Route,
+            Icon: FileClock,
+            ready: true,
+            active: (p: string) => p.startsWith(draftsRoute),
+            group: "bottom",
+          },
+        ] as NavDef[])
+      : []),
     // Recycle Bin - per form, next to that form's Drafts.
     ...(recycleBinRoute
       ? ([
@@ -270,7 +294,7 @@ function navFor(pathname: string): NavDef[] {
           ? "SAM Dropdown Master"
           : custom.formKey === "enquiry"
             ? "ENQ Dropdown Master"
-            : "CUST Dropdown Master",
+            : "Client Master DD",
       href: custom.route as Route,
       Icon: SlidersHorizontal,
       ready: true,
@@ -320,6 +344,9 @@ export function EnquiryModuleShell({
 }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  // The register's status distribution collapses into the Register row like an
+  // accordion. Default open so nothing that was visible before is hidden on load.
+  const [registerOpen, setRegisterOpen] = useState(true);
   // The header shows the current form MODULE name (e.g. "Client KYC") on every
   // one of its sub-pages - Master, Drafts, Contact Book, Recycle Bin, Custom -
   // so the top title never just repeats the page's own <h1> below it.
@@ -340,10 +367,29 @@ export function EnquiryModuleShell({
   const showSidebar = pathname !== "/enquiries";
   const nav = navFor(pathname).filter((n) => !n.adminOnly || isAdmin);
 
+  // ── Drafting-sheet theme (the /login look) ────────────────────────────────
+  // Applied to every module page the shell renders (all pipeline forms + their
+  // registers/boards) for one consistent look — everything except the Forms
+  // launchpad, which keeps its own layout (and has no sidebar).
+  const themed = showSidebar;
+  // Active nav pill: navy on the cream sheet, indigo on the default white shell.
+  const activeNav = themed
+    ? "bg-[#1E2447] font-bold text-white shadow-[0_2px_8px_rgba(31,37,71,0.30)]"
+    : "bg-[#454595] font-bold text-white shadow-[0_2px_8px_rgba(69,69,149,0.30)]";
+  const idleNav = themed
+    ? "font-semibold text-[#777985] hover:bg-[#e2dfdc] hover:text-[#1f2547]"
+    : "font-semibold text-[#777985] hover:bg-[#e2dfdc] hover:text-[#454595]";
+  const dividerCls = themed ? "bg-[#e2dfdc]" : "bg-[#e2dfdc]";
+  // The module name shown in the sidebar brand block (uppercased in the mockup).
+  const brandTitle = title ?? pageTitle;
+
   return (
-    <div className="flex min-h-screen flex-col bg-[#f4f5f7]">
+    <div className={cn("flex min-h-screen flex-col", themed ? "drafting-grid" : "bg-[#f4f5f7]")}>
       {/* ── Top header bar (full width) ─────────────────────────── */}
-      <header className="sticky top-0 z-40 flex h-[60px] shrink-0 items-center gap-4 border-b border-[#e5e7eb] bg-white px-4">
+      <header className={cn(
+        "sticky top-0 z-40 flex h-[60px] shrink-0 items-center gap-4 border-b px-4",
+        themed ? "border-[#e2dfdc] bg-[#f4f0e8]" : "border-[#e5e7eb] bg-white",
+      )}>
         {/* Left zone - toggle, history, brand. Sized to the sidebar (minus the
             header's own px-4) so the module title that follows starts exactly
             where the white side panel ends. min-w, not w: if the brand ever
@@ -360,7 +406,7 @@ export function EnquiryModuleShell({
               onClick={() => setCollapsed((c) => !c)}
               aria-label={collapsed ? "Show sidebar" : "Hide sidebar"}
               aria-pressed={!collapsed}
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-[#4b5563] transition hover:bg-[#efeffb] hover:text-[#3f3f94] active:scale-90"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-[#777985] transition hover:bg-[#e2dfdc] hover:text-[#454595] active:scale-90"
             >
               {/* Re-keyed so the pop animation replays on every toggle. */}
               <span key={collapsed ? "collapsed" : "open"} className="animate-toggle-pop inline-flex">
@@ -376,14 +422,21 @@ export function EnquiryModuleShell({
               Back-to-Forms, driving real history navigation with depth-aware
               enable/disable. */}
           <HistoryNav />
-          <ModuleBrand collapsed={collapsed} />
+          {/* On the cream sheet the brand lives in the sidebar (logo + module
+              name + tagline), so the header wordmark would double it — keep it
+              only when collapsed, where the sidebar block is hidden. */}
+          {(!themed || collapsed) && <ModuleBrand collapsed={collapsed} />}
         </div>
 
         {/* Module title — published by the page (a register names itself) with
-            the route-derived module name as the fallback. */}
-        <div className="flex min-w-0 shrink items-center">
-          <ModuleTitleSlot fallback={pageTitle} />
-        </div>
+            the route-derived module name as the fallback. On the cream sheet the
+            module name already sits in the sidebar masthead, so the header title
+            would double it — hide it there (matches the mockup's clean header). */}
+        {!themed && (
+          <div className="flex min-w-0 shrink items-center">
+            <ModuleTitleSlot fallback={pageTitle} />
+          </div>
+        )}
 
         {/* Search - pushed to the right, just before the action icons. */}
         <div className="ml-auto flex min-w-0 flex-1 justify-end pl-4">
@@ -395,7 +448,7 @@ export function EnquiryModuleShell({
           {showSidebar && (
             <Link
               href={"/enquiries" as Route}
-              className="group flex h-9 shrink-0 items-center gap-1.5 rounded-lg border-[1.5px] border-[#c7cae6] bg-white px-3 text-[13px] font-bold text-[#3f3f94] transition-colors hover:border-[#3f3f94] hover:bg-[#f3f3fb] max-md:hidden"
+              className="group flex h-9 shrink-0 items-center gap-1.5 rounded-lg border-[1.5px] border-[#e2dfdc] bg-white px-3 text-[13px] font-bold text-[#454595] transition-colors hover:border-[#454595] hover:bg-[#f4f0e8] max-md:hidden"
               aria-label="Back to all forms"
             >
               <ArrowLeft className="h-[15px] w-[15px] transition-transform duration-200 group-hover:-translate-x-0.5" strokeWidth={2.6} />
@@ -405,7 +458,7 @@ export function EnquiryModuleShell({
           <NotificationBell />
           <span
             title="Help - coming soon"
-            className="grid h-9 w-9 cursor-default place-items-center rounded-full text-[#9aa0ab]"
+            className="grid h-9 w-9 cursor-default place-items-center rounded-full text-[#a8a8a8]"
           >
             <HelpCircle className="h-[16px] w-[16px]" />
           </span>
@@ -420,18 +473,54 @@ export function EnquiryModuleShell({
         {showSidebar && (
           <aside
             className={cn(
-              "sticky top-[60px] h-[calc(100vh-60px)] shrink-0 overflow-hidden border-r border-[#e5e7eb] bg-white transition-[width] duration-300 ease-in-out",
+              "sticky top-[60px] h-[calc(100vh-60px)] shrink-0 overflow-hidden border-r transition-[width] duration-300 ease-in-out",
+              themed ? "border-[#e2dfdc] bg-[#f4f0e8]" : "border-[#e5e7eb] bg-white",
               collapsed ? "w-[72px]" : "w-[248px]",
             )}
           >
-            <div className={cn("flex h-full flex-col py-3", collapsed ? "w-[72px] items-center px-2" : "w-[248px] px-4")}>
+            <div className={cn("relative flex h-full flex-col py-3", collapsed ? "w-[72px] items-center px-2" : "w-[248px] px-4")}>
+              {/* Blueprint diamond cluster — the drafting-sheet flourish from the
+                  mockup. Purely decorative: behind the nav, non-interactive, and
+                  clipped by the aside's overflow-hidden so it never spills. */}
+              {themed && !collapsed && (
+                <div aria-hidden className="pointer-events-none absolute -bottom-3 -left-2 z-0 grid grid-cols-5 gap-2 opacity-80">
+                  {[
+                    "#e2dfdc", "#a8a8a8", "#1f2547", "#e2dfdc", "#a8a8a8",
+                    "#1f2547", "#e2dfdc", "#d03232", "#a8a8a8", "#e2dfdc",
+                    "#a8a8a8", "#e2dfdc", "#1f2547", "#e2dfdc", "#d03232",
+                  ].map((c, i) => (
+                    <span key={i} className="h-3.5 w-3.5 rotate-45 rounded-[2px]" style={{ background: c, opacity: 0.5 }} />
+                  ))}
+                </div>
+              )}
+              {/* Cream-sheet brand block: the Carbide India logo, the module name
+                  and the tagline — the sidebar masthead from the mockup. Only on
+                  the themed shell and only when expanded (no room in the rail). */}
+              {themed && !collapsed && (
+                <Link
+                  href={"/hub" as Route}
+                  aria-label="Carbide India — back to the Hub"
+                  className="mb-3 flex items-center gap-2.5 rounded-lg px-1 py-1 transition-colors hover:bg-[#e2dfdc]"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/brand/logo.png" alt="Carbide India" className="h-10 w-auto shrink-0" />
+                  <span className="flex min-w-0 flex-col leading-tight">
+                    <span className="truncate text-[14px] font-extrabold uppercase tracking-[0.04em] text-[#1f2547]">
+                      {brandTitle}
+                    </span>
+                    <span className="truncate text-[9.5px] leading-tight text-[#777985]">
+                      Your Tungsten Carbide &amp; Tungsten Copper Partners
+                    </span>
+                  </span>
+                </Link>
+              )}
               {/* Big brand logo → hub, wordmark stacked beneath. Enlarged while
                   the surrounding spacing is tightened so the nav stays put. */}
               {/* Scrolls on its own so the footer below stays pinned in view.
                   Without this the nav pushed "Go to next module" past the
                   bottom of a 100vh aside with `overflow-hidden`, which clipped
                   it away entirely on the longer modules (KYC, Costing). */}
-              <div className="mt-2.5 flex min-h-0 w-full flex-1 flex-col overflow-y-auto">
+              <div className="relative z-10 mt-2.5 flex min-h-0 w-full flex-1 flex-col overflow-y-auto">
               <nav className="flex w-full flex-col gap-1">
                 {nav.map((n, i) => {
                   const prev = nav[i - 1];
@@ -444,36 +533,71 @@ export function EnquiryModuleShell({
                     "flex h-[34px] items-center rounded-lg text-[12.5px] transition",
                     collapsed ? "justify-center px-0" : "gap-2.5 px-3",
                   );
+                  // The Register row becomes an accordion header when it carries a
+                  // status distribution (the expanded rail only) — a chevron on
+                  // the right toggles the buckets while the label still links to
+                  // the register itself.
+                  const isRegisterHeader =
+                    n.id === "register" && !!registerChildren && !collapsed;
                   return (
                     <Fragment key={n.label}>
-                      {showDivider && <div className="my-2 h-[1.5px] rounded-full bg-[#c2c7d6]" />}
+                      {showDivider && <div className={cn("my-2 h-[1.5px] rounded-full", dividerCls)} />}
                       {!n.ready ? (
                         <span
                           title={collapsed ? n.label : "Coming soon"}
-                          className={`${base} cursor-default font-semibold text-[#b3b8c2]`}
+                          className={`${base} cursor-default font-semibold text-[#a8a8a8]`}
                         >
                           <n.Icon className="h-[16px] w-[16px]" />
                           {!collapsed && n.label}
                         </span>
+                      ) : isRegisterHeader ? (
+                        // The whole Register row toggles its status distribution
+                        // (clicking anywhere on the tab), so it is a button rather
+                        // than a link to the register table.
+                        <button
+                          type="button"
+                          onClick={() => setRegisterOpen((o) => !o)}
+                          aria-label={registerOpen ? "Collapse status filters" : "Expand status filters"}
+                          aria-expanded={registerOpen}
+                          className={cn(
+                            "flex h-[34px] w-full items-center gap-2.5 rounded-lg px-3 text-left text-[12.5px] transition",
+                            isActive ? activeNav : idleNav,
+                          )}
+                        >
+                          <n.Icon className="h-[16px] w-[16px] shrink-0" />
+                          <span className="min-w-0 flex-1 truncate">{n.label}</span>
+                          <ChevronDown
+                            className={cn(
+                              "h-[15px] w-[15px] shrink-0 opacity-70 transition-transform duration-200",
+                              registerOpen ? "" : "-rotate-90",
+                            )}
+                          />
+                        </button>
                       ) : (
                         <Link
                           href={n.href}
                           title={collapsed ? n.label : undefined}
-                          className={
-                            isActive
-                              ? `${base} bg-[#3f3f94] font-bold text-white shadow-[0_2px_8px_rgba(63,63,148,0.30)]`
-                              : `${base} font-semibold text-[#3a4152] hover:bg-[#efeffb] hover:text-[#3f3f94]`
-                          }
+                          className={cn(base, isActive ? activeNav : idleNav)}
                         >
                           <n.Icon className="h-[16px] w-[16px]" />
                           {!collapsed && n.label}
                         </Link>
                       )}
-                      {/* The register's status buckets. NOT wrapped in the
-                          nesting rule here — `SidebarBuckets` owns that, because
-                          its last row (the stage's Approved exit) has to sit
-                          OUTSIDE the nested sequence. */}
-                      {n.id === "register" && registerChildren && !collapsed && registerChildren}
+                      {/* The register's status buckets, collapsing into the row
+                          above like an accordion. `SidebarBuckets` still owns the
+                          nesting/indentation within (the Approved exit sits
+                          outside the nested working sequence); this only wraps the
+                          whole block so the chevron can slide it shut. */}
+                      {n.id === "register" && registerChildren && !collapsed && (
+                        <div
+                          className={cn(
+                            "grid transition-[grid-template-rows] duration-200 ease-in-out",
+                            registerOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+                          )}
+                        >
+                          <div className="overflow-hidden">{registerChildren}</div>
+                        </div>
+                      )}
                     </Fragment>
                   );
                 })}
@@ -481,7 +605,7 @@ export function EnquiryModuleShell({
                 {/* Bulk-upload button carries a label, so only in the expanded rail. */}
                 {bulkUpload && !collapsed && (
                   <>
-                    <div className="my-2 h-[1.5px] rounded-full bg-[#c2c7d6]" />
+                    <div className={cn("my-2 h-[1.5px] rounded-full", dividerCls)} />
                     {bulkUpload}
                   </>
                 )}
@@ -495,12 +619,12 @@ export function EnquiryModuleShell({
               )}
               </div>
 
-              <div className="mt-2 flex w-full shrink-0 flex-col gap-1 border-t border-[#e5e7eb] pt-2">
+              <div className={cn("relative z-10 mt-2 flex w-full shrink-0 flex-col gap-1 border-t pt-2", themed ? "border-[#e2dfdc]" : "border-[#e5e7eb]")}>
                 <ModuleStepButtons collapsed={collapsed} />
                 <span
                   title="Support - coming soon"
                   className={cn(
-                    "flex h-[44px] cursor-default items-center rounded-lg text-[14px] font-semibold text-[#9aa0ab]",
+                    "flex h-[44px] cursor-default items-center rounded-lg text-[14px] font-semibold text-[#a8a8a8]",
                     collapsed ? "justify-center px-0" : "gap-2.5 px-3",
                   )}
                 >
@@ -513,7 +637,7 @@ export function EnquiryModuleShell({
         )}
 
         {/* Main */}
-        <main className={cn("min-w-0 flex-1 px-8", showSidebar ? "py-8" : "pb-8 pt-4")}>
+        <main className={cn("min-w-0 flex-1 px-8", showSidebar ? "py-8" : "pb-8 pt-4", themed && "nt-sheet")}>
           {children}
         </main>
       </div>

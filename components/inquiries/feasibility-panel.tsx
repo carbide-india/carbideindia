@@ -361,7 +361,7 @@ export function FeasibilityPanel({
           disabled={isSubmitting}
           className="inline-flex items-center gap-2 rounded-pill px-5 py-2.5 text-[14px] text-white transition-opacity disabled:opacity-50"
           style={{
-            background: "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
+            background: "#454595",
             fontWeight: 800,
           }}
         >

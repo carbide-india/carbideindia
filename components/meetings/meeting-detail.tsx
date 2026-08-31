@@ -326,7 +326,7 @@ export function MeetingDetail({ meeting, employees }: Props) {
                   className="inline-flex items-center gap-2 rounded-pill px-5 py-2.5 text-[14px] font-bold text-white transition-opacity disabled:opacity-50"
                   style={{
                     background:
-                      "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
+                      "#454595",
                   }}
                 >
                   {isSubmitting && (

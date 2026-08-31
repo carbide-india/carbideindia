@@ -230,7 +230,7 @@ export function CustomerPoCard({
             disabled={awarding}
             className="inline-flex items-center gap-2 rounded-pill px-5 py-2.5 text-[14px] font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
             style={{
-              background: "linear-gradient(135deg, var(--color-purple), var(--color-purple-deep))",
+              background: "var(--color-purple-deep)",
               boxShadow: "0 6px 16px rgba(124, 58, 237, 0.28)",
             }}
           >
@@ -383,7 +383,7 @@ export function CustomerPoCard({
             disabled={savingPo || uploading}
             className="inline-flex items-center gap-2 rounded-pill px-5 py-2.5 text-[14px] font-bold text-white transition-opacity disabled:opacity-50"
             style={{
-              background: "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
+              background: "#454595",
             }}
           >
             {savingPo && (
@@ -406,7 +406,7 @@ export function CustomerPoCard({
             }
             className="inline-flex items-center gap-2 rounded-pill px-6 py-2.5 text-[14px] font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
             style={{
-              background: "linear-gradient(135deg, var(--color-green), var(--color-green-deep))",
+              background: "var(--color-green-deep)",
               boxShadow: "0 6px 16px rgba(22, 163, 74, 0.26)",
             }}
           >

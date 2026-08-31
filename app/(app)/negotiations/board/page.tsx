@@ -26,11 +26,11 @@ export default async function NegotiationBoardPage() {
   const total = cards.reduce((n, c) => n + c.quotedValue, 0);
 
   return (
-    <EnquiryModuleShell title="Negotiation Board" userMenu={<UserMenuServer />}>
+    <EnquiryModuleShell title="Negotiation Kanban" userMenu={<UserMenuServer />}>
       <div className="mx-auto w-full max-w-[1600px]">
         <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2">
           <RegisterHeading
-            title="Negotiation Board"
+            title="Negotiation Kanban"
             count={cards.length}
             unit="deal"
             filterLabel={

@@ -415,7 +415,7 @@ export function CostingForm({
       <section
         className="rounded-section border-2 p-6"
         style={{
-          background: "linear-gradient(135deg, #F8F7FF 0%, #EEEEFF 100%)",
+          background: "#FFFFFF",
           borderColor: "var(--color-brand)",
           boxShadow: "0 4px 24px -8px rgba(63,63,148,0.18)",
         }}
@@ -784,7 +784,7 @@ export function CostingForm({
                   className="flex flex-col gap-4 rounded-section border p-5"
                   style={{
                     background: isCheapest
-                      ? "linear-gradient(135deg, #F5FBF6 0%, #ECF7EF 100%)"
+                      ? "#ECF7EF"
                       : "var(--color-surface-soft)",
                     borderColor: isCheapest ? "#16a34a" : "var(--color-hairline)",
                     boxShadow: isCheapest
@@ -1033,7 +1033,7 @@ export function CostingForm({
           className="text-cta text-white px-8 py-4 rounded-chip transition-transform disabled:opacity-50"
           style={{
             background:
-              "linear-gradient(135deg, rgb(63, 63, 148), rgb(47, 47, 111))",
+              "#454595",
             boxShadow: "0 6px 16px rgba(63, 63, 148, 0.34)",
             fontWeight: 800,
             fontSize: 18,

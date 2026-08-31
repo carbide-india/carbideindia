@@ -955,7 +955,7 @@ function OutputCard({
     <section
       className="rounded-section border-2 p-6"
       style={{
-        background: "linear-gradient(135deg, #F8F7FF 0%, #EEEEFF 100%)",
+        background: "#FFFFFF",
         borderColor: "var(--color-brand)",
         boxShadow: "0 4px 24px -8px rgba(63,63,148,0.18)",
       }}

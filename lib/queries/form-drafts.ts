@@ -13,6 +13,25 @@ import {
 /** Recycled drafts are purged this long after being recycled (48h). */
 const RECYCLE_TTL_MS = 48 * 60 * 60 * 1000;
 
+/**
+ * Global purge of EVERY recycled draft past the 48h TTL, owner-agnostic.
+ *
+ * The lazy purge (`purgeExpired` in the actions, and `listRecycledDrafts` below)
+ * only ever cleans the CURRENT owner's rows, and only when that owner saves a
+ * draft or opens their recycle bin — so a user who recycles something and never
+ * comes back leaves it forever. This is the nightly cron's job: one sweep across
+ * all owners. Deliberately takes no `requireUser()` — it runs from the cron
+ * route, which authenticates with CRON_SECRET instead.
+ */
+export async function purgeAllExpiredDrafts(): Promise<{ purged: number }> {
+  const cutoff = new Date(Date.now() - RECYCLE_TTL_MS);
+  const rows = await db
+    .delete(formDrafts)
+    .where(and(isNotNull(formDrafts.deletedAt), lt(formDrafts.deletedAt, cutoff)))
+    .returning({ id: formDrafts.id });
+  return { purged: rows.length };
+}
+
 export interface FormDraftListItem {
   id: string;
   label: string;

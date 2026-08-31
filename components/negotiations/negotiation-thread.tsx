@@ -163,7 +163,7 @@ export function NegotiationThreadPanel({
               onClick={() => void submit()}
               disabled={saving || draft.trim().length < 3}
               className="inline-flex h-9 shrink-0 items-center gap-2 rounded-pill px-4 text-[13px] font-extrabold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-45"
-              style={{ background: "linear-gradient(135deg, rgb(63,63,148), rgb(47,47,111))" }}
+              style={{ background: "#454595" }}
             >
               {saving && (
                 <Loader2 size={13} style={{ animation: "spinFast 0.8s linear infinite" }} />

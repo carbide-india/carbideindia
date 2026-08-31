@@ -165,7 +165,7 @@ export function ReviseButton({
                 title={tooShort ? "Write a reason first" : undefined}
                 className="inline-flex h-9 items-center gap-2 rounded-pill px-5 text-[13px] font-extrabold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-45"
                 style={{
-                  background: "linear-gradient(135deg, rgb(63,63,148), rgb(47,47,111))",
+                  background: "#454595",
                 }}
               >
                 {pending && (

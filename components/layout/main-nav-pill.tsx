@@ -63,7 +63,7 @@ export function MainNavPill({ href, label, Icon, active, count, badge, grow, var
             alignItems: "center",
             justifyContent: "center",
             background:
-              "linear-gradient(135deg, #7979B4, var(--color-brand))",
+              "#454595",
             color: "#ffffff",
             fontFamily: "var(--font-mono)",
             fontSize: 10,

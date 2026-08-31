@@ -622,7 +622,7 @@ export function BuyoutCalculator({
                 style={{
                   border: `2px solid ${INDIGO}`,
                   background: hasCost(r)
-                    ? "linear-gradient(135deg,#eef1fb 0%,#e2e6f8 100%)"
+                    ? "#FFFFFF"
                     : "#f4f6fd",
                   boxShadow: hasCost(r)
                     ? "0 6px 18px -8px rgba(63,63,148,0.5)"
@@ -982,7 +982,7 @@ function ScenarioChip({
       <div className="flex items-center gap-2">
         <span
           className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-white"
-          style={{ background: "linear-gradient(135deg, #3f3f94 0%, #6d6dcf 100%)" }}
+          style={{ background: "#454595" }}
         >
           {icon}
         </span>

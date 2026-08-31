@@ -32,7 +32,7 @@ export function ModuleTitleBadge({
         .mtb-badge {
           display: inline-flex; align-items: center; gap: 10px;
           border: 2px solid rgba(63,63,148,0.35); border-radius: 12px;
-          background: linear-gradient(180deg, #f5f6ff 0%, #eaecfb 100%);
+          background: #FFFFFF;
           padding: 7px 20px;
           animation: mtbIn .5s cubic-bezier(.22,.61,.36,1) both, mtbGlow 2.8s ease-in-out infinite .5s;
         }
@@ -45,10 +45,7 @@ export function ModuleTitleBadge({
         .mtb-text {
           font-weight: 900; font-size: 21px; letter-spacing: 0.18em; line-height: 1;
           text-transform: uppercase; padding-left: 0.18em;
-          background: linear-gradient(100deg, #3F3F94 0%, #7b6cf0 45%, #3F3F94 90%);
-          background-size: 200% 100%;
-          -webkit-background-clip: text; background-clip: text; color: transparent;
-          animation: mtbShine 5s linear infinite;
+          color: #1F2547;
         }
         @media (prefers-reduced-motion: reduce) {
           .mtb-badge, .mtb-dot, .mtb-text { animation: none }

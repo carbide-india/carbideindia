@@ -457,7 +457,7 @@ function NoteEditor({
           className="inline-flex items-center gap-1.5 rounded-pill px-4 py-1.5 text-[12.5px] font-bold text-white transition-opacity disabled:opacity-45"
           style={{
             background:
-              "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
+              "#454595",
           }}
         >
           {saving && (

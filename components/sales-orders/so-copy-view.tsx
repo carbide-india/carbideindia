@@ -71,8 +71,8 @@ export function SoCopyView({
             className="inline-flex items-center gap-1.5 rounded-pill px-5 py-2 text-[13.5px] font-bold text-white"
             style={{
               background: doc.internal
-                ? "linear-gradient(135deg, var(--color-amber), var(--color-amber-deep))"
-                : "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
+                ? "var(--color-amber-deep)"
+                : "#454595",
             }}
           >
             <Download size={14} strokeWidth={2.6} />

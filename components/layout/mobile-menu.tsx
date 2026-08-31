@@ -56,7 +56,7 @@ export function MobileMenu({ children }: { children: React.ReactNode }) {
           className="fixed left-0 top-0 z-[61] h-dvh w-[82vw] max-w-[360px] flex flex-col"
           style={{
             background:
-              "linear-gradient(180deg, #ffffff 0%, var(--color-surface-soft) 100%)",
+              "#FFFFFF",
             borderRight: "1px solid var(--color-hairline)",
             boxShadow: "0 20px 48px rgba(15, 23, 42, 0.18)",
             animation: "slideMenuIn 220ms cubic-bezier(0.22, 1, 0.36, 1) forwards",

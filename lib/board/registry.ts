@@ -65,7 +65,7 @@ const cfg = (c: BoardModuleConfig): BoardModuleConfig => c;
 export const BOARD_MODULES: Record<BoardModule, BoardModuleConfig> = {
   enquiry: cfg({
     key: "enquiry",
-    title: "Enquiry Board",
+    title: "Enquiry Kanban",
     unit: "enquiry",
     buckets: ENQUIRY_STAGE_BUCKETS,
     labels: ENQUIRY_STATUS_LABELS,
@@ -75,7 +75,7 @@ export const BOARD_MODULES: Record<BoardModule, BoardModuleConfig> = {
   }),
   feasibility: cfg({
     key: "feasibility",
-    title: "Primary Feasibility Board",
+    title: "Primary Feasibility Kanban",
     unit: "enquiry",
     buckets: FEASIBILITY_STAGE_BUCKETS,
     labels: FEASIBILITY_STATUS_LABELS,
@@ -85,7 +85,7 @@ export const BOARD_MODULES: Record<BoardModule, BoardModuleConfig> = {
   }),
   "secondary-feasibility": cfg({
     key: "secondary-feasibility",
-    title: "Secondary Feasibility Board",
+    title: "Secondary Feasibility Kanban",
     unit: "product line",
     buckets: SECONDARY_FEASIBILITY_STAGE_BUCKETS,
     labels: SECONDARY_FEASIBILITY_STATUS_LABELS,
@@ -95,7 +95,7 @@ export const BOARD_MODULES: Record<BoardModule, BoardModuleConfig> = {
   }),
   costing: cfg({
     key: "costing",
-    title: "Costing Board",
+    title: "Costing Kanban",
     unit: "cost sheet",
     buckets: COSTING_STAGE_BUCKETS,
     labels: COSTING_DONE_STATUS_LABELS,
@@ -105,7 +105,7 @@ export const BOARD_MODULES: Record<BoardModule, BoardModuleConfig> = {
   }),
   quotation: cfg({
     key: "quotation",
-    title: "Quotation Board",
+    title: "Quotation Kanban",
     unit: "quotation",
     buckets: QUOTATION_STAGE_BUCKETS,
     labels: QUOTATION_STATUS_LABELS,
@@ -115,7 +115,7 @@ export const BOARD_MODULES: Record<BoardModule, BoardModuleConfig> = {
   }),
   "sales-order": cfg({
     key: "sales-order",
-    title: "Sales Order Board",
+    title: "Sales Order Kanban",
     unit: "sales order",
     buckets: SALES_ORDER_STAGE_BUCKETS,
     labels: SALES_ORDER_STATUS_LABELS,

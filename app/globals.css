@@ -1807,6 +1807,193 @@ select.nt-input {
   }
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   Client-KYC field demo — the /login "drafting sheet" FIELD look, scoped to the
+   KYC form via the `.nt-sheet` wrapper so no other module changes. It flattens
+   the field box: a warm-paper fill + a single hairline border + navy text +
+   a soft indigo focus ring, instead of the default gradient / indigo left-bar /
+   layered shadow. `.nt-input` covers text inputs AND the Select trigger (which
+   is an `.nt-input`), so boxes and dropdowns restyle together. Remove the
+   `kyc-sheet` class to revert — nothing global is touched.
+   ───────────────────────────────────────────────────────────────────────── */
+/* Page background: cream + a faint blueprint grid drawn in the border colour. */
+.drafting-grid {
+  background-color: #f4f0e8;
+  background-image:
+    linear-gradient(#e2dfdc 1px, transparent 1px),
+    linear-gradient(90deg, #e2dfdc 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Cards float on the drafting sheet: drop the solid white fill to 50% so the
+   cream + blueprint grid reads through — on BOTH form cards and register/table
+   cards. Also catches the common table/card wrappers that use bg-surface-card
+   or an inline white, not a <section>. */
+.nt-sheet section,
+.nt-sheet .bg-surface-card,
+.nt-sheet .rounded-panel,
+.nt-sheet .rounded-section {
+  background-color: #f4f0e8;
+  /* Tighter corners for a crisper, more technical look. */
+  border-radius: 6px;
+}
+
+/* ── Tighter radius across the WHOLE module ──────────────────────────────────
+   Buttons, cards, containers, thumbnails, tables — everything that uses a
+   rounded-* utility gets pulled in to the crisp, technical range. Round pills
+   and circular badges (rounded-full / rounded-pill) are left alone on purpose,
+   and .nt-input / notch / chips already carry their own 4px. These win over the
+   single-class Tailwind utilities on specificity, so no !important needed. */
+.nt-sheet .rounded-2xl { border-radius: 8px; }
+.nt-sheet .rounded-xl { border-radius: 6px; }
+.nt-sheet .rounded-lg { border-radius: 5px; }
+.nt-sheet .rounded-md { border-radius: 4px; }
+.nt-sheet .rounded-chip { border-radius: 5px; }
+
+/* Section titles keep the drafting letter-spacing; colour comes from the
+   per-section accent rules below. */
+.nt-sheet:has(.nt-field-shell) h2 {
+  color: #d03232;
+  letter-spacing: 0.16em;
+}
+
+/* ── Vibrant per-section accents ─────────────────────────────────────────────
+   Each form card gets a coloured left bar + a matching title, cycling through a
+   set of vibrant hues so a long form reads as distinct, lively sections instead
+   of one flat cream slab. Form pages only; `nth-of-type` counts the SectionCard
+   <section>s, skipping banners/dividers between them. */
+.nt-sheet:has(.nt-field-shell) section {
+  border-left-width: 3px;
+}
+.nt-sheet:has(.nt-field-shell) section:nth-of-type(6n + 1) { border-left-color: #454595; }
+.nt-sheet:has(.nt-field-shell) section:nth-of-type(6n + 1) h2 { color: #454595; }
+.nt-sheet:has(.nt-field-shell) section:nth-of-type(6n + 2) { border-left-color: #d03232; }
+.nt-sheet:has(.nt-field-shell) section:nth-of-type(6n + 2) h2 { color: #d03232; }
+.nt-sheet:has(.nt-field-shell) section:nth-of-type(6n + 3) { border-left-color: #0e9f6e; }
+.nt-sheet:has(.nt-field-shell) section:nth-of-type(6n + 3) h2 { color: #0e9f6e; }
+.nt-sheet:has(.nt-field-shell) section:nth-of-type(6n + 4) { border-left-color: #e8830c; }
+.nt-sheet:has(.nt-field-shell) section:nth-of-type(6n + 4) h2 { color: #e8830c; }
+.nt-sheet:has(.nt-field-shell) section:nth-of-type(6n + 5) { border-left-color: #2563eb; }
+.nt-sheet:has(.nt-field-shell) section:nth-of-type(6n + 5) h2 { color: #2563eb; }
+.nt-sheet:has(.nt-field-shell) section:nth-of-type(6n + 6) { border-left-color: #7c3aed; }
+.nt-sheet:has(.nt-field-shell) section:nth-of-type(6n + 6) h2 { color: #7c3aed; }
+
+/* Flat fields: solid white fill (surface), a hairline border, a SMALL corner
+   radius and NO gradient. Covers text inputs AND the Select trigger. */
+.nt-sheet .nt-input {
+  background: #ffffff;
+  border: 1.5px solid #e2dfdc;
+  border-radius: 4px;
+  color: #1f2547;
+  box-shadow: none;
+}
+.nt-sheet .nt-input::placeholder { color: #a8a8a8; font-weight: 400; }
+.nt-sheet .nt-input:hover {
+  border-color: #777985;
+  box-shadow: none;
+}
+.nt-sheet .nt-input:focus,
+.nt-sheet .nt-input:focus-visible,
+.nt-sheet .nt-input:focus-within {
+  background: #ffffff;
+  border-color: #454595;
+  box-shadow: 0 0 0 3px rgba(69, 69, 149, 0.15);
+}
+/* Native <select> keeps its custom chevron (muted-text colour) over the fill. */
+.nt-sheet select.nt-input {
+  background-color: #ffffff;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23777985' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 13px;
+}
+
+/* ── Label ABOVE the box (never on the border) ──────────────────────────────
+   The default shell floats the label onto the top border — which reads as the
+   label "hiding" the box's top edge. The client wants it CLEARLY ABOVE the box
+   with a gap. Reserve a 22px band at the top of the shell, drop the label into
+   it, push the outline (notch) + control below, and remove the notch cut so the
+   top border is solid. Keeps the 51 float fields + their inline "+ Add" actions
+   intact — no field markup changes. */
+.nt-sheet .nt-field-shell { padding-top: 22px; }
+.nt-sheet .nt-field-label {
+  top: 0;
+  left: 1px;
+  transform: none;
+  max-width: calc(100% - 2px);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.005em;
+  color: #777985;
+}
+.nt-sheet .nt-field-shell:focus-within .nt-field-label { color: #454595; }
+
+/* The outline is now the box BELOW the label band; solid white fill + hairline
+   border + small radius, indigo ring on focus. Solid border (notch cut removed). */
+.nt-sheet .nt-field-notch {
+  top: 22px;
+  border: 1.5px solid #e2dfdc;
+  border-radius: 4px;
+  background: #ffffff;
+}
+.nt-sheet .nt-field-shell:hover .nt-field-notch { border-color: #777985; }
+.nt-sheet .nt-field-shell:focus-within .nt-field-notch {
+  border-color: #454595;
+  border-width: 1.5px;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(69, 69, 149, 0.15);
+}
+/* Remove the notch cut so the top border is continuous (label is above now). */
+.nt-sheet .nt-field-legend { max-width: 0; padding: 0; }
+.nt-sheet .nt-field-legend > span { padding: 0; }
+/* Any "+ Add" affordance rides the box's top border, not the label band. */
+.nt-sheet .nt-field-action { top: 22px; background: #ffffff; }
+
+/* Inside a shell the control draws no chrome (the notch owns the outline) — but
+   the Select trigger is an `.nt-input`, so re-suppress its fill/shadow here. */
+.nt-sheet .nt-field-shell .nt-input,
+.nt-sheet .nt-field-shell .nt-input:hover,
+.nt-sheet .nt-field-shell .nt-input:focus,
+.nt-sheet .nt-field-shell .nt-input:focus-visible,
+.nt-sheet .nt-field-shell .nt-input:focus-within {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+/* ── Master picker chips (Customer / Industry / Product Types) ───────────────
+   Give the option checkboxes the same drafting look as the fields: small
+   radius, a thin warm border and a flat paper fill when unchecked. The chips
+   ship with single-class Tailwind utilities, so this 2-class scope wins the
+   cascade without !important. Checked chips keep the brand (indigo) tint as the
+   selection accent. */
+.nt-sheet [role="checkbox"] {
+  border-radius: 4px;
+}
+.nt-sheet [role="checkbox"][aria-checked="false"] {
+  border-color: #e2dfdc;
+  background-color: #ffffff;
+}
+.nt-sheet [role="checkbox"][aria-checked="false"]:hover {
+  border-color: #777985;
+  background-color: #f4f0e8;
+}
+/* The little tick box inside an unchecked chip. */
+.nt-sheet [role="checkbox"][aria-checked="false"] > span:first-child {
+  border-color: #a8a8a8;
+  background-color: #ffffff;
+}
+/* Checked chip + its tick box in the palette indigo (not the app brand). */
+.nt-sheet [role="checkbox"][aria-checked="true"] {
+  border-color: #454595;
+  background-color: rgba(69, 69, 149, 0.08);
+}
+.nt-sheet [role="checkbox"][aria-checked="true"] > span:first-child {
+  border-color: #454595;
+  background-color: #454595;
+}
+
 /* Sidebar collapse toggle — a springy pop each time the icon flips, so the
    collapse action reads clearly. Applied to a re-keyed span in the shell. */
 @keyframes togglePop {

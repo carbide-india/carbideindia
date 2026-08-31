@@ -387,7 +387,7 @@ export function VendorQuickCreateModal({ open, onClose, onCreated, initialName }
             disabled={pending}
             className="text-cta rounded-chip px-7 py-3 text-white transition-transform disabled:opacity-50"
             style={{
-              background: "linear-gradient(135deg, rgb(63, 63, 148), rgb(47, 47, 111))",
+              background: "#454595",
               boxShadow: "0 6px 16px rgba(63, 63, 148, 0.34)",
               fontWeight: 800,
               fontSize: 15,

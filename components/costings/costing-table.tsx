@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ArrowUpRight, Calculator, CircleDot, Trash2, Undo2 } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, BadgeCheck, Calculator, CircleDot, Trash2, Undo2 } from "lucide-react";
 import {
   COSTING_ROUTE_LABELS,
   COSTING_DONE_STATUS_LABELS,
@@ -21,10 +21,12 @@ import {
 } from "@/components/registers/register-data-table";
 import { fireToast } from "@/lib/toast";
 import {
+  approveCostingRecommended,
   deleteCosting,
   deleteCostingsBulk,
   setCostingStatus,
   setCostingStatusBulk,
+  unlockCostingDecision,
 } from "@/app/(app)/costings/actions";
 
 /** Buckets offered on the row menu — mirrors the chip's inline-settable set. */
@@ -144,6 +146,42 @@ export function CostingTable({ rows, heading, actions }: Props) {
             },
           });
         }
+      }
+      // Sign off the recommended option straight from the menu, the same
+      // one-click approval the status chip offers.
+      if (r.costingId && !r.isLocked) {
+        items.push({
+          key: "approve",
+          label: "Approve costing",
+          Icon: BadgeCheck,
+          onSelect: async (row) => {
+            const res = await approveCostingRecommended(row.inquiryItemId);
+            if (res.ok) {
+              fireToast({ message: "Costing approved and locked." });
+              router.refresh();
+            } else {
+              fireToast({ message: res.error, type: "error" });
+            }
+          },
+        });
+      }
+
+      // Undo a mistaken approval on a locked row — back to Pending Approval.
+      if (r.costingId && r.isLocked) {
+        items.push({
+          key: "reopen",
+          label: "Reopen (undo approval)",
+          Icon: Undo2,
+          onSelect: async (row) => {
+            const res = await unlockCostingDecision(row.inquiryItemId);
+            if (res.ok) {
+              fireToast({ message: "Reopened — now Pending Approval." });
+              router.refresh();
+            } else {
+              fireToast({ message: res.error, type: "error" });
+            }
+          },
+        });
       }
       if (r.costingId) {
         items.push({

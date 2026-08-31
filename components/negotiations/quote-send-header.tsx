@@ -115,7 +115,7 @@ export function QuoteSendHeader({
           onClick={() => setModalOpen(true)}
           className="inline-flex items-center gap-2 rounded-pill px-5 py-2.5 text-[14px] font-bold text-white transition-transform active:scale-[0.98]"
           style={{
-            background: "linear-gradient(135deg, var(--color-brand), var(--color-brand-deep))",
+            background: "#454595",
             boxShadow: "0 6px 16px rgba(63, 63, 148, 0.34)",
           }}
         >

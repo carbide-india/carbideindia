@@ -556,7 +556,7 @@ export function CostingCalculatorShell({
             disabled={pending}
             className="text-cta text-white px-8 py-4 rounded-chip transition-transform disabled:opacity-50"
             style={{
-              background: "linear-gradient(135deg, rgb(63, 63, 148), rgb(47, 47, 111))",
+              background: "#454595",
               boxShadow: "0 6px 16px rgba(63, 63, 148, 0.34)",
               fontWeight: 800,
               fontSize: 18,
@@ -651,7 +651,7 @@ function CompareView({
     <section
       className="rounded-section border-2 p-6"
       style={{
-        background: "linear-gradient(135deg, #F8F7FF 0%, #EEEEFF 100%)",
+        background: "#FFFFFF",
         borderColor: "var(--color-brand)",
         boxShadow: "0 4px 24px -8px rgba(63,63,148,0.18)",
       }}

@@ -137,7 +137,7 @@ export function NotesField({
           aria-pressed={listening}
           title={listening ? "Stop dictation" : "Dictate with Voice"}
           className={cn(
-            "absolute bottom-2 right-2 inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-[12px] font-semibold transition",
+            "absolute bottom-2 z-10 right-2 inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-[12px] font-semibold transition",
             listening
               ? "animate-pulse border-[#d32f2f] bg-[#fdecec] text-[#d32f2f]"
               : "border-[#dcdce8] bg-white text-[#3f3f94] hover:border-[#3f3f94] hover:bg-[#efeffb]",
