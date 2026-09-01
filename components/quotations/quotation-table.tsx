@@ -338,7 +338,7 @@ export function QuotationTable({ rows, filtered = false, heading, actions }: Pro
         // inherited costing status so the register reads in stage order.
         id: "quotationStatus",
         header: "Quotation Status",
-        sortValue: (r) => QUOTATION_STAGE_BUCKETS.indexOf(r.quotationStatus),
+        sortValue: (r) => (QUOTATION_STAGE_BUCKETS as readonly string[]).indexOf(r.quotationStatus),
         exportValue: (r) => QUOTATION_STATUS_LABELS[r.quotationStatus],
         cell: (r) => (
           <Chip

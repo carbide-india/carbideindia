@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, X } from "lucide-react";
+import { Check, Pause, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { PipelineRow, PipelineStageCell, StageState } from "@/lib/queries/pipeline-tracker";
 
@@ -9,6 +9,7 @@ const STATE_STYLE: Record<StageState, string> = {
   active: "border-[#454595] bg-[#454595] text-white",
   pending: "border-[#d8d4cc] bg-white text-transparent",
   dead: "border-[#d03232] bg-[#d03232] text-white",
+  hold: "border-[#e8830c] bg-[#e8830c] text-white",
 };
 
 export function StageDot({ state, title, size = 18 }: { state: StageState; title?: string; size?: number }) {
@@ -26,6 +27,8 @@ export function StageDot({ state, title, size = 18 }: { state: StageState; title
         <Check size={Math.round(size * 0.6)} strokeWidth={3} />
       ) : state === "dead" ? (
         <X size={Math.round(size * 0.6)} strokeWidth={3} />
+      ) : state === "hold" ? (
+        <Pause size={Math.round(size * 0.55)} strokeWidth={3} fill="currentColor" />
       ) : state === "active" ? (
         <span className="rounded-full bg-white" style={{ width: size * 0.33, height: size * 0.33 }} />
       ) : null}
@@ -58,6 +61,7 @@ export function OverallChip({ overall }: { overall: PipelineRow["overall"] }) {
     completed: { label: "Completed", cls: "border-[#16a34a]/30 bg-[#16a34a]/10 text-[#15803d]" },
     in_progress: { label: "In Progress", cls: "border-[#454595]/30 bg-[#454595]/10 text-[#454595]" },
     dead: { label: "Dropped", cls: "border-[#d03232]/30 bg-[#d03232]/10 text-[#d03232]" },
+    on_hold: { label: "On Hold", cls: "border-[#e8830c]/30 bg-[#e8830c]/10 text-[#b45309]" },
   }[overall];
   return (
     <span

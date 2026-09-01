@@ -177,7 +177,7 @@ export function SoTable({ rows, heading, actions }: Props) {
       {
         id: "salesOrderStatus",
         header: "Stage",
-        sortValue: (r) => SALES_ORDER_STAGE_BUCKETS.indexOf(r.salesOrderStatus),
+        sortValue: (r) => (SALES_ORDER_STAGE_BUCKETS as readonly string[]).indexOf(r.salesOrderStatus),
         exportValue: (r) => SALES_ORDER_STATUS_LABELS[r.salesOrderStatus],
         cell: (r) => (
           <Chip

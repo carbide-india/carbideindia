@@ -26,7 +26,7 @@ import {
  * DEAD.
  */
 
-export type StageState = "done" | "active" | "pending" | "dead";
+export type StageState = "done" | "active" | "pending" | "dead" | "hold";
 
 export interface PipelineStageCell {
   key: string;
@@ -41,7 +41,7 @@ export interface PipelineRow {
   enquiryDate: Date | null;
   salesPerson: string | null;
   stages: PipelineStageCell[];
-  overall: "completed" | "in_progress" | "dead";
+  overall: "completed" | "in_progress" | "dead" | "on_hold";
   /** The stage the inquiry is currently sitting on (first not-done, or the last
    *  stage when everything is done). Drives the "where is it stuck" view. */
   currentStageKey: string;
@@ -215,12 +215,23 @@ export async function listPipelineTracker(opts?: { inquiryId?: string }): Promis
       state: byKey[s.key] ?? "pending",
     }));
 
-    const overall: PipelineRow["overall"] =
-      salesOrder === "done"
-        ? "completed"
-        : stages.some((st) => st.state === "dead")
-          ? "dead"
-          : "in_progress";
+    // Cascade freeze: hold/cancel sets EVERY stage (feasibility included), so the
+    // SM-level feasibilityStatus is the reliable inquiry-wide signal. When frozen,
+    // the whole row reads as held/cancelled.
+    const isCancelled = b.feasibilityStatus === "cancelled" || b.enquiryStatus === "cancelled";
+    const isOnHold = b.feasibilityStatus === "on_hold" || b.enquiryStatus === "on_hold";
+    const frozen: StageState | null = isCancelled ? "dead" : isOnHold ? "hold" : null;
+    if (frozen) for (const st of stages) st.state = frozen;
+
+    const overall: PipelineRow["overall"] = isCancelled
+      ? "dead"
+      : isOnHold
+        ? "on_hold"
+        : salesOrder === "done"
+          ? "completed"
+          : stages.some((st) => st.state === "dead")
+            ? "dead"
+            : "in_progress";
 
     // Current stage = the first not-done stage (where it's sitting), or the last
     // stage once everything is done.

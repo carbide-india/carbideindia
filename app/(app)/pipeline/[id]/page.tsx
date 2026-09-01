@@ -13,10 +13,10 @@ export default async function PipelineDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireUser();
+  const me = await requireUser();
   const { id } = await params;
   const rows = await listPipelineTracker({ inquiryId: id });
   const row = rows[0];
   if (!row) notFound();
-  return <PipelineDetail row={row} />;
+  return <PipelineDetail row={row} isApprover={me.isApprover} />;
 }

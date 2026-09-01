@@ -12,6 +12,7 @@ import {
   LifeBuoy,
   ListChecks,
   Loader2,
+  PauseCircle,
   XCircle,
 } from "lucide-react";
 import { HubSearch } from "@/components/hub/hub-search";
@@ -35,6 +36,7 @@ interface NavItem {
 const NAV: NavItem[] = [
   { label: "Overview", href: "/pipeline" as Route, Icon: LayoutGrid },
   { label: "In Progress", href: "/pipeline?status=in_progress" as Route, Icon: Loader2, status: "in_progress" },
+  { label: "On Hold", href: "/pipeline?status=on_hold" as Route, Icon: PauseCircle, status: "on_hold" },
   { label: "Completed", href: "/pipeline?status=completed" as Route, Icon: ListChecks, status: "completed" },
   { label: "Dropped", href: "/pipeline?status=dead" as Route, Icon: XCircle, status: "dead" },
 ];

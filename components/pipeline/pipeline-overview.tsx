@@ -8,13 +8,14 @@ import { cn } from "@/lib/utils";
 import type { PipelineRow } from "@/lib/queries/pipeline-tracker";
 import { OverallChip, Stepper, fmtDate } from "./parts";
 
-type Status = "in_progress" | "completed" | "dead";
+type Status = "in_progress" | "on_hold" | "completed" | "dead";
 
 export function PipelineOverview({ rows, status }: { rows: PipelineRow[]; status?: string }) {
   const counts = React.useMemo(
     () => ({
       total: rows.length,
       in_progress: rows.filter((r) => r.overall === "in_progress").length,
+      on_hold: rows.filter((r) => r.overall === "on_hold").length,
       completed: rows.filter((r) => r.overall === "completed").length,
       dead: rows.filter((r) => r.overall === "dead").length,
     }),
@@ -31,12 +32,15 @@ export function PipelineOverview({ rows, status }: { rows: PipelineRow[]; status
   const distMax = Math.max(1, ...stageOrder.map((s) => dist.get(s.key) ?? 0));
 
   const active: Status | null =
-    status === "in_progress" || status === "completed" || status === "dead" ? status : null;
+    status === "in_progress" || status === "on_hold" || status === "completed" || status === "dead"
+      ? status
+      : null;
   const shown = active ? rows.filter((r) => r.overall === active) : rows;
 
   const TILES: { key: keyof typeof counts; label: string; color: string }[] = [
     { key: "total", label: "Total", color: "#1f2547" },
     { key: "in_progress", label: "In Progress", color: "#454595" },
+    { key: "on_hold", label: "On Hold", color: "#e8830c" },
     { key: "completed", label: "Completed", color: "#16a34a" },
     { key: "dead", label: "Dropped", color: "#d03232" },
   ];
@@ -52,9 +56,11 @@ export function PipelineOverview({ rows, status }: { rows: PipelineRow[]; status
             ? "Completed Enquiries"
             : active === "in_progress"
               ? "In-Progress Enquiries"
-              : active === "dead"
-                ? "Dropped Enquiries"
-                : "Pipeline Overview"}
+              : active === "on_hold"
+                ? "On-Hold Enquiries"
+                : active === "dead"
+                  ? "Dropped Enquiries"
+                  : "Pipeline Overview"}
         </h1>
         <p className="mt-1 text-[13px] text-[#777985]">
           Click any enquiry to open its full stage tracker.
@@ -65,7 +71,7 @@ export function PipelineOverview({ rows, status }: { rows: PipelineRow[]; status
       <div className="mb-5 grid gap-3.5 lg:grid-cols-[1fr_1.3fr]">
         {/* Stat tiles + proportion bar */}
         <div className="rounded-lg border border-[#e2dfdc] bg-white p-4">
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-5 gap-2">
             {TILES.map((t) => (
               <div key={t.key} className="text-center">
                 <div className="text-[26px] font-black leading-none" style={{ color: t.color }}>
@@ -83,6 +89,7 @@ export function PipelineOverview({ rows, status }: { rows: PipelineRow[]; status
               <>
                 <div style={{ width: `${(counts.completed / counts.total) * 100}%`, background: "#16a34a" }} />
                 <div style={{ width: `${(counts.in_progress / counts.total) * 100}%`, background: "#454595" }} />
+                <div style={{ width: `${(counts.on_hold / counts.total) * 100}%`, background: "#e8830c" }} />
                 <div style={{ width: `${(counts.dead / counts.total) * 100}%`, background: "#d03232" }} />
               </>
             )}
