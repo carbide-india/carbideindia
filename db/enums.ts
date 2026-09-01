@@ -393,7 +393,7 @@ export const ENQUIRY_STATUS_COLORS: Record<EnquiryStatus, string> = {
 export const DEPRECATED_ENQUIRY_STATUSES = ["initiated", "need_help", "proceed"] as const;
 /** The five house buckets of the Enquiry stage, in display order. */
 export const ENQUIRY_STAGE_BUCKETS = [
-  "not_started", "draft", "need_info", "pending_approval", "enquiry_approved",
+  "not_started", "draft", "need_info", "pending_approval", "on_hold", "cancelled", "enquiry_approved",
 ] as const satisfies readonly EnquiryStatus[];
 
 export const FEAS_VERDICTS = ["to_check", "available", "not_available"] as const;
@@ -460,7 +460,7 @@ export const DEPRECATED_FEASIBILITY_STATUSES = ["initiated", "need_help", "prima
 /** The six house buckets of the Primary Feasibility stage, in display order. */
 export const FEASIBILITY_STAGE_BUCKETS = [
   "not_started", "draft", "need_info", "pending_approval",
-  "not_approved", "not_feasible", "proceed_to_costing",
+  "not_approved", "not_feasible", "on_hold", "cancelled", "proceed_to_costing",
 ] as const satisfies readonly FeasibilityStatus[];
 /** The live status set surfaced in the module UI (pickers, KPI strip, filters). */
 export const ACTIVE_FEASIBILITY_STATUSES = FEASIBILITY_STATUSES.filter(
@@ -493,7 +493,7 @@ export const SECONDARY_FEASIBILITY_STATUS_COLORS: Record<SecondaryFeasibilitySta
  *  belongs beside Approved on screen, not after Not Feasible. */
 export const SECONDARY_FEASIBILITY_STAGE_BUCKETS = [
   "not_started", "draft", "need_info", "pending_approval",
-  "not_approved", "not_feasible", "secondary_feasibility_approved",
+  "not_approved", "not_feasible", "on_hold", "cancelled", "secondary_feasibility_approved",
 ] as const satisfies readonly SecondaryFeasibilityStatus[];
 
 export const FEAS_PRIORITIES = ["p1", "p2", "p3", "p5_high_profile"] as const;     // sheet: 1, 2, 3, 5. High Profile
@@ -604,7 +604,7 @@ export const COSTING_DONE_STATUS_COLORS: Record<CostingDoneStatus, string> = {
 export const DEPRECATED_COSTING_DONE_STATUSES = ["in_process", "done"] as const;
 /** The five house buckets of the Costing stage, in display order. */
 export const COSTING_STAGE_BUCKETS = [
-  "not_done", "draft", "need_info", "pending_approval", "not_approved", "costing_approved",
+  "not_done", "draft", "need_info", "pending_approval", "not_approved", "on_hold", "cancelled", "costing_approved",
 ] as const satisfies readonly CostingDoneStatus[];
 
 // Quotation stage status (2026-08). The stage previously had only the
@@ -629,7 +629,7 @@ export const QUOTATION_STATUS_COLORS: Record<QuotationStatus, string> = {
  *  enum: `not_approved` was appended to it (append-only) but belongs before the
  *  approved exit, not after. */
 export const QUOTATION_STAGE_BUCKETS = [
-  "not_started", "draft", "need_info", "pending_approval", "not_approved", "quotation_approved",
+  "not_started", "draft", "need_info", "pending_approval", "not_approved", "on_hold", "cancelled", "quotation_approved",
 ] as const satisfies readonly QuotationStatus[];
 
 // Sales Order stage status (2026-08). The SO carried no status at all before —
@@ -648,11 +648,11 @@ export const SALES_ORDER_STATUS_COLORS: Record<SalesOrderStatus, string> = {
   pending_approval: "purple", sales_order_approved: "green",
   not_approved: "rose", on_hold: "stone", cancelled: "slate",
 };
-/** The five house buckets of the Sales Order stage, in display order. The
- *  approver-only outcomes (not_approved/on_hold/cancelled) are NOT board columns —
- *  they're set from the status control, like the other stages. */
+/** The Sales Order stage buckets, in display order — includes the approver
+ *  outcomes so a not-approved / held / cancelled SO still shows in its bucket. */
 export const SALES_ORDER_STAGE_BUCKETS = [
-  "not_started", "draft", "need_info", "pending_approval", "sales_order_approved",
+  "not_started", "draft", "need_info", "pending_approval",
+  "not_approved", "on_hold", "cancelled", "sales_order_approved",
 ] as const satisfies readonly SalesOrderStatus[];
 
 // Negotiation status. Append-only: the four house-vocabulary values were added at
@@ -693,7 +693,7 @@ export const NEGOTIATION_STATUS_COLORS: Record<NegotiationStatus, string> = {
  */
 export const NEGOTIATION_STAGE_BUCKETS = [
   "to_start", "need_info", "follow_up", "revision",
-  "order_won", "order_lost", "order_abandoned",
+  "order_won", "order_lost", "order_abandoned", "on_hold", "cancelled",
 ] as const satisfies readonly NegotiationStatus[];
 
 /**
