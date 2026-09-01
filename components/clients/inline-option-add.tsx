@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Plus, PlusCircle, X, Check, Loader2 } from "lucide-react";
 import { fireToast } from "@/lib/toast";
+import { useIsAdmin } from "@/components/auth/admin-provider";
 
 /**
  * Compact "+ Add" affordance for a dropdown inside a form: a small pill that
@@ -26,6 +27,7 @@ export function InlineOptionAdd({
   add: (name: string) => Promise<{ ok: true; value: string } | { ok: false; error: string }>;
   onAdded?: (value: string, name: string) => void;
 }) {
+  const isAdmin = useIsAdmin();
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [pending, start] = React.useTransition();
@@ -39,6 +41,11 @@ export function InlineOptionAdd({
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
+
+  // Managing dropdown options is admin-only (enforced server-side too). Non-
+  // admins simply don't see the "+ Add" affordance. Placed after all hooks so
+  // hook order stays stable.
+  if (!isAdmin) return null;
 
   function submit() {
     const v = name.trim();

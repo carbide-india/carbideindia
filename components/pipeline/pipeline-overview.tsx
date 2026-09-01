@@ -130,56 +130,69 @@ export function PipelineOverview({ rows, status }: { rows: PipelineRow[]; status
         </div>
       </div>
 
-      {/* Enquiry list */}
+      {/* Enquiry register — a dense table like the module registers; the whole
+          row opens the detail. */}
       {shown.length === 0 ? (
         <div className="rounded-lg border border-[#e2dfdc] bg-white p-8 text-center text-[13px] text-[#777985]">
           No enquiries in this view.
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
-          {shown.map((r) => (
-            <div
-              key={r.inquiryId}
-              role="button"
-              tabIndex={0}
-              onClick={() => router.push(`/pipeline/${r.inquiryId}` as Route)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  router.push(`/pipeline/${r.inquiryId}` as Route);
-                }
-              }}
-              className="group flex cursor-pointer items-center gap-4 rounded-lg border border-[#e2dfdc] bg-white p-3.5 outline-none transition-colors hover:border-[#454595] hover:bg-[#faf9f6] focus-visible:border-[#454595]"
-            >
-              <div className="flex min-w-0 flex-1 flex-col gap-2">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="text-[13px] font-black text-[#1f2547]"
-                    style={{ fontFamily: "var(--font-mono, monospace)" }}
-                  >
+        <div className="overflow-x-auto rounded-lg border border-[#e2dfdc] bg-white">
+          <table className="w-full min-w-[820px] border-collapse text-left">
+            <thead>
+              <tr className="border-b border-[#e2dfdc] text-[10.5px] font-black uppercase tracking-[0.08em] text-[#777985]">
+                <th className="px-3 py-2.5">SM No</th>
+                <th className="px-3 py-2.5">Company</th>
+                <th className="px-3 py-2.5">Sales Person</th>
+                <th className="px-3 py-2.5">Current Stage</th>
+                <th className="px-3 py-2.5">Progress</th>
+                <th className="px-3 py-2.5">Status</th>
+                <th className="px-3 py-2.5" />
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map((r) => (
+                <tr
+                  key={r.inquiryId}
+                  onClick={() => router.push(`/pipeline/${r.inquiryId}` as Route)}
+                  className="group cursor-pointer border-b border-[#f3f1ec] transition-colors last:border-0 hover:bg-[#faf9f6]"
+                >
+                  <td className="whitespace-nowrap px-3 py-2.5 text-[13px] font-black text-[#1f2547]" style={{ fontFamily: "var(--font-mono, monospace)" }}>
                     {r.smNumber}
-                  </span>
-                  <span className="truncate text-[13px] font-semibold text-[#1f2547]">
-                    {r.companyName}
-                  </span>
-                  <OverallChip overall={r.overall} />
-                  <span className="rounded-[3px] bg-[#f4f0e8] px-1.5 py-0.5 text-[10.5px] font-bold text-[#57534e]">
-                    At: {r.currentStageLabel}
-                  </span>
-                </div>
-                <Stepper stages={r.stages} minWidth={440} />
-              </div>
-              {/* Edit is the only affordance — the whole row opens the detail. */}
-              <Link
-                href={`/inquiries/${r.inquiryId}/edit` as Route}
-                onClick={(e) => e.stopPropagation()}
-                className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md border border-[#e2dfdc] bg-white px-2.5 text-[12px] font-bold text-[#454595] opacity-0 transition-all hover:border-[#454595] hover:bg-[#454595]/8 group-hover:opacity-100 focus-visible:opacity-100"
-              >
-                <Pencil className="h-3.5 w-3.5" strokeWidth={2.4} />
-                Edit
-              </Link>
-            </div>
-          ))}
+                  </td>
+                  <td className="px-3 py-2.5 text-[13px] font-semibold text-[#1f2547]">
+                    <div className="max-w-[220px] truncate">{r.companyName}</div>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-[12px] text-[#777985]">
+                    {r.salesPerson ?? "—"}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2.5">
+                    <span className="rounded-[3px] bg-[#f4f0e8] px-1.5 py-0.5 text-[11px] font-bold text-[#57534e]">
+                      {r.currentStageLabel}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <div className="w-[210px]">
+                      <Stepper stages={r.stages} minWidth={190} />
+                    </div>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2.5">
+                    <OverallChip overall={r.overall} />
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-right">
+                    <Link
+                      href={`/inquiries/${r.inquiryId}/edit` as Route}
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex h-7 items-center gap-1 rounded-md border border-[#e2dfdc] bg-white px-2 text-[11px] font-bold text-[#454595] opacity-0 transition-all hover:border-[#454595] hover:bg-[#454595]/8 group-hover:opacity-100 focus-visible:opacity-100"
+                    >
+                      <Pencil className="h-3 w-3" strokeWidth={2.4} />
+                      Edit
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

@@ -16,6 +16,20 @@ import {
 /** stage_remarks.module tag under which the whole-inquiry freeze is recorded. */
 const FREEZE_MODULE = "pipeline-freeze";
 
+/** The current freeze overlay for one inquiry (latest wins; "resume" clears). */
+export async function getFreezeState(
+  inquiryId: string,
+): Promise<"on_hold" | "cancelled" | null> {
+  const rows = await db
+    .select({ toStatus: stageRemarks.toStatus })
+    .from(stageRemarks)
+    .where(and(eq(stageRemarks.module, FREEZE_MODULE), eq(stageRemarks.recordId, inquiryId)))
+    .orderBy(desc(stageRemarks.createdAt))
+    .limit(1);
+  const t = rows[0]?.toStatus;
+  return t === "on_hold" ? "on_hold" : t === "cancelled" ? "cancelled" : null;
+}
+
 /**
  * Pipeline tracker — one row per inquiry (SM number), with the completion state
  * of every pipeline stage rolled up from the stage tables. Powers the Forms

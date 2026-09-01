@@ -7,7 +7,9 @@ import { requireUser } from "@/lib/auth/current";
 import { canApprove } from "@/lib/approval/gate";
 import { getInquiryWorkspaceHeader, getInquiryProducts } from "@/lib/queries/sm-workspace";
 import { getInquiryById } from "@/lib/queries/inquiries";
+import { getFreezeState } from "@/lib/queries/pipeline-tracker";
 import { listEmployeeOptions } from "@/lib/queries/employees";
+import { ApproverBar } from "@/components/pipeline/approver-bar";
 import { INQUIRY_PRIORITY_LABELS } from "@/db/enums";
 import { Chip, PRIORITY_TONES } from "@/components/inquiries/chip";
 import { FeasibilityEnquirySnapshot } from "@/components/feasibility/feasibility-enquiry-snapshot";
@@ -36,11 +38,12 @@ export default async function FeasibilityReviewPage({
   const { id } = await params;
   if (!UUID_RE.test(id)) notFound();
 
-  const [header, products, inquiry, employees] = await Promise.all([
+  const [header, products, inquiry, employees, freeze] = await Promise.all([
     getInquiryWorkspaceHeader(id),
     getInquiryProducts(id),
     getInquiryById(id),
     listEmployeeOptions(),
+    getFreezeState(id),
   ]);
   if (!header || !inquiry) notFound();
 
@@ -98,6 +101,13 @@ export default async function FeasibilityReviewPage({
           </Link>
         </div>
       </header>
+
+      {/* Approver decisions for this inquiry — right on the review page. */}
+      {canApprove(me) && (
+        <div className="mb-5">
+          <ApproverBar inquiryId={id} stage="feasibility" isApprover frozen={freeze} />
+        </div>
+      )}
 
       {/* Auto-fetched enquiry snapshot (read-only) — exactly the sheet's fields. */}
       <div className="mb-5">
