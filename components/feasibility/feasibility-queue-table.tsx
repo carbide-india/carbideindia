@@ -2,7 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { Route } from "next";
+import { Trash2 } from "lucide-react";
 import {
   ACTIVE_FEASIBILITY_STATUSES,
   FEASIBILITY_STATUS_LABELS,
@@ -11,6 +13,7 @@ import {
   INQUIRY_PRIORITY_LABELS,
 } from "@/db/enums";
 import { formatDate } from "@/lib/format";
+import { fireToast } from "@/lib/toast";
 import { Chip, PRIORITY_TONES } from "@/components/inquiries/chip";
 import {
   RegisterDataTable,
@@ -18,6 +21,7 @@ import {
   type FilterConfig,
 } from "@/components/registers/register-data-table";
 import { setFeasibilityStatusBulk } from "@/app/(app)/feasibility/actions";
+import { recycleInquiry } from "@/app/(app)/inquiries/recycle-actions";
 import type { FeasibilityQueueItem } from "@/lib/queries/feasibility";
 
 /** Days a row has waited in the queue (from createdAt to now, floored). */
@@ -47,6 +51,25 @@ export function FeasibilityQueueTable({
   heading?: React.ReactNode;
 }) {
   const hrefFor = React.useCallback((id: string): Route => `/feasibility/${id}` as Route, []);
+
+  const router = useRouter();
+  const [pending, startTransition] = React.useTransition();
+  const [confirmId, setConfirmId] = React.useState<string | null>(null);
+  const del = React.useCallback(
+    (id: string) => {
+      startTransition(async () => {
+        const res = await recycleInquiry(id);
+        if (res.ok) {
+          fireToast({ message: "Enquiry moved to Recycle Bin." });
+          router.refresh();
+        } else {
+          fireToast({ type: "error", message: res.error });
+        }
+        setConfirmId(null);
+      });
+    },
+    [router],
+  );
 
   const columns = React.useMemo<RegisterColumn<FeasibilityQueueItem>[]>(
     () => [
@@ -183,8 +206,47 @@ export function FeasibilityQueueTable({
           );
         },
       },
+      {
+        // Delete → Recycle Bin. Row click opens the detail, so stop propagation
+        // and confirm inline before deleting the whole enquiry.
+        id: "__delete",
+        header: "",
+        width: "116px",
+        cell: (r) => (
+          <span onClick={(e) => e.stopPropagation()} className="inline-flex">
+            {confirmId === r.id ? (
+              <span className="inline-flex items-center gap-1">
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => del(r.id)}
+                  className="inline-flex h-7 items-center gap-1 rounded-md bg-[#d03232] px-2 text-[11px] font-bold text-white transition-colors hover:bg-[#b02525] disabled:opacity-50"
+                >
+                  <Trash2 size={13} strokeWidth={2.4} /> Delete
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmId(null)}
+                  className="inline-flex h-7 items-center rounded-md border border-hairline px-2 text-[11px] font-bold text-ink-subtle hover:border-ink-subtle"
+                >
+                  No
+                </button>
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmId(r.id)}
+                title="Delete this enquiry (moves the whole pipeline to the Recycle Bin)"
+                className="inline-flex h-7 items-center gap-1 rounded-md border border-[#d03232]/40 px-2 text-[11px] font-bold text-[#d03232] opacity-0 transition-all hover:bg-[#d03232]/10 group-hover/row:opacity-100"
+              >
+                <Trash2 size={13} strokeWidth={2.4} /> Delete
+              </button>
+            )}
+          </span>
+        ),
+      },
     ],
-    [hrefFor],
+    [hrefFor, confirmId, pending, del],
   );
 
   const filters = React.useMemo<FilterConfig<FeasibilityQueueItem>[]>(
