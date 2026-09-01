@@ -102,6 +102,7 @@ export function FeasibilityQueueTable({
       },
       {
         id: "priority",
+        pinnedLeft: true,
         header: "Priority",
         width: "104px",
         sortValue: (r) => INQUIRY_PRIORITY_LABELS[r.priority],
