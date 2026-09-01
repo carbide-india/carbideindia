@@ -4,7 +4,7 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { formCustomOptions } from "@/db/schema";
-import { requireUser } from "@/lib/auth/current";
+import { requireAdmin } from "@/lib/auth/current";
 import { CUSTOM_LISTS, isKnownCustomList } from "@/lib/custom-lists/registry";
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -30,7 +30,7 @@ export async function addCustomOptionsBulk(
   listKey: string,
   labelsRaw: string[],
 ): Promise<{ ok: true; added: number; skipped: number } | { ok: false; error: string }> {
-  await requireUser();
+  await requireAdmin();
   if (!isKnownCustomList(formKey, listKey)) return { ok: false, error: "Unknown list." };
   // Count every valid pasted value, then dedupe within the paste (case-
   // insensitive) - the difference is the first bucket of skipped duplicates.
@@ -78,7 +78,7 @@ export async function addCustomOption(
   listKey: string,
   labelRaw: string,
 ): Promise<Result> {
-  await requireUser();
+  await requireAdmin();
   const label = labelRaw.trim();
   if (!label) return { ok: false, error: "Enter a value." };
   if (label.length > 200) return { ok: false, error: "That value is too long." };
@@ -106,7 +106,7 @@ export async function renameCustomOption(
   labelRaw: string,
   formKey: string,
 ): Promise<Result> {
-  await requireUser();
+  await requireAdmin();
   const label = labelRaw.trim();
   if (!label) return { ok: false, error: "Enter a value." };
   if (label.length > 200) return { ok: false, error: "That value is too long." };
@@ -123,7 +123,7 @@ export async function renameCustomOption(
 }
 
 export async function removeCustomOption(id: string, formKey: string): Promise<Result> {
-  await requireUser();
+  await requireAdmin();
   try {
     await db
       .update(formCustomOptions)
@@ -143,7 +143,7 @@ export async function moveCustomOption(
   id: string,
   direction: "up" | "down",
 ): Promise<Result> {
-  await requireUser();
+  await requireAdmin();
   if (!isKnownCustomList(formKey, listKey)) return { ok: false, error: "Unknown list." };
   try {
     const rows = await db
@@ -179,7 +179,7 @@ export async function clearCustomList(
   formKey: string,
   listKey: string,
 ): Promise<Result> {
-  await requireUser();
+  await requireAdmin();
   if (!isKnownCustomList(formKey, listKey)) return { ok: false, error: "Unknown list." };
   try {
     await db
@@ -204,7 +204,7 @@ export async function seedCustomListDefaults(
   formKey: string,
   listKey: string,
 ): Promise<Result> {
-  await requireUser();
+  await requireAdmin();
   const def = CUSTOM_LISTS[formKey]?.lists.find((l) => l.key === listKey);
   if (!def) return { ok: false, error: "Unknown list." };
   try {

@@ -24,10 +24,17 @@ import {
 const APPROVER_CHECKS = new Set<string>(APPROVER_ONLY_CHECK_STATES);
 const APPROVER_BUCKETS = new Set<string>(APPROVER_ONLY_BUCKETS);
 
-/** Anyone this gate is asked about. Only the approver flag matters. */
+/** Anyone this gate is asked about — the `is_approver` flag, or one of the two
+ *  known approver emails (Alok & Altus) as a reliable fallback so approval works
+ *  even before the flag is toggled in Admin → People. */
 export interface Approver {
   isApprover: boolean;
+  email?: string | null;
 }
+
+/** Alok & Altus are the approvers (Manan's rule). Alok is also seeded with the
+ *  `is_approver` flag in migration 0074; the emails cover both without a DB step. */
+const APPROVER_EMAILS = new Set(["alok@carbideindia.com", "altus@carbideindia.com"]);
 
 /**
  * Who may approve.
@@ -43,7 +50,7 @@ export interface Approver {
  * enforcement on, and approval must be restricted from the moment it ships.
  */
 export function canApprove(viewer: Approver): boolean {
-  return viewer.isApprover;
+  return viewer.isApprover || (!!viewer.email && APPROVER_EMAILS.has(viewer.email.toLowerCase()));
 }
 
 /** True for a per-check state only an approver may set. */

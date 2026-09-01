@@ -10,7 +10,11 @@ import {
   quotations,
   salesOrders,
   samples,
+  stageRemarks,
 } from "@/db/schema";
+
+/** stage_remarks.module tag under which the whole-inquiry freeze is recorded. */
+const FREEZE_MODULE = "pipeline-freeze";
 
 /**
  * Pipeline tracker — one row per inquiry (SM number), with the completion state
@@ -42,6 +46,8 @@ export interface PipelineRow {
   salesPerson: string | null;
   stages: PipelineStageCell[];
   overall: "completed" | "in_progress" | "dead" | "on_hold";
+  /** Approver freeze overlay, if any — drives the banner + control set. */
+  frozen: "on_hold" | "cancelled" | null;
   /** The stage the inquiry is currently sitting on (first not-done, or the last
    *  stage when everything is done). Drives the "where is it stuck" view. */
   currentStageKey: string;
@@ -155,6 +161,18 @@ export async function listPipelineTracker(opts?: { inquiryId?: string }): Promis
   const negM = keyMap(negAgg);
   const soM = keyMap(soAgg);
 
+  // Freeze overlay — the LATEST pipeline-freeze remark per inquiry decides whether
+  // it reads On Hold / Cancelled (a "resume" row clears it).
+  const freezeRows = await db
+    .select({ inquiryId: stageRemarks.recordId, toStatus: stageRemarks.toStatus })
+    .from(stageRemarks)
+    .where(and(eq(stageRemarks.module, FREEZE_MODULE), inArray(stageRemarks.recordId, ids)))
+    .orderBy(desc(stageRemarks.createdAt));
+  const freezeMap = new Map<string, string>();
+  for (const r of freezeRows) {
+    if (r.inquiryId && !freezeMap.has(r.inquiryId)) freezeMap.set(r.inquiryId, r.toStatus);
+  }
+
   return base.map((b) => {
     const kyc: StageState = b.clientId ? "done" : "active";
 
@@ -218,8 +236,9 @@ export async function listPipelineTracker(opts?: { inquiryId?: string }): Promis
     // Cascade freeze: hold/cancel sets EVERY stage (feasibility included), so the
     // SM-level feasibilityStatus is the reliable inquiry-wide signal. When frozen,
     // the whole row reads as held/cancelled.
-    const isCancelled = b.feasibilityStatus === "cancelled" || b.enquiryStatus === "cancelled";
-    const isOnHold = b.feasibilityStatus === "on_hold" || b.enquiryStatus === "on_hold";
+    const fz = freezeMap.get(b.id);
+    const isCancelled = fz === "cancelled";
+    const isOnHold = fz === "on_hold";
     const frozen: StageState | null = isCancelled ? "dead" : isOnHold ? "hold" : null;
     if (frozen) for (const st of stages) st.state = frozen;
 
@@ -246,6 +265,7 @@ export async function listPipelineTracker(opts?: { inquiryId?: string }): Promis
       salesPerson: b.salesPerson,
       stages,
       overall,
+      frozen: isCancelled ? "cancelled" : isOnHold ? "on_hold" : null,
       currentStageKey: current.key,
       currentStageLabel: current.label,
     };

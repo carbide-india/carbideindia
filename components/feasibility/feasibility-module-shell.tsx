@@ -15,6 +15,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   KanbanSquare,
+  LayoutGrid,
 } from "lucide-react";
 import { BUCKET_ICONS } from "@/components/layout/bucket-icon";
 import { HubSearch } from "@/components/hub/hub-search";
@@ -323,6 +324,22 @@ export function FeasibilityModuleShell({
                       >
                         <KanbanSquare className="h-[16px] w-[16px] shrink-0" />
                         {!collapsed && <span className="truncate">Feasibility Kanban</span>}
+                      </Link>
+
+                      {/* Pipeline Tracker — the cross-stage register (every SM and
+                          where it sits), with per-inquiry approver actions. */}
+                      <Link
+                        href={"/pipeline" as Route}
+                        title={collapsed ? "Pipeline Tracker" : undefined}
+                        className={cn(
+                          base,
+                          pathname.startsWith("/pipeline")
+                            ? "bg-[#1f2547] font-bold text-white shadow-[0_2px_8px_rgba(31,37,71,0.30)]"
+                            : "font-semibold text-[#777985] hover:bg-[#e2dfdc] hover:text-[#1f2547]",
+                        )}
+                      >
+                        <LayoutGrid className="h-[16px] w-[16px] shrink-0" />
+                        {!collapsed && <span className="truncate">Pipeline Tracker</span>}
                       </Link>
 
                       {/* Destination 2 — Spec Variance. Promoted out of the status

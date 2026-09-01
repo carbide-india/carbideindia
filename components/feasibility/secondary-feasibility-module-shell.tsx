@@ -16,6 +16,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   KanbanSquare,
+  LayoutGrid,
 } from "lucide-react";
 import { HubSearch } from "@/components/hub/hub-search";
 import { ModuleBrand } from "@/components/layout/module-brand";
@@ -301,6 +302,21 @@ export function SecondaryFeasibilityModuleShell({
                     >
                       <KanbanSquare className="h-[16px] w-[16px] shrink-0" />
                       {!collapsed && <span className="min-w-0 flex-1 truncate">Secondary Kanban</span>}
+                    </Link>
+
+                    {/* Pipeline Tracker — cross-stage register + approver actions. */}
+                    <Link
+                      href={"/pipeline" as Route}
+                      title={collapsed ? "Pipeline Tracker" : undefined}
+                      className={cn(
+                        base,
+                        pathname.startsWith("/pipeline")
+                          ? "bg-[#1f2547] font-bold text-white shadow-[0_2px_8px_rgba(31,37,71,0.30)]"
+                          : "font-semibold text-[#777985] hover:bg-[#e2dfdc] hover:text-[#1f2547]",
+                      )}
+                    >
+                      <LayoutGrid className="h-[16px] w-[16px] shrink-0" />
+                      {!collapsed && <span className="min-w-0 flex-1 truncate">Pipeline Tracker</span>}
                     </Link>
 
                     {/* Spec Variance — a standing exception report ("what did

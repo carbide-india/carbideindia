@@ -52,17 +52,11 @@ export type PipelineDecision =
   | "cancelled"
   | "resume";
 
-/** Stages that a hold/cancel/resume cascades across, in pipeline order. Includes
- *  Enquiry so the whole inquiry (its own status too) freezes/resumes. */
-const CASCADE_STAGES: PipelineStageKey[] = [
-  "enquiry",
-  "feasibility",
-  "secondary",
-  "costing",
-  "quotation",
-  "negotiation",
-  "sales_order",
-];
+/** The stage-remarks module tag under which the whole-inquiry freeze
+ *  (On Hold / Cancelled / Resume) is recorded. Reading the LATEST such row per
+ *  inquiry gives its freeze state — no enum column is touched, so it needs no
+ *  migration and Resume restores the exact prior stage statuses. */
+const FREEZE_MODULE = "pipeline-freeze";
 
 /** Each stage's "approved" status value. */
 const APPROVED: Record<PipelineStageKey, string> = {
@@ -146,27 +140,30 @@ export async function applyPipelineDecision(input: {
   const remark = input.remark?.trim() || `Approver marked ${decision.replace("_", " ")}.`;
 
   try {
-    await db.transaction(async (tx) => {
-      if (decision === "on_hold" || decision === "cancelled") {
-        for (const s of CASCADE_STAGES) await setStage(tx, s, inquiryId, decision);
-      } else if (decision === "resume") {
-        for (const s of CASCADE_STAGES) await setStage(tx, s, inquiryId, "draft");
-      } else if (decision === "approve") {
-        await setStage(tx, stage, inquiryId, APPROVED[stage]);
-      } else {
-        await setStage(tx, stage, inquiryId, "not_approved");
-      }
-
-      await tx.insert(stageRemarks).values({
-        module: decision === "on_hold" || decision === "cancelled" || decision === "resume"
-          ? "pipeline"
-          : stage,
+    if (decision === "on_hold" || decision === "cancelled" || decision === "resume") {
+      // Whole-inquiry freeze/resume — a non-destructive overlay row. No stage
+      // status columns are changed, so it needs no migration and Resume simply
+      // stops the overlay, leaving every stage exactly as it was.
+      await db.insert(stageRemarks).values({
+        module: FREEZE_MODULE,
         recordId: inquiryId,
         toStatus: decision,
         body: remark,
         authorId: me.id,
       });
-    });
+    } else {
+      // Approve / Not Approved — a real, per-stage status change + its log.
+      await db.transaction(async (tx) => {
+        await setStage(tx, stage, inquiryId, decision === "approve" ? APPROVED[stage] : "not_approved");
+        await tx.insert(stageRemarks).values({
+          module: stage,
+          recordId: inquiryId,
+          toStatus: decision,
+          body: remark,
+          authorId: me.id,
+        });
+      });
+    }
   } catch (err) {
     return {
       ok: false,
