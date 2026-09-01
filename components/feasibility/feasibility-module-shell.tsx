@@ -16,6 +16,7 @@ import {
   PanelLeftOpen,
   KanbanSquare,
   LayoutGrid,
+  Table,
   Trash2,
 } from "lucide-react";
 import { BUCKET_ICONS } from "@/components/layout/bucket-icon";
@@ -309,6 +310,21 @@ export function FeasibilityModuleShell({
                           </>
                         );
                       })()}
+
+                      {/* Register — the full queue table (unfiltered). */}
+                      <Link
+                        href={"/feasibility" as Route}
+                        title={collapsed ? "Register" : undefined}
+                        className={cn(
+                          base,
+                          onQueue && activeStatus === ""
+                            ? "bg-[#1f2547] font-bold text-white shadow-[0_2px_8px_rgba(31,37,71,0.30)]"
+                            : "font-semibold text-[#777985] hover:bg-[#e2dfdc] hover:text-[#1f2547]",
+                        )}
+                      >
+                        <Table className="h-[16px] w-[16px] shrink-0" />
+                        {!collapsed && <span className="truncate">Register</span>}
+                      </Link>
 
                       {/* The stage BOARD — the same queue arranged by status,
                         with a remark demanded on every move. */}

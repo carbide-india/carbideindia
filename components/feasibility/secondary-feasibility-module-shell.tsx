@@ -17,6 +17,7 @@ import {
   PanelLeftOpen,
   KanbanSquare,
   LayoutGrid,
+  Table,
   Trash2,
 } from "lucide-react";
 import { HubSearch } from "@/components/hub/hub-search";
@@ -286,6 +287,21 @@ export function SecondaryFeasibilityModuleShell({
                         </>
                       );
                     })()}
+
+                    {/* Register — the full queue table (unfiltered). */}
+                    <Link
+                      href={"/secondary-feasibility" as Route}
+                      title={collapsed ? "Register" : undefined}
+                      className={cn(
+                        base,
+                        onQueue && activeStatus === ""
+                          ? "bg-[#1f2547] font-bold text-white shadow-[0_2px_8px_rgba(31,37,71,0.30)]"
+                          : "font-semibold text-[#777985] hover:bg-[#e2dfdc] hover:text-[#1f2547]",
+                      )}
+                    >
+                      <Table className="h-[16px] w-[16px] shrink-0" />
+                      {!collapsed && <span className="min-w-0 flex-1 truncate">Register</span>}
+                    </Link>
 
                     <div className="my-1 h-[1.5px] rounded-full bg-[#e2dfdc]" />
 
