@@ -1,5 +1,6 @@
 import {
   AlarmClock,
+  Ban,
   Circle,
   CircleCheck,
   CircleHelp,
@@ -8,6 +9,7 @@ import {
   Clock3,
   GitCompareArrows,
   Handshake,
+  PauseCircle,
   PencilLine,
   SendHorizonal,
   Undo2,
@@ -40,6 +42,8 @@ export type BucketIconKey =
   | "approved"
   | "not_approved"
   | "not_feasible"
+  | "on_hold"
+  | "cancelled"
   | "all"
   | "overdue"
   | "not_sent"
@@ -56,6 +60,9 @@ export const BUCKET_ICONS: Record<BucketIconKey, BucketIcon> = {
   // be made". Same distinction the rose/red tones carry.
   not_approved: Undo2,
   not_feasible: CircleX,
+  // Approver freeze states — the whole inquiry is paused / cancelled.
+  on_hold: PauseCircle,
+  cancelled: Ban,
   // Cross-cutting views that are not buckets of the queue.
   all: ClipboardList,
   overdue: AlarmClock,
