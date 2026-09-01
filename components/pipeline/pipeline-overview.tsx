@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { Route } from "next";
-import { ArrowRight, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { PipelineRow } from "@/lib/queries/pipeline-tracker";
 import { OverallChip, Stepper, fmtDate } from "./parts";
@@ -11,6 +12,7 @@ import { OverallChip, Stepper, fmtDate } from "./parts";
 type Status = "in_progress" | "on_hold" | "completed" | "dead";
 
 export function PipelineOverview({ rows, status }: { rows: PipelineRow[]; status?: string }) {
+  const router = useRouter();
   const counts = React.useMemo(
     () => ({
       total: rows.length,
@@ -138,9 +140,18 @@ export function PipelineOverview({ rows, status }: { rows: PipelineRow[]; status
           {shown.map((r) => (
             <div
               key={r.inquiryId}
-              className="group flex items-center gap-4 rounded-lg border border-[#e2dfdc] bg-white p-3.5 transition-colors hover:border-[#454595]"
+              role="button"
+              tabIndex={0}
+              onClick={() => router.push(`/pipeline/${r.inquiryId}` as Route)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  router.push(`/pipeline/${r.inquiryId}` as Route);
+                }
+              }}
+              className="group flex cursor-pointer items-center gap-4 rounded-lg border border-[#e2dfdc] bg-white p-3.5 outline-none transition-colors hover:border-[#454595] hover:bg-[#faf9f6] focus-visible:border-[#454595]"
             >
-              <Link href={`/pipeline/${r.inquiryId}` as Route} className="flex min-w-0 flex-1 flex-col gap-2">
+              <div className="flex min-w-0 flex-1 flex-col gap-2">
                 <div className="flex items-center gap-2">
                   <span
                     className="text-[13px] font-black text-[#1f2547]"
@@ -157,23 +168,16 @@ export function PipelineOverview({ rows, status }: { rows: PipelineRow[]; status
                   </span>
                 </div>
                 <Stepper stages={r.stages} minWidth={440} />
-              </Link>
-              <div className="flex shrink-0 items-center gap-1.5">
-                <Link
-                  href={`/inquiries/${r.inquiryId}/edit` as Route}
-                  className="inline-flex h-8 items-center gap-1 rounded-md border border-[#e2dfdc] bg-white px-2.5 text-[12px] font-bold text-[#454595] transition-colors hover:border-[#454595] hover:bg-[#454595]/8"
-                >
-                  <Pencil className="h-3.5 w-3.5" strokeWidth={2.4} />
-                  Edit
-                </Link>
-                <Link
-                  href={`/pipeline/${r.inquiryId}` as Route}
-                  className="inline-flex h-8 items-center gap-1 rounded-md bg-[#454595] px-2.5 text-[12px] font-bold text-white transition-colors hover:bg-[#3a3a80]"
-                >
-                  View
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
               </div>
+              {/* Edit is the only affordance — the whole row opens the detail. */}
+              <Link
+                href={`/inquiries/${r.inquiryId}/edit` as Route}
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md border border-[#e2dfdc] bg-white px-2.5 text-[12px] font-bold text-[#454595] opacity-0 transition-all hover:border-[#454595] hover:bg-[#454595]/8 group-hover:opacity-100 focus-visible:opacity-100"
+              >
+                <Pencil className="h-3.5 w-3.5" strokeWidth={2.4} />
+                Edit
+              </Link>
             </div>
           ))}
         </div>
