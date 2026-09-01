@@ -218,7 +218,10 @@ export function FeasibilityModuleShell({
                         unfiltered queue. In the 72px rail there is no room to
                         nest, so the filters simply stack as icons, unchanged. */}
                       {(() => {
-                        const headerActive = primaryActive && activeStatus === "";
+                        // The accordion header is a pure toggle now — the explicit
+                        // "Register" link below owns the unfiltered-queue active state,
+                        // so the header never highlights (avoids double-highlight).
+                        const headerActive = false;
                         const filterList = (
                           <div className={cn("flex flex-col gap-0.5", !collapsed && "ml-3 border-l border-[#e2dfdc] pl-2")}>
                             {PRIMARY_STATUS_NAV.map((n) => {

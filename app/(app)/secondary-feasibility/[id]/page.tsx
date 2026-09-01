@@ -4,8 +4,11 @@ import type { Route } from "next";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ClipboardList } from "lucide-react";
 import { requireUser } from "@/lib/auth/current";
+import { canApprove } from "@/lib/approval/gate";
 import { getInquiryWorkspaceHeader, getInquiryProducts } from "@/lib/queries/sm-workspace";
 import { getInquiryById } from "@/lib/queries/inquiries";
+import { getFreezeState } from "@/lib/queries/pipeline-tracker";
+import { ApproverBar } from "@/components/pipeline/approver-bar";
 import {
   listItemLockStates,
   getInquiryVarianceRows,
@@ -54,6 +57,7 @@ export default async function SecondaryFeasibilityReviewPage({
     conditionOptions,
     toleranceOptions,
     shapeProfiles,
+    freeze,
   ] = await Promise.all([
     getInquiryWorkspaceHeader(id),
     getInquiryProducts(id),
@@ -65,6 +69,7 @@ export default async function SecondaryFeasibilityReviewPage({
     listMasterOptions("condition"),
     listMasterOptions("tolerance"),
     getShapeProfiles(),
+    getFreezeState(id),
   ]);
   if (!header || !inquiry) notFound();
 
@@ -120,6 +125,13 @@ export default async function SecondaryFeasibilityReviewPage({
           </Link>
         </div>
       </header>
+
+      {/* Approver decisions for this inquiry — right on the review page. */}
+      {canApprove(me) && (
+        <div className="mb-5">
+          <ApproverBar inquiryId={id} stage="secondary" isApprover frozen={freeze} />
+        </div>
+      )}
 
       {/* Enquiry context — customer/checks/links read-only, but the two product
           bands are editable here so a reviewer can correct the spec in place. */}

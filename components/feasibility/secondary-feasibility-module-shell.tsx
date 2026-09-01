@@ -198,7 +198,9 @@ export function SecondaryFeasibilityModuleShell({
                         as the Primary shell. The row still links to the
                         unfiltered queue; the chevron only toggles the filters. */}
                     {(() => {
-                      const headerActive = onQueue && activeStatus === "";
+                      // Pure toggle — the "Register" link owns the unfiltered-queue
+                      // active state, so the header never highlights.
+                      const headerActive = false;
                       const filterList = (
                         <div className={cn("flex flex-col gap-0.5", !collapsed && "ml-3 border-l border-[#e2dfdc] pl-2")}>
                           {SECONDARY_STATUS_NAV.map((n) => {
