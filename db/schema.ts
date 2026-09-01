@@ -636,6 +636,10 @@ export const inquiries = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     smNumber: text("sm_number").notNull().unique()
       .default(sql`'SM' || nextval('inquiries_sm_number_seq')`),
+    // Soft-delete → Recycle Bin. Deleting an enquiry stamps this; the whole
+    // pipeline (every stage hangs off the inquiry) disappears from the registers
+    // and is purged 48h later. Restore clears it.
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     enquiryDate: timestamp("enquiry_date", { withTimezone: true }).notNull().defaultNow(),
     priority: inquiryPriorityEnum("priority").notNull().default("normal"),
     source: inquirySourceEnum("source"),

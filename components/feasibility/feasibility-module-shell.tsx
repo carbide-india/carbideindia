@@ -16,6 +16,7 @@ import {
   PanelLeftOpen,
   KanbanSquare,
   LayoutGrid,
+  Trash2,
 } from "lucide-react";
 import { BUCKET_ICONS } from "@/components/layout/bucket-icon";
 import { HubSearch } from "@/components/hub/hub-search";
@@ -340,6 +341,21 @@ export function FeasibilityModuleShell({
                       >
                         <LayoutGrid className="h-[16px] w-[16px] shrink-0" />
                         {!collapsed && <span className="truncate">Pipeline Tracker</span>}
+                      </Link>
+
+                      {/* Recycle Bin — soft-deleted enquiries (whole pipeline). */}
+                      <Link
+                        href={"/pipeline/recycle-bin" as Route}
+                        title={collapsed ? "Recycle Bin" : undefined}
+                        className={cn(
+                          base,
+                          pathname.startsWith("/pipeline/recycle-bin")
+                            ? "bg-[#1f2547] font-bold text-white shadow-[0_2px_8px_rgba(31,37,71,0.30)]"
+                            : "font-semibold text-[#777985] hover:bg-[#e2dfdc] hover:text-[#1f2547]",
+                        )}
+                      >
+                        <Trash2 className="h-[16px] w-[16px] shrink-0" />
+                        {!collapsed && <span className="truncate">Recycle Bin</span>}
                       </Link>
 
                       {/* Destination 2 — Spec Variance. Promoted out of the status

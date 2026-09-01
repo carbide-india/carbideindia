@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, ilike, or, sql, inArray, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, isNull, or, sql, inArray, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/lib/db";
 import { inquiries, inquiryItems, items, employees, masterOptions, type Inquiry } from "@/db/schema";
@@ -49,7 +49,11 @@ export async function listInquiries(
 ): Promise<InquiryListItem[]> {
   // Archived enquiries drop off the register (the detail page can still load
   // one directly, and it can be unarchived).
-  const conds: Array<SQL | undefined> = [eq(inquiries.isArchived, false)];
+  // Archived AND soft-deleted (Recycle Bin) enquiries drop off the register.
+  const conds: Array<SQL | undefined> = [
+    eq(inquiries.isArchived, false),
+    isNull(inquiries.deletedAt),
+  ];
   if (filters.status) {
     conds.push(eq(inquiries.enquiryStatus, filters.status));
   }
@@ -118,6 +122,32 @@ export async function listInquiries(
       sampleStatus: s.sampleStatus,
     })),
   }));
+}
+
+/** One soft-deleted enquiry in the Recycle Bin. */
+export interface RecycledInquiry {
+  id: string;
+  smNumber: string;
+  companyName: string;
+  salesPersonName: string | null;
+  deletedAt: Date;
+}
+
+/** Enquiries in the Recycle Bin (soft-deleted), newest deletion first. */
+export async function listRecycledInquiries(): Promise<RecycledInquiry[]> {
+  const rows = await db
+    .select({
+      id: inquiries.id,
+      smNumber: inquiries.smNumber,
+      companyName: inquiries.companyName,
+      salesPersonName: employees.name,
+      deletedAt: inquiries.deletedAt,
+    })
+    .from(inquiries)
+    .leftJoin(employees, eq(inquiries.assignedSalesPersonId, employees.id))
+    .where(sql`${inquiries.deletedAt} is not null`)
+    .orderBy(desc(inquiries.deletedAt));
+  return rows.map((r) => ({ ...r, deletedAt: r.deletedAt as Date }));
 }
 
 /** Full inquiry row for the detail page / feasibility panel. */

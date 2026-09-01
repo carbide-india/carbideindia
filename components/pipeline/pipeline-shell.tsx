@@ -13,6 +13,7 @@ import {
   ListChecks,
   Loader2,
   PauseCircle,
+  Trash2,
   XCircle,
 } from "lucide-react";
 import { HubSearch } from "@/components/hub/hub-search";
@@ -116,6 +117,19 @@ export function PipelineShell({ children, userMenu }: { children: ReactNode; use
               })}
 
               <div className="my-2 h-px bg-[#e2dfdc]" />
+
+              <Link
+                href={"/pipeline/recycle-bin" as Route}
+                className={cn(
+                  "flex h-[36px] items-center gap-2.5 rounded-md px-3 text-[13px] transition-colors",
+                  pathname === "/pipeline/recycle-bin"
+                    ? "bg-[#1f2547] font-bold text-white shadow-[0_2px_8px_rgba(31,37,71,0.30)]"
+                    : "font-semibold text-[#44403c] hover:bg-[#ece5d8] hover:text-[#1f2547]",
+                )}
+              >
+                <Trash2 className="h-[16px] w-[16px] shrink-0" />
+                Recycle Bin
+              </Link>
 
               <Link
                 href={"/enquiries" as Route}

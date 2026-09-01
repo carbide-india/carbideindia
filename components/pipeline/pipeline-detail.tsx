@@ -13,11 +13,13 @@ import {
   Pencil,
   Play,
   ShieldCheck,
+  Trash2,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fireToast } from "@/lib/toast";
 import type { PipelineRow, StageState } from "@/lib/queries/pipeline-tracker";
+import { recycleInquiry } from "@/app/(app)/inquiries/recycle-actions";
 import {
   applyPipelineDecision,
   type PipelineDecision,
@@ -62,6 +64,7 @@ export function PipelineDetail({ row, isApprover = false }: { row: PipelineRow; 
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
   const [confirmCancel, setConfirmCancel] = React.useState(false);
+  const [confirmDelete, setConfirmDelete] = React.useState(false);
 
   function decide(stage: PipelineStageKey, decision: PipelineDecision) {
     startTransition(async () => {
@@ -70,6 +73,18 @@ export function PipelineDetail({ row, isApprover = false }: { row: PipelineRow; 
         fireToast({ message: "Decision applied." });
         setConfirmCancel(false);
         router.refresh();
+      } else {
+        fireToast({ type: "error", message: res.error });
+      }
+    });
+  }
+
+  function del() {
+    startTransition(async () => {
+      const res = await recycleInquiry(row.inquiryId);
+      if (res.ok) {
+        fireToast({ message: "Enquiry moved to Recycle Bin." });
+        router.push("/pipeline" as Route);
       } else {
         fireToast({ type: "error", message: res.error });
       }
@@ -159,6 +174,36 @@ export function PipelineDetail({ row, isApprover = false }: { row: PipelineRow; 
               Open Full SM
               <ArrowUpRight className="h-4 w-4" />
             </Link>
+            {confirmDelete ? (
+              <span className="inline-flex items-center gap-1">
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={del}
+                  className="inline-flex h-9 items-center gap-1 rounded-md bg-[#d03232] px-3 text-[12.5px] font-bold text-white transition-colors hover:bg-[#b02525] disabled:opacity-50"
+                >
+                  <Trash2 className="h-4 w-4" strokeWidth={2.4} /> Confirm delete
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(false)}
+                  className="inline-flex h-9 items-center rounded-md border border-[#e2dfdc] px-3 text-[12.5px] font-bold text-[#777985] hover:border-[#a8a8a8]"
+                >
+                  No
+                </button>
+              </span>
+            ) : (
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => setConfirmDelete(true)}
+                title="Move this enquiry (whole pipeline) to the Recycle Bin"
+                className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[#d03232] bg-white px-3 text-[12.5px] font-bold text-[#d03232] transition-colors hover:bg-[#d03232]/10 disabled:opacity-50"
+              >
+                <Trash2 className="h-4 w-4" strokeWidth={2.4} />
+                Delete
+              </button>
+            )}
           </div>
         </div>
 

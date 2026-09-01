@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   costings,
@@ -102,7 +102,11 @@ export async function listPipelineTracker(opts?: { inquiryId?: string }): Promis
     })
     .from(inquiries)
     .leftJoin(employees, eq(employees.id, inquiries.assignedSalesPersonId))
-    .where(opts?.inquiryId ? eq(inquiries.id, opts.inquiryId) : eq(inquiries.isArchived, false))
+    .where(
+      opts?.inquiryId
+        ? eq(inquiries.id, opts.inquiryId)
+        : and(eq(inquiries.isArchived, false), isNull(inquiries.deletedAt)),
+    )
     .orderBy(desc(inquiries.enquiryDate));
 
   const ids = base.map((b) => b.id);

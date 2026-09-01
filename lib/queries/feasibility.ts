@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/lib/db";
 import { inquiries, inquiryItems, employees, masterOptions } from "@/db/schema";
@@ -109,7 +109,7 @@ export async function listFeasibilityQueue(): Promise<FeasibilityQueueItem[]> {
     })
     .from(inquiries)
     .leftJoin(employees, eq(employees.id, inquiries.feasibilityCheckedById))
-    .where(eq(inquiries.isArchived, false))
+    .where(and(eq(inquiries.isArchived, false), isNull(inquiries.deletedAt)))
     .orderBy(desc(inquiries.enquiryDate), desc(inquiries.createdAt));
 
   // One pass over the product lines gives BOTH the line count and the variance
@@ -531,7 +531,7 @@ export async function listSecondaryFeasibilityQueue(): Promise<SecondaryFeasibil
     .innerJoin(inquiries, eq(inquiryItems.inquiryId, inquiries.id))
     .where(
       and(
-        eq(inquiries.isArchived, false),
+        and(eq(inquiries.isArchived, false), isNull(inquiries.deletedAt)),
         inArray(inquiries.feasibilityStatus, primaryCleared),
       ),
     )
@@ -793,7 +793,7 @@ export async function getFeasibilityBucketCounts(): Promise<Record<string, numbe
   const rows = await db
     .select({ status: inquiries.feasibilityStatus, n: sql<number>`count(*)::int` })
     .from(inquiries)
-    .where(eq(inquiries.isArchived, false))
+    .where(and(eq(inquiries.isArchived, false), isNull(inquiries.deletedAt)))
     .groupBy(inquiries.feasibilityStatus);
 
   const out: Record<string, number> = {};
