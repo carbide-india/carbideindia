@@ -35,6 +35,7 @@ import {
   type QuotationStatus,
 } from "@/db/enums";
 import { getChosenCostingLocksForItems } from "@/lib/queries/costings";
+import { ensureNegotiationForQuote } from "@/lib/workflow/provision";
 import {
   CreateQuotationSchema,
   UpdateQuotationSchema,
@@ -479,7 +480,7 @@ export async function setQuotationSentBulk(
   ids: string[],
   sent: string,
 ): Promise<ActionResult> {
-  await requireUser();
+  const me = await requireUser();
   if (!Array.isArray(ids) || ids.length === 0) {
     return { ok: false, error: "No rows selected." };
   }
@@ -496,6 +497,18 @@ export async function setQuotationSentBulk(
     console.error("[setQuotationSentBulk] failed", err);
     return { ok: false, error: "Could not update the rows. Please try again." };
   }
+
+  // Marking a quote as sent starts its negotiation step too (same hand-off as
+  // sendQuotation). Non-fatal + idempotent per quote.
+  if (parsed.data === "yes") {
+    try {
+      for (const id of ids) await ensureNegotiationForQuote(id, me.id);
+      revalidatePath("/negotiations");
+    } catch (err) {
+      console.error("[setQuotationSentBulk] negotiation provisioning failed", err);
+    }
+  }
+
   revalidatePath("/quotations");
   return { ok: true };
 }
@@ -706,6 +719,16 @@ export async function sendQuotation(input: {
       error:
         "The quotation was emailed, but the record could not be updated. Set Quote Sent manually.",
     };
+  }
+
+  // Quotation → Negotiation hand-off: sending the quote starts the negotiation
+  // step, so the sent quote surfaces there with its lines carried forward (owner
+  // request 2026-09-01). Non-fatal + idempotent — the mail already went out.
+  try {
+    await ensureNegotiationForQuote(input.id, me.id);
+    revalidatePath("/negotiations");
+  } catch (err) {
+    console.error("[sendQuotation] negotiation provisioning failed", err);
   }
 
   revalidatePath("/quotations");

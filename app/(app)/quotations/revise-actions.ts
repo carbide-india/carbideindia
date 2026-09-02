@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { costings, quotations, quotationItems, type NewQuotation } from "@/db/schema";
 import { requireUser } from "@/lib/auth/current";
@@ -140,17 +140,18 @@ export async function reviseQuotation(
         .limit(1);
       if (!src) throw new Error("not-found");
 
-      const prior = await tx
-        .select({ revisionNo: quotations.revisionNo })
-        .from(quotations)
-        .where(eq(quotations.inquiryId, src.inquiryId))
-        .orderBy(desc(quotations.revisionNo));
-      const revisionNo = (prior[0]?.revisionNo ?? src.revisionNo) + 1;
+      // Chain-local numbering: the next revision is one past the row being
+      // revised (always the latest of its OWN chain — the Revise button is
+      // disabled on superseded rows). Counting enquiry-wide would let a separate
+      // quote (Q02) inflate another's (Q01) revision number.
+      const revisionNo = src.revisionNo + 1;
 
+      // Only the row we are superseding stops being the latest — NOT the other
+      // quotes (Q01, Q03…) of the same enquiry.
       await tx
         .update(quotations)
         .set({ isLatestRevision: false })
-        .where(eq(quotations.inquiryId, src.inquiryId));
+        .where(eq(quotations.id, src.id));
 
       const {
         id: _id,
@@ -160,11 +161,18 @@ export async function reviseQuotation(
         ...carried
       } = src;
 
+      // Build the revision number off the ORIGINAL quote number, not the
+      // previous revision's — otherwise the -R suffix accumulates
+      // (Q02 → Q02-R1 → Q02-R1-R2 …). Strip any trailing -R<n> group(s) to get
+      // the base, then append the single current revision suffix.
+      const baseQuoteNo = src.quoteNo.replace(/(?:-R\d+)+$/i, "");
+
       const values: NewQuotation = {
         ...carried,
-        // Revisions keep the original number with an -R suffix, so the
-        // customer-facing identifier stays recognisable across a re-quote.
-        quoteNo: `${src.quoteNo}-R${revisionNo}`,
+        // Revisions keep the original number with ONE -R suffix. The FIRST
+        // revision is R1: the original's revisionNo is 1, so the first revision
+        // (revisionNo 2) → -R1, the next (3) → -R2, etc.
+        quoteNo: `${baseQuoteNo}-R${revisionNo - 1}`,
         revisionNo,
         supersedesQuotationId: src.id,
         isLatestRevision: true,

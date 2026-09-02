@@ -260,13 +260,12 @@ function ProductCell({ row }: { row: QuotationListItem }) {
   const hasMore = row.lineProducts.length > 1;
 
   return (
-    <div className="flex items-center gap-2 min-w-0">
-      <span
-        className="block max-w-[240px] truncate text-ink-soft"
-        title={primary === "-" ? undefined : primary}
-      >
-        {primary}
-      </span>
+    // Product codes can be very long (e.g. S-10029-FSp-…-250x50x24), so this ONE
+    // cell is capped + ellipsised to stop it dominating the row; the full spec is
+    // on "View more products" and the quote detail. Everything else stays
+    // full-width with horizontal scroll.
+    <div className="flex items-center gap-1.5">
+      <span className="block max-w-[170px] truncate text-ink-soft">{primary}</span>
       {hasMore && <ProductsTablePopover row={row} />}
     </div>
   );
@@ -289,15 +288,45 @@ export function QuotationTable({ rows, filtered = false, heading, actions }: Pro
         header: "Quote No",
         searchable: true,
         sortValue: (r) => r.quoteNo,
+        // Original quote = green, revisions = red (Manan). "Revision" is decided
+        // by whether it supersedes another quote (robust — revisionNo defaults to
+        // 1 even for originals).
         cell: (r) => (
           <Link
             href={`/quotations/${r.id}` as Route}
-            className="font-semibold text-ink-strong hover:underline"
-            style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}
+            className="font-bold hover:underline"
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 13,
+              color: r.isRevision ? "#d03232" : "#16a34a",
+            }}
           >
             {r.quoteNo}
           </Link>
         ),
+      },
+      {
+        // Dedicated column so the register can be read (and sorted/filtered) by
+        // whether a quote is the original or a revision.
+        id: "revision",
+        header: "Revision",
+        sortValue: (r) => (r.isRevision ? r.revisionNo : 0),
+        exportValue: (r) => (r.isRevision ? `Rev ${Math.max(1, r.revisionNo - 1)}` : "Original"),
+        cell: (r) => {
+          const color = r.isRevision ? "#d03232" : "#16a34a";
+          return (
+            <span
+              className="inline-flex rounded-[4px] px-1.5 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.04em]"
+              style={{
+                color,
+                background: `color-mix(in srgb, ${color} 12%, transparent)`,
+                border: `1px solid color-mix(in srgb, ${color} 30%, transparent)`,
+              }}
+            >
+              {r.isRevision ? `Rev ${Math.max(1, r.revisionNo - 1)}` : "Original"}
+            </span>
+          );
+        },
       },
       {
         id: "companyName",
@@ -305,8 +334,9 @@ export function QuotationTable({ rows, filtered = false, heading, actions }: Pro
         searchable: true,
         sortValue: (r) => r.companyName ?? "",
         exportValue: (r) => r.companyName ?? "",
+        // Full name, no wrap — the table scrolls sideways rather than truncating.
         cell: (r) => (
-          <span className="text-ink-strong font-medium">
+          <span className="whitespace-nowrap text-ink-strong font-medium">
             {r.companyName ?? "-"}
           </span>
         ),

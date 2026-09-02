@@ -352,6 +352,11 @@ export const clients = pgTable(
     isActive: boolean("is_active").notNull().default(true),
     // Governance (ERP Phase 4): deactivate-only — clients are never hard-deleted.
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    // Recycle Bin (2026-09): a client with NO enquiries can be soft-deleted here
+    // (recoverable, purged after 48h). Distinct from `deletedAt`/`isActive` which
+    // mark a *deactivated* client (kept, hidden from pickers). recycled ⇒ hidden
+    // from the register entirely and eligible for the purge cron.
+    recycledAt: timestamp("recycled_at", { withTimezone: true }),
     sortOrder: integer("sort_order").notNull().default(100),
     // ── Carbide KYC (Phase 2) — auto-fetch source for inquiries ──
     customerTypeId: uuid("customer_type_id").references(() => masterOptions.id, { onDelete: "set null" }),

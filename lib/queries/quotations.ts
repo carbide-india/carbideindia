@@ -9,6 +9,7 @@ import {
   ilike,
   inArray,
   isNotNull,
+  isNull,
   notExists,
   or,
 } from "drizzle-orm";
@@ -97,6 +98,15 @@ export interface QuotationListItem {
   /** This stage's house bucket - what the dashboard groups and counts by. */
   quotationStatus: QuotationStatus;
   quoteSent: boolean;
+  /** Chain position (1 = original, 2 = first revision, …). The customer-facing
+   *  revision suffix is revisionNo - 1 (original has none, first revision = R1). */
+  revisionNo: number;
+  /** True when this quote supersedes another — i.e. it IS a revision. Drives the
+   *  green/red register colouring (original green, revisions red). Robust against
+   *  the revisionNo default of 1. */
+  isRevision: boolean;
+  /** Whether this is the current revision (older ones are superseded). */
+  isLatestRevision: boolean;
   /** SM snapshot of the enquiry date; null on legacy rows - date filters fall
    *  back to createdAt. */
   enquiryDate: Date | null;
@@ -117,6 +127,8 @@ export interface QuotationFilters {
   bucket?: QuotationStatus;
   /** `"no"` = only quotes still unsent (`?sent=no`); cross-cuts `bucket`. */
   sent?: "yes" | "no";
+  /** Narrow to original quotes only, or revised (superseding) quotes only. */
+  rev?: "original" | "revised";
 }
 
 /**
@@ -142,6 +154,11 @@ export async function listQuotations(
   if (filters.sent) {
     conds.push(eq(quotations.quoteSent, filters.sent === "yes"));
   }
+  if (filters.rev === "original") {
+    conds.push(isNull(quotations.supersedesQuotationId));
+  } else if (filters.rev === "revised") {
+    conds.push(isNotNull(quotations.supersedesQuotationId));
+  }
   const heads = await db
     .select({
       id: quotations.id,
@@ -152,18 +169,69 @@ export async function listQuotations(
       costingDoneStatus: quotations.costingDoneStatus,
       quotationStatus: quotations.quotationStatus,
       quoteSent: quotations.quoteSent,
+      revisionNo: quotations.revisionNo,
+      isLatestRevision: quotations.isLatestRevision,
       enquiryDate: quotations.enquiryDate,
       createdAt: quotations.createdAt,
+      // Internal-only (stripped before return) — used to hide a no-op revision
+      // that is identical to the one it superseded.
+      supersedesQuotationId: quotations.supersedesQuotationId,
+      negotiation: quotations.negotiation,
+      finalCost: quotations.finalCost,
+      developmentTime: quotations.developmentTime,
+      deliveryTime: quotations.deliveryTime,
+      validity: quotations.validity,
+      quotationLink: quotations.quotationLink,
+      qty: quotations.qty,
     })
     .from(quotations)
     .where(conds.length ? and(...conds) : undefined)
     .orderBy(desc(quotations.createdAt));
 
-  const lineProducts = await listQuotationLineProducts(heads.map((h) => h.id));
-  return heads.map((h) => {
+  // Duplicate-revision filter: a revision whose priced/term fields are IDENTICAL
+  // to the revision it superseded is a no-op re-quote — hide it so the register
+  // isn't cluttered with copies. A revision that was actually SENT always stays
+  // visible (it's a real record of what the customer saw).
+  const sig = (h: (typeof heads)[number]): string =>
+    JSON.stringify(
+      [
+        h.custProductName,
+        h.qty,
+        h.finalCost,
+        h.negotiation,
+        h.quotePrice,
+        h.developmentTime,
+        h.deliveryTime,
+        h.validity,
+        h.quotationLink,
+      ].map((v) => (v ?? "").toString().trim()),
+    );
+  const byId = new Map(heads.map((h) => [h.id, h]));
+  const visible = heads.filter((h) => {
+    if (!h.supersedesQuotationId || h.quoteSent) return true;
+    const prev = byId.get(h.supersedesQuotationId);
+    if (!prev) return true; // predecessor not in this slice — keep it
+    return sig(prev) !== sig(h);
+  });
+
+  const lineProducts = await listQuotationLineProducts(visible.map((h) => h.id));
+  return visible.map((h) => {
+    // Drop the internal-only comparison fields before returning the list item.
+    const {
+      supersedesQuotationId: _s,
+      negotiation: _n,
+      finalCost: _f,
+      developmentTime: _dt,
+      deliveryTime: _dl,
+      validity: _v,
+      quotationLink: _ql,
+      qty: _q,
+      ...rest
+    } = h;
     const lines = lineProducts.get(h.id) ?? [];
     return {
-      ...h,
+      ...rest,
+      isRevision: h.supersedesQuotationId != null,
       lineProducts: lines,
       staleCostLines: lines.filter((l) => l.costBasisStale).length,
     };
@@ -361,6 +429,114 @@ export async function countLinesReadyToQuote(): Promise<number> {
   return Number(row?.n ?? 0);
 }
 
+/** One quote's full revision chain (original → R1 → R2 …) for the matrix view. */
+export interface QuotationRevisionChain {
+  rootId: string;
+  companyName: string | null;
+  /** The original's quote number (chain root) — the family label. */
+  baseQuoteNo: string;
+  entries: QuotationRevisionEntry[];
+}
+
+/**
+ * Every quote that has been revised, each as its full chain (original → R1 → …).
+ * Powers the Revision Log tab. Only chains with at least one revision are
+ * returned; independent quotes (Q01, Q02) are separate chains, never merged.
+ */
+export async function listRevisedQuotationChains(): Promise<QuotationRevisionChain[]> {
+  const rows = await db
+    .select({
+      id: quotations.id,
+      companyName: quotations.companyName,
+      quoteNo: quotations.quoteNo,
+      revisionNo: quotations.revisionNo,
+      revisionReason: quotations.revisionReason,
+      quoteSent: quotations.quoteSent,
+      isLatestRevision: quotations.isLatestRevision,
+      supersedesQuotationId: quotations.supersedesQuotationId,
+      createdAt: quotations.createdAt,
+      createdById: quotations.createdById,
+      quotePrice: quotations.quotePrice,
+      negotiation: quotations.negotiation,
+      finalCost: quotations.finalCost,
+      developmentTime: quotations.developmentTime,
+      deliveryTime: quotations.deliveryTime,
+      validity: quotations.validity,
+      quotationLink: quotations.quotationLink,
+      custProductName: quotations.custProductName,
+      qty: quotations.qty,
+    })
+    .from(quotations);
+
+  const supersededBy = new Map<string, (typeof rows)[number]>();
+  for (const r of rows) {
+    if (r.supersedesQuotationId) supersededBy.set(r.supersedesQuotationId, r);
+  }
+  const toEntry = (r: (typeof rows)[number]): QuotationRevisionEntry => ({
+    id: r.id,
+    quoteNo: r.quoteNo,
+    revisionNo: r.revisionNo,
+    revisionReason: r.revisionReason,
+    quoteSent: r.quoteSent,
+    isLatestRevision: r.isLatestRevision,
+    createdAt: r.createdAt,
+    createdById: r.createdById,
+    fields: {
+      quotePrice: r.quotePrice,
+      negotiation: r.negotiation,
+      finalCost: r.finalCost,
+      developmentTime: r.developmentTime,
+      deliveryTime: r.deliveryTime,
+      validity: r.validity,
+      quotationLink: r.quotationLink,
+      custProductName: r.custProductName,
+      qty: r.qty,
+    },
+  });
+
+  const chains: QuotationRevisionChain[] = [];
+  for (const root of rows.filter((r) => !r.supersedesQuotationId)) {
+    const entries: (typeof rows)[number][] = [];
+    const seen = new Set<string>();
+    let node: (typeof rows)[number] | undefined = root;
+    while (node && !seen.has(node.id)) {
+      seen.add(node.id);
+      entries.push(node);
+      node = supersededBy.get(node.id);
+    }
+    if (entries.length > 1) {
+      chains.push({
+        rootId: root.id,
+        companyName: root.companyName,
+        baseQuoteNo: root.quoteNo,
+        entries: entries.map(toEntry),
+      });
+    }
+  }
+  // Most-recently-touched chains first.
+  chains.sort(
+    (a, b) =>
+      b.entries[b.entries.length - 1]!.createdAt.getTime() -
+      a.entries[a.entries.length - 1]!.createdAt.getTime(),
+  );
+  return chains;
+}
+
+/** Original-vs-revised split for the register summary strip. */
+export interface QuotationRevisionCounts {
+  total: number;
+  originals: number;
+  revised: number;
+}
+
+export async function getQuotationRevisionCounts(): Promise<QuotationRevisionCounts> {
+  const [total, revised] = await Promise.all([
+    db.$count(quotations),
+    db.$count(quotations, isNotNull(quotations.supersedesQuotationId)),
+  ]);
+  return { total, originals: total - revised, revised };
+}
+
 /** Full quotation row for the detail page. */
 export async function getQuotationById(id: string): Promise<Quotation | null> {
   const [row] = await db
@@ -369,4 +545,122 @@ export async function getQuotationById(id: string): Promise<Quotation | null> {
     .where(eq(quotations.id, id))
     .limit(1);
   return row ?? null;
+}
+
+/** The diff-relevant fields carried on every quotation revision. */
+export interface QuotationRevisionEntry {
+  id: string;
+  quoteNo: string;
+  revisionNo: number;
+  revisionReason: string | null;
+  quoteSent: boolean;
+  isLatestRevision: boolean;
+  createdAt: Date;
+  createdById: string | null;
+  /** Snapshot of the values that a re-quote changes — diffed field-by-field
+   *  against the previous revision in the admin revision-history view. */
+  fields: {
+    quotePrice: string | null;
+    negotiation: string | null;
+    finalCost: string | null;
+    developmentTime: string | null;
+    deliveryTime: string | null;
+    validity: string | null;
+    quotationLink: string | null;
+    custProductName: string | null;
+    qty: string | null;
+  };
+}
+
+/**
+ * The revision chain for ONE quotation (original → R1 → R2 …), oldest first.
+ *
+ * A single enquiry can carry several INDEPENDENT quotes (Q01, Q02, …), each with
+ * its own revision chain linked by `supersedes_quotation_id`. This reconstructs
+ * only the linear chain that contains `quotationId` — it must NOT lump Q01 and
+ * Q02 together just because they share an enquiry. The admin revision-history
+ * view diffs each entry against its predecessor and highlights what moved.
+ */
+export async function getQuotationRevisions(
+  quotationId: string,
+): Promise<QuotationRevisionEntry[]> {
+  const [cur] = await db
+    .select({ inquiryId: quotations.inquiryId })
+    .from(quotations)
+    .where(eq(quotations.id, quotationId))
+    .limit(1);
+  if (!cur?.inquiryId) return [];
+
+  const rows = await db
+    .select({
+      id: quotations.id,
+      quoteNo: quotations.quoteNo,
+      revisionNo: quotations.revisionNo,
+      revisionReason: quotations.revisionReason,
+      quoteSent: quotations.quoteSent,
+      isLatestRevision: quotations.isLatestRevision,
+      supersedesQuotationId: quotations.supersedesQuotationId,
+      createdAt: quotations.createdAt,
+      createdById: quotations.createdById,
+      quotePrice: quotations.quotePrice,
+      negotiation: quotations.negotiation,
+      finalCost: quotations.finalCost,
+      developmentTime: quotations.developmentTime,
+      deliveryTime: quotations.deliveryTime,
+      validity: quotations.validity,
+      quotationLink: quotations.quotationLink,
+      custProductName: quotations.custProductName,
+      qty: quotations.qty,
+    })
+    .from(quotations)
+    .where(eq(quotations.inquiryId, cur.inquiryId));
+
+  // Reconstruct the LINEAR supersedes chain containing quotationId: walk up to
+  // the root (supersedes = null), then walk down via the "superseded-by" links.
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const supersededBy = new Map<string, (typeof rows)[number]>();
+  for (const r of rows) {
+    if (r.supersedesQuotationId) supersededBy.set(r.supersedesQuotationId, r);
+  }
+  let root = byId.get(quotationId);
+  if (!root) return [];
+  const upSeen = new Set<string>();
+  while (
+    root.supersedesQuotationId &&
+    byId.has(root.supersedesQuotationId) &&
+    !upSeen.has(root.id)
+  ) {
+    upSeen.add(root.id);
+    root = byId.get(root.supersedesQuotationId)!;
+  }
+  const chain: (typeof rows)[number][] = [];
+  const downSeen = new Set<string>();
+  let node: (typeof rows)[number] | undefined = root;
+  while (node && !downSeen.has(node.id)) {
+    downSeen.add(node.id);
+    chain.push(node);
+    node = supersededBy.get(node.id);
+  }
+
+  return chain.map((r) => ({
+    id: r.id,
+    quoteNo: r.quoteNo,
+    revisionNo: r.revisionNo,
+    revisionReason: r.revisionReason,
+    quoteSent: r.quoteSent,
+    isLatestRevision: r.isLatestRevision,
+    createdAt: r.createdAt,
+    createdById: r.createdById,
+    fields: {
+      quotePrice: r.quotePrice,
+      negotiation: r.negotiation,
+      finalCost: r.finalCost,
+      developmentTime: r.developmentTime,
+      deliveryTime: r.deliveryTime,
+      validity: r.validity,
+      quotationLink: r.quotationLink,
+      custProductName: r.custProductName,
+      qty: r.qty,
+    },
+  }));
 }

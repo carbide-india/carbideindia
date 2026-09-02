@@ -70,12 +70,12 @@ export interface PipelineRow {
 
 /** The nine pipeline stages, in order, with their display labels. */
 const STAGE_LABELS: { key: string; label: string }[] = [
-  { key: "kyc", label: "KYC" },
-  { key: "sample", label: "Sample" },
-  { key: "enquiry", label: "Enquiry" },
-  { key: "feasibility", label: "Feasibility" },
-  { key: "secondary", label: "Secondary" },
-  { key: "costing", label: "Costing" },
+  { key: "kyc", label: "Client KYC" },
+  { key: "sample", label: "Sample Register" },
+  { key: "enquiry", label: "New Enquiry" },
+  { key: "feasibility", label: "Primary Feasibility" },
+  { key: "secondary", label: "Secondary Feasibility" },
+  { key: "costing", label: "Costing Sheet" },
   { key: "quotation", label: "Quotation" },
   { key: "negotiation", label: "Negotiation" },
   { key: "sales_order", label: "Sales Order" },

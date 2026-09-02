@@ -17,7 +17,7 @@ export function StageDot({ state, title, size = 18 }: { state: StageState; title
     <span
       title={title}
       className={cn(
-        "relative z-10 grid shrink-0 place-items-center rounded-full border-[1.5px]",
+        "relative z-10 grid shrink-0 place-items-center rounded-full border-[1.5px] transition-transform duration-200 hover:scale-110",
         STATE_STYLE[state],
         state === "active" && "ring-2 ring-[#454595]/25",
       )}
@@ -47,6 +47,71 @@ export function Stepper({ stages, minWidth = 520 }: { stages: PipelineStageCell[
             {i < stages.length - 1 && (
               <span
                 className={cn("h-[2px] flex-1", st.state === "done" ? "bg-[#16a34a]" : "bg-[#e2dfdc]")}
+              />
+            )}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Full-width, LABELLED stepper for the row-hover preview panel — the nine stage
+ * names above their dots with connecting lines. A stage counts as "reached"
+ * (green line into it) once it is done / active / on-hold.
+ */
+/**
+ * Edge-to-edge stepper. `mode`:
+ *  - "full"   labels above dots + connectors (standalone use)
+ *  - "labels" just the stage names, positioned exactly over where the dots sit
+ *             (rendered once as a shared header so each row needn't repeat them)
+ *  - "dots"   just dots + connectors (each enquiry row), aligned under the header
+ * First dot is flush-left (under the SM No column), last flush-right.
+ */
+export function StepperWide({
+  stages,
+  mode = "full",
+}: {
+  stages: PipelineStageCell[];
+  mode?: "full" | "labels" | "dots";
+}) {
+  const reached = (s: StageState) => s === "done" || s === "active" || s === "hold";
+  const last = stages.length - 1;
+  const showLabels = mode !== "dots";
+  const showDots = mode !== "labels";
+  return (
+    <div className={cn("overflow-x-auto", showLabels && "pt-7")}>
+      <div className="flex min-w-[720px] items-center">
+        {stages.map((st, i) => (
+          <span key={st.key} className="flex flex-1 items-center last:flex-none">
+            <span className="relative shrink-0">
+              {showLabels && (
+                <span
+                  className={cn(
+                    "absolute -top-7 whitespace-nowrap text-[11px] font-bold normal-case text-[#57534e]",
+                    i === 0 ? "left-0" : i === last ? "right-0" : "left-1/2 -translate-x-1/2",
+                  )}
+                >
+                  {st.label}
+                </span>
+              )}
+              {/* In "labels" mode the dot is kept (invisible) purely to reserve
+                  the same width so labels line up with the dot rows below. */}
+              <span className={cn(!showDots && "invisible")}>
+                <StageDot state={st.state} title={st.label} size={24} />
+              </span>
+            </span>
+            {i < last && (
+              <span
+                className={cn(
+                  "h-[2px] flex-1",
+                  !showDots
+                    ? "invisible"
+                    : reached(st.state)
+                      ? "bg-[#16a34a]"
+                      : "bg-[#e2dfdc]",
+                )}
               />
             )}
           </span>

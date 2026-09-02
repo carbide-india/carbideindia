@@ -582,6 +582,13 @@
       "when": 1788264348342,
       "tag": "0084_ambitious_scalphunter",
       "breakpoints": true
+    },
+    {
+      "idx": 85,
+      "version": "7",
+      "when": 1788274601927,
+      "tag": "0085_spicy_psynapse",
+      "breakpoints": true
     }
   ]
 }

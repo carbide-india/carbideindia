@@ -16,15 +16,17 @@ import { requireUser } from "@/lib/auth/current";
 import {
   countLinesReadyToQuote,
   getQuotationBucketCounts,
+  getQuotationRevisionCounts,
   listQuotations,
 } from "@/lib/queries/quotations";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
 import { UserMenuServer } from "@/components/header/user-menu-server";
+import { QuotationRevisionSummary } from "@/components/quotations/quotation-revision-summary";
 
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  searchParams: Promise<{ bucket?: string; sent?: string }>;
+  searchParams: Promise<{ bucket?: string; sent?: string; rev?: string }>;
 }
 
 export default async function QuotationsPage({ searchParams }: PageProps) {
@@ -33,14 +35,18 @@ export default async function QuotationsPage({ searchParams }: PageProps) {
   // The dashboard tiles are URL-driven (`?bucket=` / `?sent=no`) and filter the
   // register SERVER-side, so the list a tile opens is exactly what it counted.
   // The counts themselves are always read over the whole table.
-  const selection = parseQuotationSelection(await searchParams);
+  const sp = await searchParams;
+  const selection = parseQuotationSelection(sp);
+  const rev = sp.rev === "original" || sp.rev === "revised" ? sp.rev : undefined;
 
-  const [counts, readyToQuote, rows] = await Promise.all([
+  const [counts, revCounts, readyToQuote, rows] = await Promise.all([
     getQuotationBucketCounts(),
+    getQuotationRevisionCounts(),
     countLinesReadyToQuote(),
     listQuotations({
       bucket: selection.bucket ?? undefined,
       sent: selection.notSentOnly ? "no" : undefined,
+      rev,
     }),
   ]);
 
@@ -49,6 +55,7 @@ export default async function QuotationsPage({ searchParams }: PageProps) {
   const filterLabel = [
     selection.bucket ? QUOTATION_STATUS_LABELS[selection.bucket] : null,
     selection.notSentOnly ? "Not Sent" : null,
+    rev === "original" ? "Originals" : rev === "revised" ? "Revised" : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -70,6 +77,7 @@ export default async function QuotationsPage({ searchParams }: PageProps) {
       }
     >
       <div className="mx-auto w-full max-w-[1600px]">
+        <QuotationRevisionSummary counts={revCounts} active={rev ?? null} />
         <QuotationBucketStrip readyToQuote={readyToQuote} />
 
         <QuotationTable

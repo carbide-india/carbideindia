@@ -332,6 +332,18 @@ export async function setNegotiationStatus(
     console.error("[setNegotiationStatus] failed", err);
     return { ok: false, error: "Could not update the status. Please try again." };
   }
+
+  // If this approval is the last precondition (customer PO already recorded),
+  // auto-advance to the Sales Order. Idempotent + non-fatal — no-ops until the
+  // PO is in and the stage is Customer PO Received.
+  if (isNegotiationApprovedForSo(parsed.data.status)) {
+    try {
+      await acceptAndConvertToSalesOrder(id);
+    } catch (err) {
+      console.error("[setNegotiationStatus] auto-convert to sales order failed", err);
+    }
+  }
+
   revalidatePath("/negotiations");
   revalidatePath(`/negotiations/${id}`);
   return { ok: true };
@@ -845,6 +857,16 @@ export async function saveCustomerPo(
   revalidatePath("/negotiations");
   revalidatePath(`/negotiations/${negotiationId}`);
   revalidatePath("/proforma-invoices");
+
+  // Auto-advance to Sales Order the moment BOTH preconditions are met (customer
+  // PO saved here + negotiation already approved) — so the flow moves forward
+  // without a separate "Accept PO" click. Idempotent + non-fatal: if the
+  // negotiation isn't approved yet, the conversion no-ops and the SO waits.
+  try {
+    await acceptAndConvertToSalesOrder(negotiationId);
+  } catch (err) {
+    console.error("[saveCustomerPo] auto-convert to sales order failed", err);
+  }
   return { ok: true };
 }
 

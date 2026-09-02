@@ -38,7 +38,6 @@ import {
   QuoteSendHeader,
   type QuoteSendSummary,
 } from "@/components/negotiations/quote-send-header";
-import { PiHistory } from "@/components/negotiations/pi-history";
 import { CustomerPoCard } from "@/components/negotiations/customer-po-card";
 import { NegotiationApprovalCard } from "@/components/negotiations/negotiation-approval-card";
 import {
@@ -140,7 +139,6 @@ export function NegotiationDetail({
   inquiryLink,
   lines,
   quoteSend,
-  proformaInvoices,
   latestPiTotal,
   poDownloadUrl,
   revisableCostings,
@@ -297,40 +295,30 @@ export function NegotiationDetail({
             status={negotiation.negotiationStatus}
           />
 
-          {/* Quote Send anchor + PI progress strip + Issue PI trigger */}
+          {/* Quote Send anchor + stage progress strip */}
           <QuoteSendHeader
             negotiationId={negotiation.id}
             stage={negotiation.negotiationStage}
-            piCount={negotiation.piIterationCount}
             quoteSend={quoteSend}
-            lines={lines}
-            defaultTerms={{
-              developmentTime: negotiation.developmentTime,
-              deliveryTime: negotiation.deliveryTime,
-              validity: negotiation.validity,
-            }}
           />
 
-          {/* PI iteration history */}
-          <PiHistory invoices={proformaInvoices} />
-
-          {/* Customer PO (award → capture → accept) — shown once a PI is issued */}
-          {negotiation.negotiationStage !== "quote_send" && (
-            <CustomerPoCard
-              negotiationId={negotiation.id}
-              stage={negotiation.negotiationStage}
-              po={{
-                customerPoNo: negotiation.customerPoNo,
-                customerPoDate: negotiation.customerPoDate,
-                customerPoLink: negotiation.customerPoLink,
-                customerPoRemarks: negotiation.customerPoRemarks,
-                poMatchStatus: negotiation.poMatchStatus,
-              }}
-              latestPiTotal={latestPiTotal}
-              poDownloadUrl={poDownloadUrl}
-              approvedForSo={isNegotiationApprovedForSo(negotiation.negotiationStatus)}
-            />
-          )}
+          {/* Customer PO → Sales Order. Available directly (no proforma invoice
+              step): once the negotiation is approved and the customer PO is
+              saved, the sales order is provisioned automatically. */}
+          <CustomerPoCard
+            negotiationId={negotiation.id}
+            stage={negotiation.negotiationStage}
+            po={{
+              customerPoNo: negotiation.customerPoNo,
+              customerPoDate: negotiation.customerPoDate,
+              customerPoLink: negotiation.customerPoLink,
+              customerPoRemarks: negotiation.customerPoRemarks,
+              poMatchStatus: negotiation.poMatchStatus,
+            }}
+            latestPiTotal={latestPiTotal}
+            poDownloadUrl={poDownloadUrl}
+            approvedForSo={isNegotiationApprovedForSo(negotiation.negotiationStatus)}
+          />
 
           {/* Not approved → the costing gets revised (new revision per sheet) */}
           <ReviseCostingCard

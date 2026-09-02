@@ -150,6 +150,11 @@ html[data-density="compact"] body {
       linear-gradient(180deg, #fafbfc 0%, #f5f5f7 100%);
     background-attachment: fixed;
     overflow-x: hidden;
+    /* Global readability bump (owner request 2026-09): everything ~12% larger.
+       A uniform zoom scales the app's many fixed-px sizes together — a font-size
+       change alone wouldn't touch them. The `compact` density rule above is more
+       specific, so it still wins for users who choose compact. */
+    zoom: 1.12;
   }
 
   ::selection {
@@ -1816,13 +1821,10 @@ select.nt-input {
    is an `.nt-input`), so boxes and dropdowns restyle together. Remove the
    `kyc-sheet` class to revert — nothing global is touched.
    ───────────────────────────────────────────────────────────────────────── */
-/* Page background: cream + a faint blueprint grid drawn in the border colour. */
+/* Page background: a clean, flat warm-paper cream — no grid lines. */
 .drafting-grid {
   background-color: #f4f0e8;
-  background-image:
-    linear-gradient(#e2dfdc 1px, transparent 1px),
-    linear-gradient(90deg, #e2dfdc 1px, transparent 1px);
-  background-size: 24px 24px;
+  background-image: none;
 }
 
 /* Cards float on the drafting sheet: drop the solid white fill to 50% so the
@@ -2424,6 +2426,18 @@ select.nt-input {
   .liasoning-card.is-launching {
     transform: none;
   }
+}
+
+/* Pipeline Tracker entrance — graph cards + table fade/slide in on mount. */
+@keyframes ptFadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.pt-enter {
+  animation: ptFadeInUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pt-enter { animation: none; }
 }
 
 /* Hide scrollbars while keeping scrollability — used by the header nav so it

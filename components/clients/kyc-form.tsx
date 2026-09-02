@@ -8,13 +8,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
 import { Check, Copy, FileText, ImagePlus, Loader2, Plus, X } from "lucide-react";
 import { CreateClientKycSchema } from "@/lib/validators/client-kyc";
-import { createClientKyc, fetchGstDetailsAction } from "@/app/(app)/clients/actions";
+import { createClientKyc } from "@/app/(app)/clients/actions";
 import { parseGstin, type GstinParse, GST_STATE_NAMES } from "@/lib/data/gst";
 import { MasterMultiSelect } from "@/components/masters/master-multi-select";
-import { InlineOptionAdd } from "@/components/clients/inline-option-add";
-import { addCustomOption } from "@/app/(app)/_actions/custom-lists";
 import { CUSTOM_LISTS } from "@/lib/custom-lists/registry";
-import { createMasterOption } from "@/app/(admin)/admin/masters/actions";
 import {
   adminUpdateClientKyc,
   checkClientDuplicate,
@@ -277,9 +274,9 @@ export function KycForm({
 
   // Locally-added Designation / Department options show in their dropdown
   // instantly (before router.refresh() syncs them back from the server).
-  const [extraDesignations, setExtraDesignations] = React.useState<string[]>(() => {
-    // Seed with any designations the client already has so a previously
-    // free-typed value still renders as the selected dropdown option.
+  // Seed with any designations the client already has so a previously
+  // free-typed value still renders as the selected dropdown option.
+  const [extraDesignations] = React.useState<string[]>(() => {
     const vals: string[] = [];
     if (initialValues?.contactDesignation) vals.push(initialValues.contactDesignation);
     (initialValues?.additionalContacts ?? []).forEach((c) => {
@@ -287,7 +284,6 @@ export function KycForm({
     });
     return vals;
   });
-  const [extraDepartments, setExtraDepartments] = React.useState<MasterOptionItem[]>([]);
   const designationList = React.useMemo(() => {
     const base = designationOptions?.length ? designationOptions : DESIGNATION_PRESET;
     return Array.from(
@@ -296,9 +292,9 @@ export function KycForm({
   }, [designationOptions, extraDesignations]);
   const departmentList = React.useMemo(() => {
     const map = new Map<string, MasterOptionItem>();
-    [...departments, ...extraDepartments].forEach((d) => map.set(d.id, d));
+    departments.forEach((d) => map.set(d.id, d));
     return Array.from(map.values());
-  }, [departments, extraDepartments]);
+  }, [departments]);
 
   // Locally-added Commercial & Credit terms (payment terms / freight / credit
   // days / credit limit / transporter / qty deviation) - each list is a custom
@@ -314,15 +310,6 @@ export function KycForm({
   const draftsOn = Boolean(enableDrafts) && !isEdit;
   const router = useRouter();
 
-  // Inline "Add new" for the master multi-selects (admin only): create the
-  // option, refresh so it flows back into the options list, return the result.
-  const masterCreate =
-    (kind: "customer_type" | "industry_type" | "product_type") =>
-    async (name: string) => {
-      const res = await createMasterOption({ kind, name });
-      if (res.ok) router.refresh();
-      return res;
-    };
   const [pending, startTransition] = React.useTransition();
   const [serverError, setServerError] = React.useState<string | null>(null);
 
@@ -557,72 +544,9 @@ export function KycForm({
     if (parse.pan) setValue("panNo", parse.pan, { shouldDirty: true });
   }
 
-  // ── GSTIN → business details auto-fetch. A GSTIN is a rich key: one lookup
-  //    (configured KYB provider, lib/kyb/gst-lookup.ts) fills the Company Name,
-  //    registered address, registration type and reports the GSTIN status.
-  //    Only fills fields the user left blank so it never clobbers a manual edit.
-  const [gstPending, startGst] = React.useTransition();
-  function setIfBlank(name: Parameters<typeof setValue>[0], value: string | undefined) {
-    if (!value) return;
-    const current = getValues(name);
-    if (current === undefined || current === null || current === "") {
-      setValue(name, value, { shouldDirty: true });
-    }
-  }
-  function handleFetchGst() {
-    const gstin = (watch("gstin") ?? "").trim();
-    if (gstin.replace(/[^a-zA-Z0-9]/g, "").length !== 15) {
-      fireToast({ message: "Enter a complete 15-character GSTIN first.", type: "error" });
-      return;
-    }
-    startGst(async () => {
-      const res = await fetchGstDetailsAction(gstin);
-      if (!res.ok) {
-        fireToast({ message: res.error ?? "Couldn't fetch GST details.", type: "error" });
-        return;
-      }
-      setIfBlank("name", res.tradeName ?? res.legalName);
-      if (
-        res.registrationType &&
-        (GST_REGISTRATION_TYPES as readonly string[]).includes(res.registrationType)
-      ) {
-        setValue(
-          "gstRegistrationType",
-          res.registrationType as (typeof GST_REGISTRATION_TYPES)[number],
-          { shouldDirty: true },
-        );
-      }
-      const a = res.address;
-      if (a) {
-        setIfBlank("addresses.0.line1", a.line1);
-        setIfBlank("addresses.0.line2", a.line2);
-        setIfBlank("addresses.0.line3", a.line3);
-        setIfBlank("addresses.0.line4", a.line4);
-        setIfBlank("addresses.0.city", a.city);
-        setIfBlank("addresses.0.state", a.state);
-        setIfBlank("addresses.0.pinCode", a.pincode);
-        setIfBlank("addresses.0.country", "India");
-      }
-      const cancelled = (res.status ?? "").toLowerCase().includes("cancel");
-      fireToast({
-        message: `${res.legalName ?? res.tradeName ?? "GST"} fetched${res.status ? ` · ${res.status}` : ""}.`,
-        type: cancelled ? "error" : "success",
-      });
-    });
-  }
-
-  // Auto-fetch GST details in the background the moment a complete, valid GSTIN
-  // is entered (no manual button). Guarded so each distinct GSTIN fetches once.
-  const lastAutoFetchedGstin = React.useRef<string>("");
-  React.useEffect(() => {
-    if (gstParse.valid && gstParse.normalized !== lastAutoFetchedGstin.current) {
-      lastAutoFetchedGstin.current = gstParse.normalized;
-      handleFetchGst();
-    }
-    // handleFetchGst reads the current gstin via watch(); the ref guard prevents
-    // re-fetching the same number, so we intentionally depend only on the parse.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gstParse.valid, gstParse.normalized]);
+  // NOTE: GSTIN business-details auto-fetch (external GST API) was removed on
+  // owner request — no provider is used. `handleGstinChange` above still does the
+  // client-side parse (PAN + Place of Supply/state + registration type) locally.
 
   /** Inline "+ Add" for a Commercial & Credit custom dropdown: writes the value
    *  to the list, shows it instantly, and selects it via `onSelect`. */
@@ -807,12 +731,7 @@ export function KycForm({
                 />
               )}
             />
-            {gstPending && (
-              <p className="mt-1 inline-flex items-center gap-1 text-[12px] font-medium text-[#6b7280]">
-                <Loader2 className="h-[13px] w-[13px] animate-spin" /> Fetching details…
-              </p>
-            )}
-            {!gstPending && gstParse.status === "valid" && (
+            {gstParse.status === "valid" && (
               <p className="mt-1 inline-flex items-center gap-1 text-[12px] font-semibold text-[#15803d]">
                 <Check size={13} strokeWidth={3} /> Verified
                 {gstParse.stateName ? ` · ${gstParse.stateName}` : ""}
@@ -923,14 +842,12 @@ export function KycForm({
             name="customerTypeIds"
             label="Customer Type"
             options={customerTypes}
-            onCreate={isAdmin ? masterCreate("customer_type") : undefined}
           />
           <MasterChips
             control={control}
             name="industryTypeIds"
             label="Industry Type"
             options={industryTypes}
-            onCreate={isAdmin ? masterCreate("industry_type") : undefined}
           />
           <Controller
             control={control}
@@ -941,7 +858,6 @@ export function KycForm({
                 options={productTypes}
                 selected={field.value ?? []}
                 onChange={field.onChange}
-                onCreate={isAdmin ? masterCreate("product_type") : undefined}
                 placeholder="Select product types…"
               />
             )}
@@ -1101,25 +1017,7 @@ export function KycForm({
             <Field id="kyc-cemail" label="Email" float>
               <input id="kyc-cemail" type="email" className="nt-input" {...register("contactEmail")} />
             </Field>
-            <Field
-              label="Designation"
-              labelOnly
-              float
-              action={
-                <InlineOptionAdd
-                  title="Designation"
-                  placeholder="e.g. Purchase Manager"
-                  add={async (n) => {
-                    const r = await addCustomOption("kyc", "designation", n);
-                    return r.ok ? { ok: true, value: n } : { ok: false, error: r.error };
-                  }}
-                  onAdded={(v) => {
-                    setExtraDesignations((prev) => [...prev, v]);
-                    setValue("contactDesignation", v, { shouldDirty: true });
-                  }}
-                />
-              }
-            >
+            <Field label="Designation" labelOnly float>
               <Controller
                 control={control}
                 name="contactDesignation"
@@ -1136,28 +1034,7 @@ export function KycForm({
                 )}
               />
             </Field>
-            <Field
-              label="Department"
-              labelOnly
-              float
-              action={
-                isAdmin ? (
-                  <InlineOptionAdd
-                    title="Department"
-                    add={async (n) => {
-                      const r = await createMasterOption({ kind: "department", name: n });
-                      return r.ok
-                        ? { ok: true, value: r.id }
-                        : { ok: false, error: r.error };
-                    }}
-                    onAdded={(id, name) => {
-                      setExtraDepartments((prev) => [...prev, { id, name }]);
-                      setValue("departmentId", id, { shouldDirty: true });
-                    }}
-                  />
-                ) : undefined
-              }
-            >
+            <Field label="Department" labelOnly float>
               <Controller
                 control={control}
                 name="departmentId"
@@ -1842,14 +1719,11 @@ function MasterChips({
   name,
   label,
   options,
-  onCreate,
 }: {
   control: Control<KycFormValues>;
   name: "customerTypeIds" | "industryTypeIds";
   label: string;
   options: MasterOptionItem[];
-  /** Inline "Add new" in the dropdown (admin only). */
-  onCreate?: (name: string) => Promise<{ ok: boolean; error?: string }>;
 }) {
   return (
     <Controller
@@ -1861,7 +1735,6 @@ function MasterChips({
           options={options}
           selected={field.value ?? []}
           onChange={field.onChange}
-          onCreate={onCreate}
           placeholder={`Select ${label.toLowerCase()}…`}
         />
       )}

@@ -17,6 +17,28 @@ const OptionalText = (max = 500) =>
 const MeetingTime = z.string().regex(/^\d{2}:\d{2}$/, "Use HH:MM").optional();
 
 /**
+ * Lenient numeric coercion for optional number dropdowns (credit days / limit).
+ * Returns a finite number when one can be read from the input, otherwise
+ * `undefined` — so "", null, NaN, AND non-numeric option text ("As per PO")
+ * all fold to "not provided" instead of throwing "expected number, received
+ * NaN". Grouping separators are stripped so "5,00,000" parses to 500000.
+ *
+ * A const arrow (not a function declaration) so it is unambiguously initialised
+ * before the schema literals below reference it — top-to-bottom, no hoisting.
+ */
+const numericOrUndefined = (v: unknown): number | undefined => {
+  if (v == null || v === "") return undefined;
+  if (typeof v === "number") return Number.isFinite(v) ? v : undefined;
+  if (typeof v === "string") {
+    const cleaned = v.replace(/[^0-9.]/g, "");
+    if (cleaned === "") return undefined;
+    const n = Number(cleaned);
+    return Number.isFinite(n) ? n : undefined;
+  }
+  return undefined;
+};
+
+/**
  * One normalized client address (ERP Phase 2 - Customer Master). Mirrors the
  * `client_addresses` child table: a typed address (registered / bill_to /
  * ship_to / consignee), optionally flagged primary, with free-text lines.
@@ -109,17 +131,14 @@ const ClientKycFieldsSchema = z.object({
     notes: OptionalText(2000),
   })).optional(),
   // ── Credit & banking ──
-  // Empty number inputs arrive as "" or NaN (RHF valueAsNumber) — treat those
-  // as "not provided" so an untouched field doesn't fail with
+  // These are dropdowns whose option VALUE is a string. Empty inputs arrive as
+  // "" / null / NaN, but a custom master option can also be non-numeric text
+  // ("30 days", "5 Lakh", "₹5,00,000"). Parse leniently: pull the numeric part
+  // out (so "5,00,000" → 500000) and fold anything with no number to
+  // "not provided" — an optional field must never crash the whole form with
   // "expected number, received NaN".
-  creditDays: z.preprocess(
-    (v) => (v === "" || v == null || (typeof v === "number" && Number.isNaN(v)) ? undefined : v),
-    z.coerce.number().int().nonnegative().optional(),
-  ),
-  creditLimit: z.preprocess(
-    (v) => (v === "" || v == null || (typeof v === "number" && Number.isNaN(v)) ? undefined : v),
-    z.coerce.number().nonnegative().optional(),
-  ),
+  creditDays: z.preprocess(numericOrUndefined, z.number().int().nonnegative().optional()),
+  creditLimit: z.preprocess(numericOrUndefined, z.number().nonnegative().optional()),
   bankName: OptionalText(120), bankAccountNo: OptionalText(60),
   bankIfsc: OptionalText(20), bankBranch: OptionalText(120),
   bankAccountHolder: OptionalText(120),

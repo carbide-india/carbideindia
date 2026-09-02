@@ -13,6 +13,8 @@ import {
   Pencil,
   Power,
   Search,
+  Trash2,
+  Undo2,
   X,
   SlidersHorizontal,
   Check,
@@ -31,6 +33,8 @@ import { fireToast } from "@/lib/toast";
 import {
   deleteClient,
   reactivateClient,
+  recycleClient,
+  restoreClient,
 } from "@/app/(admin)/admin/clients/actions";
 import type { ClientRegisterRow } from "@/lib/queries/clients";
 import type { ClientGrade } from "@/db/enums";
@@ -313,6 +317,13 @@ export function ClientRegister({ rows, isAdmin, heading, actions }: Props) {
         return false;
       if (trade === "export" && r.isExport !== true) return false;
       if (trade === "domestic" && r.isExport === true) return false;
+      // Recycled clients are hidden everywhere except under the explicit
+      // "Recycled" filter (the Recycle Bin view).
+      if (status === "recycled") {
+        if (!r.isRecycled) return false;
+      } else if (r.isRecycled) {
+        return false;
+      }
       if (status === "active" && !r.isActive) return false;
       if (status === "inactive" && r.isActive) return false;
       if (gstin === "has" && !r.gstin) return false;
@@ -494,6 +505,7 @@ export function ClientRegister({ rows, isAdmin, heading, actions }: Props) {
           <option value="">All statuses</option>
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
+          <option value="recycled">Recycle Bin</option>
         </select>
 
         <select
@@ -896,6 +908,45 @@ function RowMenu({
     }
   }
 
+  // Delete → Recycle Bin (recoverable, purged after 48h). Refused server-side
+  // when the client has enquiries — that message surfaces here.
+  async function recycle() {
+    if (
+      !window.confirm(
+        `Move "${row.name}" to the Recycle Bin? It can be restored within 48 hours.`,
+      )
+    ) {
+      return;
+    }
+    setPending(true);
+    try {
+      const res = await recycleClient(row.id);
+      if (!res.ok) {
+        fireToast({ message: res.error, type: "error" });
+        return;
+      }
+      fireToast({ message: `${row.name} moved to the Recycle Bin.` });
+      router.refresh();
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function restore() {
+    setPending(true);
+    try {
+      const res = await restoreClient(row.id);
+      if (!res.ok) {
+        fireToast({ message: res.error, type: "error" });
+        return;
+      }
+      fireToast({ message: `${row.name} restored.` });
+      router.refresh();
+    } finally {
+      setPending(false);
+    }
+  }
+
   // Each entry is either a navigation (href) or an action (onSelect). Append to
   // this array to add a new row action.
   type MenuItem = {
@@ -984,18 +1035,46 @@ function RowMenu({
         {isAdmin && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              danger={row.isActive}
-              disabled={pending}
-              className="text-[14px]"
-              onSelect={(e) => {
-                e.preventDefault();
-                void toggleActive();
-              }}
-            >
-              <Power size={15} strokeWidth={2.2} />
-              {row.isActive ? "Deactivate" : "Reactivate"}
-            </DropdownMenuItem>
+            {row.isRecycled ? (
+              <DropdownMenuItem
+                disabled={pending}
+                className="text-[14px]"
+                onSelect={(e) => {
+                  e.preventDefault();
+                  void restore();
+                }}
+              >
+                <Undo2 size={15} strokeWidth={2.2} />
+                Restore
+              </DropdownMenuItem>
+            ) : (
+              <>
+                <DropdownMenuItem
+                  danger={row.isActive}
+                  disabled={pending}
+                  className="text-[14px]"
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    void toggleActive();
+                  }}
+                >
+                  <Power size={15} strokeWidth={2.2} />
+                  {row.isActive ? "Deactivate" : "Reactivate"}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  danger
+                  disabled={pending}
+                  className="text-[14px]"
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    void recycle();
+                  }}
+                >
+                  <Trash2 size={15} strokeWidth={2.2} />
+                  Delete
+                </DropdownMenuItem>
+              </>
+            )}
           </>
         )}
       </DropdownMenuContent>

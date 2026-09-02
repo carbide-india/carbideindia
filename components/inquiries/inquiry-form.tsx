@@ -32,8 +32,6 @@ import type { MasterOptionItem } from "@/lib/queries/masters";
 import type { SampleOption } from "@/lib/queries/samples";
 import type { ShapeConfig } from "@/lib/masters/shape-config";
 import type { PickerMasters } from "@/components/erp/product-picker";
-import { InlineOptionAdd } from "@/components/clients/inline-option-add";
-import { addCustomOption } from "@/app/(app)/_actions/custom-lists";
 import { firstErrorMessage } from "@/lib/forms/first-error";
 import { useUnsavedGuard } from "@/lib/forms/use-unsaved-guard";
 import { useKeyboardForm } from "@/components/forms/use-keyboard-form";
@@ -140,17 +138,14 @@ export function InquiryForm({
   // Custom-master lists fall back to the built-in datasets.
   const stateList = stateOptions?.length ? stateOptions : INDIA_STATES;
 
-  // Editable Currency / Country lists (ENQ Dropdown Master), with locally-added
-  // values shown instantly before router.refresh() syncs them from the server.
-  const [extraCurrencies, setExtraCurrencies] = React.useState<string[]>([]);
-  const [extraCountries, setExtraCountries] = React.useState<string[]>([]);
+  // Currency / Country lists come from the ENQ Dropdown Master (admin-managed).
   const currencyList = React.useMemo(
-    () => Array.from(new Set([...(currencyOptions?.length ? currencyOptions : CURRENCY_CODES), ...extraCurrencies])),
-    [currencyOptions, extraCurrencies],
+    () => Array.from(new Set(currencyOptions?.length ? currencyOptions : CURRENCY_CODES)),
+    [currencyOptions],
   );
   const countryList = React.useMemo(
-    () => Array.from(new Set([...(countryOptions?.length ? countryOptions : COUNTRIES), ...extraCountries])),
-    [countryOptions, extraCountries],
+    () => Array.from(new Set(countryOptions?.length ? countryOptions : COUNTRIES)),
+    [countryOptions],
   );
   const isEdit = editInquiryId !== undefined;
   const draftsOn = Boolean(enableDrafts) && !isEdit;
@@ -368,8 +363,8 @@ export function InquiryForm({
     <form onSubmit={submit} onKeyDown={formProps.onKeyDown} className="flex flex-col gap-6" noValidate>
       {/* ── 1 · Client ───────────────────────────────────────────────── */}
       <SectionCard>
-        {/* Existing client (required) · New Client button · Company Name - one
-            line. New clients are onboarded only via the Client KYC form. */}
+        {/* Existing client (required) · Company Name - one line. New clients are
+            onboarded only via the Client KYC form (step 01 of the pipeline). */}
         <div className="flex flex-wrap items-start gap-4">
           <div className="w-[300px] max-md:w-full">
             <ExistingClientPicker
@@ -379,18 +374,6 @@ export function InquiryForm({
               onAutofill={applyAutofill}
               error={errors.clientId?.message}
             />
-          </div>
-          {/* No top offset any more: every field in this row is a floating-label
-              box of the same height, so the button lines up with the row top. */}
-          <div className="max-md:w-full">
-            <a
-              href="/clients/new"
-              title="Onboard a new client (opens the Client KYC form)"
-              className="inline-flex h-[42px] items-center gap-1.5 rounded-lg border-[1.75px] border-[#3f3f94] bg-[#f4f4fd] px-3.5 text-[13px] font-bold text-[#3f3f94] transition hover:-translate-y-0.5 hover:bg-[#3f3f94] hover:text-white"
-            >
-              <Plus className="h-[15px] w-[15px]" strokeWidth={2.6} />
-              New Client
-            </a>
           </div>
           <div className="min-w-[240px] max-w-[460px] flex-1 max-md:w-full">
             <Field id="inq-company" label="Company Name" required float>
@@ -494,25 +477,7 @@ export function InquiryForm({
         </div>
 
         <div className="grid grid-cols-5 gap-3 max-lg:grid-cols-3 max-md:grid-cols-2">
-          <Field
-            id="inq-currency"
-            label="Currency"
-            labelOnly
-            float
-            action={
-                <InlineOptionAdd
-                  title="Currency"
-                  add={async (n) => {
-                    const r = await addCustomOption("enquiry", "currency", n);
-                    return r.ok ? { ok: true, value: n } : { ok: false, error: r.error };
-                  }}
-                  onAdded={(v) => {
-                    setExtraCurrencies((p) => [...p, v]);
-                    setValue("currency", v);
-                  }}
-                />
-            }
-          >
+          <Field id="inq-currency" label="Currency" labelOnly float>
             <Controller
               control={control}
               name="currency"
@@ -529,25 +494,7 @@ export function InquiryForm({
               )}
             />
           </Field>
-          <Field
-            id="inq-country"
-            label="Country"
-            labelOnly
-            float
-            action={
-                <InlineOptionAdd
-                  title="Country"
-                  add={async (n) => {
-                    const r = await addCustomOption("enquiry", "country", n);
-                    return r.ok ? { ok: true, value: n } : { ok: false, error: r.error };
-                  }}
-                  onAdded={(v) => {
-                    setExtraCountries((p) => [...p, v]);
-                    setValue("country", v);
-                  }}
-                />
-            }
-          >
+          <Field id="inq-country" label="Country" labelOnly float>
             <Controller
               control={control}
               name="country"

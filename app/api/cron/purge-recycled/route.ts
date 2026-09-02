@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { purgeAllExpiredDrafts } from "@/lib/queries/form-drafts";
 import { purgeExpiredRecycledInquiries } from "@/app/(app)/inquiries/recycle-actions";
+import { purgeExpiredRecycledClients } from "@/app/(admin)/admin/clients/actions";
 
 /**
  * Nightly purge of recycled form drafts past their 48h TTL.
@@ -31,7 +32,13 @@ async function run(request: Request): Promise<NextResponse> {
   try {
     const drafts = await purgeAllExpiredDrafts();
     const inquiries = await purgeExpiredRecycledInquiries();
-    return NextResponse.json({ ok: true, draftsPurged: drafts.purged, inquiriesPurged: inquiries.purged });
+    const clients = await purgeExpiredRecycledClients();
+    return NextResponse.json({
+      ok: true,
+      draftsPurged: drafts.purged,
+      inquiriesPurged: inquiries.purged,
+      clientsPurged: clients,
+    });
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error("[cron/purge-recycled] failed", err);

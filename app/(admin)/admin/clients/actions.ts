@@ -1,13 +1,14 @@
 "use server";
 
 import { revalidatePath, updateTag } from "next/cache";
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, eq, isNotNull, lt, ne, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   clients,
   clientContacts,
   clientAddresses,
   clientBankAccounts,
+  inquiries,
   tasks,
   settingsEvents,
 } from "@/db/schema";
@@ -269,6 +270,115 @@ export async function reactivateClient(
 
   revalidateClientSurfaces();
   return { ok: true };
+}
+
+/**
+ * Safe Delete → Recycle Bin (2026-09). Soft-deletes a client to a recoverable
+ * bin (purged after 48h) — but ONLY when the client has NO enquiries. A client
+ * referenced by the pipeline must never be removed (it would orphan those
+ * enquiries/quotes/orders), so we refuse and point to Deactivate instead.
+ * Admin-only, same governance as deactivate.
+ */
+export async function recycleClient(clientId: string): Promise<ActionResult> {
+  const me = await requireAdmin();
+
+  const parsedId = ClientIdSchema.safeParse(clientId);
+  if (!parsedId.success) {
+    return { ok: false, error: parsedId.error.issues[0]?.message ?? "Invalid client id" };
+  }
+
+  const client = await db.query.clients.findFirst({ where: eq(clients.id, parsedId.data) });
+  if (!client) return { ok: false, error: "Client not found" };
+  if (client.recycledAt) return { ok: true }; // already recycled — idempotent
+
+  // Guard: a client with enquiries must not be deleted (would orphan the pipeline).
+  const enquiryCount = await db.$count(inquiries, eq(inquiries.clientId, client.id));
+  if (enquiryCount > 0) {
+    return {
+      ok: false,
+      error:
+        `This client has ${enquiryCount} enquir${enquiryCount === 1 ? "y" : "ies"} — it can't be deleted. Deactivate it instead.`,
+    };
+  }
+
+  try {
+    await db
+      .update(clients)
+      .set({ recycledAt: new Date(), isActive: false, updatedAt: new Date() })
+      .where(eq(clients.id, client.id));
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: `DB: ${msg}` };
+  }
+
+  await recordAudit({
+    entityType: "client",
+    entityId: client.id,
+    entityLabel: client.name,
+    action: "delete",
+    actorId: me.id,
+    actorName: me.name,
+    summary: `Client "${client.name}" moved to Recycle Bin`,
+  });
+
+  revalidateClientSurfaces();
+  revalidatePath("/clients/recycle-bin");
+  return { ok: true };
+}
+
+/**
+ * Restore a recycled client back to the register (clears the recycle marker and
+ * reactivates it). Admin-only.
+ */
+export async function restoreClient(clientId: string): Promise<ActionResult> {
+  const me = await requireAdmin();
+
+  const parsedId = ClientIdSchema.safeParse(clientId);
+  if (!parsedId.success) {
+    return { ok: false, error: parsedId.error.issues[0]?.message ?? "Invalid client id" };
+  }
+
+  const client = await db.query.clients.findFirst({ where: eq(clients.id, parsedId.data) });
+  if (!client) return { ok: false, error: "Client not found" };
+  if (!client.recycledAt) return { ok: true }; // not recycled — idempotent
+
+  try {
+    await db
+      .update(clients)
+      .set({ recycledAt: null, isActive: true, updatedAt: new Date() })
+      .where(eq(clients.id, client.id));
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: `DB: ${msg}` };
+  }
+
+  await recordAudit({
+    entityType: "client",
+    entityId: client.id,
+    entityLabel: client.name,
+    action: "restore",
+    actorId: me.id,
+    actorName: me.name,
+    summary: `Client "${client.name}" restored from Recycle Bin`,
+  });
+
+  revalidateClientSurfaces();
+  revalidatePath("/clients/recycle-bin");
+  return { ok: true };
+}
+
+/**
+ * Purge clients recycled more than 48h ago (cron). Children (contacts /
+ * addresses / bank) cascade; any loose reference is ON DELETE SET NULL, so the
+ * hard delete never fails. Returns how many were purged.
+ */
+export async function purgeExpiredRecycledClients(): Promise<number> {
+  const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
+  const purged = await db
+    .delete(clients)
+    .where(and(isNotNull(clients.recycledAt), lt(clients.recycledAt, cutoff)))
+    .returning({ id: clients.id });
+  return purged.length;
 }
 
 /**

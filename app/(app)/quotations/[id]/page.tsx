@@ -4,7 +4,9 @@ import { requireUser } from "@/lib/auth/current";
 import {
   getQuotationById,
   getLatestCostingRevisionsForItems,
+  getQuotationRevisions,
 } from "@/lib/queries/quotations";
+import { QuotationRevisionHistory } from "@/components/quotations/quotation-revision-history";
 import { getInquiryById } from "@/lib/queries/inquiries";
 import { listEmployeeOptions } from "@/lib/queries/employees";
 import { getQuotationItems, getInquiryItemSeeds } from "@/lib/queries/quotes";
@@ -42,12 +44,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function QuotationDetailPage({ params }: PageProps) {
-  await requireUser();
+  const me = await requireUser();
   const { id } = await params;
   if (!UUID_RE.test(id)) notFound();
 
   const quotation = await getQuotationById(id);
   if (!quotation) notFound();
+
+  // Admin-only revision history — THIS quote's own supersedes chain (original →
+  // R1 → R2 …), not every quote of the enquiry.
+  const revisions = me.isAdmin ? await getQuotationRevisions(quotation.id) : [];
 
   // The linked enquiry (SM repo) supplies the header SM chip + number, and the
   // seed list lets us flag products added to the enquiry after this quote.
@@ -131,6 +137,9 @@ export default async function QuotationDetailPage({ params }: PageProps) {
             </>
           }
         />
+        {me.isAdmin && revisions.length > 1 && (
+          <QuotationRevisionHistory revisions={revisions} employees={employees} />
+        )}
       </div>
     </EnquiryModuleShell>
   );

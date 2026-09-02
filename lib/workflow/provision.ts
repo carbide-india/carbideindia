@@ -1,5 +1,5 @@
 import "server-only";
-import { count, eq } from "drizzle-orm";
+import { asc, count, eq } from "drizzle-orm";
 import {
   quotations,
   quotationItems,
@@ -10,6 +10,7 @@ import {
   inquiries,
 } from "@/db/schema";
 import { db } from "@/lib/db";
+import { getInquiryItemSeeds, getQuoteAutofill } from "@/lib/queries/quotes";
 
 /**
  * ERP Phase 8 - idempotent auto-provisioning (§4.6). Each `provision*` helper
@@ -158,6 +159,131 @@ export async function provisionSalesOrderFromNegotiation(
     );
   }
   return { id: head.id, created: true };
+}
+
+/**
+ * Costing → Quotation hand-off (manual-mode auto-flow, owner request 2026-09-01:
+ * "when the previous step is completed the details flow to the next step, like a
+ * multi-step form"). On every costing approval we ensure the inquiry has a DRAFT
+ * quotation and that every APPROVED + LOCKED line is present on it — so approved
+ * costings surface in the Quotation register with their details carried forward.
+ *
+ * Idempotent + accumulating:
+ *  - one quotation per inquiry (the earliest existing one is reused, never a 2nd);
+ *  - only lines whose chosen costing is locked with a non-null final unit cost are
+ *    pulled in (the same "safe to quote" rule the createQuotation hard-gate uses);
+ *  - a line already on the quotation is left untouched (never re-priced), so a
+ *    later-approved line just appends. Nothing is sent — the draft waits for review.
+ */
+export async function syncQuotationForInquiry(
+  inquiryId: string,
+  createdById: string,
+): Promise<{ quotationId: string; created: boolean; added: number } | null> {
+  const seeds = await getInquiryItemSeeds(inquiryId);
+  // "Ready to quote" = approved & locked chosen costing with a final unit cost.
+  const ready = seeds.filter((s) => s.isCostingLocked && s.finalUnitCost != null);
+  if (ready.length === 0) return null;
+
+  const auto = await getQuoteAutofill(inquiryId);
+  if (!auto) return null;
+
+  // Accumulate into the inquiry's existing quotation (earliest), else create one.
+  const [existing] = await db
+    .select({ id: quotations.id, quoteSent: quotations.quoteSent })
+    .from(quotations)
+    .where(eq(quotations.inquiryId, inquiryId))
+    .orderBy(asc(quotations.createdAt))
+    .limit(1);
+
+  // Never mutate a quotation that's already gone to the customer — what was sent
+  // stays sent. A line approved after the send is the user's call to add.
+  if (existing?.quoteSent) {
+    return { quotationId: existing.id, created: false, added: 0 };
+  }
+
+  let quotationId: string;
+  let created = false;
+  if (existing) {
+    quotationId = existing.id;
+  } else {
+    const line0 = ready[0]!;
+    const quoteNo = `${auto.smNumber}-Q01`;
+    const [head] = await db
+      .insert(quotations)
+      .values({
+        inquiryId,
+        companyName: auto.companyName,
+        enquiryDate: auto.enquiryDate,
+        // line-#1 legacy mirror (same subset createQuotation seeds).
+        custProductName: line0.custProductName ?? auto.productDescription ?? undefined,
+        qty: line0.qty ?? undefined,
+        gradeCustomer: line0.gradeCustomer ?? auto.gradeName ?? undefined,
+        tolerance: line0.tolerance ?? auto.toleranceName ?? undefined,
+        condition: line0.condition ?? auto.conditionName ?? undefined,
+        partNo: line0.partNo ?? undefined,
+        finalCost: line0.finalUnitCost ?? undefined,
+        quotationStatus: "draft",
+        quoteNo,
+        createdById,
+      })
+      .returning({ id: quotations.id });
+    if (!head) throw new Error("quotations insert returned no row");
+    quotationId = head.id;
+    created = true;
+  }
+
+  // Append any approved line not yet on the quotation (never touch existing ones).
+  const existingItems = await db
+    .select({
+      inquiryItemId: quotationItems.inquiryItemId,
+      sortOrder: quotationItems.sortOrder,
+    })
+    .from(quotationItems)
+    .where(eq(quotationItems.quotationId, quotationId));
+  const present = new Set(
+    existingItems.map((r) => r.inquiryItemId).filter((v): v is string => v !== null),
+  );
+  const maxSort = existingItems.reduce((m, r) => Math.max(m, r.sortOrder), -1);
+  const missing = ready.filter((s) => !present.has(s.inquiryItemId));
+  if (missing.length) {
+    await db.insert(quotationItems).values(
+      missing.map((s, i) => ({
+        quotationId,
+        inquiryItemId: s.inquiryItemId,
+        itemId: s.itemId,
+        sortOrder: maxSort + 1 + i,
+        qty: s.qty,
+        // Authoritative approved per-piece cost (same basis createQuotation uses).
+        finalCost: s.finalUnitCost,
+      })),
+    );
+  }
+  return { quotationId, created, added: missing.length };
+}
+
+/**
+ * Quotation → Negotiation hand-off (manual-mode auto-flow). Resolves the quote's
+ * inquiry + SM number and provisions the DRAFT negotiation. Idempotent via
+ * provisionNegotiationFromQuote (no-op if a negotiation already links the quote).
+ */
+export async function ensureNegotiationForQuote(
+  quotationId: string,
+  createdById: string,
+): Promise<ProvisionResult | null> {
+  const [q] = await db
+    .select({ inquiryId: quotations.inquiryId })
+    .from(quotations)
+    .where(eq(quotations.id, quotationId))
+    .limit(1);
+  if (!q) return null;
+  const smNumber = await smNumberForInquiry(db, q.inquiryId);
+  if (!smNumber) return null;
+  return provisionNegotiationFromQuote(db, {
+    quotationId,
+    inquiryId: q.inquiryId,
+    smNumber,
+    createdById,
+  });
 }
 
 /** Resolve an inquiry's SM number (for provisioning doc numbers). */

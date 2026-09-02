@@ -1,0 +1,1 @@
+ALTER TABLE "clients" ADD COLUMN "recycled_at" timestamp with time zone;

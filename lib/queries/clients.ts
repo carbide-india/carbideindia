@@ -93,6 +93,8 @@ export interface ClientRegisterRow {
   creditDays: number | null;
   isExport: boolean | null;
   isActive: boolean;
+  /** In the Recycle Bin (soft-deleted, purged after 48h). */
+  isRecycled: boolean;
   createdAt: Date;
   /** Client rating A / B / C (null when unrated). */
   grade: ClientGrade | null;
@@ -127,6 +129,7 @@ export async function listClientsForRegister(): Promise<ClientRegisterRow[]> {
       creditDays: clients.creditDays,
       isExport: clients.export,
       isActive: clients.isActive,
+      recycledAt: clients.recycledAt,
       createdAt: clients.createdAt,
       grade: clients.grade,
       tags: clients.tags,
@@ -210,6 +213,7 @@ export async function listClientsForRegister(): Promise<ClientRegisterRow[]> {
         creditDays: r.creditDays,
         isExport: r.isExport,
         isActive: r.isActive,
+        isRecycled: r.recycledAt != null,
         createdAt: r.createdAt,
         grade: r.grade,
         tags: r.tags ?? [],

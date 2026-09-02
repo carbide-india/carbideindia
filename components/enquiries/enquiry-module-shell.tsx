@@ -12,9 +12,11 @@ import {
   FileClock,
   FilePlus2,
   FileText,
+  GitCompareArrows,
   HelpCircle,
   KanbanSquare,
   LayoutDashboard,
+  LayoutGrid,
   LifeBuoy,
   PanelLeftClose,
   PanelLeftOpen,
@@ -183,6 +185,7 @@ function navFor(pathname: string): NavDef[] {
             !p.startsWith(`${reg.href}/recycle-bin`) &&
             !p.startsWith(`${reg.href}/vendors`) &&
             !p.startsWith(`${reg.href}/po-register`) &&
+            !p.startsWith(`${reg.href}/revisions`) &&
             !p.startsWith(`${reg.href}/board`) &&
             !p.startsWith(`${reg.href}/custom`)),
       };
@@ -233,6 +236,43 @@ function navFor(pathname: string): NavDef[] {
           Icon: KanbanSquare,
           ready: true,
           active: (p: string) => p.startsWith(board.href),
+          group: "records" as const,
+        },
+      ];
+    })(),
+    // Revision Log — only in the Quotation family. The matrix of every re-quote
+    // (latest → original, changes highlighted), sitting beside the Kanban.
+    ...(familySeg(pathname) === "quotations"
+      ? ([
+          {
+            label: "Revision Log",
+            href: "/quotations/revisions" as Route,
+            Icon: GitCompareArrows,
+            ready: true,
+            active: (p: string) => p.startsWith("/quotations/revisions"),
+            group: "records" as const,
+          },
+        ] as NavDef[])
+      : []),
+    // Pipeline Tracker - the cross-stage view (start→current stage per enquiry,
+    // plus the On Hold / Cancelled buckets). Feasibility already links it; the
+    // downstream pipeline modules (Costing → Sales Order) + Meetings get parity.
+    ...((): NavDef[] => {
+      const PIPELINE_FAMILIES = new Set([
+        "costings",
+        "quotations",
+        "negotiations",
+        "sales-orders",
+        "meetings",
+      ]);
+      if (!PIPELINE_FAMILIES.has(familySeg(pathname))) return [];
+      return [
+        {
+          label: "Pipeline Tracker",
+          href: "/pipeline" as Route,
+          Icon: LayoutGrid,
+          ready: true,
+          active: (p: string) => p.startsWith("/pipeline"),
           group: "records" as const,
         },
       ];

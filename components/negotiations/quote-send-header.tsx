@@ -1,12 +1,9 @@
 "use client";
 
-import * as React from "react";
-import { ArrowUpRight, FileText, CheckCircle2, CircleDashed } from "lucide-react";
-import type { NegotiationLineWithSpec } from "@/lib/queries/negotiations";
+import { ArrowUpRight, CheckCircle2, CircleDashed } from "lucide-react";
 import type { NegotiationStage } from "@/db/enums";
 import { formatInr } from "@/lib/format";
 import { NegotiationStageStrip } from "@/components/negotiations/negotiation-stage-strip";
-import { IssuePiModal } from "@/components/negotiations/issue-pi-modal";
 
 /** Source-quote summary the negotiation was raised from. */
 export interface QuoteSendSummary {
@@ -19,14 +16,7 @@ export interface QuoteSendSummary {
 interface Props {
   negotiationId: string;
   stage: NegotiationStage;
-  piCount: number;
   quoteSend: QuoteSendSummary;
-  lines: NegotiationLineWithSpec[];
-  defaultTerms: {
-    developmentTime: string | null;
-    deliveryTime: string | null;
-    validity: string | null;
-  };
 }
 
 function money(value: string | null): string {
@@ -42,17 +32,7 @@ function money(value: string | null): string {
  * Issue a Proforma Invoice (PI). Client-facing wording is always "Proforma
  * Invoice (PI)", never "Revised Quote".
  */
-export function QuoteSendHeader({
-  negotiationId,
-  stage,
-  piCount,
-  quoteSend,
-  lines,
-  defaultTerms,
-}: Props) {
-  const [modalOpen, setModalOpen] = React.useState(false);
-  const issuedBefore = piCount > 0;
-
+export function QuoteSendHeader({ stage, quoteSend }: Props) {
   return (
     <section
       className="flex flex-col gap-5 rounded-section border border-hairline bg-surface-card p-6"
@@ -61,7 +41,7 @@ export function QuoteSendHeader({
       {/* Stage strip */}
       <NegotiationStageStrip stage={stage} />
 
-      {/* Quote send + Issue PI */}
+      {/* Quote send summary */}
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4 border-t border-hairline pt-5">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -109,28 +89,7 @@ export function QuoteSendHeader({
             )}
           </div>
         </div>
-
-        <button
-          type="button"
-          onClick={() => setModalOpen(true)}
-          className="inline-flex items-center gap-2 rounded-pill px-5 py-2.5 text-[14px] font-bold text-white transition-transform active:scale-[0.98]"
-          style={{
-            background: "#454595",
-            boxShadow: "0 6px 16px rgba(63, 63, 148, 0.34)",
-          }}
-        >
-          <FileText size={16} strokeWidth={2.4} />
-          {issuedBefore ? "Issue Revised PI" : "Issue Proforma Invoice (PI)"}
-        </button>
       </div>
-
-      <IssuePiModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        negotiationId={negotiationId}
-        lines={lines}
-        defaultTerms={defaultTerms}
-      />
     </section>
   );
 }

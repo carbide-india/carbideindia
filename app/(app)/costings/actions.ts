@@ -34,6 +34,7 @@ import {
   type InhouseCalculatorValue,
 } from "@/lib/costing/inhouse-master";
 import { getCostingDecision } from "@/lib/queries/costings";
+import { syncQuotationForInquiry } from "@/lib/workflow/provision";
 import { isItemFeasibilityConfirmed } from "@/lib/queries/feasibility";
 import type { CostingDoneStatus, CostingRoute } from "@/db/enums";
 
@@ -544,6 +545,16 @@ export async function approveCostingDecision(
 
     revalidatePath("/costings");
     revalidatePath("/inquiries/" + ownItem.inquiryId);
+
+    // Costing → Quotation hand-off: the approved line flows into a DRAFT
+    // quotation so it surfaces in the next step (owner request 2026-09-01).
+    // Non-fatal — the approval itself already committed above.
+    try {
+      const synced = await syncQuotationForInquiry(ownItem.inquiryId, me.id);
+      if (synced) revalidatePath("/quotations");
+    } catch (err) {
+      console.error("[approveCostingDecision] quotation provisioning failed", err);
+    }
 
     return { ok: true, finalUnitCost, isOverridden };
   } catch (err) {

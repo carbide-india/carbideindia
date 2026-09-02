@@ -11,12 +11,10 @@ import {
   CheckCircle2,
   AlertTriangle,
   CircleDashed,
-  Award,
   Loader2,
 } from "lucide-react";
 import { upload } from "@vercel/blob/client";
 import {
-  markNegotiationAwarded,
   saveCustomerPo,
   acceptAndConvertToSalesOrder,
 } from "@/app/(app)/negotiations/actions";
@@ -106,10 +104,8 @@ export function CustomerPoCard({
 
   const [uploading, setUploading] = React.useState(false);
   const [savingPo, setSavingPo] = React.useState(false);
-  const [awarding, setAwarding] = React.useState(false);
   const [accepting, setAccepting] = React.useState(false);
 
-  const awaitingAward = stage === "pi_issued";
   const poReceived = stage === "customer_po_received";
   const hasPo = Boolean((poNo.trim() || poPath) );
 
@@ -122,21 +118,6 @@ export function CustomerPoCard({
         ? "matched"
         : "mismatch"
       : null;
-
-  async function onMarkAwarded(): Promise<void> {
-    setAwarding(true);
-    try {
-      const res = await markNegotiationAwarded(negotiationId);
-      if (!res.ok) {
-        fireToast({ message: res.error, type: "error" });
-        return;
-      }
-      fireToast({ message: "Negotiation marked awarded." });
-      router.refresh();
-    } finally {
-      setAwarding(false);
-    }
-  }
 
   async function onUpload(file: File): Promise<void> {
     const bad = precheckFile(file);
@@ -212,44 +193,10 @@ export function CustomerPoCard({
     }
   }
 
-  // ── pi_issued: only the award prompt ──────────────────────────────────────
-  if (awaitingAward) {
-    return (
-      <SectionCard
-        title="Customer PO"
-        hint="Mark the negotiation awarded to start capturing the customer purchase order."
-      >
-        <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-hairline bg-surface-soft px-4 py-4">
-          <p className="text-[13.5px] text-ink-muted">
-            A proforma invoice has been issued. Once the customer confirms, mark the
-            negotiation awarded.
-          </p>
-          <button
-            type="button"
-            onClick={() => void onMarkAwarded()}
-            disabled={awarding}
-            className="inline-flex items-center gap-2 rounded-pill px-5 py-2.5 text-[14px] font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
-            style={{
-              background: "var(--color-purple-deep)",
-              boxShadow: "0 6px 16px rgba(124, 58, 237, 0.28)",
-            }}
-          >
-            {awarding ? (
-              <Loader2 size={15} style={{ animation: "spinFast 0.8s linear infinite" }} />
-            ) : (
-              <Award size={16} strokeWidth={2.4} />
-            )}
-            Mark Negotiation Awarded
-          </button>
-        </div>
-      </SectionCard>
-    );
-  }
-
   return (
     <SectionCard
       title="Customer PO"
-      hint="Capture the received purchase order, reconcile it against the latest PI, then accept it into a sales order."
+      hint="Capture the received purchase order, then accept it into a sales order. Once the negotiation is approved and the PO is saved, the sales order is created automatically."
     >
       <div className="flex flex-col gap-5">
         {/* Match indicator */}
