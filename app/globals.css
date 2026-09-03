@@ -2436,8 +2436,45 @@ select.nt-input {
 .pt-enter {
   animation: ptFadeInUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+/* Donut chart — each arc "draws" from 0 to its length (uses per-segment CSS
+   vars so one keyframe animates every arc to its own size). */
+@keyframes ptDonutDraw {
+  from { stroke-dasharray: 0 var(--pt-circ); }
+  to { stroke-dasharray: var(--pt-seg) var(--pt-circ); }
+}
+.pt-donut-seg {
+  stroke-dasharray: 0 var(--pt-circ);
+  animation: ptDonutDraw 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Horizontal distribution bars grow in from the left. */
+@keyframes ptGrowX {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.pt-bar {
+  transform-origin: left center;
+  animation: ptGrowX 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pt-enter { animation: none; }
+  .pt-donut-seg { animation: none; stroke-dasharray: var(--pt-seg) var(--pt-circ); }
+  .pt-bar { animation: none; transform: none; }
+}
+
+/* Reusable ConfirmDialog (components/ui/confirm-dialog.tsx) entrance. */
+@keyframes cdOverlayIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes cdContentIn {
+  from { opacity: 0; transform: translate(-50%, -48%) scale(0.96); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+.cd-overlay[data-state="open"] { animation: cdOverlayIn 0.16s ease-out; }
+.cd-content[data-state="open"] { animation: cdContentIn 0.18s cubic-bezier(0.22, 1, 0.36, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .cd-overlay[data-state="open"],
+  .cd-content[data-state="open"] { animation: none; }
 }
 
 /* Hide scrollbars while keeping scrollability — used by the header nav so it

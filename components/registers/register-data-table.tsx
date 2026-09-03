@@ -36,6 +36,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -1582,17 +1583,11 @@ function BulkActionGroup({
 }) {
   const [value, setValue] = React.useState("");
   const [pending, setPending] = React.useState(false);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const chosenLabel = action.options.find((o) => o.value === value)?.label ?? value;
 
   async function apply() {
     if (!value) return;
-    const chosen = action.options.find((o) => o.value === value)?.label ?? value;
-    if (
-      !window.confirm(
-        `Apply "${action.label}: ${chosen}" to ${count} ${count === 1 ? "row" : "rows"}? This updates them all at once.`,
-      )
-    ) {
-      return;
-    }
     setPending(true);
     try {
       const res = await action.onApply(ids, value);
@@ -1607,6 +1602,7 @@ function BulkActionGroup({
       fireToast({ message: "Couldn't apply the change.", type: "error" });
     } finally {
       setPending(false);
+      setConfirmOpen(false);
     }
   }
 
@@ -1632,13 +1628,28 @@ function BulkActionGroup({
         </select>
         <button
           type="button"
-          onClick={apply}
+          onClick={() => value && setConfirmOpen(true)}
           disabled={pending || !value}
           className="inline-flex items-center h-8 px-3.5 rounded-pill text-[13px] font-bold bg-brand text-white transition-all enabled:hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {pending ? "Applying" : "Apply"}
         </button>
       </div>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        tone="brand"
+        title={`Apply to ${count} ${count === 1 ? "row" : "rows"}?`}
+        description={
+          <>
+            Set <b>{action.label}</b> to <b>{chosenLabel}</b> for all selected rows. This
+            updates them at once.
+          </>
+        }
+        confirmLabel="Apply"
+        pending={pending}
+        onConfirm={apply}
+      />
     </div>
   );
 }
@@ -1683,15 +1694,12 @@ function BulkDeleteButton({
   } = config;
   const [pending, setPending] = React.useState(false);
 
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
   const subject = `${count} ${count === 1 ? noun.one : noun.many}`;
   const failureMessage = `Couldn't ${verb.infinitive}.`;
+  const confirmVerb = verb.infinitive.charAt(0).toUpperCase() + verb.infinitive.slice(1);
 
   async function run() {
-    const confirmVerb =
-      verb.infinitive.charAt(0).toUpperCase() + verb.infinitive.slice(1);
-    const warning = irreversible ? " This can't be undone." : "";
-    if (!window.confirm(`${confirmVerb} ${subject}?${warning}`)) return;
-
     setPending(true);
     try {
       const res = await onDelete(ids);
@@ -1705,24 +1713,36 @@ function BulkDeleteButton({
       fireToast({ message: failureMessage, type: "error" });
     } finally {
       setPending(false);
+      setConfirmOpen(false);
     }
   }
 
   return (
-    <button
-      type="button"
-      onClick={run}
-      disabled={pending}
-      className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-pill text-[13px] font-bold border transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-      style={{
-        color: "var(--color-red)",
-        borderColor: "color-mix(in srgb, var(--color-red) 35%, transparent)",
-        background: "color-mix(in srgb, var(--color-red) 8%, transparent)",
-      }}
-    >
-      <Icon size={13} strokeWidth={2.2} />
-      {pending ? verb.progressive : `${label} (${count})`}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() => setConfirmOpen(true)}
+        disabled={pending}
+        className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-pill text-[13px] font-bold border transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        style={{
+          color: "var(--color-red)",
+          borderColor: "color-mix(in srgb, var(--color-red) 35%, transparent)",
+          background: "color-mix(in srgb, var(--color-red) 8%, transparent)",
+        }}
+      >
+        <Icon size={13} strokeWidth={2.2} />
+        {pending ? verb.progressive : `${label} (${count})`}
+      </button>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={`${confirmVerb} ${subject}?`}
+        description={irreversible ? "This can't be undone." : "You can restore it later if needed."}
+        confirmLabel={confirmVerb}
+        pending={pending}
+        onConfirm={run}
+      />
+    </>
   );
 }
 

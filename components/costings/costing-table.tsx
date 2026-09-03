@@ -32,6 +32,7 @@ import {
 /** Buckets offered on the row menu — mirrors the chip's inline-settable set. */
 const ROW_MENU_STATUSES = ["not_done", "draft", "pending_approval"] as const;
 import { costingRevisionLabel } from "@/lib/costing/buckets";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CostingStatusCell } from "./costing-status-cell";
 import type { CostingRegisterRow } from "@/lib/queries/costings";
 
@@ -89,6 +90,29 @@ function targetBand(r: CostingRegisterRow): string {
  */
 export function CostingTable({ rows, heading, actions }: Props) {
   const router = useRouter();
+  const [deleteRow, setDeleteRow] = React.useState<CostingRegisterRow | null>(null);
+  const [deleting, setDeleting] = React.useState(false);
+
+  async function runDelete() {
+    const id = deleteRow?.costingId;
+    if (!id) return;
+    const name = deleteRow?.smNumber ?? deleteRow?.custProductName ?? "this line";
+    setDeleting(true);
+    try {
+      const res = await deleteCosting(id);
+      if (res.ok) {
+        fireToast({ message: `Deleted the cost sheet for ${name}.` });
+        router.refresh();
+        setDeleteRow(null);
+      } else {
+        fireToast({ message: res.error, type: "error" });
+      }
+    } catch {
+      fireToast({ message: FORBIDDEN_MESSAGE, type: "error" });
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   // Selection ids are inquiry_item ids (the row unit), but every write below
   // targets a `costings` row — map through the rows we already hold rather than
@@ -189,31 +213,7 @@ export function CostingTable({ rows, heading, actions }: Props) {
           label: "Delete latest cost sheet",
           Icon: Trash2,
           danger: true,
-          onSelect: async (row) => {
-            const id = row.costingId;
-            if (!id) return;
-            const name = row.smNumber ?? row.custProductName ?? "this line";
-            if (
-              !window.confirm(
-                `Delete the latest cost sheet for ${name}? Earlier revisions are kept. This can't be undone.`,
-              )
-            ) {
-              return;
-            }
-            try {
-              const res = await deleteCosting(id);
-              if (res.ok) {
-                fireToast({ message: `Deleted the cost sheet for ${name}.` });
-                router.refresh();
-              } else {
-                fireToast({ message: res.error, type: "error" });
-              }
-            } catch {
-              // requireAdmin throws for non-admins; the menu handler is
-              // fire-and-forget, so swallow it into an honest toast.
-              fireToast({ message: FORBIDDEN_MESSAGE, type: "error" });
-            }
-          },
+          onSelect: (row) => setDeleteRow(row),
         });
       }
       return items;
@@ -503,6 +503,7 @@ export function CostingTable({ rows, heading, actions }: Props) {
   );
 
   return (
+    <>
     <RegisterDataTable<CostingRegisterRow>
       tableKey="costings"
       rows={rows}
@@ -538,6 +539,16 @@ export function CostingTable({ rows, heading, actions }: Props) {
       emptyTitle="Nothing is costable yet."
       emptyHint="A product line appears here the moment its feasibility is confirmed - costed or not - so the work still outstanding is always visible."
     />
+    <ConfirmDialog
+      open={deleteRow !== null}
+      onOpenChange={(o) => !o && setDeleteRow(null)}
+      title="Delete latest cost sheet?"
+      description="Only the latest cost sheet for this line is deleted — earlier revisions are kept. This can't be undone."
+      confirmLabel="Delete"
+      pending={deleting}
+      onConfirm={() => void runDelete()}
+    />
+    </>
   );
 }
 

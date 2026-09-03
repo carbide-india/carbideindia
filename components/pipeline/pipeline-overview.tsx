@@ -22,6 +22,80 @@ const LEGEND: { state: StageState; label: string }[] = [
   { state: "dead", label: "Dropped" },
 ];
 
+interface StatusCounts {
+  total: number;
+  in_progress: number;
+  on_hold: number;
+  completed: number;
+  dead: number;
+}
+
+const STATUS_SEGMENTS: { key: keyof StatusCounts; label: string; color: string }[] = [
+  { key: "completed", label: "Completed", color: "#16a34a" },
+  { key: "in_progress", label: "In Progress", color: "#454595" },
+  { key: "on_hold", label: "On Hold", color: "#e8830c" },
+  { key: "dead", label: "Dropped", color: "#d03232" },
+];
+
+/**
+ * Animated donut of the status split, with the total in the centre. Pure SVG
+ * (self-contained, no chart lib); each arc draws in via the .pt-donut-seg CSS
+ * animation. Empty when there are no enquiries.
+ */
+function StatusDonut({ counts }: { counts: StatusCounts }) {
+  const R = 58;
+  const C = 2 * Math.PI * R;
+  const denom = counts.total || 1;
+  // Precompute each arc's length + cumulative offset up front (pure render).
+  const arcs = React.useMemo(() => {
+    const out: { key: string; color: string; seg: number; offset: number }[] = [];
+    let acc = 0;
+    for (const s of STATUS_SEGMENTS) {
+      const value = counts[s.key];
+      if (!value) continue;
+      const seg = (value / denom) * C;
+      out.push({ key: s.key, color: s.color, seg, offset: acc });
+      acc += seg;
+    }
+    return out;
+  }, [counts, C, denom]);
+  return (
+    <div className="relative shrink-0" style={{ width: 132, height: 132 }}>
+      <svg viewBox="0 0 132 132" className="h-[132px] w-[132px] -rotate-90">
+        <circle cx={66} cy={66} r={R} fill="none" stroke="#f0ece3" strokeWidth={15} />
+        {arcs.map((a, i) => (
+          <circle
+            key={a.key}
+            cx={66}
+            cy={66}
+            r={R}
+            fill="none"
+            stroke={a.color}
+            strokeWidth={15}
+            strokeDashoffset={-a.offset}
+            className="pt-donut-seg"
+            style={
+              {
+                "--pt-seg": `${a.seg}px`,
+                "--pt-circ": `${C}px`,
+                animationDelay: `${150 + i * 130}ms`,
+              } as React.CSSProperties
+            }
+          />
+        ))}
+      </svg>
+      <div className="absolute inset-0 grid place-items-center">
+        <div className="text-center">
+          <div className="text-[30px] font-black leading-none text-[#1f2547]">{counts.total}</div>
+          <div className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#777985]">
+            Total
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /**
  * A single, linear view of the pipeline for the stepper: exactly ONE current
  * stage. Everything before the current stage reads done, the current stage is
@@ -88,14 +162,6 @@ export function PipelineOverview({ rows, status }: { rows: PipelineRow[]; status
   const clampedPage = Math.min(page, totalPages);
   const pageRows = filtered.slice((clampedPage - 1) * PAGE_SIZE, clampedPage * PAGE_SIZE);
 
-  const TILES: { key: keyof typeof counts; label: string; color: string }[] = [
-    { key: "total", label: "Total", color: "#1f2547" },
-    { key: "in_progress", label: "In Progress", color: "#454595" },
-    { key: "on_hold", label: "On Hold", color: "#e8830c" },
-    { key: "completed", label: "Completed", color: "#16a34a" },
-    { key: "dead", label: "Dropped", color: "#d03232" },
-  ];
-
   return (
     <div className="mx-auto w-full max-w-[1180px]">
       <div className="mb-4">
@@ -120,35 +186,29 @@ export function PipelineOverview({ rows, status }: { rows: PipelineRow[]; status
 
       {/* Graph: stat tiles + progress bar + stage distribution */}
       <div className="mb-5 grid gap-3.5 lg:grid-cols-[1fr_1.3fr]">
-        {/* Stat tiles + proportion bar */}
-        <div className="pt-enter rounded-lg border border-[#e2dfdc] bg-white p-4">
-          <div className="grid grid-cols-5 gap-2">
-            {TILES.map((t) => (
-              <div key={t.key} className="text-center">
-                <div className="text-[26px] font-black leading-none" style={{ color: t.color }}>
-                  {counts[t.key]}
+        {/* Status donut + legend */}
+        <div className="pt-enter flex items-center gap-5 rounded-lg border border-[#e2dfdc] bg-white p-5">
+          <StatusDonut counts={counts} />
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            {STATUS_SEGMENTS.map((s) => {
+              const value = counts[s.key];
+              const pct = counts.total > 0 ? Math.round((value / counts.total) * 100) : 0;
+              return (
+                <div key={s.key} className="flex items-center gap-2.5">
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ background: s.color }}
+                  />
+                  <span className="text-[12.5px] font-semibold text-[#57534e]">{s.label}</span>
+                  <span className="ml-auto text-[14px] font-black tabular-nums text-[#1f2547]">
+                    {value}
+                  </span>
+                  <span className="w-9 text-right text-[11px] font-bold tabular-nums text-[#a8a8a8]">
+                    {pct}%
+                  </span>
                 </div>
-                <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-[#777985]">
-                  {t.label}
-                </div>
-              </div>
-            ))}
-          </div>
-          {/* Proportion bar */}
-          <div className="mt-4 flex h-2.5 overflow-hidden rounded-full bg-[#f4f0e8]">
-            {counts.total > 0 && (
-              <>
-                <div style={{ width: `${(counts.completed / counts.total) * 100}%`, background: "#16a34a" }} />
-                <div style={{ width: `${(counts.in_progress / counts.total) * 100}%`, background: "#454595" }} />
-                <div style={{ width: `${(counts.on_hold / counts.total) * 100}%`, background: "#e8830c" }} />
-                <div style={{ width: `${(counts.dead / counts.total) * 100}%`, background: "#d03232" }} />
-              </>
-            )}
-          </div>
-          <div className="mt-2 text-[11px] font-semibold text-[#777985]">
-            {counts.total > 0
-              ? `${Math.round((counts.completed / counts.total) * 100)}% completed`
-              : "No enquiries yet"}
+              );
+            })}
           </div>
         </div>
 
@@ -158,7 +218,7 @@ export function PipelineOverview({ rows, status }: { rows: PipelineRow[]; status
             Where deals are sitting
           </div>
           <div className="flex flex-col gap-1.5">
-            {stageOrder.map((s) => {
+            {stageOrder.map((s, i) => {
               const c = dist.get(s.key) ?? 0;
               return (
                 <div key={s.key} className="flex items-center gap-2">
@@ -167,8 +227,11 @@ export function PipelineOverview({ rows, status }: { rows: PipelineRow[]; status
                   </span>
                   <div className="h-3.5 flex-1 overflow-hidden rounded-[3px] bg-[#f4f0e8]">
                     <div
-                      className="h-full rounded-[3px] bg-[#454595]"
-                      style={{ width: `${(c / distMax) * 100}%` }}
+                      className="pt-bar h-full rounded-[3px] bg-[#454595]"
+                      style={{
+                        width: `${(c / distMax) * 100}%`,
+                        animationDelay: `${150 + i * 60}ms`,
+                      }}
                     />
                   </div>
                   <span className="w-6 shrink-0 text-[11px] font-bold tabular-nums text-[#1f2547]">{c}</span>

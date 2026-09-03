@@ -22,6 +22,7 @@ import {
 } from "@/components/registers/register-data-table";
 import { setFeasibilityStatusBulk } from "@/app/(app)/feasibility/actions";
 import { recycleInquiry } from "@/app/(app)/inquiries/recycle-actions";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { FeasibilityQueueItem } from "@/lib/queries/feasibility";
 
 /** Days a row has waited in the queue (from createdAt to now, floored). */
@@ -208,46 +209,26 @@ export function FeasibilityQueueTable({
         },
       },
       {
-        // Delete → Recycle Bin. Row click opens the detail, so stop propagation
-        // and confirm inline before deleting the whole enquiry.
+        // Delete → Recycle Bin. Row click opens the detail, so stop propagation;
+        // a confirm dialog guards the actual delete.
         id: "__delete",
         header: "",
-        width: "116px",
+        width: "96px",
         cell: (r) => (
           <span onClick={(e) => e.stopPropagation()} className="inline-flex">
-            {confirmId === r.id ? (
-              <span className="inline-flex items-center gap-1">
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => del(r.id)}
-                  className="inline-flex h-7 items-center gap-1 rounded-md bg-[#d03232] px-2 text-[11px] font-bold text-white transition-colors hover:bg-[#b02525] disabled:opacity-50"
-                >
-                  <Trash2 size={13} strokeWidth={2.4} /> Delete
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmId(null)}
-                  className="inline-flex h-7 items-center rounded-md border border-hairline px-2 text-[11px] font-bold text-ink-subtle hover:border-ink-subtle"
-                >
-                  No
-                </button>
-              </span>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setConfirmId(r.id)}
-                title="Delete this enquiry (moves the whole pipeline to the Recycle Bin)"
-                className="inline-flex h-7 items-center gap-1 rounded-md border border-[#d03232]/40 px-2 text-[11px] font-bold text-[#d03232] opacity-0 transition-all hover:bg-[#d03232]/10 group-hover/row:opacity-100"
-              >
-                <Trash2 size={13} strokeWidth={2.4} /> Delete
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => setConfirmId(r.id)}
+              title="Delete this enquiry (moves the whole pipeline to the Recycle Bin)"
+              className="inline-flex h-7 items-center gap-1 rounded-md border border-[#d03232]/40 px-2 text-[11px] font-bold text-[#d03232] opacity-0 transition-all hover:bg-[#d03232]/10 group-hover/row:opacity-100"
+            >
+              <Trash2 size={13} strokeWidth={2.4} /> Delete
+            </button>
           </span>
         ),
       },
     ],
-    [hrefFor, confirmId, pending, del],
+    [hrefFor],
   );
 
   const filters = React.useMemo<FilterConfig<FeasibilityQueueItem>[]>(
@@ -286,24 +267,35 @@ export function FeasibilityQueueTable({
   );
 
   return (
-    <RegisterDataTable<FeasibilityQueueItem>
-      tableKey="feasibility"
-      rows={rows}
-      heading={heading}
-      getRowId={(r) => r.id}
-      columns={columns}
-      getOpenHref={(r) => hrefFor(r.id)}
-      filters={filters}
-      exportFilename="feasibility"
-      bulkActions={[
-        {
-          label: "Set status",
-          options: ACTIVE_FEASIBILITY_STATUSES.map((s) => ({ value: s, label: FEASIBILITY_STATUS_LABELS[s] })),
-          onApply: (ids: string[], value: string) => setFeasibilityStatusBulk(ids, value),
-        },
-      ]}
-      emptyTitle="No enquiries to review yet."
-      emptyHint="Enquiries appear here for their Primary Feasibility review."
-    />
+    <>
+      <RegisterDataTable<FeasibilityQueueItem>
+        tableKey="feasibility"
+        rows={rows}
+        heading={heading}
+        getRowId={(r) => r.id}
+        columns={columns}
+        getOpenHref={(r) => hrefFor(r.id)}
+        filters={filters}
+        exportFilename="feasibility"
+        bulkActions={[
+          {
+            label: "Set status",
+            options: ACTIVE_FEASIBILITY_STATUSES.map((s) => ({ value: s, label: FEASIBILITY_STATUS_LABELS[s] })),
+            onApply: (ids: string[], value: string) => setFeasibilityStatusBulk(ids, value),
+          },
+        ]}
+        emptyTitle="No enquiries to review yet."
+        emptyHint="Enquiries appear here for their Primary Feasibility review."
+      />
+      <ConfirmDialog
+        open={confirmId !== null}
+        onOpenChange={(o) => !o && setConfirmId(null)}
+        title="Move enquiry to Recycle Bin?"
+        description="This moves the whole enquiry (and its pipeline) to the Recycle Bin. You can restore it within 48 hours."
+        confirmLabel="Delete"
+        pending={pending}
+        onConfirm={() => confirmId && del(confirmId)}
+      />
+    </>
   );
 }

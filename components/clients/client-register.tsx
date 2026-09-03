@@ -29,6 +29,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { ClientKycQuickView } from "@/components/clients/client-kyc-quick-view";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { fireToast } from "@/lib/toast";
 import {
   deleteClient,
@@ -886,6 +887,7 @@ function RowMenu({
 }) {
   const router = useRouter();
   const [pending, setPending] = React.useState(false);
+  const [confirmDelete, setConfirmDelete] = React.useState(false);
 
   async function toggleActive() {
     setPending(true);
@@ -911,13 +913,6 @@ function RowMenu({
   // Delete → Recycle Bin (recoverable, purged after 48h). Refused server-side
   // when the client has enquiries — that message surfaces here.
   async function recycle() {
-    if (
-      !window.confirm(
-        `Move "${row.name}" to the Recycle Bin? It can be restored within 48 hours.`,
-      )
-    ) {
-      return;
-    }
     setPending(true);
     try {
       const res = await recycleClient(row.id);
@@ -929,6 +924,7 @@ function RowMenu({
       router.refresh();
     } finally {
       setPending(false);
+      setConfirmDelete(false);
     }
   }
 
@@ -987,6 +983,7 @@ function RowMenu({
   ];
 
   return (
+    <>
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
@@ -1067,7 +1064,7 @@ function RowMenu({
                   className="text-[14px]"
                   onSelect={(e) => {
                     e.preventDefault();
-                    void recycle();
+                    setConfirmDelete(true);
                   }}
                 >
                   <Trash2 size={15} strokeWidth={2.2} />
@@ -1079,6 +1076,21 @@ function RowMenu({
         )}
       </DropdownMenuContent>
     </DropdownMenu>
+    <ConfirmDialog
+      open={confirmDelete}
+      onOpenChange={setConfirmDelete}
+      title="Move client to Recycle Bin?"
+      description={
+        <>
+          <b>{row.name}</b> will move to the Recycle Bin (restorable within 48 hours).
+          A client that already has enquiries can&apos;t be deleted — deactivate it instead.
+        </>
+      }
+      confirmLabel="Delete"
+      pending={pending}
+      onConfirm={() => void recycle()}
+    />
+    </>
   );
 }
 

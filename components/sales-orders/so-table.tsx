@@ -21,6 +21,7 @@ import {
   deleteSalesOrder,
   deleteSalesOrdersBulk,
 } from "@/app/(app)/sales-orders/actions";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { SalesOrderListItem } from "@/lib/queries/sales-orders";
 import {
   SALES_ORDER_STAGE_BUCKETS,
@@ -62,6 +63,25 @@ function soDate(r: SalesOrderListItem): Date {
  */
 export function SoTable({ rows, heading, actions }: Props) {
   const router = useRouter();
+  const [deleteRow, setDeleteRow] = React.useState<SalesOrderListItem | null>(null);
+  const [deleting, setDeleting] = React.useState(false);
+
+  async function runDelete() {
+    if (!deleteRow) return;
+    setDeleting(true);
+    try {
+      const res = await deleteSalesOrder(deleteRow.id);
+      if (res.ok) {
+        fireToast({ message: `Deleted ${deleteRow.soNo}.` });
+        router.refresh();
+        setDeleteRow(null);
+      } else {
+        fireToast({ message: res.error, type: "error" });
+      }
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   // Per-row actions menu: Open + a destructive Delete. Delete is a HARD delete
   // (sales orders have no record-level recycle bin), so it confirms first and
@@ -93,25 +113,10 @@ export function SoTable({ rows, heading, actions }: Props) {
         label: "Delete",
         Icon: Trash2,
         danger: true,
-        onSelect: async (row) => {
-          if (
-            !window.confirm(
-              `Delete sales order ${row.soNo}? This can't be undone.`,
-            )
-          ) {
-            return;
-          }
-          const res = await deleteSalesOrder(row.id);
-          if (res.ok) {
-            fireToast({ message: `Deleted ${row.soNo}.` });
-            router.refresh();
-          } else {
-            fireToast({ message: res.error, type: "error" });
-          }
-        },
+        onSelect: (row) => setDeleteRow(row),
       },
     ],
-    [router],
+    [],
   );
 
   const columns = React.useMemo<RegisterColumn<SalesOrderListItem>[]>(
@@ -266,6 +271,7 @@ export function SoTable({ rows, heading, actions }: Props) {
   );
 
   return (
+    <>
     <RegisterDataTable<SalesOrderListItem>
       tableKey="sales-orders"
       rows={rows}
@@ -327,5 +333,19 @@ export function SoTable({ rows, heading, actions }: Props) {
       emptyTitle="No sales orders yet - record the first one."
       emptyHint="The customer PO and SO documents recorded against each quote appear here."
     />
+    <ConfirmDialog
+      open={deleteRow !== null}
+      onOpenChange={(o) => !o && setDeleteRow(null)}
+      title="Delete sales order?"
+      description={
+        <>
+          <b>{deleteRow?.soNo}</b> will be permanently deleted. This can&apos;t be undone.
+        </>
+      }
+      confirmLabel="Delete"
+      pending={deleting}
+      onConfirm={() => void runDelete()}
+    />
+    </>
   );
 }
