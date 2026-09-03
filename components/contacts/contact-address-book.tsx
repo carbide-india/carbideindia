@@ -54,7 +54,7 @@ export function ContactAddressBook({
     >
       <table
         className="w-full border-collapse text-[13px]"
-        style={{ minWidth: 920 }}
+        style={{ minWidth: 1120 }}
       >
         <thead>
           <tr className="text-left text-[11px] font-bold uppercase tracking-[0.07em] text-ink-subtle">
@@ -165,7 +165,7 @@ export function ContactAddressBook({
                   <td className="px-4 py-2.5 tabular-nums text-ink-soft whitespace-nowrap">
                     {c.contactNo ?? "-"}
                   </td>
-                  <td className="px-4 py-2.5 text-ink-soft break-all">
+                  <td className="whitespace-nowrap px-4 py-2.5 text-ink-soft">
                     {c.email ? (
                       <a
                         href={`mailto:${c.email}`}

@@ -9,7 +9,10 @@ import type { InquiryPriority } from "@/db/enums";
 export function Chip({ label, tone }: { label: string; tone: string }) {
   return (
     <span
-      className="inline-flex items-center px-2.5 py-1 rounded-pill text-[12px] font-bold whitespace-nowrap"
+      // A shared min-width + centred label keeps short status/trade chips
+      // (Export / Domestic / Yes / No / priorities) a consistent size instead of
+      // each hugging its text; longer labels still grow past it.
+      className="inline-flex min-w-[76px] items-center justify-center px-2.5 py-1 rounded-pill text-[12px] font-bold whitespace-nowrap"
       style={{
         background: `color-mix(in srgb, var(--color-${tone}) 12%, transparent)`,
         color: `var(--color-${tone}-deep)`,

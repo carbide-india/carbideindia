@@ -21,7 +21,6 @@ import {
   Trash2,
 } from "lucide-react";
 import { HubSearch } from "@/components/hub/hub-search";
-import { ModuleBrand } from "@/components/layout/module-brand";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import {
   SECONDARY_FEASIBILITY_STAGE_BUCKETS,
@@ -111,9 +110,11 @@ export function SecondaryFeasibilityModuleShell({
               {collapsed ? <PanelLeftOpen className="h-[20px] w-[20px]" /> : <PanelLeftClose className="h-[20px] w-[20px]" />}
             </span>
           </button>
-          {/* Brand lives in the sidebar masthead on the cream sheet — keep it in
-              the header only when collapsed (the sidebar block is hidden then). */}
-          {collapsed && <ModuleBrand collapsed={collapsed} />}
+          {/* Brand logo lives up here in the top bar now. Click → Hub. */}
+          <Link href={"/hub" as Route} aria-label="Carbide India — back to the Hub" title="Back to the Hub" className="shrink-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/logo.png" alt="Carbide India" className="h-8 w-auto max-w-[118px] object-contain" />
+          </Link>
         </div>
 
         <HubSearch />
@@ -149,10 +150,8 @@ export function SecondaryFeasibilityModuleShell({
               <Link
                 href={"/hub" as Route}
                 aria-label="Carbide India — back to the Hub"
-                className="mb-3 flex items-center gap-2.5 rounded-lg px-1 py-1 transition-colors hover:bg-[#e2dfdc]"
+                className="mb-3 flex w-full items-center gap-2.5 overflow-hidden rounded-lg px-1 py-1 transition-colors hover:bg-[#e2dfdc]"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/brand/logo.png" alt="Carbide India" className="h-10 w-auto shrink-0" />
                 <span className="flex min-w-0 flex-col leading-tight">
                   <span className="truncate text-[14px] font-extrabold uppercase tracking-[0.04em] text-[#1f2547]">
                     Secondary Feasibility

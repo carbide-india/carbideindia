@@ -27,7 +27,6 @@ import {
 import type { ReactNode } from "react";
 import { HubSearch } from "@/components/hub/hub-search";
 import { HistoryNav } from "@/components/layout/history-nav";
-import { ModuleBrand } from "@/components/layout/module-brand";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { draftKindForSegment, FORM_DRAFT_META } from "@/lib/drafts/form-drafts";
 import { customEditorForSegment } from "@/lib/custom-lists/registry";
@@ -462,10 +461,12 @@ export function EnquiryModuleShell({
               Back-to-Forms, driving real history navigation with depth-aware
               enable/disable. */}
           <HistoryNav />
-          {/* On the cream sheet the brand lives in the sidebar (logo + module
-              name + tagline), so the header wordmark would double it — keep it
-              only when collapsed, where the sidebar block is hidden. */}
-          {(!themed || collapsed) && <ModuleBrand collapsed={collapsed} />}
+          {/* Brand logo lives up here in the top bar now (moved out of the
+              sidebar). Click → Hub. */}
+          <Link href={"/hub" as Route} aria-label="Carbide India — back to the Hub" title="Back to the Hub" className="shrink-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/logo.png" alt="Carbide India" className="h-8 w-auto max-w-[118px] object-contain" />
+          </Link>
         </div>
 
         {/* Module title — published by the page (a register names itself) with
@@ -540,10 +541,8 @@ export function EnquiryModuleShell({
                 <Link
                   href={"/hub" as Route}
                   aria-label="Carbide India — back to the Hub"
-                  className="mb-3 flex items-center gap-2.5 rounded-lg px-1 py-1 transition-colors hover:bg-[#e2dfdc]"
+                  className="mb-3 flex w-full items-center gap-2.5 overflow-hidden rounded-lg px-1 py-1 transition-colors hover:bg-[#e2dfdc]"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/brand/logo.png" alt="Carbide India" className="h-10 w-auto shrink-0" />
                   <span className="flex min-w-0 flex-col leading-tight">
                     <span className="truncate text-[14px] font-extrabold uppercase tracking-[0.04em] text-[#1f2547]">
                       {brandTitle}

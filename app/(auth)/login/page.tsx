@@ -78,7 +78,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
   const year = new Date().getFullYear();
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto lg:overflow-hidden" style={{ background: "#F4F0E8" }}>
+    <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background: "#F4F0E8" }}>
       <style>{`
         @keyframes loginRise {
           from { opacity: 0; transform: translateY(10px); }
@@ -107,7 +107,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
         <DiamondCascade />
       </div>
 
-      <main className="relative z-10 mx-auto grid h-full min-h-0 w-full max-w-[1280px] grid-rows-[auto_1fr_auto] px-14 py-7 max-lg:h-auto max-lg:min-h-full max-lg:px-8 max-md:px-5">
+      <main className="relative z-10 mx-auto grid min-h-full w-full max-w-[1280px] grid-rows-[auto_1fr_auto] px-14 py-7 max-lg:h-auto max-lg:px-8 max-md:px-5">
         {/* ── Sheet header row (clears the diamond cascade on lg+) ── */}
         <div className="login-rise grid grid-cols-[1fr_minmax(380px,440px)] items-center gap-16 max-lg:grid-cols-1 max-lg:gap-3" style={{ animationDelay: "0.05s" }}>
           <div className="flex items-center gap-4 lg:pl-[340px]">

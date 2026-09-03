@@ -146,10 +146,10 @@ export function NegotiationMiniBoard({ cards }: { cards: NegotiationBoardCard[] 
           setOverLane(null);
         }}
       >
-        {/* One bounded scroller rather than a scrollbar per lane: seven tiny
-            scroll areas in a 250px rail is unusable, and a lane that clips its
-            own contents hides deals. */}
-        <div className="flex max-h-[420px] flex-col gap-1 overflow-y-auto rounded-xl border border-[#e5e7eb] bg-[#fbfbfd] p-1.5">
+        {/* No inner scroller — the sidebar rail already scrolls, and a second
+            nested scrollbar here made two bars sit side by side. Lanes flow and
+            the whole rail scrolls as one. */}
+        <div className="flex flex-col gap-1 rounded-xl border border-[#e5e7eb] bg-[#fbfbfd] p-1.5">
           {NEGOTIATION_STAGE_BUCKETS.map((status) => (
             <Lane
               key={status}

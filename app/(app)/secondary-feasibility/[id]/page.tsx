@@ -81,24 +81,20 @@ export default async function SecondaryFeasibilityReviewPage({
   return (
     <div className="mx-auto w-full max-w-[1400px]">
       <header
-        className="relative mb-5 rounded-section border-2 border-[#2b303b] bg-surface-card px-6 py-4"
+        className="mb-5 rounded-section border-2 border-[#2b303b] bg-surface-card px-6 py-4"
         style={{ boxShadow: "0 6px 20px -10px rgba(15,23,42,0.22)" }}
       >
+        {/* Back link sits on its own row up top — no absolute positioning, so it
+            can never overlap the SM number / client name below. */}
         <Link
           href={"/secondary-feasibility" as Route}
-          className="group absolute left-5 top-1/2 hidden -translate-y-1/2 items-center gap-2 rounded-xl border-2 border-[#c7cae6] bg-surface-card px-[18px] py-2.5 text-[14.5px] font-extrabold text-ink-soft shadow-sm transition-all hover:-translate-y-1/2 hover:border-brand hover:text-brand hover:shadow-md lg:inline-flex"
+          className="group mb-3 inline-flex items-center gap-1.5 rounded-lg border border-[#c7cae6] bg-surface-card px-3 py-1.5 text-[13px] font-bold text-ink-soft transition-colors hover:border-brand hover:text-brand"
         >
-          <ArrowLeft className="h-[18px] w-[18px] transition-transform group-hover:-translate-x-0.5" strokeWidth={2.6} />
+          <ArrowLeft className="h-[15px] w-[15px] transition-transform group-hover:-translate-x-0.5" strokeWidth={2.6} />
           Secondary Queue
         </Link>
-        <Link
-          href={"/secondary-feasibility" as Route}
-          className="mb-2 inline-flex items-center gap-1.5 text-[13px] font-bold text-ink-subtle transition-colors hover:text-brand lg:hidden"
-        >
-          <ArrowLeft className="h-[15px] w-[15px]" strokeWidth={2.6} /> Secondary Queue
-        </Link>
 
-        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-center">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <span className="font-mono text-[24px] font-black leading-none text-[#3f3f94]">{header.smNumber}</span>
           <Chip label={INQUIRY_PRIORITY_LABELS[header.priority]} tone={PRIORITY_TONES[header.priority]} />
           <span className="text-[22px] font-black leading-none tracking-tight text-ink-strong">
@@ -108,7 +104,7 @@ export default async function SecondaryFeasibilityReviewPage({
             Secondary / Technical
           </span>
         </div>
-        <div className="mt-2 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-center text-[13.5px] font-medium text-ink-soft">
+        <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[13.5px] font-medium text-ink-soft">
           {inquiry.productDescription && (
             <span className="font-bold text-ink-strong">{inquiry.productDescription}</span>
           )}

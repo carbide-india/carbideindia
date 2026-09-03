@@ -150,11 +150,6 @@ html[data-density="compact"] body {
       linear-gradient(180deg, #fafbfc 0%, #f5f5f7 100%);
     background-attachment: fixed;
     overflow-x: hidden;
-    /* Global readability bump (owner request 2026-09): everything ~12% larger.
-       A uniform zoom scales the app's many fixed-px sizes together — a font-size
-       change alone wouldn't touch them. The `compact` density rule above is more
-       specific, so it still wins for users who choose compact. */
-    zoom: 1.12;
   }
 
   ::selection {
@@ -1660,8 +1655,12 @@ select.nt-input {
 .nt-field-shell .nt-input:hover,
 .nt-field-shell .nt-input:focus,
 .nt-field-shell .nt-input:focus-visible,
-.nt-field-shell .nt-input:focus-within {
-  border-color: transparent;
+.nt-field-shell .nt-input:focus-within,
+/* An OPEN Select trigger re-asserts its own indigo border; inside a field shell
+   the notch already draws the outline, so keep the trigger transparent — else
+   the two stack into a double border. */
+.nt-field-shell .nt-input[data-state="open"] {
+  border-color: transparent !important;
   background: transparent;
   box-shadow: none;
 }

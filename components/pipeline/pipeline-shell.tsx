@@ -88,7 +88,7 @@ export function PipelineShell({ children, userMenu }: { children: ReactNode; use
               </span>
               <div className="min-w-0">
                 <div className="text-[14px] font-extrabold uppercase tracking-[0.04em] text-[#1f2547]">
-                  Admin Panel
+                  Quick Status
                 </div>
                 <div className="text-[9.5px] leading-tight text-[#777985]">Pipeline Tracker</div>
               </div>

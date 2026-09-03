@@ -22,7 +22,7 @@ export default async function NewVendorPage() {
 
   return (
     <EnquiryModuleShell title="Vendors" userMenu={<UserMenuServer />}>
-      <div className="mx-auto w-full max-w-[900px]">
+      <div className="mx-auto w-full max-w-[1120px]">
         <header className="mb-5">
           <h1 className="text-[26px] font-black leading-none tracking-tight text-[#3f3f94]">
             New Vendor

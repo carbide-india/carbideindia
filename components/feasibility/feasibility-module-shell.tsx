@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import { BUCKET_ICONS } from "@/components/layout/bucket-icon";
 import { HubSearch } from "@/components/hub/hub-search";
-import { ModuleBrand } from "@/components/layout/module-brand";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { FEASIBILITY_STAGE_BUCKETS, FEASIBILITY_STATUS_LABELS } from "@/db/enums";
 import { cn } from "@/lib/utils";
@@ -126,9 +125,12 @@ export function FeasibilityModuleShell({
               {collapsed ? <PanelLeftOpen className="h-[20px] w-[20px]" /> : <PanelLeftClose className="h-[20px] w-[20px]" />}
             </span>
           </button>
-          {/* On the cream sheet the brand lives in the sidebar masthead — keep it
-              here only when collapsed (the sidebar block is hidden then). */}
-          {collapsed && <ModuleBrand collapsed={collapsed} />}
+          {/* Brand logo lives up here in the top bar now (moved out of the
+              sidebar so the masthead reads cleanly). Click → Hub. */}
+          <Link href={"/hub" as Route} aria-label="Carbide India — back to the Hub" title="Back to the Hub" className="shrink-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/logo.png" alt="Carbide India" className="h-8 w-auto max-w-[118px] object-contain" />
+          </Link>
         </div>
 
         {/* Module title lives in the sidebar masthead on the cream sheet, so the
@@ -170,10 +172,8 @@ export function FeasibilityModuleShell({
               <Link
                 href={"/hub" as Route}
                 aria-label="Carbide India — back to the Hub"
-                className="mb-3 flex items-center gap-2.5 rounded-lg px-1 py-1 transition-colors hover:bg-[#e2dfdc]"
+                className="mb-3 flex w-full items-center gap-2.5 overflow-hidden rounded-lg px-1 py-1 transition-colors hover:bg-[#e2dfdc]"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/brand/logo.png" alt="Carbide India" className="h-10 w-auto shrink-0" />
                 <span className="flex min-w-0 flex-col leading-tight">
                   <span className="truncate text-[14px] font-extrabold uppercase tracking-[0.04em] text-[#1f2547]">
                     Primary Feasibility

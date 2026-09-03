@@ -166,7 +166,7 @@ export function PipelineOverview({ rows, status }: { rows: PipelineRow[]; status
     <div className="mx-auto w-full max-w-[1180px]">
       <div className="mb-4">
         <span className="text-[11px] font-black uppercase tracking-[0.18em] text-[#d03232]">
-          Admin Panel
+          Quick Status
         </span>
         <h1 className="mt-1 text-[24px] font-black tracking-tight text-[#1f2547]">
           {active === "completed"
@@ -184,7 +184,10 @@ export function PipelineOverview({ rows, status }: { rows: PipelineRow[]; status
         </p>
       </div>
 
-      {/* Graph: stat tiles + progress bar + stage distribution */}
+      {/* Graphs belong to the whole-pipeline OVERVIEW only — on a filtered view
+          (In Progress / On Hold / …) they'd just restate the tile you clicked,
+          so they're hidden there. */}
+      {active === null && (
       <div className="mb-5 grid gap-3.5 lg:grid-cols-[1fr_1.3fr]">
         {/* Status donut + legend */}
         <div className="pt-enter flex items-center gap-5 rounded-lg border border-[#e2dfdc] bg-white p-5">
@@ -241,6 +244,7 @@ export function PipelineOverview({ rows, status }: { rows: PipelineRow[]; status
           </div>
         </div>
       </div>
+      )}
 
       {/* Search + colour legend */}
       <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">

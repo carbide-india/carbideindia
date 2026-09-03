@@ -63,14 +63,16 @@ export function NegotiationApprovalCard({ negotiationId, status }: Props) {
       title="Negotiation Approval"
       hint="The same five buckets every stage uses - an approved negotiation is what enables Issue Sales Order."
     >
-      <ol className="flex w-full items-stretch gap-1.5 max-md:flex-wrap" aria-label="Negotiation buckets">
+      {/* Always allowed to wrap — six min-width buckets would otherwise exceed a
+          narrow card and spill over the status panel beside it. */}
+      <ol className="flex w-full flex-wrap items-stretch gap-1.5" aria-label="Negotiation buckets">
         {NEGOTIATION_STAGE_BUCKETS.map((b, i) => {
           const tone = NEGOTIATION_STATUS_COLORS[b];
           const done = onRail && i < currentIdx;
           const current = onRail && i === currentIdx;
           const active = done || current;
           return (
-            <li key={b} className="min-w-[120px] flex-1">
+            <li key={b} className="min-w-[104px] flex-1 basis-[104px]">
               <div
                 className="flex flex-col gap-1.5 rounded-xl border px-3 py-2.5"
                 aria-current={current ? "step" : undefined}

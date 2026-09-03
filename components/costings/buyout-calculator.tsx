@@ -897,7 +897,9 @@ function VendorDurationField({
 }) {
   return (
     <Field id={idBase} label={label} labelOnly>
-      <div className="flex items-stretch gap-2">
+      {/* Number on top, a full-width days/weeks toggle below — stacked so the
+          unit control never wraps and spills out of a narrow grid column. */}
+      <div className="flex flex-col gap-1.5">
         <input
           id={idBase}
           type="number"
@@ -916,6 +918,8 @@ function VendorDurationField({
           onChange={(v) => v && onUnit(v)}
           allowClear={false}
           ariaLabel={`${label} unit`}
+          size="lg"
+          activeTone="brand"
         />
       </div>
     </Field>
