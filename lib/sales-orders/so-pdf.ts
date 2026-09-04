@@ -141,7 +141,7 @@ export async function renderSalesOrderPdf(
   }
 
   if (doc0.pendingFieldList) {
-    ensure(64);
+    ensure(28);
     drawPendingFieldNotice(doc, left, width);
   }
 
@@ -411,29 +411,36 @@ function drawGrid(
  * would trust.
  */
 function drawPendingFieldNotice(doc: Doc, left: number, width: number): void {
-  const y = doc.y + 4;
-  const text =
-    "Additional production fields are still to be confirmed with Alok. This copy currently prints the internal " +
-    "grade, internal production code, production part no and production notes already held against each product. " +
-    "Any further shop-floor detail will be added here once the field list is agreed.";
-  doc.font("Helvetica").fontSize(8);
-  const h = doc.heightOfString(text, { width: width - 24 }) + 30;
-  doc.save().roundedRect(left, y, width, h, 5).fill(C.soft).restore();
+  // A compact single-line strip (was a tall paragraph box). The paragraph
+  // reliably orphaned onto a near-empty second page on a normal one-product
+  // factory copy; the honest "pending" signal is kept, just tightened so it
+  // sits at the foot of the page instead of spilling over.
+  const y = doc.y + 2;
+  const h = 20;
+  doc.save().roundedRect(left, y, width, h, 4).fill(C.soft).restore();
   doc.save().rect(left, y, 3.5, h).fill(C.internal).restore();
   doc
     .font("Helvetica-Bold")
-    .fontSize(7.5)
+    .fontSize(7)
     .fillColor(C.internalDeep)
-    .text("PENDING - PRODUCTION FIELD LIST", left + 12, y + 9, {
+    .text("PENDING - PRODUCTION FIELD LIST", left + 12, y + 7, {
       characterSpacing: 1,
       lineBreak: false,
     });
+  const labelW = doc.widthOfString("PENDING - PRODUCTION FIELD LIST", {
+    characterSpacing: 1,
+  });
   doc
     .font("Helvetica")
-    .fontSize(8)
+    .fontSize(7.5)
     .fillColor(C.inkMuted)
-    .text(text, left + 12, y + 22, { width: width - 24 });
-  doc.y = y + h + 8;
+    .text(
+      "Extra shop-floor fields to be confirmed with Alok; this copy prints the internal detail already on record.",
+      left + 12 + labelW + 12,
+      y + 7,
+      { width: width - (labelW + 36), lineBreak: false, ellipsis: true },
+    );
+  doc.y = y + h + 6;
 }
 
 function drawContinuation(
