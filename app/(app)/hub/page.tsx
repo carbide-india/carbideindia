@@ -28,8 +28,6 @@ type ModuleDef = {
   chip: string;
   href: Route;
   Icon: typeof Bell;
-  /** Honest signal shown under the description. `jobs` is filled from a live count. */
-  signal: { kind: "jobs" } | { kind: "text"; text: string };
 };
 
 const MODULES: ModuleDef[] = [
@@ -40,7 +38,6 @@ const MODULES: ModuleDef[] = [
     chip: "ON FLOOR",
     href: "/" as Route,
     Icon: Factory,
-    signal: { kind: "jobs" },
   },
   {
     key: "enquiries",
@@ -49,7 +46,6 @@ const MODULES: ModuleDef[] = [
     chip: "PIPELINE",
     href: "/enquiries" as Route,
     Icon: FileText,
-    signal: { kind: "text", text: "Client KYC → Sales Order" },
   },
   {
     key: "masters",
@@ -58,7 +54,6 @@ const MODULES: ModuleDef[] = [
     chip: "CORE DATA",
     href: "/masters" as Route,
     Icon: Database,
-    signal: { kind: "text", text: "6 master lists" },
   },
   {
     key: "admin",
@@ -67,7 +62,6 @@ const MODULES: ModuleDef[] = [
     chip: "CONTROL",
     href: "/admin" as Route,
     Icon: SlidersHorizontal,
-    signal: { kind: "text", text: "Users · Roles · Audit" },
   },
 ];
 
@@ -75,12 +69,9 @@ export default async function HubPage() {
   const me = await getCurrentEmployee();
   const firstName = me?.name?.trim().split(/\s+/)[0] ?? "there";
 
-  const { activeTasks, inboxUnread } = me
-    ? await getNavCounts({ userId: me.id }).catch(() => ({
-        activeTasks: 0,
-        inboxUnread: 0,
-      }))
-    : { activeTasks: 0, inboxUnread: 0 };
+  const { inboxUnread } = me
+    ? await getNavCounts({ userId: me.id }).catch(() => ({ inboxUnread: 0 }))
+    : { inboxUnread: 0 };
 
   // Real, IST-based date line for the greeting eyebrow.
   const dateLine = new Date().toLocaleDateString("en-GB", {
@@ -211,22 +202,7 @@ export default async function HubPage() {
                 {m.desc}
               </p>
 
-              {/* Honest signal line */}
-              <div
-                className="mt-4 border-t border-dashed border-[#d6d8e6] pt-3.5 text-[12.5px] font-medium text-[#4e5170]"
-                style={{ fontFamily: MONO }}
-              >
-                {m.signal.kind === "jobs" ? (
-                  <>
-                    <span className="font-bold tabular-nums text-[#16172b]">{activeTasks}</span>
-                    {` active ${activeTasks === 1 ? "job" : "jobs"} on the board`}
-                  </>
-                ) : (
-                  m.signal.text
-                )}
-              </div>
-
-              <div className="mt-[18px] flex items-center justify-between">
+              <div className="mt-5 flex items-center justify-between border-t border-[#eceef4] pt-4">
                 <span
                   className="text-[11.5px] font-semibold tracking-[0.12em] text-[#3f3f94]"
                   style={{ fontFamily: MONO }}
