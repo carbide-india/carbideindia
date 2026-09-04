@@ -49,6 +49,18 @@ import { exportRowsToCsv } from "@/lib/registers/export-rows";
 import { cn } from "@/lib/utils";
 
 /*
+ * Radix closes the row's ⋮ menu on select, and the pointer/click that selected
+ * a menu item can land on the row underneath as it unmounts - which would fire
+ * the row's open-navigation and yank the user to the detail page instead of
+ * running the chosen action (e.g. "Delete" navigated instead of opening the
+ * confirm dialog). Any menu action stamps this timestamp; the row's onClick
+ * ignores opens inside the short window that follows. Module-scoped so the
+ * separate RowMenu component and the row handler share one value on the client.
+ */
+let suppressRowOpenUntil = 0;
+const ROW_OPEN_SUPPRESS_MS = 600;
+
+/*
  * RegisterDataTable - the shared advanced data-table for all six Carbide sales
  * registers (Enquiries, Samples, Quotations, Negotiations, Sales Orders,
  * Meetings). Driven entirely by a per-register config (columns + filters +
@@ -1078,6 +1090,9 @@ export function RegisterDataTable<TRow>({
                       // (checkbox, links, action buttons).
                       const t = e.target as HTMLElement;
                       if (t.closest("button, a, input, select, [role='checkbox']")) return;
+                      // A row-menu action just ran - don't let its closing
+                      // click fall through and navigate away from it.
+                      if (Date.now() < suppressRowOpenUntil) return;
                       // The second click of a double-click is handled by
                       // onDoubleClick below — without this an expandable row
                       // would toggle twice on its way to opening.
@@ -1320,6 +1335,9 @@ function RowMenu<TRow>({
             danger={it.danger}
             onSelect={(e) => {
               e.preventDefault();
+              // Block the row's open-navigation from the click that closes
+              // this menu (see suppressRowOpenUntil).
+              suppressRowOpenUntil = Date.now() + ROW_OPEN_SUPPRESS_MS;
               if (it.href) router.push(it.href);
               else it.onSelect?.(row);
             }}
