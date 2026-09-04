@@ -1605,6 +1605,12 @@ html[data-density="compact"] body {
     0 0 0 3px rgba(63, 63, 148, 0.16),
     0 4px 10px -4px rgba(15, 23, 42, 0.12);
 }
+/* Open dropdown (Select trigger). A STANDALONE trigger keeps the indigo border
+   while its popover is open (focus has moved into the popover, so :focus no
+   longer applies). Inside a field shell this is overridden to transparent (the
+   notch owns the outline) — see `.nt-field-shell .nt-input[data-state="open"]`
+   below — so an open dropdown never shows two stacked borders. */
+.nt-input[data-state="open"] { border-color: #3f3f94; }
 /* Native <select> as a skeuomorphic field with a custom chevron — the OS
    arrow is hidden so the control matches the rest of the form. */
 select.nt-input {
@@ -1800,6 +1806,16 @@ select.nt-input {
 }
 .nt-field-shell:focus-within .nt-field-label { color: #3f3f94; }
 
+/* When a Select inside the shell is OPEN, the popover takes focus (so the shell
+   is no longer :focus-within). Light the field outline up anyway, and keep the
+   label indigo — so an open dropdown reads as one active indigo box. The
+   trigger itself stays borderless via the [data-state="open"] rule above. */
+.nt-field-shell:has(.nt-input[data-state="open"]) .nt-field-notch {
+  border-color: #3f3f94;
+  border-width: 2px;
+}
+.nt-field-shell:has(.nt-input[data-state="open"]) .nt-field-label { color: #3f3f94; }
+
 /* Error state — the one place the outline legitimately goes red. */
 .nt-field-shell[data-invalid="true"] .nt-field-notch { border-color: #d32f2f; }
 .nt-field-shell[data-invalid="true"] .nt-field-label { color: #d32f2f; }
@@ -1943,6 +1959,12 @@ select.nt-input {
   border-color: #454595;
   border-width: 1.5px;
   background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(69, 69, 149, 0.15);
+}
+/* Open Select inside the cream-sheet shell: outline goes the cream-theme indigo
+   (#454595), trigger stays borderless — single active box, no double border. */
+.nt-sheet .nt-field-shell:has(.nt-input[data-state="open"]) .nt-field-notch {
+  border-color: #454595;
   box-shadow: 0 0 0 3px rgba(69, 69, 149, 0.15);
 }
 /* Remove the notch cut so the top border is continuous (label is above now). */
