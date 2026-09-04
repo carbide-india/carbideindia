@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
-import { Clock, Trash2, ArrowRight, FilePlus2, Package, Check, X } from "lucide-react";
+import { Clock, Trash2, ArrowRight, FilePlus2, FileText, Package, Check, X } from "lucide-react";
 import { deleteEnquiryDraft } from "@/app/(app)/enquiries/drafts/actions";
 import { fireToast } from "@/lib/toast";
 import { formatDayMonth } from "@/lib/format";
@@ -31,40 +31,6 @@ function relTime(d: string | Date): string {
   if (days === 1) return "yesterday";
   if (days < 7) return `${days}d ago`;
   return formatDayMonth(new Date(t));
-}
-
-function CompletenessRing({ pct }: { pct: number }) {
-  const r = 22;
-  const c = 2 * Math.PI * r;
-  return (
-    <div className="relative h-[58px] w-[58px] shrink-0">
-      <svg viewBox="0 0 58 58" className="h-[58px] w-[58px] -rotate-90">
-        <circle cx="29" cy="29" r={r} fill="none" stroke="#eceef4" strokeWidth="5.5" />
-        <circle
-          cx="29"
-          cy="29"
-          r={r}
-          fill="none"
-          stroke="url(#draftRing)"
-          strokeWidth="5.5"
-          strokeLinecap="round"
-          strokeDasharray={c}
-          strokeDashoffset={c * (1 - pct / 100)}
-          style={{ transition: "stroke-dashoffset .7s cubic-bezier(.22,.61,.36,1)" }}
-        />
-        <defs>
-          <linearGradient id="draftRing" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#3F3F94" />
-            <stop offset="1" stopColor="#7b6cf0" />
-          </linearGradient>
-        </defs>
-      </svg>
-      <span className="absolute inset-0 grid place-items-center text-[13px] font-extrabold tabular-nums text-[#1e2f66]">
-        {pct}
-        <span className="text-[8px]">%</span>
-      </span>
-    </div>
-  );
 }
 
 export function DraftsList({ drafts }: { drafts: DraftItem[] }) {
@@ -132,12 +98,19 @@ export function DraftsList({ drafts }: { drafts: DraftItem[] }) {
             >
               <span className="pointer-events-none absolute inset-x-0 top-0 h-[4px] origin-left scale-x-0 bg-[#454595] transition-transform duration-300 group-hover:scale-x-100" />
 
-              <div className="flex items-start gap-4">
-                <CompletenessRing pct={d.completeness} />
+              <div className="flex items-start gap-3">
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#eef1fb] text-[#3f3f94]">
+                  <FileText className="h-[22px] w-[22px]" strokeWidth={1.9} />
+                </span>
                 <div className="min-w-0 flex-1">
-                  <h3 className="truncate text-[16px] font-extrabold tracking-tight text-[#1e2f66]" title={d.label}>
-                    {d.label}
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="truncate text-[16px] font-extrabold tracking-tight text-[#1e2f66]" title={d.label}>
+                      {d.label || "Untitled enquiry"}
+                    </h3>
+                    <span className="shrink-0 rounded-[4px] bg-[#f1f2fb] px-1.5 py-0.5 text-[9.5px] font-black uppercase tracking-[0.06em] text-[#5b5bb0]">
+                      Draft
+                    </span>
+                  </div>
                   <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] font-semibold text-[#8a90a0]">
                     <span className="inline-flex items-center gap-1">
                       <Package className="h-3.5 w-3.5" />
@@ -145,19 +118,33 @@ export function DraftsList({ drafts }: { drafts: DraftItem[] }) {
                     </span>
                     <span className="inline-flex items-center gap-1" suppressHydrationWarning>
                       <Clock className="h-3.5 w-3.5" />
-                      {relTime(d.updatedAt)}
+                      Edited {relTime(d.updatedAt)}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-5 flex items-center gap-2">
+              {/* Clear, labelled progress instead of an unlabelled % ring. */}
+              <div className="mt-4">
+                <div className="mb-1 flex items-center justify-between text-[11px] font-bold text-[#8a90a0]">
+                  <span className="uppercase tracking-[0.06em]">Filled</span>
+                  <span className="tabular-nums text-[#1e2f66]">{d.completeness}%</span>
+                </div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#eceef4]">
+                  <div
+                    className="h-full rounded-full bg-[linear-gradient(90deg,#3f3f94,#7b6cf0)]"
+                    style={{ width: `${d.completeness}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-center gap-2">
                 <Link
                   href={`/enquiries/new?draft=${d.id}` as Route}
                   className="inline-flex h-[40px] flex-1 items-center justify-center gap-2 rounded-lg bg-[#1e2f66] px-4 text-[12.5px] font-bold tracking-[0.05em] text-white transition hover:bg-[#18274f] hover:shadow-[0_6px_16px_rgba(30,47,102,0.28)]"
                   style={{ fontFamily: MONO }}
                 >
-                  RESUME
+                  CONTINUE
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                 </Link>
                 <button

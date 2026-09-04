@@ -42,23 +42,33 @@ const STATUS_SEGMENTS: { key: keyof StatusCounts; label: string; color: string }
  * (self-contained, no chart lib); each arc draws in via the .pt-donut-seg CSS
  * animation. Empty when there are no enquiries.
  */
-function StatusDonut({ counts }: { counts: StatusCounts }) {
+function StatusDonut({
+  counts,
+  hover,
+  onHover,
+}: {
+  counts: StatusCounts;
+  hover: keyof StatusCounts | null;
+  onHover: (k: keyof StatusCounts | null) => void;
+}) {
   const R = 58;
   const C = 2 * Math.PI * R;
   const denom = counts.total || 1;
   // Precompute each arc's length + cumulative offset up front (pure render).
   const arcs = React.useMemo(() => {
-    const out: { key: string; color: string; seg: number; offset: number }[] = [];
+    const out: { key: keyof StatusCounts; label: string; color: string; seg: number; offset: number }[] = [];
     let acc = 0;
     for (const s of STATUS_SEGMENTS) {
       const value = counts[s.key];
       if (!value) continue;
       const seg = (value / denom) * C;
-      out.push({ key: s.key, color: s.color, seg, offset: acc });
+      out.push({ key: s.key, label: s.label, color: s.color, seg, offset: acc });
       acc += seg;
     }
     return out;
   }, [counts, C, denom]);
+  const active = hover ? STATUS_SEGMENTS.find((s) => s.key === hover) : null;
+  const activeValue = hover ? counts[hover] : counts.total;
   return (
     <div className="relative shrink-0" style={{ width: 132, height: 132 }}>
       <svg viewBox="0 0 132 132" className="h-[132px] w-[132px] -rotate-90">
@@ -71,9 +81,9 @@ function StatusDonut({ counts }: { counts: StatusCounts }) {
             r={R}
             fill="none"
             stroke={a.color}
-            strokeWidth={15}
+            strokeWidth={hover === a.key ? 19 : hover ? 12 : 15}
             strokeDashoffset={-a.offset}
-            className="pt-donut-seg"
+            className="pt-donut-seg cursor-pointer transition-[stroke-width] duration-150"
             style={
               {
                 "--pt-seg": `${a.seg}px`,
@@ -81,16 +91,124 @@ function StatusDonut({ counts }: { counts: StatusCounts }) {
                 animationDelay: `${150 + i * 130}ms`,
               } as React.CSSProperties
             }
+            onMouseEnter={() => onHover(a.key)}
+            onMouseLeave={() => onHover(null)}
           />
         ))}
       </svg>
       <div className="absolute inset-0 grid place-items-center">
         <div className="text-center">
-          <div className="text-[30px] font-black leading-none text-[#1f2547]">{counts.total}</div>
+          <div
+            className="text-[30px] font-black leading-none"
+            style={{ color: active ? active.color : "#1f2547" }}
+          >
+            {activeValue}
+          </div>
           <div className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#777985]">
-            Total
+            {active ? active.label : "Total"}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Interactive line/area chart of "where deals are sitting" (count per stage).
+ * Hovering a point lifts it and shows a tooltip (stage + count). The line/area
+ * is SVG (stretched to fill); the dots + hover live as HTML overlays so they
+ * stay perfectly round and easy to target.
+ */
+function DistributionChart({
+  stages,
+  dist,
+}: {
+  stages: PipelineStageCell[];
+  dist: Map<string, number>;
+}) {
+  const [hover, setHover] = React.useState<number | null>(null);
+  const pts = stages.map((s) => ({ label: s.label, value: dist.get(s.key) ?? 0 }));
+  const n = pts.length;
+  if (n === 0) return null;
+  const max = Math.max(1, ...pts.map((p) => p.value));
+  const W = 300;
+  const H = 100;
+  const xAt = (i: number) => (n <= 1 ? W / 2 : (i / (n - 1)) * W);
+  const yAt = (v: number) => 8 + (1 - v / max) * (H - 16);
+  const linePath = pts
+    .map((p, i) => `${i === 0 ? "M" : "L"} ${xAt(i).toFixed(1)} ${yAt(p.value).toFixed(1)}`)
+    .join(" ");
+  const areaPath = `${linePath} L ${W} ${H} L 0 ${H} Z`;
+  const leftPct = (i: number) => (n <= 1 ? 50 : (i / (n - 1)) * 100);
+  const topPct = (v: number) => (yAt(v) / H) * 100;
+
+  return (
+    <div className="relative">
+      <div className="relative h-[120px] w-full">
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          preserveAspectRatio="none"
+          className="h-full w-full"
+          aria-hidden
+        >
+          <defs>
+            <linearGradient id="ptDistFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#454595" stopOpacity="0.22" />
+              <stop offset="1" stopColor="#454595" stopOpacity="0.02" />
+            </linearGradient>
+          </defs>
+          <path d={areaPath} fill="url(#ptDistFill)" />
+          <path
+            d={linePath}
+            fill="none"
+            stroke="#454595"
+            strokeWidth={2}
+            vectorEffect="non-scaling-stroke"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+        </svg>
+        {/* Dots + hover targets as round HTML overlays. */}
+        {pts.map((p, i) => (
+          <button
+            key={i}
+            type="button"
+            onMouseEnter={() => setHover(i)}
+            onMouseLeave={() => setHover((h) => (h === i ? null : h))}
+            onFocus={() => setHover(i)}
+            onBlur={() => setHover((h) => (h === i ? null : h))}
+            aria-label={`${p.label}: ${p.value}`}
+            className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full outline-none"
+            style={{ left: `${leftPct(i)}%`, top: `${topPct(p.value)}%` }}
+          >
+            <span
+              className={cn(
+                "block rounded-full border-2 border-white bg-[#454595] transition-all",
+                hover === i ? "h-3.5 w-3.5 shadow-[0_0_0_4px_rgba(69,69,149,0.18)]" : "h-2.5 w-2.5",
+              )}
+            />
+            {hover === i && (
+              <span className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#1f2547] px-2 py-1 text-[11px] font-bold text-white shadow-lg">
+                {p.label}: {p.value}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+      {/* X labels */}
+      <div className="mt-1.5 flex">
+        {pts.map((p, i) => (
+          <span
+            key={i}
+            className={cn(
+              "min-w-0 flex-1 truncate px-0.5 text-center text-[9px] font-semibold",
+              hover === i ? "text-[#454595]" : "text-[#a8a8a8]",
+            )}
+            title={p.label}
+          >
+            {p.label}
+          </span>
+        ))}
       </div>
     </div>
   );
@@ -137,7 +255,6 @@ export function PipelineOverview({ rows, status }: { rows: PipelineRow[]; status
     for (const r of rows) map.set(r.currentStageKey, (map.get(r.currentStageKey) ?? 0) + 1);
     return map;
   }, [rows]);
-  const distMax = Math.max(1, ...stageOrder.map((s) => dist.get(s.key) ?? 0));
 
   const active: Status | null =
     status === "in_progress" || status === "on_hold" || status === "completed" || status === "dead"
@@ -146,6 +263,7 @@ export function PipelineOverview({ rows, status }: { rows: PipelineRow[]; status
 
   const [q, setQ] = React.useState("");
   const [page, setPage] = React.useState(1);
+  const [donutHover, setDonutHover] = React.useState<keyof StatusCounts | null>(null);
 
   const filtered = React.useMemo(() => {
     const base = active ? rows.filter((r) => r.overall === active) : rows;
@@ -191,13 +309,21 @@ export function PipelineOverview({ rows, status }: { rows: PipelineRow[]; status
       <div className="mb-5 grid gap-3.5 lg:grid-cols-[1fr_1.3fr]">
         {/* Status donut + legend */}
         <div className="pt-enter flex items-center gap-5 rounded-lg border border-[#e2dfdc] bg-white p-5">
-          <StatusDonut counts={counts} />
+          <StatusDonut counts={counts} hover={donutHover} onHover={setDonutHover} />
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             {STATUS_SEGMENTS.map((s) => {
               const value = counts[s.key];
               const pct = counts.total > 0 ? Math.round((value / counts.total) * 100) : 0;
               return (
-                <div key={s.key} className="flex items-center gap-2.5">
+                <div
+                  key={s.key}
+                  className={cn(
+                    "flex items-center gap-2.5 rounded-md px-1.5 py-0.5 transition-colors",
+                    donutHover === s.key && "bg-[#f5f2ec]",
+                  )}
+                  onMouseEnter={() => setDonutHover(s.key)}
+                  onMouseLeave={() => setDonutHover(null)}
+                >
                   <span
                     className="h-2.5 w-2.5 shrink-0 rounded-full"
                     style={{ background: s.color }}
@@ -215,33 +341,12 @@ export function PipelineOverview({ rows, status }: { rows: PipelineRow[]; status
           </div>
         </div>
 
-        {/* Stage distribution */}
+        {/* Stage distribution — interactive line chart. */}
         <div className="pt-enter rounded-lg border border-[#e2dfdc] bg-white p-4" style={{ animationDelay: "80ms" }}>
           <div className="mb-2.5 text-[11px] font-black uppercase tracking-[0.1em] text-[#777985]">
             Where deals are sitting
           </div>
-          <div className="flex flex-col gap-1.5">
-            {stageOrder.map((s, i) => {
-              const c = dist.get(s.key) ?? 0;
-              return (
-                <div key={s.key} className="flex items-center gap-2">
-                  <span className="w-[76px] shrink-0 text-right text-[11px] font-semibold text-[#57534e]">
-                    {s.label}
-                  </span>
-                  <div className="h-3.5 flex-1 overflow-hidden rounded-[3px] bg-[#f4f0e8]">
-                    <div
-                      className="pt-bar h-full rounded-[3px] bg-[#454595]"
-                      style={{
-                        width: `${(c / distMax) * 100}%`,
-                        animationDelay: `${150 + i * 60}ms`,
-                      }}
-                    />
-                  </div>
-                  <span className="w-6 shrink-0 text-[11px] font-bold tabular-nums text-[#1f2547]">{c}</span>
-                </div>
-              );
-            })}
-          </div>
+          <DistributionChart stages={stageOrder} dist={dist} />
         </div>
       </div>
       )}
