@@ -365,54 +365,47 @@ export function InquiryForm({
       <SectionCard>
         {/* Existing client (required) · Company Name - one line. New clients are
             onboarded only via the Client KYC form (step 01 of the pipeline). */}
-        <div className="flex flex-wrap items-start gap-4">
-          <div className="w-[300px] max-md:w-full">
-            <ExistingClientPicker
-              clientId={clientId}
-              onClientChange={(id) => setValue("clientId", id)}
-              clients={clients}
-              onAutofill={applyAutofill}
-              error={errors.clientId?.message}
+        {/* Same 4-column grid as the rows below, so every field box lines up at
+            a consistent width instead of the old mixed fixed widths. */}
+        <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
+          <ExistingClientPicker
+            clientId={clientId}
+            onClientChange={(id) => setValue("clientId", id)}
+            clients={clients}
+            onAutofill={applyAutofill}
+            error={errors.clientId?.message}
+          />
+          <Field id="inq-company" label="Company Name" required float>
+            <input
+              id="inq-company"
+              type="text"
+              className="nt-input"
+              placeholder="e.g. Precision Tools Pvt Ltd"
+              {...register("companyName")}
             />
-          </div>
-          <div className="min-w-[240px] max-w-[460px] flex-1 max-md:w-full">
-            <Field id="inq-company" label="Company Name" required float>
-              <input
-                id="inq-company"
-                type="text"
-                className="nt-input"
-                placeholder="e.g. Precision Tools Pvt Ltd"
-                {...register("companyName")}
-              />
-            </Field>
-          </div>
-          <div className="w-[132px] max-md:w-full">
-            <Field id="inq-export" label="Export" float>
-              <Controller
-                control={control}
-                name="export"
-                render={({ field }) => (
-                  <Select
-                    id="inq-export"
-                    value={field.value === undefined ? "" : field.value ? "yes" : "no"}
-                    onValueChange={(v) => field.onChange(v === "" ? undefined : v === "yes")}
-                    placeholder="Select"
-                    options={YES_NO_OPTIONS}
-                  />
-                )}
-              />
-            </Field>
-          </div>
-          <div className="w-[160px] max-md:w-full">
-            <Field id="inq-sm" label="SM Number" float>
-              {/* `nt-input` so it is exactly as tall as the fields beside it;
-                  inside a shell it draws no border or fill of its own, so the
-                  second outline this used to have is gone. */}
-              <div className="nt-input flex items-center text-[12.5px] leading-snug text-[#9aa0ab]">
-                Auto-generated on save
-              </div>
-            </Field>
-          </div>
+          </Field>
+          <Field id="inq-export" label="Export" float>
+            <Controller
+              control={control}
+              name="export"
+              render={({ field }) => (
+                <Select
+                  id="inq-export"
+                  value={field.value === undefined ? "" : field.value ? "yes" : "no"}
+                  onValueChange={(v) => field.onChange(v === "" ? undefined : v === "yes")}
+                  placeholder="Select"
+                  options={YES_NO_OPTIONS}
+                />
+              )}
+            />
+          </Field>
+          <Field id="inq-sm" label="SM Number" float>
+            {/* `nt-input` so it is exactly as tall as the fields beside it;
+                inside a shell it draws no border or fill of its own. */}
+            <div className="nt-input flex items-center text-[12.5px] leading-snug text-[#9aa0ab]">
+              Auto-generated on save
+            </div>
+          </Field>
         </div>
 
         <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
