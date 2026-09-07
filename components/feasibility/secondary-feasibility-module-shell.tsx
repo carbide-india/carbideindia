@@ -20,6 +20,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { HubSearch } from "@/components/hub/hub-search";
+import { HistoryNav } from "@/components/layout/history-nav";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import {
   SECONDARY_FEASIBILITY_STAGE_BUCKETS,
@@ -109,6 +110,8 @@ export function SecondaryFeasibilityModuleShell({
               {collapsed ? <PanelLeftOpen className="h-[20px] w-[20px]" /> : <PanelLeftClose className="h-[20px] w-[20px]" />}
             </span>
           </button>
+          {/* Browser-style back / forward — parity with the shared module shell. */}
+          <HistoryNav />
           {/* Brand logo lives up here in the top bar now. Click → Hub. */}
           <Link href={"/hub" as Route} aria-label="Carbide India — back to the Hub" title="Back to the Hub" className="shrink-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -116,7 +119,11 @@ export function SecondaryFeasibilityModuleShell({
           </Link>
         </div>
 
-        <HubSearch />
+        {/* Search - pushed to the right, just before the action icons (matches
+            the shared shell so the two top bars read identically). */}
+        <div className="ml-auto flex min-w-0 flex-1 justify-end pl-4">
+          <HubSearch />
+        </div>
 
         <div className="flex shrink-0 items-center justify-end gap-2.5">
           <Link
@@ -129,7 +136,7 @@ export function SecondaryFeasibilityModuleShell({
           </Link>
           <NotificationBell />
           <span title="Help - coming soon" className="grid h-9 w-9 cursor-default place-items-center rounded-full text-[#a8a8a8]">
-            <HelpCircle className="h-[18px] w-[18px]" />
+            <HelpCircle className="h-[16px] w-[16px]" />
           </span>
           {userMenu}
         </div>

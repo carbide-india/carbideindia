@@ -133,7 +133,7 @@ export function EnquiryLaunchpad({ isAdmin = false }: { isAdmin?: boolean }) {
   return (
     // Fixed to the viewport (below the 60px top bar + main padding) so the whole
     // launchpad shows on ONE screen with no scrolling; the grid fills the space.
-    <div className="relative h-[calc(100vh-108px)] w-full px-6 max-md:px-4">
+    <div className="relative w-full px-6 max-md:px-4">
       {/* Carbide logo floated into the LEFT margin (wide screens); clicking it
           returns to the Hub. Hidden on narrower screens where there is no margin
           room — the top bar still carries the logo there. */}
@@ -194,7 +194,7 @@ export function EnquiryLaunchpad({ isAdmin = false }: { isAdmin?: boolean }) {
               </h3>
 
               <span
-                className="mt-auto inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-md bg-[#eef1fb] px-2 text-[12px] font-bold tracking-[0.06em] text-[#3f3f94] transition-all duration-200 group-hover:text-white group-hover:[background:linear-gradient(135deg,#4a4ab5,#2f2f6f)] group-hover:shadow-[0_10px_22px_-8px_rgba(63,63,148,0.55)]"
+                className="mt-[10px] inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-md bg-[#eef1fb] px-2 text-[12px] font-bold tracking-[0.06em] text-[#3f3f94] transition-all duration-200 group-hover:text-white group-hover:[background:linear-gradient(135deg,#4a4ab5,#2f2f6f)] group-hover:shadow-[0_10px_22px_-8px_rgba(63,63,148,0.55)]"
                 style={{ fontFamily: MONO }}
               >
                 START
@@ -227,7 +227,7 @@ export function EnquiryLaunchpad({ isAdmin = false }: { isAdmin?: boolean }) {
                     Quick Status
                   </h3>
                   <span
-                    className="mt-auto inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-md bg-[#eef1fb] px-2 text-[12px] font-bold tracking-[0.06em] text-[#3f3f94] transition-all duration-200 group-hover:text-white group-hover:[background:linear-gradient(135deg,#4a4ab5,#2f2f6f)] group-hover:shadow-[0_10px_22px_-8px_rgba(63,63,148,0.55)]"
+                    className="mt-[10px] inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-md bg-[#eef1fb] px-2 text-[12px] font-bold tracking-[0.06em] text-[#3f3f94] transition-all duration-200 group-hover:text-white group-hover:[background:linear-gradient(135deg,#4a4ab5,#2f2f6f)] group-hover:shadow-[0_10px_22px_-8px_rgba(63,63,148,0.55)]"
                     style={{ fontFamily: MONO }}
                   >
                     OPEN

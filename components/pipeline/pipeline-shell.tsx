@@ -16,6 +16,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { HubSearch } from "@/components/hub/hub-search";
+import { HistoryNav } from "@/components/layout/history-nav";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { cn } from "@/lib/utils";
 
@@ -52,6 +53,8 @@ export function PipelineShell({ children, userMenu }: { children: ReactNode; use
       {/* Header */}
       <header className="sticky top-0 z-40 flex h-[60px] shrink-0 items-center gap-4 border-b border-[#e2dfdc] bg-[#ffffff] px-4">
         <div className="flex min-w-[232px] shrink-0 items-center gap-2.5">
+          {/* Browser-style back / forward — parity with the shared module shell. */}
+          <HistoryNav />
           <Link href={"/hub" as Route} aria-label="Carbide India — back to the Hub" className="flex items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand/logo.png" alt="Carbide India" className="h-9 w-auto" />

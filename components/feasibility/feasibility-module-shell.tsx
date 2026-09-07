@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { BUCKET_ICONS } from "@/components/layout/bucket-icon";
 import { HubSearch } from "@/components/hub/hub-search";
+import { HistoryNav } from "@/components/layout/history-nav";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { FEASIBILITY_STAGE_BUCKETS, FEASIBILITY_STATUS_LABELS } from "@/db/enums";
 import { cn } from "@/lib/utils";
@@ -124,6 +125,8 @@ export function FeasibilityModuleShell({
               {collapsed ? <PanelLeftOpen className="h-[20px] w-[20px]" /> : <PanelLeftClose className="h-[20px] w-[20px]" />}
             </span>
           </button>
+          {/* Browser-style back / forward — parity with the shared module shell. */}
+          <HistoryNav />
           {/* Brand logo lives up here in the top bar now (moved out of the
               sidebar so the masthead reads cleanly). Click → Hub. */}
           <Link href={"/hub" as Route} aria-label="Carbide India — back to the Hub" title="Back to the Hub" className="shrink-0">
