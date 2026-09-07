@@ -37,6 +37,7 @@ import {
 } from "@/db/enums";
 import { SampleQuickView } from "@/components/samples/sample-quick-view";
 import type { SampleListItem } from "@/lib/queries/samples";
+import { useRowHoverPreview, RowHoverCard } from "@/components/registers/row-hover-preview";
 import type { EmployeeOption } from "@/lib/queries/employees";
 
 export const NEW_SAMPLE_ROUTE = "/samples/new" as Route;
@@ -166,6 +167,7 @@ const COLS_STORAGE_KEY = "carbide.samples.hiddenCols";
  */
 export function SampleRegister({ rows, employees, heading, actions }: Props) {
   const [quickView, setQuickView] = React.useState<SampleListItem | null>(null);
+  const { preview, onRowEnter, onRowLeave } = useRowHoverPreview<SampleListItem>();
 
   const stats = React.useMemo(() => {
     const total = rows.length;
@@ -292,7 +294,7 @@ export function SampleRegister({ rows, employees, heading, actions }: Props) {
 
       {/* Filter bar — the register's name and CTA ride this row rather than a
           header block above it, so the table starts higher. */}
-      <div className="mb-3 flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]">
+      <div className="nt-scrollx mb-3 flex items-center gap-2 overflow-x-auto pb-1.5">
         {heading && <div className="mr-1 flex shrink-0 items-baseline gap-2">{heading}</div>}
         <label className="relative w-[220px] min-w-[180px] flex-1">
           <Search size={14} strokeWidth={2.2} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[#9aa0ab]" />
@@ -406,7 +408,7 @@ export function SampleRegister({ rows, employees, heading, actions }: Props) {
             </thead>
             <tbody>
               {filtered.map((r) => (
-                <tr key={r.id} className="group/row cursor-pointer" onClick={() => setQuickView(r)}>
+                <tr key={r.id} className="group/row cursor-pointer" onClick={() => setQuickView(r)} onMouseEnter={(e) => onRowEnter(r, e)} onMouseLeave={onRowLeave}>
                   <Td sticky left={0} width={W_ACTIONS} className="align-top">
                     <div onClick={(e) => e.stopPropagation()}>
                       <RowMenu row={r} onQuickView={() => setQuickView(r)} />
@@ -428,6 +430,18 @@ export function SampleRegister({ rows, employees, heading, actions }: Props) {
             </tbody>
           </table>
         </div>
+      )}
+
+      {preview && (
+        <RowHoverCard
+          x={preview.x}
+          y={preview.y}
+          fields={[
+            { label: "Sample No", value: preview.row.sampleNo },
+            { label: "Company", value: preview.row.companyName ?? "-" },
+            ...visibleCols.map((c) => ({ label: c.label, value: c.cell(preview.row) })),
+          ]}
+        />
       )}
 
       {quickView && (

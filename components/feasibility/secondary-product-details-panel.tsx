@@ -512,7 +512,10 @@ function Chip({
         "inline-flex items-center rounded-chip border-[1.75px] px-2.5 py-1 text-[12px] transition-all",
         checked
           ? // Selected reads as SELECTED: solid brand fill, white text, lifted.
-            "border-[#2f2f6f] bg-[#3f3f94] font-extrabold text-white shadow-[0_3px_10px_-2px_rgba(63,63,148,0.55)]"
+            // `!` so it beats the drafting-theme `.nt-sheet [role=checkbox]`
+            // rule that otherwise repaints the fill to a pale tint (white text
+            // then vanished on it).
+            "!border-[#2f2f6f] !bg-[#3f3f94] font-extrabold text-white shadow-[0_3px_10px_-2px_rgba(63,63,148,0.55)]"
           : "border-[#9199b6] bg-surface-card font-semibold text-ink-strong hover:border-[#6f78a0] hover:bg-[#f3f4f8]",
       )}
     >

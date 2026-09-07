@@ -99,7 +99,7 @@ export default async function HubPage() {
       </header>
 
       {/* ── Body: vertically centred so it all fits one screen ─────────── */}
-      <main className="mx-auto flex w-full max-w-[1320px] flex-1 flex-col justify-center px-8 py-6 max-md:px-5">
+      <main className="mx-auto flex w-full max-w-[1320px] flex-1 flex-col justify-start px-8 pt-10 pb-6 max-md:px-5 max-md:pt-6">
         {/* Greeting - logo + "Carbide India Welcomes {name}." (bigger) */}
         <div className="hub-in flex flex-col items-center gap-5 text-center">
           <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4">

@@ -453,6 +453,7 @@ function AttachmentsField({
         type="file"
         multiple
         hidden
+        accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.dxf,image/*,application/pdf"
         onChange={(e) => {
           onPick(e.target.files);
           e.target.value = "";
@@ -471,6 +472,9 @@ function AttachmentsField({
         )}
         {uploading > 0 ? `Uploading ${uploading}…` : "Add Files"}
       </button>
+      <p className="text-[12px] leading-snug text-ink-subtle">
+        Images, PDF, Word, Excel, PowerPoint, CSV, TXT or DXF — up to 20&nbsp;MB each.
+      </p>
     </div>
   );
 }

@@ -89,7 +89,7 @@ export function MasterMultiSelect({
   return (
     <div className="flex flex-col gap-1.5">
       {label && (
-        <span className="text-[12.5px] font-bold tracking-[0.005em] text-[#777985]">
+        <span className="text-[15px] font-bold tracking-[0.005em] text-[#3f3f3f]">
           {label}
         </span>
       )}

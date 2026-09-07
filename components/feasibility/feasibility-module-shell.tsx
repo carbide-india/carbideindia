@@ -177,7 +177,7 @@ export function FeasibilityModuleShell({
                   <LayoutGrid className="h-[18px] w-[18px]" strokeWidth={2.1} />
                 </span>
                 <span className="flex min-w-0 flex-col leading-tight">
-                  <span className="truncate text-[14px] font-extrabold uppercase tracking-[0.04em] text-[#1f2547]">
+                  <span className="text-[13.5px] font-extrabold uppercase leading-tight tracking-[0.03em] text-[#1f2547]">
                     Primary Feasibility
                   </span>
                 </span>

@@ -74,7 +74,7 @@ function CheckField({
       {status === "assumed" && (
         // A proper, separate box for the assumed value. It is REQUIRED — the
         // form won't save until it's filled (see CreateInquirySchema).
-        <div className="rounded-xl border-[1.5px] border-amber-300 bg-amber-50/70 p-3">
+        <div className="nt-reveal rounded-xl border-[1.5px] border-amber-300 bg-amber-50/70 p-3">
           <label className="mb-1.5 block text-[12px] font-bold uppercase tracking-[0.08em] text-amber-700">
             Assumed value <span className="text-[#d32f2f]">*</span>
           </label>

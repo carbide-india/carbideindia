@@ -498,7 +498,7 @@ export const SECONDARY_FEASIBILITY_STAGE_BUCKETS = [
 
 export const FEAS_PRIORITIES = ["p1", "p2", "p3", "p5_high_profile"] as const;     // sheet: 1, 2, 3, 5. High Profile
 export type FeasPriority = (typeof FEAS_PRIORITIES)[number];
-export const FEAS_PRIORITY_LABELS: Record<FeasPriority, string> = { p1: "1", p2: "2", p3: "3", p5_high_profile: "5. High Profile" };
+export const FEAS_PRIORITY_LABELS: Record<FeasPriority, string> = { p1: "1 – Normal", p2: "2 – Important", p3: "3 – Urgent", p5_high_profile: "5 – High Profile" };
 
 // Per-dimension primary-feasibility verdict. Append-only: `feasible_with_deviation`
 // (feasible but needs a deviation/recommended change, per APQP's middle path) added last.

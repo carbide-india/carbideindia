@@ -373,7 +373,7 @@ export function ProductsSection({
                     />
                   </div>
                   {sampleReceived && (
-                  <div>
+                  <div className="nt-reveal">
                     <span className="mb-1.5 block text-[14px] font-semibold text-ink-soft">
                       Linked Sample
                     </span>

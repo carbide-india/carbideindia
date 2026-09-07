@@ -152,15 +152,7 @@ export function EnquiryLaunchpad({ isAdmin = false }: { isAdmin?: boolean }) {
         />
       </Link>
 
-      {/* Company name floated into the RIGHT margin. */}
-      <div className="absolute right-4 top-3 z-10 hidden text-right 2xl:block">
-        <div className="text-[20px] font-black leading-tight tracking-tight text-[#1e2340]">
-          Yogeshwar Engineering
-        </div>
-        <div className="mt-0.5 text-[12px] font-bold uppercase tracking-[0.18em] text-[#9aa0b8]">
-          Pvt. Ltd.
-        </div>
-      </div>
+      {/* (Company wordmark moved into the header, centered — see the shell.) */}
 
       {/* ── Card grid — centered, fills the height; rows share it equally
             (auto-rows-fr) so 12 cards land on one screen without scrolling. The
@@ -173,40 +165,36 @@ export function EnquiryLaunchpad({ isAdmin = false }: { isAdmin?: boolean }) {
               key={f.key}
               href={f.href}
               title={f.desc}
-              className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-[#e6e8f2] bg-white p-4 transition-all duration-200 hover:-translate-y-1 hover:border-[#c7cae6] hover:shadow-[0_15px_15px_-10px_#3f3f9480]"
+              className="group relative flex h-full flex-col overflow-hidden rounded-md border border-[#e6e8f2] bg-white p-5 transition-all duration-200 hover:-translate-y-1 hover:border-[#c7cae6] hover:shadow-[0_15px_15px_-10px_#3f3f9480]"
             >
-              {/* Indigo accent bar that wipes across the top on hover. */}
-              <span className="pointer-events-none absolute inset-x-0 top-0 h-[3px] origin-left scale-x-0 bg-[linear-gradient(90deg,#4a4ab5,#7b6cf0)] transition-transform duration-300 group-hover:scale-x-100" />
+              {/* Indigo accent bar down the LEFT edge — grows in on hover. A
+                  vertical rule suits the squarer, rectangular card. */}
+              <span className="pointer-events-none absolute inset-y-0 left-0 w-[3px] origin-top scale-y-0 bg-[linear-gradient(180deg,#4a4ab5,#7b6cf0)] transition-transform duration-300 group-hover:scale-y-100" />
 
               {/* Top row — icon + stage number. */}
               <div className="flex items-start justify-between">
                 <div
-                  className="grid size-12 place-items-center rounded-2xl text-white ring-1 ring-inset ring-white/20 transition-transform duration-200 group-hover:scale-105 group-hover:-rotate-3"
+                  className="grid size-12 place-items-center rounded-lg text-white ring-1 ring-inset ring-white/20 transition-transform duration-200 group-hover:scale-105"
                   style={{ background: CARD_GRAD, boxShadow: "0 10px 22px -8px rgba(63,63,148,0.55)" }}
                 >
                   <f.Icon className="h-6 w-6" strokeWidth={1.9} />
                 </div>
                 <span
-                  className="rounded-full bg-[#f1f2fb] px-2 py-0.5 text-[12px] font-black tabular-nums text-[#5b5bb0] transition-colors group-hover:bg-[#e7e8fb] group-hover:text-[#3f3f94]"
+                  className="text-[15px] font-black tabular-nums text-[#c7cae6] transition-colors group-hover:text-[#3f3f94]"
                   style={{ fontFamily: MONO }}
                 >
                   {n}
                 </span>
               </div>
 
-              {/* Tag chip — the stage's family, adds context without a paragraph. */}
-              <span className="mt-3 w-fit text-[11px] font-black uppercase tracking-[0.12em] text-[#9aa0b8]">
-                {f.tag}
-              </span>
-
-              {/* min-h holds two-line names ("Secondary Feasibility") level with
-                  the one-line ones, so every START sits on the same row. */}
-              <h3 className="mt-1 flex items-start text-[16.5px] font-extrabold leading-snug tracking-tight text-[#1e2340]">
+              {/* Title carries the card now that the family tag is gone. mt-auto
+                  pushes START to the base so every button lines up across rows. */}
+              <h3 className="mt-4 flex items-start text-[17px] font-extrabold leading-snug tracking-tight text-[#1e2340]">
                 {f.title}
               </h3>
 
               <span
-                className="mt-auto inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-xl bg-[#eef1fb] px-2 text-[12px] font-bold tracking-[0.06em] text-[#3f3f94] transition-all duration-200 group-hover:text-white group-hover:[background:linear-gradient(135deg,#4a4ab5,#2f2f6f)] group-hover:shadow-[0_10px_22px_-8px_rgba(63,63,148,0.55)]"
+                className="mt-auto inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-md bg-[#eef1fb] px-2 text-[12px] font-bold tracking-[0.06em] text-[#3f3f94] transition-all duration-200 group-hover:text-white group-hover:[background:linear-gradient(135deg,#4a4ab5,#2f2f6f)] group-hover:shadow-[0_10px_22px_-8px_rgba(63,63,148,0.55)]"
                 style={{ fontFamily: MONO }}
               >
                 START
@@ -224,25 +212,22 @@ export function EnquiryLaunchpad({ isAdmin = false }: { isAdmin?: boolean }) {
                 <Link
                   href={"/pipeline" as Route}
                   title="Quick Status — every enquiry and exactly where it sits"
-                  className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-[#e6e8f2] bg-white p-4 transition-all duration-200 hover:-translate-y-1 hover:border-[#c7cae6] hover:shadow-[0_15px_15px_-10px_#3f3f9480]"
+                  className="group relative flex h-full flex-col overflow-hidden rounded-md border border-[#e6e8f2] bg-white p-5 transition-all duration-200 hover:-translate-y-1 hover:border-[#c7cae6] hover:shadow-[0_15px_15px_-10px_#3f3f9480]"
                 >
-                  <span className="pointer-events-none absolute inset-x-0 top-0 h-[3px] origin-left scale-x-0 bg-[linear-gradient(90deg,#4a4ab5,#7b6cf0)] transition-transform duration-300 group-hover:scale-x-100" />
+                  <span className="pointer-events-none absolute inset-y-0 left-0 w-[3px] origin-top scale-y-0 bg-[linear-gradient(180deg,#4a4ab5,#7b6cf0)] transition-transform duration-300 group-hover:scale-y-100" />
                   <div className="flex items-start justify-between">
                     <div
-                      className="grid size-12 place-items-center rounded-2xl text-white ring-1 ring-inset ring-white/20 transition-transform duration-200 group-hover:scale-105 group-hover:-rotate-3"
+                      className="grid size-12 place-items-center rounded-lg text-white ring-1 ring-inset ring-white/20 transition-transform duration-200 group-hover:scale-105"
                       style={{ background: CARD_GRAD, boxShadow: "0 10px 22px -8px rgba(63,63,148,0.55)" }}
                     >
                       <LayoutGrid className="h-6 w-6" strokeWidth={1.9} />
                     </div>
                   </div>
-                  <span className="mt-3 w-fit text-[11px] font-black uppercase tracking-[0.12em] text-[#9aa0b8]">
-                    Overview
-                  </span>
-                  <h3 className="mt-1 flex items-start text-[16.5px] font-extrabold leading-snug tracking-tight text-[#1e2340]">
+                  <h3 className="mt-4 flex items-start text-[17px] font-extrabold leading-snug tracking-tight text-[#1e2340]">
                     Quick Status
                   </h3>
                   <span
-                    className="mt-auto inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-xl bg-[#eef1fb] px-2 text-[12px] font-bold tracking-[0.06em] text-[#3f3f94] transition-all duration-200 group-hover:text-white group-hover:[background:linear-gradient(135deg,#4a4ab5,#2f2f6f)] group-hover:shadow-[0_10px_22px_-8px_rgba(63,63,148,0.55)]"
+                    className="mt-auto inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-md bg-[#eef1fb] px-2 text-[12px] font-bold tracking-[0.06em] text-[#3f3f94] transition-all duration-200 group-hover:text-white group-hover:[background:linear-gradient(135deg,#4a4ab5,#2f2f6f)] group-hover:shadow-[0_10px_22px_-8px_rgba(63,63,148,0.55)]"
                     style={{ fontFamily: MONO }}
                   >
                     OPEN

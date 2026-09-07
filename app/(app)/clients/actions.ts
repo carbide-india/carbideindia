@@ -242,14 +242,21 @@ export async function createClientKyc(
 
       // Replace-all the normalized children (only when submitted). The delete is
       // a no-op for a brand-new id; for the upsert-existing branch it replaces.
+      // The delete is a replace-all for the upsert-EXISTING branch; for a fresh
+      // insert the id has no children yet, so skip the guaranteed no-op delete
+      // round-trip.
       if (addressRows !== undefined) {
-        await tx.delete(clientAddresses).where(eq(clientAddresses.clientId, id));
+        if (existing) {
+          await tx.delete(clientAddresses).where(eq(clientAddresses.clientId, id));
+        }
         if (addressRows.length > 0) {
           await tx.insert(clientAddresses).values(addressRows);
         }
       }
       if (bankRows !== undefined) {
-        await tx.delete(clientBankAccounts).where(eq(clientBankAccounts.clientId, id));
+        if (existing) {
+          await tx.delete(clientBankAccounts).where(eq(clientBankAccounts.clientId, id));
+        }
         if (bankRows.length > 0) {
           await tx.insert(clientBankAccounts).values(bankRows);
         }
@@ -257,20 +264,24 @@ export async function createClientKyc(
 
       await upsertPrimaryContact(tx, id, toContactColumns(v));
 
-      // Insert additional (non-primary) contacts if provided.
+      // Insert additional (non-primary) contacts in ONE batch insert rather than
+      // a per-row round-trip loop (each round-trip on the remote pooled DB was a
+      // big chunk of the save time).
       if (v.additionalContacts && v.additionalContacts.length > 0) {
-        for (const ac of v.additionalContacts) {
-          if (!ac.firstName) continue;
-          await tx.insert(clientContacts).values({
+        const extraRows = v.additionalContacts
+          .filter((ac) => ac.firstName)
+          .map((ac) => ({
             clientId: id,
-            firstName: ac.firstName,
+            firstName: ac.firstName as string,
             lastName: ac.lastName ?? null,
             designation: ac.designation ?? null,
             contactNo: ac.contactNo ?? null,
             email: ac.email ?? null,
             notes: ac.notes ?? null,
             isPrimary: false,
-          });
+          }));
+        if (extraRows.length > 0) {
+          await tx.insert(clientContacts).values(extraRows);
         }
       }
 

@@ -438,6 +438,19 @@ export async function setQuotationBucket(
     console.error("[setQuotationBucket] failed", err);
     return { ok: false, error: "Could not update the status. Please try again." };
   }
+
+  // Approving a quote is one half of the Negotiation hand-off (the other is
+  // Send). If the quote is ALSO already sent, this starts its negotiation step;
+  // ensureNegotiationForQuote gates on both facts, so it's a no-op otherwise.
+  if (parsed.data.status === "quotation_approved") {
+    try {
+      await ensureNegotiationForQuote(id, me.id);
+      revalidatePath("/negotiations");
+    } catch (err) {
+      console.error("[setQuotationBucket] negotiation provisioning failed", err);
+    }
+  }
+
   revalidatePath("/quotations");
   revalidatePath(`/quotations/${id}`);
   return { ok: true };
@@ -467,6 +480,18 @@ export async function setQuotationBucketBulk(
     console.error("[setQuotationBucketBulk] failed", err);
     return { ok: false, error: "Could not update the statuses. Please try again." };
   }
+
+  // Approving is half the Negotiation hand-off (Send is the other half). Try
+  // each approved row; gated on both facts, so an unsent one is a no-op.
+  if (parsed.data.status === "quotation_approved") {
+    try {
+      for (const id of ids) await ensureNegotiationForQuote(id, me.id);
+      revalidatePath("/negotiations");
+    } catch (err) {
+      console.error("[setQuotationBucketBulk] negotiation provisioning failed", err);
+    }
+  }
+
   revalidatePath("/quotations");
   return { ok: true };
 }

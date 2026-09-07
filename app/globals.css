@@ -1908,6 +1908,60 @@ select.nt-input {
 .nt-sheet:has(.nt-field-shell) section:nth-of-type(6n + 6) { border-left-color: #7c3aed; }
 .nt-sheet:has(.nt-field-shell) section:nth-of-type(6n + 6) h2 { color: #7c3aed; }
 
+/* ── Form motion ─────────────────────────────────────────────────────────────
+   A soft staggered entrance for the section cards on a form page, plus a shared
+   reveal for controls that appear conditionally (the "Assumed" value box, a
+   gated field). Runs once on mount; no re-animation while typing. All motion is
+   dropped under prefers-reduced-motion. Scoped to form sheets only. */
+@keyframes ntSectionIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: none; }
+}
+.nt-sheet:has(.nt-field-shell) section {
+  animation: ntSectionIn 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+.nt-sheet:has(.nt-field-shell) section:nth-of-type(1) { animation-delay: 0.02s; }
+.nt-sheet:has(.nt-field-shell) section:nth-of-type(2) { animation-delay: 0.07s; }
+.nt-sheet:has(.nt-field-shell) section:nth-of-type(3) { animation-delay: 0.12s; }
+.nt-sheet:has(.nt-field-shell) section:nth-of-type(4) { animation-delay: 0.17s; }
+.nt-sheet:has(.nt-field-shell) section:nth-of-type(5) { animation-delay: 0.22s; }
+.nt-sheet:has(.nt-field-shell) section:nth-of-type(6) { animation-delay: 0.27s; }
+.nt-sheet:has(.nt-field-shell) section:nth-of-type(n + 7) { animation-delay: 0.3s; }
+
+/* Conditional controls that pop in (Assumed box, gated fields). */
+@keyframes ntReveal {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+.nt-reveal { animation: ntReveal 0.28s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nt-sheet:has(.nt-field-shell) section,
+  .nt-reveal { animation: none !important; }
+}
+
+/* Discoverable horizontal-scroll strip (register toolbars). The filter row can
+   scroll sideways; make that obvious with a clearly visible scrollbar and a
+   grab cursor so people know the row moves. */
+.nt-scrollx {
+  cursor: grab;
+  scrollbar-width: thin;
+  scrollbar-color: #b9bde0 transparent;
+}
+.nt-scrollx:active { cursor: grabbing; }
+.nt-scrollx::-webkit-scrollbar { height: 9px; }
+.nt-scrollx::-webkit-scrollbar-track { background: transparent; }
+.nt-scrollx::-webkit-scrollbar-thumb {
+  background: #c3c7e6;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.nt-scrollx::-webkit-scrollbar-thumb:hover {
+  background: #9aa2bd;
+  background-clip: padding-box;
+}
+
 /* Flat fields: solid white fill (surface), a hairline border, a SMALL corner
    radius and NO gradient. Covers text inputs AND the Select trigger. */
 .nt-sheet .nt-input {

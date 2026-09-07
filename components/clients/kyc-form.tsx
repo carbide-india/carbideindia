@@ -659,16 +659,19 @@ export function KycForm({
         fireToast({ message: res.error, type: "error" });
         return;
       }
-      // Client saved - retire the draft so it leaves the Drafts inbox.
-      if (draftsOn) await discard();
+      // Client saved - retire the draft so it leaves the Drafts inbox. Fire and
+      // forget: the save is already committed, so don't make the user wait on
+      // this extra round-trip before navigating.
+      if (draftsOn) void discard();
       fireToast({
         message: isEdit
           ? `${values.name} updated.`
           : `Client ${values.name} onboarded.`,
         type: "success",
       });
+      // The action already revalidated /clients, so the push renders fresh —
+      // no blocking router.refresh() needed.
       router.push("/clients" as Route);
-      router.refresh();
     });
   });
 

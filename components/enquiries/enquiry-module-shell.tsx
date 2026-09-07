@@ -479,6 +479,21 @@ export function EnquiryModuleShell({
           </div>
         )}
 
+        {/* Company wordmark, centered in the header — only on the Forms
+            launchpad (no sidebar), where it replaces the card-grid's right-margin
+            block. Absolutely centred so side content never shifts it off-centre;
+            pointer-events-none so it never eats a click meant for the bar. */}
+        {!showSidebar && (
+          <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center max-md:hidden">
+            <div className="text-[16px] font-black leading-none tracking-tight text-[#1e2340]">
+              Yogeshwar Engineering
+            </div>
+            <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.22em] text-[#9aa0b8]">
+              Pvt. Ltd.
+            </div>
+          </div>
+        )}
+
         {/* Search - pushed to the right, just before the action icons. */}
         <div className="ml-auto flex min-w-0 flex-1 justify-end pl-4">
           <HubSearch />
@@ -534,7 +549,7 @@ export function EnquiryModuleShell({
                     <LayoutGrid className="h-[18px] w-[18px]" strokeWidth={2.1} />
                   </span>
                   <span className="flex min-w-0 flex-col leading-tight">
-                    <span className="truncate text-[14px] font-extrabold uppercase tracking-[0.04em] text-[#1f2547]">
+                    <span className="text-[13.5px] font-extrabold uppercase leading-tight tracking-[0.03em] text-[#1f2547]">
                       {brandTitle}
                     </span>
                   </span>

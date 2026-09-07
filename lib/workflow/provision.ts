@@ -57,6 +57,20 @@ export async function provisionNegotiationFromQuote(
     .limit(1);
   if (existing) return { id: existing.id, created: false };
 
+  // Pull the quote header so the negotiation opens with the customer + the
+  // line-#1 commercial mirror already filled — an auto-provisioned negotiation
+  // must NOT land on the board blank / ₹0 (owner report 2026-09-07).
+  const [qHead] = await tx
+    .select({
+      companyName: quotations.companyName,
+      enquiryDate: quotations.enquiryDate,
+      qty: quotations.qty,
+      quotePrice: quotations.quotePrice,
+    })
+    .from(quotations)
+    .where(eq(quotations.id, args.quotationId))
+    .limit(1);
+
   const [cnt] = await tx
     .select({ n: count() })
     .from(negotiations)
@@ -69,6 +83,10 @@ export async function provisionNegotiationFromQuote(
       inquiryId: args.inquiryId,
       quotationId: args.quotationId,
       negotiationNo,
+      companyName: qHead?.companyName ?? undefined,
+      enquiryDate: qHead?.enquiryDate ?? undefined,
+      qty: qHead?.qty ?? undefined,
+      quotePrice: qHead?.quotePrice ?? undefined,
       negotiationStatus: "to_start",
       createdById: args.createdById,
     })
@@ -81,6 +99,9 @@ export async function provisionNegotiationFromQuote(
       inquiryItemId: quotationItems.inquiryItemId,
       itemId: quotationItems.itemId,
       sortOrder: quotationItems.sortOrder,
+      qty: quotationItems.qty,
+      quotePrice: quotationItems.quotePrice,
+      finalCost: quotationItems.finalCost,
     })
     .from(quotationItems)
     .where(eq(quotationItems.quotationId, args.quotationId));
@@ -92,6 +113,11 @@ export async function provisionNegotiationFromQuote(
         inquiryItemId: l.inquiryItemId,
         itemId: l.itemId,
         sortOrder: l.sortOrder,
+        // Carry the commercials so the board value (Σ quotePrice × qty) is real
+        // from the moment the negotiation is created, not after a manual re-key.
+        qty: l.qty,
+        quotePrice: l.quotePrice,
+        finalCost: l.finalCost,
       })),
     );
   }
@@ -119,6 +145,20 @@ export async function provisionSalesOrderFromNegotiation(
     .limit(1);
   if (existing) return { id: existing.id, created: false };
 
+  // Carry the negotiation header so the SO opens with customer + commercials
+  // filled — same "never land blank" rule as the quote → negotiation hand-off.
+  const [nHead] = await tx
+    .select({
+      companyName: negotiations.companyName,
+      enquiryDate: negotiations.enquiryDate,
+      salesPersonId: negotiations.salesPersonId,
+      qty: negotiations.qty,
+      quotePrice: negotiations.quotePrice,
+    })
+    .from(negotiations)
+    .where(eq(negotiations.id, args.negotiationId))
+    .limit(1);
+
   const [cnt] = await tx
     .select({ n: count() })
     .from(salesOrders)
@@ -132,6 +172,11 @@ export async function provisionSalesOrderFromNegotiation(
       quotationId: args.quotationId,
       negotiationId: args.negotiationId,
       soNo,
+      companyName: nHead?.companyName ?? undefined,
+      enquiryDate: nHead?.enquiryDate ?? undefined,
+      salesPersonId: nHead?.salesPersonId ?? undefined,
+      qty: nHead?.qty ?? undefined,
+      quotePrice: nHead?.quotePrice ?? undefined,
       createdById: args.createdById,
     })
     .returning({ id: salesOrders.id });
@@ -144,6 +189,9 @@ export async function provisionSalesOrderFromNegotiation(
       inquiryItemId: negotiationItems.inquiryItemId,
       itemId: negotiationItems.itemId,
       sortOrder: negotiationItems.sortOrder,
+      qty: negotiationItems.qty,
+      quotePrice: negotiationItems.quotePrice,
+      finalCost: negotiationItems.finalCost,
     })
     .from(negotiationItems)
     .where(eq(negotiationItems.negotiationId, args.negotiationId));
@@ -155,6 +203,12 @@ export async function provisionSalesOrderFromNegotiation(
         inquiryItemId: l.inquiryItemId,
         itemId: l.itemId,
         sortOrder: l.sortOrder,
+        // Agreed commercials become the SO's ordered line; qtyOrdered is the
+        // SO's own qty snapshot, seeded from the negotiated qty.
+        qty: l.qty,
+        qtyOrdered: l.qty,
+        quotePrice: l.quotePrice,
+        finalCost: l.finalCost,
       })),
     );
   }
@@ -262,20 +316,31 @@ export async function syncQuotationForInquiry(
 }
 
 /**
- * Quotation → Negotiation hand-off (manual-mode auto-flow). Resolves the quote's
- * inquiry + SM number and provisions the DRAFT negotiation. Idempotent via
- * provisionNegotiationFromQuote (no-op if a negotiation already links the quote).
+ * Quotation → Negotiation hand-off (manual-mode auto-flow). A quote moves into
+ * the Negotiation module ONLY once it is BOTH approved AND sent (owner decision
+ * 2026-09-07: "when approved and quote sent both"). Either fact arriving last
+ * triggers this — the send path AND the approve path both call it — and the
+ * gate here makes the call a no-op until the other fact is also true. Resolves
+ * the quote's inquiry + SM number and provisions the DRAFT negotiation.
+ * Idempotent via provisionNegotiationFromQuote (no-op if one already links it).
  */
 export async function ensureNegotiationForQuote(
   quotationId: string,
   createdById: string,
 ): Promise<ProvisionResult | null> {
   const [q] = await db
-    .select({ inquiryId: quotations.inquiryId })
+    .select({
+      inquiryId: quotations.inquiryId,
+      quotationStatus: quotations.quotationStatus,
+      quoteSent: quotations.quoteSent,
+    })
     .from(quotations)
     .where(eq(quotations.id, quotationId))
     .limit(1);
   if (!q) return null;
+  // Both gates must be satisfied. If only one is, do nothing yet — the action
+  // that supplies the missing fact will call this again and provision then.
+  if (q.quotationStatus !== "quotation_approved" || !q.quoteSent) return null;
   const smNumber = await smNumberForInquiry(db, q.inquiryId);
   if (!smNumber) return null;
   return provisionNegotiationFromQuote(db, {

@@ -38,6 +38,7 @@ import {
   restoreClient,
 } from "@/app/(admin)/admin/clients/actions";
 import type { ClientRegisterRow } from "@/lib/queries/clients";
+import { useRowHoverPreview, RowHoverCard } from "@/components/registers/row-hover-preview";
 import type { ClientGrade } from "@/db/enums";
 
 interface Props {
@@ -206,6 +207,7 @@ export function ClientRegister({ rows, isAdmin, heading, actions }: Props) {
   const [quickView, setQuickView] = React.useState<ClientRegisterRow | null>(
     null,
   );
+  const { preview, onRowEnter, onRowLeave } = useRowHoverPreview<ClientRegisterRow>();
 
   // ── KPI stats ──
   const stats = React.useMemo(() => {
@@ -405,7 +407,7 @@ export function ClientRegister({ rows, isAdmin, heading, actions }: Props) {
           title the sidebar already states. */}
       <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
         {heading}
-        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]">
+        <div className="nt-scrollx flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-1.5">
         <label className="relative w-[220px] min-w-[180px] flex-1">
           <Search
             size={14}
@@ -623,6 +625,8 @@ export function ClientRegister({ rows, isAdmin, heading, actions }: Props) {
                   key={r.id}
                   className="group/row cursor-pointer"
                   onClick={() => setQuickView(r)}
+                  onMouseEnter={(e) => onRowEnter(r, e)}
+                  onMouseLeave={onRowLeave}
                 >
                   <Td sticky left={0} width={W_ACTIONS} className="align-top">
                     {/* Row-action menu manages its own clicks - keep them from
@@ -672,6 +676,18 @@ export function ClientRegister({ rows, isAdmin, heading, actions }: Props) {
             </tbody>
           </table>
         </div>
+      )}
+
+      {preview && (
+        <RowHoverCard
+          x={preview.x}
+          y={preview.y}
+          fields={[
+            { label: "Company", value: preview.row.name },
+            { label: "Contact", value: preview.row.contactName ?? "-" },
+            ...visibleCols.map((c) => ({ label: c.label, value: c.cell(preview.row) })),
+          ]}
+        />
       )}
 
       {quickView && (

@@ -656,7 +656,7 @@ export function SampleForm({
 
       {/* ── 4 · Reports & Processing ─────────────────────────────────── */}
       <SectionCard title="Reports & Processing">
-        <div className="grid grid-cols-[1fr_auto_auto] gap-5 max-lg:grid-cols-1 items-start">
+        <div className="grid grid-cols-[minmax(0,1fr)_220px_190px] gap-5 max-lg:grid-cols-1 items-start">
         <Field label="Sample Reports Uploaded">
           <Controller
             control={control}
