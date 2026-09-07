@@ -337,7 +337,7 @@ export function SoForm({
           >
             {/* Line header */}
             <div className="flex items-center justify-between">
-              <p className="text-[11px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
+              <p className="text-[14px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
                 Line {index + 1}
               </p>
               <button
@@ -441,7 +441,7 @@ export function SoForm({
           <button
             type="button"
             onClick={() => append({ ...EMPTY_LINE })}
-            className="inline-flex items-center gap-2 rounded-chip border border-brand bg-brand/8 px-4 py-2.5 text-[13px] font-semibold text-brand transition-colors hover:bg-brand/12"
+            className="inline-flex items-center gap-2 rounded-chip border border-brand bg-brand/8 px-4 py-2.5 text-[15px] font-semibold text-brand transition-colors hover:bg-brand/12"
           >
             + Add Product
           </button>
@@ -530,7 +530,7 @@ export function SoForm({
         className="flex items-center justify-end gap-3 pt-2"
         style={{ borderTop: "1px solid var(--color-hairline)" }}
       >
-        <span className="text-[11px] text-ink-subtle">
+        <span className="text-[14px] text-ink-subtle">
           Ctrl / &#8984; + Enter to save
         </span>
         <ViewPdfButton title="Sales Order" />
@@ -557,10 +557,10 @@ export function SoForm({
 function Caption({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-[11px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
+      <span className="text-[14px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
         {label}
       </span>
-      <span className="text-[14px] font-semibold text-ink-strong">{children}</span>
+      <span className="text-[16px] font-semibold text-ink-strong">{children}</span>
     </div>
   );
 }

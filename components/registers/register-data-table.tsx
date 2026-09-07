@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
@@ -384,6 +385,20 @@ export function RegisterDataTable<TRow>({
   emptyHint,
 }: RegisterDataTableProps<TRow>) {
   const router = useRouter();
+
+  // Row hover-preview: hovering a row (after a short delay) pops a card with
+  // that record's key fields — built from the same columns the table renders.
+  const [preview, setPreview] = React.useState<{ row: TRow; x: number; y: number } | null>(null);
+  const previewTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const openPreview = React.useCallback((row: TRow, x: number, y: number) => {
+    if (previewTimer.current) clearTimeout(previewTimer.current);
+    previewTimer.current = setTimeout(() => setPreview({ row, x, y }), 400);
+  }, []);
+  const closePreview = React.useCallback(() => {
+    if (previewTimer.current) clearTimeout(previewTimer.current);
+    setPreview(null);
+  }, []);
+  React.useEffect(() => () => { if (previewTimer.current) clearTimeout(previewTimer.current); }, []);
 
   // Normalize the single/plural bulk-action props into one array. Plural wins;
   // otherwise fall back to the legacy singular prop (so the other five
@@ -1085,7 +1100,10 @@ export function RegisterDataTable<TRow>({
                       background:
                         !expanded && i % 2 === 1 ? "rgba(15, 23, 42, 0.028)" : undefined,
                     }}
+                    onMouseEnter={(e) => openPreview(row.original, e.clientX, e.clientY)}
+                    onMouseLeave={closePreview}
                     onClick={(e) => {
+                      closePreview();
                       // Ignore clicks that originate on interactive children
                       // (checkbox, links, action buttons).
                       const t = e.target as HTMLElement;
@@ -1246,6 +1264,39 @@ export function RegisterDataTable<TRow>({
           </div>
         </div>
       )}
+
+      {/* Row hover-preview: a card of the row's fields, portalled to the body so
+          it's never clipped by the table's scroll container. Non-interactive. */}
+      {preview &&
+        createPortal(
+          <div
+            className="pointer-events-none fixed z-[60] max-h-[72vh] w-[330px] overflow-hidden rounded-xl border border-hairline bg-surface-card p-3.5 shadow-[0_20px_50px_-18px_rgba(15,23,42,0.4)]"
+            style={{
+              left: Math.min(preview.x + 18, window.innerWidth - 346),
+              top: Math.min(preview.y + 12, Math.max(12, window.innerHeight - 380)),
+            }}
+          >
+            <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-subtle">
+              Quick preview
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {columns
+                .filter((c) => !c.defaultHidden)
+                .map((c) => (
+                  <div
+                    key={c.id}
+                    className="flex items-start justify-between gap-3 text-[13px] leading-tight"
+                  >
+                    <span className="shrink-0 text-ink-subtle">{c.header}</span>
+                    <span className="min-w-0 text-right font-semibold text-ink-strong">
+                      {c.cell(preview.row)}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

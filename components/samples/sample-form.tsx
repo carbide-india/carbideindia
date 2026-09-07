@@ -90,8 +90,8 @@ interface Props {
 function ClientDetail({ label, value }: { label: string; value: string }) {
   return (
     <span className="inline-flex items-baseline gap-1.5">
-      <span className="text-[10.5px] uppercase tracking-wide font-semibold text-ink-subtle">{label}</span>
-      <span className="text-[13px] font-medium text-ink-soft">{value}</span>
+      <span className="text-[14px] uppercase tracking-wide font-semibold text-ink-subtle">{label}</span>
+      <span className="text-[15px] font-medium text-ink-soft">{value}</span>
     </span>
   );
 }
@@ -490,7 +490,7 @@ export function SampleForm({
         {/* Fetched client details (from Client Master) - read-only context. */}
         {client && (
           <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-[#dfe2ea] bg-surface-soft px-4 py-2.5">
-            <span className="text-[13.5px] font-bold text-ink-strong">{client.name}</span>
+            <span className="text-[15.5px] font-bold text-ink-strong">{client.name}</span>
             {[client.city, client.state].filter(Boolean).length > 0 && (
               <ClientDetail label="Location" value={[client.city, client.state].filter(Boolean).join(", ")} />
             )}
@@ -564,7 +564,7 @@ export function SampleForm({
             ) : (
               <Paperclip size={18} />
             )}
-            <span className="text-[11.5px] font-semibold">
+            <span className="text-[14px] font-semibold">
               {uploadingCount > 0 ? "Uploading" : "Add files"}
             </span>
           </button>
@@ -587,7 +587,7 @@ export function SampleForm({
               <div className="grid grid-cols-[96px_160px_160px_160px_minmax(200px,1fr)] items-start gap-3 max-xl:grid-cols-2 max-sm:grid-cols-1">
                 {/* Aligned to the middle of a 42px field box, not to a stacked
                     label that no longer exists. */}
-                <div className="flex items-start pt-[12px] text-[14px] font-bold text-ink-strong max-xl:col-span-2 max-sm:col-span-1 max-xl:pt-0">
+                <div className="flex items-start pt-[12px] text-[16px] font-bold text-ink-strong max-xl:col-span-2 max-sm:col-span-1 max-xl:pt-0">
                   {row.label}
                 </div>
                 <MiniField label="Status" float>
@@ -657,7 +657,7 @@ export function SampleForm({
       {/* ── 4 · Reports & Processing ─────────────────────────────────── */}
       <SectionCard title="Reports & Processing">
         <div className="grid grid-cols-[1fr_auto_auto] gap-5 max-lg:grid-cols-1 items-start">
-        <Field label="Sample Reports Uploaded" float>
+        <Field label="Sample Reports Uploaded">
           <Controller
             control={control}
             name="reportsUploaded"
@@ -680,7 +680,7 @@ export function SampleForm({
                         )
                       }
                       className={cn(
-                        "inline-flex items-center gap-2 rounded-chip border-[1.75px] px-3 py-2 text-[13px] font-semibold transition-colors",
+                        "inline-flex items-center gap-2 rounded-chip border-[1.75px] px-3 py-2 text-[15px] font-semibold transition-colors",
                         checked
                           ? "border-brand bg-brand/8 text-ink-strong"
                           : "border-[#9199b6] bg-surface-card text-ink-strong hover:border-[#6f78a0] hover:bg-[#f3f4f8]",
@@ -762,7 +762,7 @@ export function SampleForm({
         className="flex items-center justify-end gap-3 pt-2"
         style={{ borderTop: "1px solid var(--color-hairline)" }}
       >
-        <span className="text-[11px] text-ink-subtle">Ctrl / ⌘ + Enter to save</span>
+        <span className="text-[14px] text-ink-subtle">Ctrl / ⌘ + Enter to save</span>
         <ViewPdfButton title="Sample Register" />
         <button
           type="submit"
@@ -839,7 +839,7 @@ function AttachmentTile({ url, onRemove }: { url: string; onRemove: () => void }
       ) : (
         <FileText size={22} className="text-[#3f3f94]" />
       )}
-      <span className="line-clamp-2 w-full break-all text-[10.5px] font-semibold text-ink-soft">
+      <span className="line-clamp-2 w-full break-all text-[14px] font-semibold text-ink-soft">
         {name}
       </span>
     </div>

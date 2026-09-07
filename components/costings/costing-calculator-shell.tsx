@@ -398,7 +398,7 @@ export function CostingCalculatorShell({
       </SectionCard>
 
       {!mode && (
-        <p className="text-[13px] text-ink-subtle">
+        <p className="text-[15px] text-ink-subtle">
           Pick a costing type above to open the calculator.
         </p>
       )}
@@ -550,7 +550,7 @@ export function CostingCalculatorShell({
           className="flex items-center justify-end gap-3 pt-2"
           style={{ borderTop: "1px solid var(--color-hairline)" }}
         >
-          <span className="text-[11px] text-ink-subtle">Ctrl / ⌘ + Enter to save</span>
+          <span className="text-[14px] text-ink-subtle">Ctrl / ⌘ + Enter to save</span>
           <button
             type="submit"
             disabled={pending}
@@ -582,7 +582,7 @@ function PanelHeading({ label }: { label: string }) {
     <div className="flex items-center gap-2.5">
       <span className="h-4 w-1.5 shrink-0 rounded-full" style={{ background: "var(--color-brand)" }} />
       <h2
-        className="text-[13px] font-black uppercase tracking-[0.12em]"
+        className="text-[15px] font-black uppercase tracking-[0.12em]"
         style={{ color: "var(--color-brand)" }}
       >
         {label}
@@ -657,7 +657,7 @@ function CompareView({
       }}
     >
       <p
-        className="mb-4 text-[11px] uppercase tracking-[0.16em] font-bold"
+        className="mb-4 text-[14px] uppercase tracking-[0.16em] font-bold"
         style={{ color: "var(--color-brand)" }}
       >
         Make vs Buy — Compare
@@ -678,25 +678,25 @@ function CompareView({
           style={{ borderColor: "var(--color-brand)", background: "#EEEEFF" }}
         >
           <span
-            className="text-[11px] font-bold uppercase tracking-[0.1em]"
+            className="text-[14px] font-bold uppercase tracking-[0.1em]"
             style={{ color: "var(--color-brand)" }}
           >
             Recommended (cheaper)
           </span>
           {hasBoth ? (
             <>
-              <span className="flex items-center gap-2 text-[18px] font-black text-ink-strong">
+              <span className="flex items-center gap-2 text-[20px] font-black text-ink-strong">
                 {cheaperLabel}
                 <ArrowRight size={16} strokeWidth={2.6} style={{ color: "var(--color-brand)" }} />
                 <span className="tabular-nums">{formatInr(cheaperPerPiece)}</span>
               </span>
-              <span className="text-[12.5px] font-semibold text-ink-muted">
+              <span className="text-[14.5px] font-semibold text-ink-muted">
                 Quote value ≈ {formatInr(cheaperPerPiece * qty)} for {qty} pcs. Both paths are
                 saved; the send-to-customer choice is made at approval.
               </span>
             </>
           ) : (
-            <span className="text-[13px] font-semibold text-ink-subtle">
+            <span className="text-[15px] font-semibold text-ink-subtle">
               Fill both panels to compare.
             </span>
           )}
@@ -723,10 +723,10 @@ function ComparePane({
         background: highlight ? "#ECF7EF" : "var(--color-surface-card)",
       }}
     >
-      <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-subtle">
+      <span className="text-[14px] font-bold uppercase tracking-[0.1em] text-ink-subtle">
         {label}
       </span>
-      <span className="tabular-nums text-[24px] font-black text-ink-strong">
+      <span className="tabular-nums text-[26px] font-black text-ink-strong">
         {value > 0 ? formatInr(value) : "—"}
       </span>
     </div>

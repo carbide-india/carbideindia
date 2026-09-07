@@ -299,6 +299,9 @@ export function InquiryForm({
     setValue("contactNo", data.contact?.contactNo ?? "");
     setValue("contactEmail", data.contact?.email ?? "");
     setValue("ccEmails", data.contact?.ccEmails ?? "");
+    // If this client already has an enquiry, this can't be their first — default
+    // "First Enquiry?" to No (still editable).
+    if (data.hasEnquiries) setValue("firstEnquiry", false);
   }
 
   const submit = handleSubmit((values) => {
@@ -402,7 +405,7 @@ export function InquiryForm({
           <Field id="inq-sm" label="SM Number" float>
             {/* `nt-input` so it is exactly as tall as the fields beside it;
                 inside a shell it draws no border or fill of its own. */}
-            <div className="nt-input flex items-center text-[12.5px] leading-snug text-[#9aa0ab]">
+            <div className="nt-input flex items-center text-[14.5px] leading-snug text-[#9aa0ab]">
               Auto-generated on save
             </div>
           </Field>
@@ -560,7 +563,7 @@ export function InquiryForm({
                           }}
                         />
                         {cityGateError && !selectedState && (
-                          <p className="text-[12.5px] font-semibold" style={{ color: "#D32F2F" }}>
+                          <p className="text-[14.5px] font-semibold" style={{ color: "#D32F2F" }}>
                             Select a state first.
                           </p>
                         )}
@@ -667,7 +670,7 @@ export function InquiryForm({
                         requestAnimationFrame(() => addContactBtnRef.current?.focus());
                       }}
                       aria-label={`Remove contact ${i + 2}`}
-                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-hairline px-2.5 py-1.5 text-[12px] font-semibold text-ink-subtle transition hover:border-[#f0b4b4] hover:bg-[#fdf3f3] hover:text-[#d32f2f]"
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-hairline px-2.5 py-1.5 text-[14px] font-semibold text-ink-subtle transition hover:border-[#f0b4b4] hover:bg-[#fdf3f3] hover:text-[#d32f2f]"
                     >
                       <X className="h-[15px] w-[15px]" />
                       Remove
@@ -700,7 +703,7 @@ export function InquiryForm({
             focusContactIdxRef.current = extraContactFields.length;
             appendContact({ firstName: "", lastName: "", contactNo: "", email: "" });
           }}
-          className="inline-flex w-max items-center gap-1.5 rounded-lg border border-[#c9c9ea] bg-[#f4f4fd] px-4 py-2.5 text-[13px] font-bold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#eeeefb]"
+          className="inline-flex w-max items-center gap-1.5 rounded-lg border border-[#c9c9ea] bg-[#f4f4fd] px-4 py-2.5 text-[15px] font-bold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#eeeefb]"
         >
           <Plus className="h-4 w-4" />
           Add Contact
@@ -879,7 +882,7 @@ export function InquiryForm({
               ? "Update Enquiry"
               : "Create Enquiry"}
         </button>
-        <p className="text-[11px] text-ink-subtle">Ctrl / ⌘ + Enter to save</p>
+        <p className="text-[14px] text-ink-subtle">Ctrl / ⌘ + Enter to save</p>
       </div>
     </form>
   );

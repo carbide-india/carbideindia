@@ -441,7 +441,7 @@ export function InhouseCalculator({
 
         {newToolPicked && (
           <p
-            className="rounded-chip border px-3 py-2 text-[12.5px] font-medium"
+            className="rounded-chip border px-3 py-2 text-[14.5px] font-medium"
             style={{
               background: "#FEF6E7",
               borderColor: "#e2c78a",
@@ -537,12 +537,12 @@ export function InhouseCalculator({
 
         {/* Loss weight live readout */}
         <div className="flex flex-col gap-1">
-          <span className="text-[11px] uppercase tracking-[0.1em] font-bold text-ink-subtle">
+          <span className="text-[14px] uppercase tracking-[0.1em] font-bold text-ink-subtle">
             Loss Weight (live)
           </span>
-          <span className="tabular-nums text-[15px] font-bold text-ink-strong">
+          <span className="tabular-nums text-[17px] font-bold text-ink-strong">
             {out.lossWtGms.toFixed(3)} gms
-            <span className="ml-2 text-[12px] font-semibold text-ink-subtle">
+            <span className="ml-2 text-[14px] font-semibold text-ink-subtle">
               ({(out.effectiveLossPct * 100).toFixed(0)}% applied)
             </span>
           </span>
@@ -593,7 +593,7 @@ export function InhouseCalculator({
           </MiniField>
         </div>
         <div
-          className="inline-flex w-fit items-center gap-2 rounded-chip border px-3 py-1.5 text-[12.5px] font-semibold"
+          className="inline-flex w-fit items-center gap-2 rounded-chip border px-3 py-1.5 text-[14.5px] font-semibold"
           style={{
             background: "#EEEEFF",
             borderColor: "#c6cbdd",
@@ -633,7 +633,7 @@ export function InhouseCalculator({
           </MiniField>
         </div>
         {numOr(value.shapingMins, 0) > 0 && numOrU(value.shapingRatePerMin) === undefined && (
-          <p className="text-[12.5px] font-semibold" style={{ color: "var(--color-red-deep)" }}>
+          <p className="text-[14.5px] font-semibold" style={{ color: "var(--color-red-deep)" }}>
             Shaping rate is required when minutes are entered.
           </p>
         )}
@@ -673,7 +673,7 @@ export function InhouseCalculator({
       >
         <div ref={devFocus.containerRef} className="flex flex-col gap-4">
           {value.devCosts.length === 0 && (
-            <p className="text-[13px] text-ink-subtle">No development costs yet.</p>
+            <p className="text-[15px] text-ink-subtle">No development costs yet.</p>
           )}
           {value.devCosts.map((row, i) => (
             <div
@@ -747,7 +747,7 @@ export function InhouseCalculator({
         {/* Operations */}
         <div ref={machFocus.containerRef} className="flex flex-col gap-4">
           {value.machiningOps.length === 0 && (
-            <p className="text-[13px] text-ink-subtle">
+            <p className="text-[15px] text-ink-subtle">
               No machining operations yet. Add operations from the master.
             </p>
           )}
@@ -814,11 +814,11 @@ export function InhouseCalculator({
         </div>
 
         <div ref={vendFocus.containerRef} className="flex flex-col gap-3">
-          <span className="text-[12px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
+          <span className="text-[14px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
             External Machining Vendors (up to {MAX_EXTERNAL_VENDORS})
           </span>
           {value.externalVendors.length === 0 && (
-            <p className="text-[13px] text-ink-subtle">No external vendor rates.</p>
+            <p className="text-[15px] text-ink-subtle">No external vendor rates.</p>
           )}
           {value.externalVendors.map((row, i) => (
             <div
@@ -878,7 +878,7 @@ export function InhouseCalculator({
             />
           </MiniField>
         </div>
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-[12.5px]">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-[14.5px]">
           <span className="font-semibold text-ink-muted">
             Decided machining base:{" "}
             <span className="tabular-nums font-bold text-ink-strong">{formatInr(machiningBase)}/pc</span>
@@ -919,10 +919,10 @@ export function InhouseCalculator({
 function Out({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-[11px] uppercase tracking-[0.1em] font-bold text-ink-subtle">
+      <span className="text-[14px] uppercase tracking-[0.1em] font-bold text-ink-subtle">
         {label}
       </span>
-      <span className="tabular-nums text-[14px] font-semibold text-ink-strong">{value}</span>
+      <span className="tabular-nums text-[16px] font-semibold text-ink-strong">{value}</span>
     </div>
   );
 }
@@ -961,7 +961,7 @@ function OutputCard({
       }}
     >
       <p
-        className="mb-4 text-[11px] uppercase tracking-[0.16em] font-bold"
+        className="mb-4 text-[14px] uppercase tracking-[0.16em] font-bold"
         style={{ color: "var(--color-brand)" }}
       >
         Live Manufacturing Estimate
@@ -998,7 +998,7 @@ function OutputCard({
       >
         <div className="flex flex-col gap-0.5">
           <span
-            className="text-[11px] uppercase tracking-[0.12em] font-bold"
+            className="text-[14px] uppercase tracking-[0.12em] font-bold"
             style={{ color: "var(--color-brand)" }}
           >
             Quote Price / pc
@@ -1011,10 +1011,10 @@ function OutputCard({
           </span>
         </div>
         <div className="flex flex-col gap-0.5">
-          <span className="text-[11px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
+          <span className="text-[14px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
             Quote Value (×{qty} pcs)
           </span>
-          <span className="tabular-nums text-[22px] font-bold text-ink-strong">
+          <span className="tabular-nums text-[24px] font-bold text-ink-strong">
             {formatInr(out.quoteValue)}
           </span>
         </div>
@@ -1045,7 +1045,7 @@ function AddButton({ label, onClick }: { label: string; onClick: () => void }) {
       <button
         type="button"
         onClick={onClick}
-        className="inline-flex items-center gap-2 rounded-chip border border-brand bg-brand/8 px-4 py-2.5 text-[13px] font-semibold text-brand transition-colors hover:bg-brand/12"
+        className="inline-flex items-center gap-2 rounded-chip border border-brand bg-brand/8 px-4 py-2.5 text-[15px] font-semibold text-brand transition-colors hover:bg-brand/12"
       >
         {label}
       </button>
@@ -1058,7 +1058,7 @@ function RemoveButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex shrink-0 items-center gap-1.5 rounded-chip border border-hairline px-3 py-1.5 text-[12.5px] font-semibold text-ink-muted transition-colors hover:border-hairline-strong hover:text-ink-strong"
+      className="inline-flex shrink-0 items-center gap-1.5 rounded-chip border border-hairline px-3 py-1.5 text-[14.5px] font-semibold text-ink-muted transition-colors hover:border-hairline-strong hover:text-ink-strong"
     >
       <Trash2 size={13} strokeWidth={2.4} />
       Remove

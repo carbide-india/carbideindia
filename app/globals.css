@@ -1565,7 +1565,7 @@ html[data-density="compact"] body {
      (≈44px) so field boxes match each other and stop dwarfing their labels. */
   padding: 11px 15px;
   font-family: var(--font-sans, system-ui, sans-serif);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   line-height: 1.4;
   color: var(--color-ink-strong);
@@ -1730,7 +1730,7 @@ select.nt-input {
      (the legend span's own 6px padding, both sides). */
   max-width: calc(100% - 28px);
   height: 11px;
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 700;
   visibility: hidden; /* takes space (cuts the border) without painting */
   white-space: nowrap;
@@ -1763,10 +1763,10 @@ select.nt-input {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: var(--font-sans, system-ui, sans-serif);
-  font-size: 11.5px;
+  font-size: 15px;
   font-weight: 700;
   line-height: 1;
-  color: var(--color-ink-soft, #4b5563);
+  color: #3f3f3f;
   transition: color 140ms ease;
 }
 .nt-field-req { color: #d32f2f; }
@@ -1820,6 +1820,19 @@ select.nt-input {
 .nt-field-shell[data-invalid="true"] .nt-field-notch { border-color: #d32f2f; }
 .nt-field-shell[data-invalid="true"] .nt-field-label { color: #d32f2f; }
 
+/* GROUP-control fields — a segmented toggle, checkbox chips, or an upload tile
+   already draw their OWN border, so the field's floating outline stacked on top
+   of them as a DOUBLE border. Drop the outline (and its hover/focus/red states)
+   for those fields; the label still sits above and the group keeps its single
+   border. `!important` so it beats the focus-within/invalid notch rules. */
+.nt-field-shell:has([role="radiogroup"]) .nt-field-notch,
+.nt-field-shell:has([role="checkbox"]) .nt-field-notch,
+.nt-field-shell:has(input[type="file"]) .nt-field-notch {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .nt-field-label,
   .nt-field-notch {
@@ -1838,7 +1851,7 @@ select.nt-input {
    ───────────────────────────────────────────────────────────────────────── */
 /* Page background: a clean, flat warm-paper cream — no grid lines. */
 .drafting-grid {
-  background-color: #f4f0e8;
+  background-color: #ffffff;
   background-image: none;
 }
 
@@ -1850,7 +1863,7 @@ select.nt-input {
 .nt-sheet .bg-surface-card,
 .nt-sheet .rounded-panel,
 .nt-sheet .rounded-section {
-  background-color: #f4f0e8;
+  background-color: #ffffff;
   /* Tighter corners for a crisper, more technical look. */
   border-radius: 6px;
 }
@@ -1939,10 +1952,19 @@ select.nt-input {
   left: 1px;
   transform: none;
   max-width: calc(100% - 2px);
-  font-size: 12.5px;
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: 0.005em;
-  color: #777985;
+  color: #3f3f3f;
+}
+
+/* Owner request: the faded label / secondary text on forms read too light.
+   Pull the muted greys to a readable #3f3f3f — scoped to the form sheet so the
+   rest of the app's hierarchy is untouched. */
+.nt-sheet .text-ink-soft,
+.nt-sheet .text-ink-subtle,
+.nt-sheet .text-ink-muted {
+  color: #3f3f3f;
 }
 .nt-sheet .nt-field-shell:focus-within .nt-field-label { color: #454595; }
 
@@ -2000,7 +2022,7 @@ select.nt-input {
 }
 .nt-sheet [role="checkbox"][aria-checked="false"]:hover {
   border-color: #777985;
-  background-color: #f4f0e8;
+  background-color: #ffffff;
 }
 /* The little tick box inside an unchecked chip. */
 .nt-sheet [role="checkbox"][aria-checked="false"] > span:first-child {

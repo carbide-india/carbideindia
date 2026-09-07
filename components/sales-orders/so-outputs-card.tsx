@@ -232,14 +232,14 @@ function CopyPanel({
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           <Icon size={16} strokeWidth={2.4} style={{ color: accent }} />
-          <span className="text-[14px] font-bold text-ink-strong">{title}</span>
+          <span className="text-[16px] font-bold text-ink-strong">{title}</span>
         </div>
         <Chip label={sent ? "Sent" : "Not sent"} tone={sent ? "green" : "slate"} />
       </div>
 
       {internal && (
         <p
-          className="flex items-start gap-1.5 text-[11.5px] font-bold"
+          className="flex items-start gap-1.5 text-[13.5px] font-bold"
           style={{ color: "var(--color-amber-deep)" }}
         >
           <ShieldAlert size={13} strokeWidth={2.4} style={{ marginTop: 1 }} />
@@ -247,7 +247,7 @@ function CopyPanel({
         </p>
       )}
 
-      <p className="text-[12.5px] leading-snug text-ink-muted">{blurb}</p>
+      <p className="text-[14.5px] leading-snug text-ink-muted">{blurb}</p>
 
       <div className={pending ? "pointer-events-none opacity-60" : undefined}>
         <Segmented
@@ -262,14 +262,14 @@ function CopyPanel({
       <div className="flex flex-wrap items-center gap-2 border-t border-hairline pt-3">
         <Link
           href={`/sales-orders/${salesOrderId}/${slug}` as Route}
-          className="inline-flex items-center gap-1.5 rounded-pill border border-hairline bg-surface-card px-3.5 py-1.5 text-[12.5px] font-bold text-ink-strong transition-colors hover:border-hairline-strong"
+          className="inline-flex items-center gap-1.5 rounded-pill border border-hairline bg-surface-card px-3.5 py-1.5 text-[14.5px] font-bold text-ink-strong transition-colors hover:border-hairline-strong"
         >
           <Eye size={13} strokeWidth={2.4} />
           View
         </Link>
         <a
           href={`/sales-orders/${salesOrderId}/${slug}.pdf`}
-          className="inline-flex items-center gap-1.5 rounded-pill border border-hairline bg-surface-card px-3.5 py-1.5 text-[12.5px] font-bold text-ink-strong transition-colors hover:border-hairline-strong"
+          className="inline-flex items-center gap-1.5 rounded-pill border border-hairline bg-surface-card px-3.5 py-1.5 text-[14.5px] font-bold text-ink-strong transition-colors hover:border-hairline-strong"
           title={`Download the ${title.toLowerCase()} of ${soNo}`}
         >
           <Download size={13} strokeWidth={2.4} />
@@ -278,7 +278,7 @@ function CopyPanel({
       </div>
 
       <div className="flex flex-col gap-0.5">
-        <span className="text-[10px] font-black uppercase tracking-[0.12em] text-ink-subtle">
+        <span className="text-[12px] font-black uppercase tracking-[0.12em] text-ink-subtle">
           {storedLinkLabel}
         </span>
         {storedLink ? (
@@ -286,13 +286,13 @@ function CopyPanel({
             href={storedLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 break-all text-[12.5px] font-semibold text-brand hover:underline"
+            className="inline-flex items-center gap-1 break-all text-[14.5px] font-semibold text-brand hover:underline"
           >
             Open stored document
             <ArrowUpRight size={12} strokeWidth={2.4} />
           </a>
         ) : (
-          <span className="text-[12.5px] font-semibold text-ink-subtle">
+          <span className="text-[14.5px] font-semibold text-ink-subtle">
             Not recorded
           </span>
         )}
@@ -326,11 +326,11 @@ function ProductionNotesCard({
         />
 
         <div className="flex flex-col gap-3 border-t border-hairline pt-4">
-          <p className="text-[12px] font-black uppercase tracking-[0.12em] text-ink-subtle">
+          <p className="text-[14px] font-black uppercase tracking-[0.12em] text-ink-subtle">
             Per-product production notes
           </p>
           {lines.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-hairline-strong px-4 py-5 text-center text-[13px] font-semibold text-ink-subtle">
+            <p className="rounded-xl border border-dashed border-hairline-strong px-4 py-5 text-center text-[15px] font-semibold text-ink-subtle">
               No products on this sales order yet — add products and their
               per-product factory notes appear here.
             </p>
@@ -355,14 +355,14 @@ function ProductionNotesCard({
         </div>
 
         <p
-          className="rounded-xl border border-dashed px-4 py-3.5 text-[12.5px] leading-relaxed text-ink-muted"
+          className="rounded-xl border border-dashed px-4 py-3.5 text-[14.5px] leading-relaxed text-ink-muted"
           style={{
             borderColor: "color-mix(in srgb, var(--color-amber) 45%, transparent)",
             background: "color-mix(in srgb, var(--color-amber) 6%, transparent)",
           }}
         >
           <span
-            className="mr-1.5 text-[10px] font-black uppercase tracking-[0.14em]"
+            className="mr-1.5 text-[12px] font-black uppercase tracking-[0.14em]"
             style={{ color: "var(--color-amber-deep)" }}
           >
             Pending
@@ -416,7 +416,7 @@ function NoteEditor({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex flex-wrap items-baseline gap-2">
-        <span className="text-[13px] font-bold text-ink-strong">{label}</span>
+        <span className="text-[15px] font-bold text-ink-strong">{label}</span>
         {sub && (
           <span
             className="text-ink-subtle"
@@ -445,7 +445,7 @@ function NoteEditor({
           <button
             type="button"
             onClick={() => setValue(baseline)}
-            className="text-[12.5px] font-semibold text-ink-muted transition-colors hover:text-ink-strong"
+            className="text-[14.5px] font-semibold text-ink-muted transition-colors hover:text-ink-strong"
           >
             Reset
           </button>
@@ -454,7 +454,7 @@ function NoteEditor({
           type="button"
           onClick={() => void save()}
           disabled={!dirty || saving}
-          className="inline-flex items-center gap-1.5 rounded-pill px-4 py-1.5 text-[12.5px] font-bold text-white transition-opacity disabled:opacity-45"
+          className="inline-flex items-center gap-1.5 rounded-pill px-4 py-1.5 text-[14.5px] font-bold text-white transition-opacity disabled:opacity-45"
           style={{
             background:
               "#454595",

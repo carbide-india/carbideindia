@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Controller, type Control, type UseFormRegister } from "react-hook-form";
+import { Controller, useFormState, useWatch, type Control, type UseFormRegister } from "react-hook-form";
 import { Check } from "lucide-react";
 import {
   CHECK_STATES,
@@ -49,13 +49,18 @@ function CheckField({
   control: Control<InquiryFormValues>;
   register: UseFormRegister<InquiryFormValues>;
 }) {
+  const status = useWatch({ control, name });
+  const { errors } = useFormState({ control });
+  const assumedErr = (
+    errors.assumedValues as Record<string, { message?: string } | undefined> | undefined
+  )?.[assumedKey]?.message;
   return (
-    <Field label={label} float>
-      <Controller
-        control={control}
-        name={name}
-        render={({ field }) => (
-          <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2">
+      <Field label={label} float>
+        <Controller
+          control={control}
+          name={name}
+          render={({ field }) => (
             <Select
               options={CHECK_OPTIONS}
               value={field.value ?? ""}
@@ -63,18 +68,28 @@ function CheckField({
               placeholder="Select"
               className={cn("font-bold", field.value ? CHECK_TEXT_COLOR[field.value] : "")}
             />
-            {field.value === "assumed" && (
-              <input
-                type="text"
-                className="nt-input"
-                placeholder="What value did you assume?"
-                {...register(`assumedValues.${assumedKey}`)}
-              />
-            )}
-          </div>
-        )}
-      />
-    </Field>
+          )}
+        />
+      </Field>
+      {status === "assumed" && (
+        // A proper, separate box for the assumed value. It is REQUIRED — the
+        // form won't save until it's filled (see CreateInquirySchema).
+        <div className="rounded-xl border-[1.5px] border-amber-300 bg-amber-50/70 p-3">
+          <label className="mb-1.5 block text-[12px] font-bold uppercase tracking-[0.08em] text-amber-700">
+            Assumed value <span className="text-[#d32f2f]">*</span>
+          </label>
+          <input
+            type="text"
+            className={cn("nt-input", assumedErr && "!border-[#d32f2f]")}
+            placeholder="What value did you assume?"
+            {...register(`assumedValues.${assumedKey}`)}
+          />
+          {assumedErr && (
+            <p className="mt-1.5 text-[13px] font-semibold text-[#d32f2f]">{assumedErr}</p>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -145,10 +160,10 @@ export function ChecklistSection({
                       )
                     }
                     className={cn(
-                      "inline-flex items-center gap-2 rounded-chip border-[1.75px] px-3 py-2 text-[13px] font-semibold transition-colors",
+                      "inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-[14px] font-semibold transition-colors",
                       checked
-                        ? "border-brand bg-brand/8 text-ink-strong"
-                        : "border-[#9199b6] bg-surface-card text-ink-strong hover:border-[#6f78a0] hover:bg-[#f3f4f8]",
+                        ? "bg-brand/10 text-brand"
+                        : "bg-[#f3f4f8] text-ink-soft hover:bg-[#e9ebf2]",
                     )}
                   >
                     <span

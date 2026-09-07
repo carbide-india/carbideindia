@@ -358,21 +358,21 @@ export function VendorForm({
               )}
             />
             {gstApplicable && gstParse.status === "valid" && (
-              <p className="mt-1 text-[12px] font-semibold text-[#15803d]">
+              <p className="mt-1 text-[14px] font-semibold text-[#15803d]">
                 Valid · {gstParse.stateName}
                 {gstParse.pan ? ` · PAN ${gstParse.pan}` : ""}
               </p>
             )}
             {gstApplicable && gstParse.status === "invalid" && (
               <p
-                className="mt-1 text-[12px] font-semibold"
+                className="mt-1 text-[14px] font-semibold"
                 style={{ color: "var(--color-red-deep)" }}
               >
                 {gstParse.error}
               </p>
             )}
             {gstApplicable && gstParse.status === "idle" && gstParse.stateName && (
-              <p className="mt-1 text-[12px] font-medium text-[#6b7280]">
+              <p className="mt-1 text-[14px] font-medium text-[#6b7280]">
                 {gstParse.stateName} · {15 - gstParse.normalized.length} more
               </p>
             )}

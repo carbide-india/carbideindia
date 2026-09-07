@@ -9,7 +9,6 @@ import {
   CircleDot,
   HelpCircle,
   LayoutGrid,
-  LifeBuoy,
   ListChecks,
   Loader2,
   PauseCircle,
@@ -51,7 +50,7 @@ export function PipelineShell({ children, userMenu }: { children: ReactNode; use
   return (
     <div className="drafting-grid flex min-h-screen flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-40 flex h-[60px] shrink-0 items-center gap-4 border-b border-[#e2dfdc] bg-[#f4f0e8] px-4">
+      <header className="sticky top-0 z-40 flex h-[60px] shrink-0 items-center gap-4 border-b border-[#e2dfdc] bg-[#ffffff] px-4">
         <div className="flex min-w-[232px] shrink-0 items-center gap-2.5">
           <Link href={"/hub" as Route} aria-label="Carbide India — back to the Hub" className="flex items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -64,7 +63,7 @@ export function PipelineShell({ children, userMenu }: { children: ReactNode; use
         <div className="flex shrink-0 items-center justify-end gap-2.5">
           <Link
             href={"/enquiries" as Route}
-            className="group flex h-9 shrink-0 items-center gap-1.5 rounded-md border-[1.5px] border-[#e2dfdc] bg-white px-3 text-[13px] font-bold text-[#454595] transition-colors hover:border-[#454595] hover:bg-[#f4f0e8] max-md:hidden"
+            className="group flex h-9 shrink-0 items-center gap-1.5 rounded-md border-[1.5px] border-[#e2dfdc] bg-white px-3 text-[13px] font-bold text-[#454595] transition-colors hover:border-[#454595] hover:bg-[#ffffff] max-md:hidden"
           >
             <ArrowLeft className="h-[15px] w-[15px]" strokeWidth={2.6} />
             Back to Forms
@@ -139,13 +138,6 @@ export function PipelineShell({ children, userMenu }: { children: ReactNode; use
                 All Forms
               </Link>
             </nav>
-
-            <div className="mt-auto border-t border-[#e2dfdc] pt-2">
-              <span className="flex h-[40px] cursor-default items-center gap-2.5 rounded-md px-3 text-[13px] font-semibold text-[#a8a8a8]">
-                <LifeBuoy className="h-[16px] w-[16px]" />
-                Support
-              </span>
-            </div>
           </div>
         </aside>
 

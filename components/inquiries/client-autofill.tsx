@@ -60,7 +60,7 @@ export function ClientTypeToggle({
             aria-checked={mode === o.value}
             onClick={() => onModeChange(o.value)}
             className={cn(
-              "relative z-10 rounded-lg py-2 text-center text-[13.5px] font-bold transition-colors duration-200",
+              "relative z-10 rounded-lg py-2 text-center text-[15.5px] font-bold transition-colors duration-200",
               mode === o.value ? "text-white" : "text-[#6b7280] hover:text-[#3f3f94]",
             )}
           >
@@ -119,7 +119,7 @@ export function ExistingClientPicker({
     /* `float` so this lines up with Company Name / Export / SM Number beside it
        — a stacked label in a row of floating ones pushed its box a label-height
        lower than every neighbour. */
-    <Field id="inq-client" label="Existing Client" required float>
+    <Field id="inq-client" label="Select Client Name" required float>
       <div className="flex items-center gap-3">
         <div className="flex-1">
           <Select
@@ -135,10 +135,10 @@ export function ExistingClientPicker({
         {loading && <Spinner />}
       </div>
       {loading && (
-        <p className="text-[13px] text-ink-subtle">Fetching client details</p>
+        <p className="text-[15px] text-ink-subtle">Fetching client details</p>
       )}
       {error && (
-        <p className="text-[13px] font-semibold" style={{ color: "#D32F2F" }}>
+        <p className="text-[15px] font-semibold" style={{ color: "#D32F2F" }}>
           {error}
         </p>
       )}
@@ -159,7 +159,7 @@ function ClientContextBlock({ data }: { data: ClientAutofill }) {
           {(data.tags ?? []).map((tag) => (
             <span
               key={tag}
-              className="inline-flex items-center rounded-chip px-2 py-0.5 text-[12px] font-semibold"
+              className="inline-flex items-center rounded-chip px-2 py-0.5 text-[14px] font-semibold"
               style={{
                 background: "rgba(63,63,148,0.1)",
                 color: "var(--color-brand-indigo, #3F3F94)",
@@ -171,7 +171,7 @@ function ClientContextBlock({ data }: { data: ClientAutofill }) {
         </div>
       )}
       {hasNotes && (
-        <p className="text-[12px] text-muted-foreground leading-snug">{data.notes}</p>
+        <p className="text-[14px] text-muted-foreground leading-snug">{data.notes}</p>
       )}
     </div>
   );

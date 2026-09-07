@@ -6,7 +6,6 @@ import { useState, type ReactNode } from "react";
 import type { Route } from "next";
 import {
   HelpCircle,
-  LifeBuoy,
   ArrowLeft,
   ChevronDown,
   Layers,
@@ -97,7 +96,7 @@ export function SecondaryFeasibilityModuleShell({
   return (
     <div className="drafting-grid flex min-h-screen flex-col">
       {/* Top header */}
-      <header className="sticky top-0 z-40 flex h-[60px] shrink-0 items-center gap-4 border-b border-[#e2dfdc] bg-[#f4f0e8] px-4">
+      <header className="sticky top-0 z-40 flex h-[60px] shrink-0 items-center gap-4 border-b border-[#e2dfdc] bg-[#ffffff] px-4">
         <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
@@ -122,7 +121,7 @@ export function SecondaryFeasibilityModuleShell({
         <div className="flex shrink-0 items-center justify-end gap-2.5">
           <Link
             href={"/enquiries" as Route}
-            className="group flex h-9 shrink-0 items-center gap-1.5 rounded-lg border-[1.5px] border-[#e2dfdc] bg-white px-3 text-[13px] font-bold text-[#454595] transition-colors hover:border-[#454595] hover:bg-[#f4f0e8] max-md:hidden"
+            className="group flex h-9 shrink-0 items-center gap-1.5 rounded-lg border-[1.5px] border-[#e2dfdc] bg-white px-3 text-[13px] font-bold text-[#454595] transition-colors hover:border-[#454595] hover:bg-[#ffffff] max-md:hidden"
             aria-label="Back to all forms"
           >
             <ArrowLeft className="h-[15px] w-[15px] transition-transform duration-200 group-hover:-translate-x-0.5" strokeWidth={2.6} />
@@ -140,7 +139,7 @@ export function SecondaryFeasibilityModuleShell({
       <div className="flex flex-1">
         <aside
           className={cn(
-            "sticky top-[60px] h-[calc(100vh-60px)] shrink-0 overflow-hidden border-r border-[#e2dfdc] bg-[#f4f0e8] transition-[width] duration-300 ease-in-out",
+            "sticky top-[60px] h-[calc(100vh-60px)] shrink-0 overflow-hidden border-r border-[#e2dfdc] bg-[#ffffff] transition-[width] duration-300 ease-in-out",
             collapsed ? "w-[72px]" : "w-[248px]",
           )}
         >
@@ -148,33 +147,21 @@ export function SecondaryFeasibilityModuleShell({
             {/* Cream-sheet brand block: logo + module name + tagline masthead. */}
             {!collapsed && (
               <Link
-                href={"/hub" as Route}
-                aria-label="Carbide India — back to the Hub"
+                href={"/enquiries" as Route}
+                aria-label="Back to Forms"
                 className="mb-3 flex w-full items-center gap-2.5 overflow-hidden rounded-lg px-1 py-1 transition-colors hover:bg-[#e2dfdc]"
               >
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#e7e8fb] text-[#3f3f94]">
+                  <LayoutGrid className="h-[18px] w-[18px]" strokeWidth={2.1} />
+                </span>
                 <span className="flex min-w-0 flex-col leading-tight">
                   <span className="truncate text-[14px] font-extrabold uppercase tracking-[0.04em] text-[#1f2547]">
                     Secondary Feasibility
                   </span>
-                  <span className="truncate text-[9.5px] leading-tight text-[#777985]">
-                    Your Tungsten Carbide &amp; Tungsten Copper Partners
-                  </span>
                 </span>
               </Link>
             )}
-            {/* Blueprint diamond cluster — decorative, behind the nav, clipped by
-                the aside's overflow-hidden. */}
-            {!collapsed && (
-              <div aria-hidden className="pointer-events-none absolute -bottom-3 -left-2 z-0 grid grid-cols-5 gap-2 opacity-80">
-                {[
-                  "#e2dfdc", "#a8a8a8", "#1f2547", "#e2dfdc", "#a8a8a8",
-                  "#1f2547", "#e2dfdc", "#d03232", "#a8a8a8", "#e2dfdc",
-                  "#a8a8a8", "#e2dfdc", "#1f2547", "#e2dfdc", "#d03232",
-                ].map((c, i) => (
-                  <span key={i} className="h-3.5 w-3.5 rotate-45 rounded-[2px]" style={{ background: c, opacity: 0.5 }} />
-                ))}
-              </div>
-            )}
+            {/* (Blueprint diamond cluster removed per request.) */}
             {/* Scrolls on its own so the footer below stays pinned in view —
                 a 100vh aside with `overflow-hidden` otherwise clips the
                 "Go to next module" button away on the longer modules. */}
@@ -411,16 +398,6 @@ export function SecondaryFeasibilityModuleShell({
 
             <div className="relative z-10 mt-2 flex w-full shrink-0 flex-col gap-1 border-t border-[#e2dfdc] pt-2">
               <ModuleStepButtons collapsed={collapsed} />
-              <span
-                title="Support - coming soon"
-                className={cn(
-                  "flex h-[44px] cursor-default items-center rounded-lg text-[14px] font-semibold text-[#a8a8a8]",
-                  collapsed ? "justify-center px-0" : "gap-2.5 px-3",
-                )}
-              >
-                <LifeBuoy className="h-[16px] w-[16px]" />
-                {!collapsed && "Support"}
-              </span>
             </div>
           </div>
         </aside>

@@ -88,20 +88,20 @@ export function SoIssueCard({ salesOrder, poHistory, employeeNames }: Props) {
           <div className="rounded-xl border border-hairline bg-[#fbfbfd] p-3.5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[10.5px] font-black uppercase tracking-[0.12em] text-ink-subtle">
+                <p className="text-[12.5px] font-black uppercase tracking-[0.12em] text-ink-subtle">
                   Client PO
                   {salesOrder.customerPoRevisionNo > 1 && (
-                    <span className="ml-1.5 rounded-pill bg-[#efeffb] px-1.5 py-0.5 text-[10px] text-[#3f3f94]">
+                    <span className="ml-1.5 rounded-pill bg-[#efeffb] px-1.5 py-0.5 text-[12px] text-[#3f3f94]">
                       Rev {salesOrder.customerPoRevisionNo}
                     </span>
                   )}
                 </p>
                 {hasPo ? (
                   <>
-                    <p className="mt-1 text-[15px] font-black tracking-tight text-ink-strong">
+                    <p className="mt-1 text-[17px] font-black tracking-tight text-ink-strong">
                       {salesOrder.customerPoNo}
                     </p>
-                    <p className="mt-0.5 text-[12px] font-semibold text-ink-soft">
+                    <p className="mt-0.5 text-[14px] font-semibold text-ink-soft">
                       {salesOrder.customerPoDate
                         ? formatDate(salesOrder.customerPoDate)
                         : "No PO date recorded"}
@@ -121,7 +121,7 @@ export function SoIssueCard({ salesOrder, poHistory, employeeNames }: Props) {
                     </p>
                   </>
                 ) : (
-                  <p className="mt-1 text-[13px] font-semibold text-ink-soft">
+                  <p className="mt-1 text-[15px] font-semibold text-ink-soft">
                     Nothing attached yet. Nothing can be issued until it is.
                   </p>
                 )}
@@ -130,7 +130,7 @@ export function SoIssueCard({ salesOrder, poHistory, employeeNames }: Props) {
               <button
                 type="button"
                 onClick={() => setDialog(hasPo ? "revise-po" : "attach")}
-                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-pill border-[1.5px] border-[#c9cbe0] px-3.5 text-[12.5px] font-extrabold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#efeffb]"
+                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-pill border-[1.5px] border-[#c9cbe0] px-3.5 text-[14.5px] font-extrabold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#efeffb]"
               >
                 <Paperclip size={14} strokeWidth={2.4} />
                 {hasPo ? "Revise Cust PO" : "Attach Client PO"}
@@ -142,7 +142,7 @@ export function SoIssueCard({ salesOrder, poHistory, employeeNames }: Props) {
                 <button
                   type="button"
                   onClick={() => setShowHistory((v) => !v)}
-                  className="inline-flex items-center gap-1.5 text-[11.5px] font-bold text-ink-soft hover:text-[#3f3f94]"
+                  className="inline-flex items-center gap-1.5 text-[13.5px] font-bold text-ink-soft hover:text-[#3f3f94]"
                 >
                   <History size={13} strokeWidth={2.4} />
                   {showHistory ? "Hide" : "Show"} {poHistory.length} superseded{" "}
@@ -155,7 +155,7 @@ export function SoIssueCard({ salesOrder, poHistory, employeeNames }: Props) {
                         key={h.id}
                         className="rounded-lg border border-hairline bg-white px-3 py-2"
                       >
-                        <p className="text-[12.5px] font-bold text-ink-strong">
+                        <p className="text-[14.5px] font-bold text-ink-strong">
                           Rev {h.revisionNo} · {h.customerPoNo ?? "—"}
                           {h.customerPoDate && (
                             <span className="font-semibold text-ink-soft">
@@ -165,11 +165,11 @@ export function SoIssueCard({ salesOrder, poHistory, employeeNames }: Props) {
                           )}
                         </p>
                         {h.reason && (
-                          <p className="mt-0.5 text-[12px] font-medium text-ink-soft">
+                          <p className="mt-0.5 text-[14px] font-medium text-ink-soft">
                             {h.reason}
                           </p>
                         )}
-                        <p className="mt-0.5 text-[11px] font-semibold text-ink-subtle">
+                        <p className="mt-0.5 text-[13px] font-semibold text-ink-subtle">
                           Replaced {formatDate(h.supersededAt)}
                           {h.supersededById && employeeNames[h.supersededById]
                             ? ` by ${employeeNames[h.supersededById]}`
@@ -231,7 +231,7 @@ export function SoIssueCard({ salesOrder, poHistory, employeeNames }: Props) {
 
           {/* ── 3. Revise ────────────────────────────────────────────── */}
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-hairline pt-3.5">
-            <p className="text-[12px] font-semibold text-ink-soft">
+            <p className="text-[14px] font-semibold text-ink-soft">
               {superseded ? (
                 <>
                   Revision {salesOrder.revisionNo} — superseded. Open the latest
@@ -250,7 +250,7 @@ export function SoIssueCard({ salesOrder, poHistory, employeeNames }: Props) {
               <button
                 type="button"
                 onClick={() => setDialog("revise-so")}
-                className="inline-flex h-9 items-center gap-1.5 rounded-pill border-[1.5px] border-[#f0d3a4] bg-[#fdf6e7] px-3.5 text-[12.5px] font-extrabold text-[#8a5a08] transition hover:border-[#b45309] hover:bg-[#f9ecd2]"
+                className="inline-flex h-9 items-center gap-1.5 rounded-pill border-[1.5px] border-[#f0d3a4] bg-[#fdf6e7] px-3.5 text-[14.5px] font-extrabold text-[#8a5a08] transition hover:border-[#b45309] hover:bg-[#f9ecd2]"
               >
                 <FileSignature size={14} strokeWidth={2.4} />
                 Revise SO
@@ -339,7 +339,7 @@ function IssueRow({
           style={{ color: sent ? "#1c7a44" : "#6b7280" }}
         />
         <p
-          className="text-[12.5px] font-black tracking-tight"
+          className="text-[14.5px] font-black tracking-tight"
           style={{ color: sent ? "#1c7a44" : "var(--color-ink-strong)" }}
         >
           {title}
@@ -347,22 +347,22 @@ function IssueRow({
       </div>
 
       {sent ? (
-        <p className="inline-flex items-center gap-1.5 text-[12px] font-bold text-[#1c7a44]">
+        <p className="inline-flex items-center gap-1.5 text-[14px] font-bold text-[#1c7a44]">
           <CheckCircle2 size={13} strokeWidth={2.6} />
           {sentAt ? formatDate(sentAt) : "Issued"}
           {sentBy ? ` · ${sentBy}` : ""}
         </p>
       ) : (
         <>
-          <p className="text-[11.5px] font-medium leading-snug text-ink-soft">{blurb}</p>
+          <p className="text-[13.5px] font-medium leading-snug text-ink-soft">{blurb}</p>
           {disabledReason ? (
-            <p className="text-[11.5px] font-bold text-[#8a5a08]">{disabledReason}</p>
+            <p className="text-[13.5px] font-bold text-[#8a5a08]">{disabledReason}</p>
           ) : (
             <button
               type="button"
               onClick={onIssue}
               disabled={pending}
-              className="inline-flex h-9 w-fit items-center gap-1.5 rounded-pill px-4 text-[12.5px] font-extrabold text-white transition-opacity disabled:opacity-50"
+              className="inline-flex h-9 w-fit items-center gap-1.5 rounded-pill px-4 text-[14.5px] font-extrabold text-white transition-opacity disabled:opacity-50"
               style={{ background: "#454595" }}
             >
               {pending && (
@@ -412,9 +412,9 @@ function Modal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="border-b border-hairline px-5 py-4">
-          <h2 className="text-[16px] font-black tracking-tight text-ink-strong">{title}</h2>
+          <h2 className="text-[18px] font-black tracking-tight text-ink-strong">{title}</h2>
           {subtitle && (
-            <p className="mt-0.5 text-[12.5px] font-semibold text-ink-soft">{subtitle}</p>
+            <p className="mt-0.5 text-[14.5px] font-semibold text-ink-soft">{subtitle}</p>
           )}
         </div>
         <div className="flex flex-col gap-3 p-5">{children}</div>
@@ -426,7 +426,7 @@ function Modal({
   );
 }
 
-const LABEL = "text-[10.5px] font-black uppercase tracking-[0.12em] text-ink-subtle";
+const LABEL = "text-[12.5px] font-black uppercase tracking-[0.12em] text-ink-subtle";
 
 function PoDialog({
   mode,
@@ -489,7 +489,7 @@ function PoDialog({
             type="button"
             onClick={onClose}
             disabled={busy}
-            className="h-9 rounded-pill px-4 text-[13px] font-bold text-ink-soft hover:text-ink-strong"
+            className="h-9 rounded-pill px-4 text-[15px] font-bold text-ink-soft hover:text-ink-strong"
           >
             Cancel
           </button>
@@ -497,7 +497,7 @@ function PoDialog({
             type="button"
             onClick={() => void submit()}
             disabled={busy || blocked}
-            className="inline-flex h-9 items-center gap-2 rounded-pill px-5 text-[13px] font-extrabold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-45"
+            className="inline-flex h-9 items-center gap-2 rounded-pill px-5 text-[15px] font-extrabold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-45"
             style={{ background: "#454595" }}
           >
             {busy && <Loader2 size={14} style={{ animation: "spinFast 0.8s linear infinite" }} />}
@@ -593,7 +593,7 @@ function ReviseSoDialog({
             type="button"
             onClick={onClose}
             disabled={busy}
-            className="h-9 rounded-pill px-4 text-[13px] font-bold text-ink-soft hover:text-ink-strong"
+            className="h-9 rounded-pill px-4 text-[15px] font-bold text-ink-soft hover:text-ink-strong"
           >
             Cancel
           </button>
@@ -601,7 +601,7 @@ function ReviseSoDialog({
             type="button"
             onClick={() => void submit()}
             disabled={busy || reason.trim().length < 3}
-            className="inline-flex h-9 items-center gap-2 rounded-pill px-5 text-[13px] font-extrabold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-45"
+            className="inline-flex h-9 items-center gap-2 rounded-pill px-5 text-[15px] font-extrabold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-45"
             style={{ background: "#454595" }}
           >
             {busy && <Loader2 size={14} style={{ animation: "spinFast 0.8s linear infinite" }} />}
@@ -620,7 +620,7 @@ function ReviseSoDialog({
         onChange={(e) => setReason(e.target.value)}
         placeholder="Customer revised the PO quantity — delivery schedule reworked."
       />
-      <p className="text-[11.5px] font-semibold text-ink-subtle">
+      <p className="text-[13.5px] font-semibold text-ink-subtle">
         The frozen revision stays open to read, so what the factory and the customer
         were given is never lost.
       </p>

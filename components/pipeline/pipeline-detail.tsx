@@ -275,7 +275,7 @@ export function PipelineDetail({ row, isApprover = false }: { row: PipelineRow; 
               const canDecide = DECISION_STAGES.has(st.key as PipelineStageKey) && !frozen;
               return (
                 <div key={st.key} className={cn("flex flex-wrap items-center gap-3 px-4 py-2.5", i > 0 && "border-t border-[#f3f1ec]")}>
-                  <span className="grid size-6 shrink-0 place-items-center rounded-full bg-[#f4f0e8] text-[11px] font-black text-[#777985] tabular-nums">
+                  <span className="grid size-6 shrink-0 place-items-center rounded-full bg-[#ffffff] text-[11px] font-black text-[#777985] tabular-nums">
                     {i + 1}
                   </span>
                   <span className="w-[104px] shrink-0 text-[13px] font-bold text-[#1f2547]">{st.label}</span>
@@ -304,7 +304,7 @@ export function PipelineDetail({ row, isApprover = false }: { row: PipelineRow; 
 
                   <Link
                     href={stageHref(st.key, row.inquiryId)}
-                    className="ml-auto inline-flex h-7 items-center gap-1 rounded-[4px] border border-[#e2dfdc] bg-[#f4f0e8] px-2 text-[11px] font-bold text-[#454595] transition-colors hover:border-[#454595] hover:bg-[#454595]/10"
+                    className="ml-auto inline-flex h-7 items-center gap-1 rounded-[4px] border border-[#e2dfdc] bg-[#ffffff] px-2 text-[11px] font-bold text-[#454595] transition-colors hover:border-[#454595] hover:bg-[#454595]/10"
                   >
                     Open <ArrowUpRight className="h-3 w-3" />
                   </Link>
@@ -322,14 +322,14 @@ export function PipelineDetail({ row, isApprover = false }: { row: PipelineRow; 
             const t = STATE_TEXT[st.state];
             return (
               <div key={st.key} className={cn("flex items-center gap-3 px-4 py-3", i > 0 && "border-t border-[#f3f1ec]")}>
-                <span className="grid size-6 shrink-0 place-items-center rounded-full bg-[#f4f0e8] text-[11px] font-black text-[#777985] tabular-nums">
+                <span className="grid size-6 shrink-0 place-items-center rounded-full bg-[#ffffff] text-[11px] font-black text-[#777985] tabular-nums">
                   {i + 1}
                 </span>
                 <span className="w-[110px] shrink-0 text-[13px] font-bold text-[#1f2547]">{st.label}</span>
                 <span className={cn("flex-1 text-[12.5px] font-semibold", t.cls)}>{t.label}</span>
                 <Link
                   href={stageHref(st.key, row.inquiryId)}
-                  className="inline-flex h-7 items-center gap-1 rounded-[4px] border border-[#e2dfdc] bg-[#f4f0e8] px-2 text-[11px] font-bold text-[#454595] transition-colors hover:border-[#454595] hover:bg-[#454595]/10"
+                  className="inline-flex h-7 items-center gap-1 rounded-[4px] border border-[#e2dfdc] bg-[#ffffff] px-2 text-[11px] font-bold text-[#454595] transition-colors hover:border-[#454595] hover:bg-[#454595]/10"
                 >
                   Open <ArrowUpRight className="h-3 w-3" />
                 </Link>

@@ -732,18 +732,18 @@ export function KycForm({
               )}
             />
             {gstParse.status === "valid" && (
-              <p className="mt-1 inline-flex items-center gap-1 text-[12px] font-semibold text-[#15803d]">
+              <p className="mt-1 inline-flex items-center gap-1 text-[14px] font-semibold text-[#15803d]">
                 <Check size={13} strokeWidth={3} /> Verified
                 {gstParse.stateName ? ` · ${gstParse.stateName}` : ""}
               </p>
             )}
             {gstParse.status === "invalid" && (
-              <p className="mt-1 inline-flex items-center gap-1 text-[12px] font-semibold text-[#d32f2f]">
+              <p className="mt-1 inline-flex items-center gap-1 text-[14px] font-semibold text-[#d32f2f]">
                 <X size={13} strokeWidth={3} /> {gstParse.error ?? "Invalid GST Number"}
               </p>
             )}
             {gstParse.status === "idle" && gstParse.stateName && (
-              <p className="mt-1 text-[12px] font-medium text-[#6b7280]">
+              <p className="mt-1 text-[14px] font-medium text-[#6b7280]">
                 State: <span className="font-semibold text-ink-strong">{gstParse.stateName}</span>
               </p>
             )}
@@ -757,7 +757,7 @@ export function KycForm({
               {...register("name")}
             />
             {errors.name?.message && (
-              <p className="text-[13px] font-semibold" style={{ color: "#D32F2F" }}>
+              <p className="text-[15px] font-semibold" style={{ color: "#D32F2F" }}>
                 {errors.name.message}
               </p>
             )}
@@ -980,7 +980,7 @@ export function KycForm({
         {/* Non-blocking dedup warning - existing clients sharing this GSTIN/PAN. */}
         {(dupPending || dupMatches.length > 0) && (
           <p
-            className="text-[12.5px] font-semibold"
+            className="text-[14.5px] font-semibold"
             style={{ color: dupMatches.length > 0 ? "#B45309" : "var(--color-ink-subtle)" }}
             role="status"
           >
@@ -1082,7 +1082,7 @@ export function KycForm({
                   type="button"
                   onClick={() => removeContact(idx)}
                   aria-label={`Remove contact ${idx + 2}`}
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-hairline px-2.5 py-1.5 text-[12px] font-semibold text-ink-subtle transition hover:border-[#f0b4b4] hover:bg-[#fdf3f3] hover:text-[#d32f2f]"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-hairline px-2.5 py-1.5 text-[14px] font-semibold text-ink-subtle transition hover:border-[#f0b4b4] hover:bg-[#fdf3f3] hover:text-[#d32f2f]"
                 >
                   <X className="h-[15px] w-[15px]" />
                   Remove
@@ -1153,7 +1153,7 @@ export function KycForm({
               notes: "",
             })
           }
-          className="inline-flex w-max items-center gap-1.5 rounded-lg border border-[#c9c9ea] bg-[#f4f4fd] px-4 py-2.5 text-[13px] font-bold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#eeeefb]"
+          className="inline-flex w-max items-center gap-1.5 rounded-lg border border-[#c9c9ea] bg-[#f4f4fd] px-4 py-2.5 text-[15px] font-bold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#eeeefb]"
         >
           <Plus className="h-4 w-4" />
           Add Contact
@@ -1179,7 +1179,7 @@ export function KycForm({
                     <button
                       type="button"
                       onClick={() => copyFromBilling(idx)}
-                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border-[1.75px] border-[#3f3f94] bg-[#f4f4fd] px-3 py-1.5 text-[12.5px] font-bold text-[#3f3f94] transition hover:bg-[#3f3f94] hover:text-white hover:shadow-[0_6px_16px_rgba(63,63,148,0.28)]"
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border-[1.75px] border-[#3f3f94] bg-[#f4f4fd] px-3 py-1.5 text-[14.5px] font-bold text-[#3f3f94] transition hover:bg-[#3f3f94] hover:text-white hover:shadow-[0_6px_16px_rgba(63,63,148,0.28)]"
                     >
                       <Copy className="h-[14px] w-[14px]" />
                       Click here to Copy from Billing Address
@@ -1192,7 +1192,7 @@ export function KycForm({
                       type="button"
                       onClick={() => removeAddress(idx)}
                       aria-label={`Remove ${addrLabel.toLowerCase()}`}
-                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-hairline px-2.5 py-1.5 text-[12px] font-semibold text-ink-subtle transition hover:border-[#f0b4b4] hover:bg-[#fdf3f3] hover:text-[#d32f2f]"
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-hairline px-2.5 py-1.5 text-[14px] font-semibold text-ink-subtle transition hover:border-[#f0b4b4] hover:bg-[#fdf3f3] hover:text-[#d32f2f]"
                     >
                       <X className="h-[15px] w-[15px]" />
                       Remove
@@ -1317,7 +1317,7 @@ export function KycForm({
               pinCode: "",
             })
           }
-          className="inline-flex w-max items-center gap-1.5 rounded-lg border border-[#c9c9ea] bg-[#f4f4fd] px-4 py-2.5 text-[13px] font-bold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#eeeefb]"
+          className="inline-flex w-max items-center gap-1.5 rounded-lg border border-[#c9c9ea] bg-[#f4f4fd] px-4 py-2.5 text-[15px] font-bold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#eeeefb]"
         >
           <Plus className="h-4 w-4" />
           Add address
@@ -1507,7 +1507,7 @@ export function KycForm({
                   type="button"
                   onClick={() => removeBank(idx)}
                   aria-label={`Remove bank account ${idx + 1}`}
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-hairline px-2.5 py-1.5 text-[12px] font-semibold text-ink-subtle transition hover:border-[#f0b4b4] hover:bg-[#fdf3f3] hover:text-[#d32f2f]"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-hairline px-2.5 py-1.5 text-[14px] font-semibold text-ink-subtle transition hover:border-[#f0b4b4] hover:bg-[#fdf3f3] hover:text-[#d32f2f]"
                 >
                   <X className="h-[15px] w-[15px]" />
                   Remove
@@ -1529,7 +1529,7 @@ export function KycForm({
                   onClick={() =>
                     setValue(`bankAccounts.${idx}.accountHolder`, watch("name") ?? "")
                   }
-                  className="self-start text-[12px] font-semibold text-ink-subtle hover:text-ink-strong transition-colors"
+                  className="self-start text-[14px] font-semibold text-ink-subtle hover:text-ink-strong transition-colors"
                 >
                   &#8627; Same as company
                 </button>
@@ -1584,7 +1584,7 @@ export function KycForm({
               control={control}
               name={`bankAccounts.${idx}.isPrimary`}
               render={({ field: f }) => (
-                <label className="inline-flex items-center gap-2 text-[13px] font-semibold text-ink-muted">
+                <label className="inline-flex items-center gap-2 text-[15px] font-semibold text-ink-muted">
                   <input
                     type="checkbox"
                     className="size-[16px] accent-brand"
@@ -1612,7 +1612,7 @@ export function KycForm({
               notes: "",
             })
           }
-          className="inline-flex w-max items-center gap-1.5 rounded-lg border border-[#c9c9ea] bg-[#f4f4fd] px-4 py-2.5 text-[13px] font-bold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#eeeefb]"
+          className="inline-flex w-max items-center gap-1.5 rounded-lg border border-[#c9c9ea] bg-[#f4f4fd] px-4 py-2.5 text-[15px] font-bold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#eeeefb]"
         >
           <Plus className="h-4 w-4" />
           Add Account
@@ -1631,7 +1631,7 @@ export function KycForm({
             documents={documents ?? []}
           />
         ) : (
-          <p className="text-[13px] text-ink-subtle">
+          <p className="text-[15px] text-ink-subtle">
             Save the client first, then you can attach documents.
           </p>
         )}
@@ -1677,7 +1677,7 @@ export function KycForm({
         className="flex items-center justify-end gap-3 pt-2"
         style={{ borderTop: "1px solid var(--color-hairline)" }}
       >
-        <span className="text-[11px] text-ink-subtle">Ctrl / ⌘ + Enter to save</span>
+        <span className="text-[14px] text-ink-subtle">Ctrl / ⌘ + Enter to save</span>
         <ViewPdfButton title="Client KYC" />
         <button
           type="submit"
@@ -1762,7 +1762,10 @@ function CardUpload({
 }) {
   const inputRef = React.useRef<HTMLInputElement>(null);
   return (
-    <Field label={label} labelOnly float>
+    // NOT a `float` field: the floating variant draws an outlined box, and the
+    // tile already has its own border — that stacked into a double border. Plain
+    // label above → single clean border on the tile.
+    <Field label={label} labelOnly>
       {/* One wrapper, because `Field` treats its FIRST child as the control and
           stacks the rest under the box — the hidden file input alone would
           leave an empty outline with the tile floating beneath it. */}
@@ -1812,7 +1815,7 @@ function CardUpload({
           ) : (
             <ImagePlus size={18} />
           )}
-          <span className="text-[11.5px] font-semibold">
+          <span className="text-[14px] font-semibold">
             {uploading ? "Uploading" : `Add ${label.toLowerCase()}`}
           </span>
         </button>
@@ -1856,7 +1859,9 @@ function OtherDocsUpload({
 }) {
   const inputRef = React.useRef<HTMLInputElement>(null);
   return (
-    <Field label="Other" labelOnly float>
+    // Plain label (not `float`): the tiles carry their own border, so the
+    // floating outline box would double it. See CardUpload above.
+    <Field label="Other" labelOnly>
       {/* The hidden input lives inside the visible wrapper: `Field` puts only
           its first child inside the outline. */}
       <div className="flex flex-wrap items-start gap-3">
@@ -1888,7 +1893,7 @@ function OtherDocsUpload({
                 className="flex size-full flex-col items-center justify-center gap-1.5 px-2 text-center text-ink-subtle hover:text-ink-strong transition-colors"
               >
                 <FileText size={22} />
-                <span className="line-clamp-2 break-all text-[10.5px] font-semibold">
+                <span className="line-clamp-2 break-all text-[14px] font-semibold">
                   {fileNameFromUrl(url)}
                 </span>
               </a>
@@ -1914,7 +1919,7 @@ function OtherDocsUpload({
           ) : (
             <Plus size={18} />
           )}
-          <span className="text-[11.5px] font-semibold">
+          <span className="text-[14px] font-semibold">
             {uploading ? "Uploading" : "Add files"}
           </span>
         </button>

@@ -168,7 +168,7 @@ export function ClientDocuments({
                   <span className="truncate text-sm font-medium text-gray-900" title={doc.title}>
                     {doc.title}
                   </span>
-                  <span className="shrink-0 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-600">
+                  <span className="shrink-0 rounded bg-gray-100 px-1.5 py-0.5 text-[12px] font-semibold uppercase tracking-wide text-gray-600">
                     {typeChip(doc.mimeType)}
                   </span>
                 </div>

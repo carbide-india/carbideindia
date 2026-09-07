@@ -132,7 +132,28 @@ const InquiryFieldsSchema = z.object({
 export const CreateInquirySchema = InquiryFieldsSchema.refine(
   (v) => v.clientMode === "new" || !!v.clientId,
   { message: "Pick the existing client", path: ["clientId"] },
-);
+).superRefine((v, ctx) => {
+  // If a checklist item is marked "Assumed", the value we assumed is required —
+  // you can't move forward until it's filled in.
+  const checks: Array<
+    [(typeof CHECK_STATES)[number] | undefined, string | undefined, "quantity" | "shapeDimension" | "grade" | "tolerance" | "condition"]
+  > = [
+    [v.quantityStatus, v.assumedValues?.quantity, "quantity"],
+    [v.shapeDimensionCheck, v.assumedValues?.shapeDimension, "shapeDimension"],
+    [v.gradeCheck, v.assumedValues?.grade, "grade"],
+    [v.toleranceCheck, v.assumedValues?.tolerance, "tolerance"],
+    [v.conditionCheck, v.assumedValues?.condition, "condition"],
+  ];
+  for (const [status, value, key] of checks) {
+    if (status === "assumed" && (value == null || value.trim() === "")) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Enter the value you assumed.",
+        path: ["assumedValues", key],
+      });
+    }
+  }
+});
 export type CreateInquiryInput = z.infer<typeof CreateInquirySchema>;
 
 /**

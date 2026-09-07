@@ -106,10 +106,10 @@ const numRegister = { setValueAs: (v: unknown) => toNum(v) };
 function OutputRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-[11px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
+      <span className="text-[14px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
         {label}
       </span>
-      <span className="tabular-nums text-[14px] font-semibold text-ink-strong">
+      <span className="tabular-nums text-[16px] font-semibold text-ink-strong">
         {value}
       </span>
     </div>
@@ -420,7 +420,7 @@ export function CostingForm({
           boxShadow: "0 4px 24px -8px rgba(63,63,148,0.18)",
         }}
       >
-        <p className="mb-4 text-[11px] uppercase tracking-[0.16em] font-bold" style={{ color: "var(--color-brand)" }}>
+        <p className="mb-4 text-[14px] uppercase tracking-[0.16em] font-bold" style={{ color: "var(--color-brand)" }}>
           Live Estimate
         </p>
 
@@ -440,7 +440,7 @@ export function CostingForm({
           style={{ borderTop: "1px solid rgba(63,63,148,0.18)" }}
         >
           <div className="flex flex-col gap-0.5">
-            <span className="text-[11px] uppercase tracking-[0.12em] font-bold" style={{ color: "var(--color-brand)" }}>
+            <span className="text-[14px] uppercase tracking-[0.12em] font-bold" style={{ color: "var(--color-brand)" }}>
               Final Cost / Piece
             </span>
             <span
@@ -451,10 +451,10 @@ export function CostingForm({
             </span>
           </div>
           <div className="flex flex-col gap-0.5">
-            <span className="text-[11px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
+            <span className="text-[14px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
               Quote Value (x{toNum(v.qty) ?? 0} pcs)
             </span>
-            <span className="tabular-nums text-[22px] font-bold text-ink-strong">
+            <span className="tabular-nums text-[24px] font-bold text-ink-strong">
               {inr(quoteVal)}
             </span>
           </div>
@@ -751,7 +751,7 @@ export function CostingForm({
             hint={`Add up to ${MAX_VENDOR_QUOTES} competing vendors. Landed cost / pc = unit price + OH + development + freight ÷ qty. Freight is per order.`}
           >
             {quoteFields.length === 0 && (
-              <p className="text-[13px] text-ink-subtle">
+              <p className="text-[15px] text-ink-subtle">
                 No vendor quotes yet. Add a vendor to start comparing.
               </p>
             )}
@@ -801,9 +801,9 @@ export function CostingForm({
                         {isFastest && <RankChip tone="indigo" label="Fastest" />}
                         {isBestCredit && <RankChip tone="amber" label="Best Credit" />}
                         {landed != null && (
-                          <span className="ml-1 text-[12.5px] font-bold tabular-nums text-ink-strong">
+                          <span className="ml-1 text-[14.5px] font-bold tabular-nums text-ink-strong">
                             {inr(landed)}
-                            <span className="ml-1 text-[11px] font-semibold text-ink-subtle">
+                            <span className="ml-1 text-[14px] font-semibold text-ink-subtle">
                               / pc landed
                             </span>
                           </span>
@@ -814,7 +814,7 @@ export function CostingForm({
                       <button
                         type="button"
                         onClick={() => removeQuote(index)}
-                        className="inline-flex shrink-0 items-center gap-1.5 rounded-chip border border-hairline px-3 py-1.5 text-[12.5px] font-semibold text-ink-muted transition-colors hover:border-hairline-strong hover:text-ink-strong"
+                        className="inline-flex shrink-0 items-center gap-1.5 rounded-chip border border-hairline px-3 py-1.5 text-[14.5px] font-semibold text-ink-muted transition-colors hover:border-hairline-strong hover:text-ink-strong"
                       >
                         <Trash2 size={13} strokeWidth={2.4} />
                         Remove
@@ -947,7 +947,7 @@ export function CostingForm({
                 <button
                   type="button"
                   onClick={addQuote}
-                  className="inline-flex items-center gap-2 rounded-chip border border-brand bg-brand/8 px-4 py-2.5 text-[13px] font-semibold text-brand transition-colors hover:bg-brand/12"
+                  className="inline-flex items-center gap-2 rounded-chip border border-brand bg-brand/8 px-4 py-2.5 text-[15px] font-semibold text-brand transition-colors hover:bg-brand/12"
                 >
                   + Add vendor
                 </button>
@@ -1023,7 +1023,7 @@ export function CostingForm({
         className="flex items-center justify-end gap-3 pt-2"
         style={{ borderTop: "1px solid var(--color-hairline)" }}
       >
-        <span className="text-[11px] text-ink-subtle">
+        <span className="text-[14px] text-ink-subtle">
           Ctrl / &#8984; + Enter to save
         </span>
         <ViewPdfButton title="Costing Sheet" />
@@ -1088,7 +1088,7 @@ function RankChip({
   const t = RANK_TONES[tone];
   return (
     <span
-      className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.06em]"
+      className="inline-flex items-center rounded-full border px-2 py-0.5 text-[14px] font-bold uppercase tracking-[0.06em]"
       style={{ background: t.bg, borderColor: t.border, color: t.text }}
     >
       {label}
@@ -1115,22 +1115,22 @@ function WinnerCard({
       style={{ background: t.bg, borderColor: t.border }}
     >
       <span
-        className="text-[11px] font-bold uppercase tracking-[0.1em]"
+        className="text-[14px] font-bold uppercase tracking-[0.1em]"
         style={{ color: t.text }}
       >
         {label}
       </span>
       {vendor ? (
         <>
-          <span className="truncate text-[15px] font-extrabold text-ink-strong">
+          <span className="truncate text-[17px] font-extrabold text-ink-strong">
             {vendor}
           </span>
-          <span className="tabular-nums text-[13px] font-semibold text-ink-muted">
+          <span className="tabular-nums text-[15px] font-semibold text-ink-muted">
             {value}
           </span>
         </>
       ) : (
-        <span className="text-[13px] font-semibold text-ink-subtle">—</span>
+        <span className="text-[15px] font-semibold text-ink-subtle">—</span>
       )}
     </div>
   );
@@ -1180,7 +1180,7 @@ function ComparisonDashboard({
       hint="Recommended = cheapest landed cost. Ranked live as you type."
     >
       {ranked.length === 0 ? (
-        <p className="text-[13px] text-ink-subtle">
+        <p className="text-[15px] text-ink-subtle">
           Enter at least one vendor unit price to see the comparison.
         </p>
       ) : (
@@ -1211,16 +1211,16 @@ function ComparisonDashboard({
             <table className="w-full min-w-[420px] border-collapse text-left">
               <thead>
                 <tr className="border-b border-hairline">
-                  <th className="py-2 pr-3 text-[11px] font-bold uppercase tracking-[0.08em] text-ink-subtle">
+                  <th className="py-2 pr-3 text-[14px] font-bold uppercase tracking-[0.08em] text-ink-subtle">
                     Vendor
                   </th>
-                  <th className="py-2 px-3 text-right text-[11px] font-bold uppercase tracking-[0.08em] text-ink-subtle">
+                  <th className="py-2 px-3 text-right text-[14px] font-bold uppercase tracking-[0.08em] text-ink-subtle">
                     Landed / pc
                   </th>
-                  <th className="py-2 px-3 text-right text-[11px] font-bold uppercase tracking-[0.08em] text-ink-subtle">
+                  <th className="py-2 px-3 text-right text-[14px] font-bold uppercase tracking-[0.08em] text-ink-subtle">
                     Lead
                   </th>
-                  <th className="py-2 pl-3 text-right text-[11px] font-bold uppercase tracking-[0.08em] text-ink-subtle">
+                  <th className="py-2 pl-3 text-right text-[14px] font-bold uppercase tracking-[0.08em] text-ink-subtle">
                     Credit
                   </th>
                 </tr>
@@ -1291,18 +1291,18 @@ function DualView({
     >
       <div className="flex flex-wrap items-stretch gap-4">
         <div className="flex min-w-[160px] flex-1 flex-col gap-1 rounded-section border border-hairline bg-surface-soft p-4">
-          <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-subtle">
+          <span className="text-[14px] font-bold uppercase tracking-[0.1em] text-ink-subtle">
             In-House (Make)
           </span>
-          <span className="tabular-nums text-[24px] font-black text-ink-strong">
+          <span className="tabular-nums text-[26px] font-black text-ink-strong">
             {inr(inhouseFinal)}
           </span>
         </div>
         <div className="flex min-w-[160px] flex-1 flex-col gap-1 rounded-section border border-hairline bg-surface-soft p-4">
-          <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-subtle">
+          <span className="text-[14px] font-bold uppercase tracking-[0.1em] text-ink-subtle">
             Bought-Out (Buy)
           </span>
-          <span className="tabular-nums text-[24px] font-black text-ink-strong">
+          <span className="tabular-nums text-[26px] font-black text-ink-strong">
             {hasBoQuote ? inr(boCheapest) : "—"}
           </span>
         </div>
@@ -1325,15 +1325,15 @@ function DualView({
               : "var(--color-hairline)",
           }}
         >
-          <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-subtle">
+          <span className="text-[14px] font-bold uppercase tracking-[0.1em] text-ink-subtle">
             Differential
           </span>
           {bothKnown ? (
             <>
-              <span className="tabular-nums text-[24px] font-black text-ink-strong">
+              <span className="tabular-nums text-[26px] font-black text-ink-strong">
                 {inr(Math.abs(diff))}
               </span>
-              <span className="text-[12.5px] font-semibold text-ink-muted">
+              <span className="text-[14.5px] font-semibold text-ink-muted">
                 {equal
                   ? "Make and buy are level"
                   : buyCheaper
@@ -1342,7 +1342,7 @@ function DualView({
               </span>
             </>
           ) : (
-            <span className="text-[13px] font-semibold text-ink-subtle">
+            <span className="text-[15px] font-semibold text-ink-subtle">
               Add a vendor quote to compare
             </span>
           )}

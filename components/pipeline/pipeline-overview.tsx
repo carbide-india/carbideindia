@@ -432,7 +432,7 @@ export function PipelineOverview({ rows, status }: { rows: PipelineRow[]; status
                       {r.salesPerson ?? "—"}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2.5">
-                      <span className="rounded-[3px] bg-[#f4f0e8] px-1.5 py-0.5 text-[11px] font-bold text-[#57534e]">
+                      <span className="rounded-[3px] bg-[#ffffff] px-1.5 py-0.5 text-[11px] font-bold text-[#57534e]">
                         {r.currentStageLabel}
                       </span>
                     </td>

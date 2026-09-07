@@ -38,9 +38,9 @@ const DIMENSION_UNITS = ["mm", "cm", "m", "inch"] as const;
 // The underline turns indigo on focus; the SpecField cell adds a focus-within
 // tint so keyboard nav stays visible.
 const CELL_INPUT =
-  "w-full border-x-0 border-t-0 border-b border-solid border-[#c9cee0] bg-transparent p-0 pb-1 text-[14px] font-bold leading-tight text-ink-strong outline-none transition-colors focus:border-[#3f3f94] placeholder:font-medium placeholder:text-[#aab0bd]";
+  "w-full border-x-0 border-t-0 border-b border-solid border-[#c9cee0] bg-transparent p-0 pb-1 text-[16px] font-bold leading-tight text-ink-strong outline-none transition-colors focus:border-[#3f3f94] placeholder:font-medium placeholder:text-[#aab0bd]";
 const CELL_SELECT =
-  "!h-auto !min-h-0 !gap-1 !rounded-none !border-0 !bg-transparent !p-0 !shadow-none text-[14px] font-bold text-ink-strong data-[state=open]:!border-0";
+  "!h-auto !min-h-0 !gap-1 !rounded-none !border-0 !bg-transparent !p-0 !shadow-none text-[16px] font-bold text-ink-strong data-[state=open]:!border-0";
 
 /** Controlled value for the panel — the shell owns this state. All strings. */
 export interface CostingSpecValue {
@@ -234,7 +234,7 @@ export function CostingSpecPanel({
           role="status"
         >
           <TriangleAlert size={18} strokeWidth={2.5} className="mt-0.5 shrink-0 text-[#b45309]" />
-          <div className="flex-1 text-[13px] leading-snug text-[#8a5a12]">
+          <div className="flex-1 text-[15px] leading-snug text-[#8a5a12]">
             <span className="font-black text-[#b45309]">
               You&rsquo;re changing values locked in Primary Feasibility
             </span>{" "}
@@ -257,12 +257,12 @@ export function CostingSpecPanel({
       {/* Row 0 — SM No · Enquiry Date (auto, from the enquiry — read-only) */}
       <div className="grid grid-cols-2 divide-x divide-[#eceef6] bg-[#f8f9fe]">
         <SpecField label="SM No.">
-          <span className="text-[14px] font-black tabular-nums text-[#3f3f94]">
+          <span className="text-[16px] font-black tabular-nums text-[#3f3f94]">
             {smNumber ?? "—"}
           </span>
         </SpecField>
         <SpecField label="Enquiry Date">
-          <span className="text-[14px] font-bold text-ink-strong">
+          <span className="text-[16px] font-bold text-ink-strong">
             {fmtDate(enquiryDate)}
           </span>
         </SpecField>
@@ -484,7 +484,7 @@ export function CostingSpecPanel({
       <div className="flex flex-wrap items-center justify-center gap-3 border-t border-hairline pt-4 text-center">
         <p
           className={cn(
-            "inline-flex items-center rounded-lg border-2 px-4 py-2 text-[12.5px] font-bold",
+            "inline-flex items-center rounded-lg border-2 px-4 py-2 text-[14.5px] font-bold",
             hasBaseline && changedCount === 0
               ? "border-[#16a34a] bg-[#eaf7ee] text-[#16a34a]"
               : "border-[#d32f2f] bg-[#fdecea] text-[#d32f2f]",
@@ -501,7 +501,7 @@ export function CostingSpecPanel({
           onClick={() => setShowReport(true)}
           disabled={!hasBaseline}
           className={cn(
-            "inline-flex items-center gap-2 rounded-lg border-2 px-3.5 py-2 text-[13px] font-bold transition-colors",
+            "inline-flex items-center gap-2 rounded-lg border-2 px-3.5 py-2 text-[15px] font-bold transition-colors",
             hasBaseline
               ? "border-[#c7cae6] text-ink-soft hover:border-brand hover:text-brand"
               : "cursor-not-allowed border-hairline text-ink-subtle opacity-60",
@@ -510,7 +510,7 @@ export function CostingSpecPanel({
           <GitCompareArrows size={15} strokeWidth={2.6} />
           Variance vs Feasibility
           {changedCount > 0 && (
-            <span className="inline-flex min-w-[18px] items-center justify-center rounded-full bg-[#f59e0b] px-1.5 text-[11px] font-black text-white">
+            <span className="inline-flex min-w-[18px] items-center justify-center rounded-full bg-[#f59e0b] px-1.5 text-[14px] font-black text-white">
               {changedCount}
             </span>
           )}
@@ -589,7 +589,7 @@ function SpecField({
 function VarianceTag({ row }: { row?: SpecVarianceRow }) {
   if (!row || !row.changed) return null;
   return (
-    <span className="animate-spec-tag-in inline-flex w-fit items-center gap-1.5 rounded-md border border-[#f3d9a6] bg-[#fdf6e7] px-2 py-1 text-[11px] font-bold text-[#b45309]">
+    <span className="animate-spec-tag-in inline-flex w-fit items-center gap-1.5 rounded-md border border-[#f3d9a6] bg-[#fdf6e7] px-2 py-1 text-[14px] font-bold text-[#b45309]">
       <History size={11} strokeWidth={2.6} className="shrink-0" />
       Primary Feasibility: {row.feasibilityValue}
     </span>

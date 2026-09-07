@@ -266,7 +266,7 @@ export function ProductsSection({
                   requestAnimationFrame(() => addProductBtnRef.current?.focus());
                 }}
                 disabled={fields.length === 1}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-chip border border-hairline px-3 py-1.5 text-[12.5px] font-semibold text-ink-muted transition-colors hover:border-hairline-strong hover:text-ink-strong disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-chip border border-hairline px-3 py-1.5 text-[14.5px] font-semibold text-ink-muted transition-colors hover:border-hairline-strong hover:text-ink-strong disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <Trash2 size={13} strokeWidth={2.4} />
                 Remove
@@ -277,7 +277,7 @@ export function ProductsSection({
           {/* Checklist FIRST - what the client gave us for reference (Given /
               Not Given / Assumed), packed densely to save space. */}
           <div className="flex flex-col gap-3 rounded-lg border border-[#dcdce8] bg-white p-4">
-            <span className="text-[12px] font-bold uppercase tracking-[0.08em] text-[#3f3f94]">
+            <span className="text-[14px] font-bold uppercase tracking-[0.08em] text-[#3f3f94]">
               Checklist
             </span>
             <div className="grid grid-cols-6 gap-3 max-lg:grid-cols-3 max-md:grid-cols-2">
@@ -319,7 +319,7 @@ export function ProductsSection({
                           aria-checked={checked}
                           onClick={() => f.onChange(checked ? selected.filter((o) => o !== opt) : [...selected, opt])}
                           className={cn(
-                            "inline-flex items-center gap-2 rounded-chip border-[1.75px] px-3 py-2 text-[13px] font-semibold transition-colors",
+                            "inline-flex items-center gap-2 rounded-chip border-[1.75px] px-3 py-2 text-[15px] font-semibold transition-colors",
                             checked
                               ? "border-brand bg-brand/8 text-ink-strong"
                               : "border-[#9199b6] bg-surface-card text-ink-strong hover:border-[#6f78a0] hover:bg-[#f3f4f8]",
@@ -348,11 +348,15 @@ export function ProductsSection({
           {(() => {
             const pickedId = watch(`products.${index}.sampleId`);
             const picked = sampleOptions.find((o) => o.id === pickedId);
+            // "Linked Sample" only appears once the client actually sent a
+            // sample (checklist → Sample Received = Yes). If No / unset, hide it
+            // and let Material take the full width.
+            const sampleReceived = watch("sampleReceived") === true;
             return (
               <>
-                <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+                <div className={cn("grid gap-4 max-md:grid-cols-1", sampleReceived ? "grid-cols-2" : "grid-cols-1")}>
                   <div>
-                    <span className="mb-1.5 block text-[12px] font-semibold text-ink-soft">
+                    <span className="mb-1.5 block text-[14px] font-semibold text-ink-soft">
                       Material
                     </span>
                     <ProductPicker
@@ -368,8 +372,9 @@ export function ProductsSection({
                       }
                     />
                   </div>
+                  {sampleReceived && (
                   <div>
-                    <span className="mb-1.5 block text-[12px] font-semibold text-ink-soft">
+                    <span className="mb-1.5 block text-[14px] font-semibold text-ink-soft">
                       Linked Sample
                     </span>
                     <Controller
@@ -395,8 +400,9 @@ export function ProductsSection({
                       )}
                     />
                   </div>
+                  )}
                 </div>
-                {picked && <SampleSummaryPanel sample={picked} />}
+                {sampleReceived && picked && <SampleSummaryPanel sample={picked} />}
               </>
             );
           })()}
@@ -501,7 +507,7 @@ export function ProductsSection({
                         setValueAs: toOptionalNumber,
                       })}
                     />
-                    <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[13px] font-bold text-ink-subtle">
+                    <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[15px] font-bold text-ink-subtle">
                       {dimUnit}
                     </span>
                   </div>
@@ -534,7 +540,7 @@ export function ProductsSection({
               raw grade text, the grade WE quote them, the internal production
               grade, and the production/part codes each live on their own. */}
           <div className="flex flex-col gap-3 rounded-lg border border-[#dcdce8] bg-white p-4">
-            <span className="text-[12px] font-bold uppercase tracking-[0.08em] text-[#3f3f94]">
+            <span className="text-[14px] font-bold uppercase tracking-[0.08em] text-[#3f3f94]">
               Grades &amp; Codes
             </span>
             <div className="grid grid-cols-5 gap-4 max-lg:grid-cols-3 max-md:grid-cols-1">
@@ -653,7 +659,7 @@ export function ProductsSection({
             focusNewProductRef.current = true;
             append({ ...EMPTY_PRODUCT });
           }}
-          className="inline-flex items-center gap-2 rounded-chip border border-brand bg-brand/8 px-4 py-2.5 text-[13px] font-semibold text-brand transition-colors hover:bg-brand/12"
+          className="inline-flex items-center gap-2 rounded-chip border border-brand bg-brand/8 px-4 py-2.5 text-[15px] font-semibold text-brand transition-colors hover:bg-brand/12"
         >
           + Add product
         </button>

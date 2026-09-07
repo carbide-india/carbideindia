@@ -1,11 +1,12 @@
 import "server-only";
-import { aliasedTable, and, asc, eq, getTableColumns, inArray } from "drizzle-orm";
+import { aliasedTable, and, asc, count, eq, getTableColumns, inArray } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import {
   clientContacts,
   clients,
   employees,
+  inquiries,
   masterOptions,
   type Client,
   type ClientContact,
@@ -254,6 +255,9 @@ export interface ClientAutofill {
   // ── Extra context fields (display-only in the inquiry picker) ──
   tags: string[] | null;
   notes: string | null;
+  /** True when this client already has at least one enquiry — the New Enquiry
+   *  form uses it to default "First Enquiry?" to No. */
+  hasEnquiries: boolean;
   contact: {
     firstName: string;
     lastName: string | null;
@@ -585,6 +589,12 @@ export async function getClientAutofill(
       ),
     )
     .limit(1);
+  // Does this client already have an enquiry? Drives the "First Enquiry?" default.
+  const [enq] = await db
+    .select({ n: count() })
+    .from(inquiries)
+    .where(eq(inquiries.clientId, clientId));
+  const hasEnquiries = Number(enq?.n ?? 0) > 0;
   return {
     id: row.id,
     name: row.name,
@@ -605,6 +615,7 @@ export async function getClientAutofill(
     industryTypeName: row.industryTypeName,
     tags: row.tags,
     notes: row.notes ?? null,
+    hasEnquiries,
     contact: contact
       ? {
           firstName: contact.firstName,

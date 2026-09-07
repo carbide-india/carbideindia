@@ -155,14 +155,14 @@ export function VendorDocuments({
   return (
     <div className="px-4 py-3.5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <span className="text-[12px] font-bold tabular-nums text-[#6b7280]">
+        <span className="text-[14px] font-bold tabular-nums text-[#6b7280]">
           {documents.length === 0
             ? "No files attached"
             : `${documents.length} ${documents.length === 1 ? "file" : "files"}`}
         </span>
         {canEdit && (
           <label
-            className={`inline-flex cursor-pointer items-center gap-2 rounded-chip border border-[#d4d7e3] bg-white px-3.5 py-2 text-[13px] font-bold text-[#3a4152] transition-colors hover:border-[#3f3f94] hover:text-[#3f3f94] ${
+            className={`inline-flex cursor-pointer items-center gap-2 rounded-chip border border-[#d4d7e3] bg-white px-3.5 py-2 text-[15px] font-bold text-[#3a4152] transition-colors hover:border-[#3f3f94] hover:text-[#3f3f94] ${
               busy ? "pointer-events-none opacity-60" : ""
             }`}
           >
@@ -184,7 +184,7 @@ export function VendorDocuments({
       </div>
 
       {documents.length === 0 ? (
-        <p className="text-[13.5px] text-[#8a90a0]">
+        <p className="text-[15.5px] text-[#8a90a0]">
           {canEdit
             ? "Attach the vendor's brochure, price list or certificate — up to 25 MB per file."
             : "Nothing attached yet."}
@@ -197,16 +197,16 @@ export function VendorDocuments({
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span
-                    className="truncate text-[13.5px] font-bold text-[#14151a]"
+                    className="truncate text-[15.5px] font-bold text-[#14151a]"
                     title={doc.title}
                   >
                     {doc.title}
                   </span>
-                  <span className="shrink-0 rounded bg-[#f1f2f6] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#6b7280]">
+                  <span className="shrink-0 rounded bg-[#f1f2f6] px-1.5 py-0.5 text-[12px] font-bold uppercase tracking-wide text-[#6b7280]">
                     {typeChip(doc.mimeType)}
                   </span>
                 </div>
-                <div className="mt-0.5 text-[11.5px] text-[#8a90a0]">
+                <div className="mt-0.5 text-[13.5px] text-[#8a90a0]">
                   {prettySize(doc.sizeBytes)}
                   {doc.sizeBytes ? " · " : ""}
                   {fmtDate(doc.createdAt)}
@@ -218,21 +218,21 @@ export function VendorDocuments({
                   href={doc.downloadUrl}
                   target="_blank"
                   rel="noopener"
-                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[13px] font-semibold text-[#3f3f94] hover:bg-[#eef0fa]"
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[15px] font-semibold text-[#3f3f94] hover:bg-[#eef0fa]"
                   title="Download"
                 >
                   <Download size={15} strokeWidth={2.3} />
                   <span className="max-sm:hidden">Download</span>
                 </a>
               ) : (
-                <span className="px-2 py-1 text-[11.5px] text-[#b3b8c2]">Unavailable</span>
+                <span className="px-2 py-1 text-[13.5px] text-[#b3b8c2]">Unavailable</span>
               )}
               {canEdit && (
                 <button
                   type="button"
                   onClick={() => void handleDelete(doc.id, doc.title)}
                   disabled={deletingId === doc.id}
-                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[13px] font-semibold text-[#D32F2F] hover:bg-[rgba(211,47,47,0.08)] disabled:opacity-50"
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[15px] font-semibold text-[#D32F2F] hover:bg-[rgba(211,47,47,0.08)] disabled:opacity-50"
                   title="Remove"
                 >
                   <Trash2 size={15} strokeWidth={2.3} />

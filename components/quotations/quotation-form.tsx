@@ -423,7 +423,7 @@ export function QuotationForm({
                   type="button"
                   onClick={() => handleRemoveLine(index)}
                   disabled={fields.length === 1}
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-chip border border-hairline px-3 py-1.5 text-[12.5px] font-semibold text-ink-muted transition-colors hover:border-hairline-strong hover:text-ink-strong disabled:cursor-not-allowed disabled:opacity-40"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-chip border border-hairline px-3 py-1.5 text-[14.5px] font-semibold text-ink-muted transition-colors hover:border-hairline-strong hover:text-ink-strong disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Trash2 size={13} strokeWidth={2.4} />
                   Remove
@@ -549,7 +549,7 @@ export function QuotationForm({
               className="pt-4"
               style={{ borderTop: "1px solid var(--color-hairline)" }}
             >
-              <p className="mb-3 text-[11px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
+              <p className="mb-3 text-[14px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
                 Pricing
               </p>
               <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5">
@@ -586,7 +586,7 @@ export function QuotationForm({
               className="pt-4"
               style={{ borderTop: "1px solid var(--color-hairline)" }}
             >
-              <p className="mb-3 text-[11px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
+              <p className="mb-3 text-[14px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
                 Timeline &amp; Validity
               </p>
               <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
@@ -637,7 +637,7 @@ export function QuotationForm({
             ref={addProductRef}
             type="button"
             onClick={() => setShowAddWarning(true)}
-            className="inline-flex items-center gap-2 rounded-chip border border-brand bg-brand/8 px-4 py-2.5 text-[13px] font-semibold text-brand transition-colors hover:bg-brand/12"
+            className="inline-flex items-center gap-2 rounded-chip border border-brand bg-brand/8 px-4 py-2.5 text-[15px] font-semibold text-brand transition-colors hover:bg-brand/12"
           >
             + Add Product
           </button>
@@ -649,7 +649,7 @@ export function QuotationForm({
         {/* The stage bucket is not picked here: a quotation created from an
             approved & locked costing IS a draft, and moves through the house
             buckets from the register / detail page. */}
-        <p className="-mt-1 mb-3 text-[12.5px] text-ink-muted">
+        <p className="-mt-1 mb-3 text-[14.5px] text-ink-muted">
           This quotation will be created as{" "}
           <span className="font-bold text-ink-strong">
             {QUOTATION_STATUS_LABELS.draft}
@@ -716,7 +716,7 @@ export function QuotationForm({
             className="mt-0.5 shrink-0"
             style={{ color: "#b45309" }}
           />
-          <p className="text-[13px] leading-relaxed" style={{ color: "#8a5a12" }}>
+          <p className="text-[15px] leading-relaxed" style={{ color: "#8a5a12" }}>
             {blockedLineNumbers.length === 1
               ? `Product ${blockedLineNumbers[0]} has no approved & locked costing - approve its costing before quoting.`
               : `Products ${blockedLineNumbers.join(", ")} have no approved & locked costing - approve their costing before quoting.`}
@@ -737,7 +737,7 @@ export function QuotationForm({
         className="flex items-center justify-end gap-3 pt-2"
         style={{ borderTop: "1px solid var(--color-hairline)" }}
       >
-        <span className="text-[11px] text-ink-subtle">
+        <span className="text-[14px] text-ink-subtle">
           Ctrl / &#8984; + Enter to save
         </span>
         <ViewPdfButton title="Quotation" />
@@ -865,11 +865,11 @@ function AddProductGate({
           <div className="min-w-0">
             <h2
               id="add-product-gate-title"
-              className="text-[16px] font-extrabold leading-tight text-ink-strong"
+              className="text-[18px] font-extrabold leading-tight text-ink-strong"
             >
               Primary Feasibility Required
             </h2>
-            <p className="mt-1.5 text-[13.5px] leading-relaxed text-ink-soft">
+            <p className="mt-1.5 text-[15.5px] leading-relaxed text-ink-soft">
               You can&apos;t add a product to a quotation until its Primary
               Feasibility is done. Products flow through the pipeline: New
               Enquiry → Primary Feasibility → Costing → Quotation. Add the
@@ -881,14 +881,14 @@ function AddProductGate({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-10 items-center rounded-pill border border-[#dcdce8] bg-white px-4 text-[13px] font-bold text-ink-soft transition hover:border-ink-subtle"
+            className="inline-flex h-10 items-center rounded-pill border border-[#dcdce8] bg-white px-4 text-[15px] font-bold text-ink-soft transition hover:border-ink-subtle"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={onGoToEnquiry}
-            className="inline-flex h-10 items-center gap-1.5 rounded-pill px-5 text-[13px] font-extrabold text-white transition-transform hover:-translate-y-px"
+            className="inline-flex h-10 items-center gap-1.5 rounded-pill px-5 text-[15px] font-extrabold text-white transition-transform hover:-translate-y-px"
             style={{
               background: "#454595",
               boxShadow: "0 6px 16px rgba(63,63,148,0.32)",
@@ -919,11 +919,11 @@ function CostingLockedBanner({ lock }: { lock: LineLock }) {
         className="shrink-0"
         style={{ color: "#15803d" }}
       />
-      <span className="text-[12.5px] font-semibold" style={{ color: "#15803d" }}>
+      <span className="text-[14.5px] font-semibold" style={{ color: "#15803d" }}>
         Costing approved &amp; locked
       </span>
       {meta && (
-        <span className="text-[12px] text-ink-subtle">{meta}</span>
+        <span className="text-[14px] text-ink-subtle">{meta}</span>
       )}
     </div>
   );
@@ -944,10 +944,10 @@ function CostingBlockedBanner() {
         style={{ color: "#b45309" }}
       />
       <div className="min-w-0">
-        <p className="text-[12.5px] font-bold" style={{ color: "#8a5a12" }}>
+        <p className="text-[14.5px] font-bold" style={{ color: "#8a5a12" }}>
           Costing not approved - can&apos;t be quoted
         </p>
-        <p className="mt-0.5 text-[12px] leading-relaxed" style={{ color: "#8a5a12" }}>
+        <p className="mt-0.5 text-[14px] leading-relaxed" style={{ color: "#8a5a12" }}>
           This product has no approved &amp; locked costing. Approve its costing
           (Costing → Decision) before it can be added to a quotation.
         </p>
@@ -967,10 +967,10 @@ function Caption({
     // min-w-0 lets the grid cell shrink; break-words wraps long values (e.g. a
     // long contact email) instead of overflowing the layout at larger zoom.
     <div className="flex min-w-0 flex-col gap-0.5">
-      <span className="text-[11px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
+      <span className="text-[14px] uppercase tracking-[0.12em] font-bold text-ink-subtle">
         {label}
       </span>
-      <span className="text-[14px] font-semibold text-ink-strong break-words">
+      <span className="text-[16px] font-semibold text-ink-strong break-words">
         {children}
       </span>
     </div>

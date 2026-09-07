@@ -96,7 +96,7 @@ export function Field({
         {hasAside && (
           <div className="nt-field-aside">
             {aside}
-            {hint != null && <p className="text-[12px] text-ink-subtle">{hint}</p>}
+            {hint != null && <p className="text-[14px] text-ink-subtle">{hint}</p>}
           </div>
         )}
       </div>
@@ -178,7 +178,7 @@ export function MiniField({
         {hasAside && (
           <div className="nt-field-aside">
             {aside}
-            {hint != null && <p className="text-[12px] text-ink-subtle">{hint}</p>}
+            {hint != null && <p className="text-[14px] text-ink-subtle">{hint}</p>}
           </div>
         )}
       </div>
@@ -224,12 +224,12 @@ export function GroupHeader({
   return (
     <div className="flex items-center gap-3">
       <span
-        className="grid h-[28px] min-w-[28px] shrink-0 place-items-center rounded-full px-2 text-[12.5px] font-extrabold text-white tabular-nums"
+        className="grid h-[28px] min-w-[28px] shrink-0 place-items-center rounded-full px-2 text-[14.5px] font-extrabold text-white tabular-nums"
         style={{ background: "#1F2547" }}
       >
         {n}
       </span>
-      <span className="shrink-0 text-[14.5px] font-extrabold tracking-tight text-ink-strong">
+      <span className="shrink-0 text-[16.5px] font-extrabold tracking-tight text-ink-strong">
         {label}
       </span>
       {leftAction}
@@ -265,12 +265,12 @@ export function SectionCard({
           )}
         >
           {title && (
-            <h2 className="text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
+            <h2 className="text-[16px] uppercase tracking-[0.12em] font-extrabold text-ink-strong">
               {title}
             </h2>
           )}
           {hint && (
-            <p className={cn("text-[13px] text-ink-subtle", !inlineHint && "mt-1.5")}>
+            <p className={cn("text-[15px] text-ink-subtle", !inlineHint && "mt-1.5")}>
               {hint}
             </p>
           )}
@@ -405,8 +405,8 @@ export function Segmented<T extends string>({
             className={cn(
               "rounded-lg font-semibold transition-colors whitespace-nowrap",
               lg
-                ? "flex-1 px-3 py-2.5 text-[14px]"
-                : "px-3 py-1.5 text-[13px]",
+                ? "flex-1 px-3 py-2.5 text-[16px]"
+                : "px-3 py-1.5 text-[15px]",
               active
                 ? activeTone === "brand"
                   ? "bg-brand text-white border-[1.5px] border-brand shadow-[0_0_0_3px_rgba(63,63,148,0.25)]"

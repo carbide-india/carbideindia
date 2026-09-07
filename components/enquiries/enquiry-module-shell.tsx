@@ -15,9 +15,7 @@ import {
   GitCompareArrows,
   HelpCircle,
   KanbanSquare,
-  LayoutDashboard,
   LayoutGrid,
-  LifeBuoy,
   PanelLeftClose,
   PanelLeftOpen,
   SlidersHorizontal,
@@ -135,7 +133,7 @@ function navFor(pathname: string): NavDef[] {
         : "Create New Form";
   const custom = customEditorForSegment(familySeg(pathname));
   const items: NavDef[] = [
-    { label: "Dashboard", href: "/hub" as Route, Icon: LayoutDashboard, ready: false, group: "overview" },
+    // Dashboard entry hidden per request (it was a "coming soon" placeholder).
     // Costing has NO "create" entry, and deliberately so. You do not invent a
     // costing out of nothing — you pick a product line that hasn't been costed,
     // which is exactly what the register's Not Started bucket already lists
@@ -330,9 +328,9 @@ function navFor(pathname: string): NavDef[] {
     items.push({
       label:
         custom.formKey === "sample"
-          ? "SAM Dropdown Master"
+          ? "Sam Dropdown Master"
           : custom.formKey === "enquiry"
-            ? "ENQ Dropdown Master"
+            ? "Enq Dropdown Master"
             : "Client Master DD",
       href: custom.route as Route,
       Icon: SlidersHorizontal,
@@ -427,7 +425,7 @@ export function EnquiryModuleShell({
       {/* ── Top header bar (full width) ─────────────────────────── */}
       <header className={cn(
         "sticky top-0 z-40 flex h-[60px] shrink-0 items-center gap-4 border-b px-4",
-        themed ? "border-[#e2dfdc] bg-[#f4f0e8]" : "border-[#e5e7eb] bg-white",
+        themed ? "border-[#e2dfdc] bg-[#ffffff]" : "border-[#e5e7eb] bg-white",
       )}>
         {/* Left zone - toggle, history, brand. Sized to the sidebar (minus the
             header's own px-4) so the module title that follows starts exactly
@@ -461,12 +459,14 @@ export function EnquiryModuleShell({
               Back-to-Forms, driving real history navigation with depth-aware
               enable/disable. */}
           <HistoryNav />
-          {/* Brand logo lives up here in the top bar now (moved out of the
-              sidebar). Click → Hub. */}
-          <Link href={"/hub" as Route} aria-label="Carbide India — back to the Hub" title="Back to the Hub" className="shrink-0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand/logo.png" alt="Carbide India" className="h-8 w-auto max-w-[118px] object-contain" />
-          </Link>
+          {/* Brand logo in the top bar (click → Hub). Hidden on the Forms
+              launchpad, which shows its own larger logo in the left margin. */}
+          {showSidebar && (
+            <Link href={"/hub" as Route} aria-label="Carbide India — back to the Hub" title="Back to the Hub" className="shrink-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/brand/logo.png" alt="Carbide India" className="h-8 w-auto max-w-[118px] object-contain" />
+            </Link>
+          )}
         </div>
 
         {/* Module title — published by the page (a register names itself) with
@@ -489,7 +489,7 @@ export function EnquiryModuleShell({
           {showSidebar && (
             <Link
               href={"/enquiries" as Route}
-              className="group flex h-9 shrink-0 items-center gap-1.5 rounded-lg border-[1.5px] border-[#e2dfdc] bg-white px-3 text-[13px] font-bold text-[#454595] transition-colors hover:border-[#454595] hover:bg-[#f4f0e8] max-md:hidden"
+              className="group flex h-9 shrink-0 items-center gap-1.5 rounded-lg border-[1.5px] border-[#e2dfdc] bg-white px-3 text-[13px] font-bold text-[#454595] transition-colors hover:border-[#454595] hover:bg-[#ffffff] max-md:hidden"
               aria-label="Back to all forms"
             >
               <ArrowLeft className="h-[15px] w-[15px] transition-transform duration-200 group-hover:-translate-x-0.5" strokeWidth={2.6} />
@@ -515,40 +515,27 @@ export function EnquiryModuleShell({
           <aside
             className={cn(
               "sticky top-[60px] h-[calc(100vh-60px)] shrink-0 overflow-hidden border-r transition-[width] duration-300 ease-in-out",
-              themed ? "border-[#e2dfdc] bg-[#f4f0e8]" : "border-[#e5e7eb] bg-white",
+              themed ? "border-[#e2dfdc] bg-[#ffffff]" : "border-[#e5e7eb] bg-white",
               collapsed ? "w-[72px]" : "w-[248px]",
             )}
           >
             <div className={cn("relative flex h-full flex-col py-3", collapsed ? "w-[72px] items-center px-2" : "w-[248px] px-4")}>
-              {/* Blueprint diamond cluster — the drafting-sheet flourish from the
-                  mockup. Purely decorative: behind the nav, non-interactive, and
-                  clipped by the aside's overflow-hidden so it never spills. */}
-              {themed && !collapsed && (
-                <div aria-hidden className="pointer-events-none absolute -bottom-3 -left-2 z-0 grid grid-cols-5 gap-2 opacity-80">
-                  {[
-                    "#e2dfdc", "#a8a8a8", "#1f2547", "#e2dfdc", "#a8a8a8",
-                    "#1f2547", "#e2dfdc", "#d03232", "#a8a8a8", "#e2dfdc",
-                    "#a8a8a8", "#e2dfdc", "#1f2547", "#e2dfdc", "#d03232",
-                  ].map((c, i) => (
-                    <span key={i} className="h-3.5 w-3.5 rotate-45 rounded-[2px]" style={{ background: c, opacity: 0.5 }} />
-                  ))}
-                </div>
-              )}
+              {/* (Blueprint diamond cluster removed per request.) */}
               {/* Cream-sheet brand block: the Carbide India logo, the module name
                   and the tagline — the sidebar masthead from the mockup. Only on
                   the themed shell and only when expanded (no room in the rail). */}
               {themed && !collapsed && (
                 <Link
-                  href={"/hub" as Route}
-                  aria-label="Carbide India — back to the Hub"
+                  href={"/enquiries" as Route}
+                  aria-label="Back to Forms"
                   className="mb-3 flex w-full items-center gap-2.5 overflow-hidden rounded-lg px-1 py-1 transition-colors hover:bg-[#e2dfdc]"
                 >
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#e7e8fb] text-[#3f3f94]">
+                    <LayoutGrid className="h-[18px] w-[18px]" strokeWidth={2.1} />
+                  </span>
                   <span className="flex min-w-0 flex-col leading-tight">
                     <span className="truncate text-[14px] font-extrabold uppercase tracking-[0.04em] text-[#1f2547]">
                       {brandTitle}
-                    </span>
-                    <span className="truncate text-[9.5px] leading-tight text-[#777985]">
-                      Your Tungsten Carbide &amp; Tungsten Copper Partners
                     </span>
                   </span>
                 </Link>
@@ -660,16 +647,6 @@ export function EnquiryModuleShell({
 
               <div className={cn("relative z-10 mt-2 flex w-full shrink-0 flex-col gap-1 border-t pt-2", themed ? "border-[#e2dfdc]" : "border-[#e5e7eb]")}>
                 <ModuleStepButtons collapsed={collapsed} />
-                <span
-                  title="Support - coming soon"
-                  className={cn(
-                    "flex h-[44px] cursor-default items-center rounded-lg text-[14px] font-semibold text-[#a8a8a8]",
-                    collapsed ? "justify-center px-0" : "gap-2.5 px-3",
-                  )}
-                >
-                  <LifeBuoy className="h-[16px] w-[16px]" />
-                  {!collapsed && "Support"}
-                </span>
               </div>
             </div>
           </aside>
