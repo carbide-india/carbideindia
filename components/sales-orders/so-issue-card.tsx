@@ -184,28 +184,7 @@ export function SoIssueCard({ salesOrder, poHistory, employeeNames }: Props) {
           </div>
 
           {/* ── 2. Issue ─────────────────────────────────────────────── */}
-          <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
-            <IssueRow
-              title="SO Issued to Production"
-              Icon={Factory}
-              blurb="The factory copy — internal grade, production part numbers, production notes."
-              sent={salesOrder.productionSoSent}
-              sentAt={salesOrder.productionSoSentAt}
-              sentBy={
-                salesOrder.productionSoSentById
-                  ? (employeeNames[salesOrder.productionSoSentById] ?? null)
-                  : null
-              }
-              disabledReason={
-                superseded
-                  ? "This revision has been superseded."
-                  : hasPo
-                    ? null
-                    : "Attach the client PO first."
-              }
-              pending={issuing === "production"}
-              onIssue={() => void issue("production")}
-            />
+          <div className="grid grid-cols-1 gap-3">
             <IssueRow
               title="SO Issued to Customer"
               Icon={UserRound}
