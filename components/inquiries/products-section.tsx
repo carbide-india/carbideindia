@@ -13,10 +13,6 @@ import { Trash2, Check } from "lucide-react";
 import {
   INQUIRY_SHAPES,
   QUANTITY_UOMS,
-  CHECK_STATES,
-  CHECK_STATE_LABELS,
-  DOC_GIVEN_OPTIONS,
-  type CheckState,
 } from "@/db/enums";
 import { cn } from "@/lib/utils";
 import { Select } from "@/components/ui/select";
@@ -102,63 +98,6 @@ const EMPTY_PRODUCT = {
   sampleReceived: undefined,
   description: "",
 };
-
-const CHECK_OPTIONS = CHECK_STATES.map((s) => ({ value: s, label: CHECK_STATE_LABELS[s] }));
-const CHECK_TEXT_COLOR: Record<CheckState, string> = {
-  given: "!text-emerald-700",
-  not_given: "!text-[#d32f2f]",
-  assumed: "!text-amber-700",
-};
-const YES_NO = [
-  { value: "yes", label: "Yes" },
-  { value: "no", label: "No" },
-];
-
-/** One per-product checklist mark (Given / Not Given / Assumed) with a
- *  follow-up "what did you assume?" input when Assumed is picked. */
-function ProductCheck({
-  index,
-  label,
-  name,
-  assumed,
-  control,
-  register,
-}: {
-  index: number;
-  label: string;
-  name: "quantityStatus" | "shapeDimensionCheck" | "gradeCheck" | "toleranceCheck" | "conditionCheck";
-  assumed: "assumedQuantity" | "assumedShapeDimension" | "assumedGrade" | "assumedTolerance" | "assumedCondition";
-  control: Control<InquiryFormValues>;
-  register: UseFormRegister<InquiryFormValues>;
-}) {
-  return (
-    <Field label={label} float>
-      <Controller
-        control={control}
-        name={`products.${index}.${name}`}
-        render={({ field }) => (
-          <div className="flex flex-col gap-2">
-            <Select
-              options={CHECK_OPTIONS}
-              value={field.value ?? ""}
-              onValueChange={(v) => field.onChange((v || undefined) as CheckState | undefined)}
-              placeholder="Select"
-              className={cn("font-bold", field.value ? CHECK_TEXT_COLOR[field.value as CheckState] : "")}
-            />
-            {field.value === "assumed" && (
-              <input
-                type="text"
-                className="nt-input"
-                placeholder="What value did you assume?"
-                {...register(`products.${index}.${assumed}`)}
-              />
-            )}
-          </div>
-        )}
-      />
-    </Field>
-  );
-}
 
 /**
  * Section 3 of the New Inquiry form - Products. A repeatable per-product
@@ -274,74 +213,8 @@ export function ProductsSection({
             }
           />
 
-          {/* Checklist FIRST - what the client gave us for reference (Given /
-              Not Given / Assumed), packed densely to save space. */}
-          <div className="flex flex-col gap-3 rounded-lg border border-[#dcdce8] bg-white p-4">
-            <span className="text-[14px] font-bold uppercase tracking-[0.08em] text-[#3f3f94]">
-              Checklist
-            </span>
-            <div className="grid grid-cols-6 gap-3 max-lg:grid-cols-3 max-md:grid-cols-2">
-              <ProductCheck index={index} label="Quantity" name="quantityStatus" assumed="assumedQuantity" control={control} register={register} />
-              <ProductCheck index={index} label="Shape & Dimension" name="shapeDimensionCheck" assumed="assumedShapeDimension" control={control} register={register} />
-              <ProductCheck index={index} label="Grade" name="gradeCheck" assumed="assumedGrade" control={control} register={register} />
-              <ProductCheck index={index} label="Tolerance" name="toleranceCheck" assumed="assumedTolerance" control={control} register={register} />
-              <ProductCheck index={index} label="Condition" name="conditionCheck" assumed="assumedCondition" control={control} register={register} />
-              <Field label="Sample Received" float>
-                <Controller
-                  control={control}
-                  name={`products.${index}.sampleReceived`}
-                  render={({ field: f }) => (
-                    <Select
-                      options={YES_NO}
-                      value={f.value === undefined ? "" : f.value ? "yes" : "no"}
-                      onValueChange={(v) => f.onChange(v === "" ? undefined : v === "yes")}
-                      placeholder="Select"
-                      className="font-bold"
-                    />
-                  )}
-                />
-              </Field>
-            </div>
-            <Field label="Docs Given" float>
-              <Controller
-                control={control}
-                name={`products.${index}.docsGiven`}
-                render={({ field: f }) => (
-                  <div className="flex flex-wrap gap-2">
-                    {DOC_GIVEN_OPTIONS.map((opt) => {
-                      const selected = f.value ?? [];
-                      const checked = selected.includes(opt);
-                      return (
-                        <button
-                          key={opt}
-                          type="button"
-                          role="checkbox"
-                          aria-checked={checked}
-                          onClick={() => f.onChange(checked ? selected.filter((o) => o !== opt) : [...selected, opt])}
-                          className={cn(
-                            "inline-flex items-center gap-2 rounded-chip border-[1.75px] px-3 py-2 text-[15px] font-semibold transition-colors",
-                            checked
-                              ? "border-brand bg-brand/8 text-ink-strong"
-                              : "border-[#9199b6] bg-surface-card text-ink-strong hover:border-[#6f78a0] hover:bg-[#f3f4f8]",
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              "inline-flex size-[16px] items-center justify-center rounded-[4px] border-[1.75px] transition-colors",
-                              checked ? "bg-brand border-brand text-white" : "border-[#9199b6] bg-white text-transparent",
-                            )}
-                          >
-                            <Check size={11} strokeWidth={3} />
-                          </span>
-                          {opt}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              />
-            </Field>
-          </div>
+          {/* The per-product checklist was moved to the enquiry-level
+              "Enquiry Checklist" section (owner request 2026-09-08). */}
 
           {/* Material Search + Linked Sample on one line. The picked sample's
               read-only panel renders full-width below the row. */}
@@ -357,7 +230,7 @@ export function ProductsSection({
                 <div className={cn("grid gap-4 max-md:grid-cols-1", sampleReceived ? "grid-cols-2" : "grid-cols-1")}>
                   <div>
                     <span className="mb-1.5 block text-[14px] font-semibold text-ink-soft">
-                      Material
+                      Select Product
                     </span>
                     <ProductPicker
                       masters={pickerMasters}
@@ -420,7 +293,7 @@ export function ProductsSection({
                 {...register(`products.${index}.custProductName`)}
               />
             </Field>
-            <Field id={`products.${index}.custDrawingNo`} label="Drawing No" float>
+            <Field id={`products.${index}.custDrawingNo`} label="Customer Drawing No" float>
               <input
                 id={`products.${index}.custDrawingNo`}
                 type="text"
@@ -430,7 +303,7 @@ export function ProductsSection({
             </Field>
             <Field
               id={`products.${index}.drawingRevisionNo`}
-              label="Drawing Rev No" float
+              label="Customer Drawing Rev No" float
             >
               <input
                 id={`products.${index}.drawingRevisionNo`}

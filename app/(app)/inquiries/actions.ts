@@ -190,21 +190,22 @@ export async function createInquiry(
           contactEmail: v.contactEmail,
           ccEmails: v.ccEmails,
           extraContacts: v.extraContacts,
-          // The checklist + description moved into each product card; mirror the
-          // first product's values into the header columns for back-compat with
-          // the register / feasibility that still read inquiry-level fields.
-          productDescription: p0?.description ?? v.productDescription ?? p0?.custProductName ?? "-",
-          quantityStatus: p0?.quantityStatus ?? v.quantityStatus,
+          // The checklist is now ONE enquiry-level section (moved out of the
+          // product card), so the enquiry-level values (`v.*`) are authoritative
+          // and written to the header columns the register / feasibility read.
+          // The old per-product `p0` values remain as a fallback (older drafts).
+          productDescription: v.productDescription || p0?.description || p0?.custProductName || "-",
+          quantityStatus: v.quantityStatus ?? p0?.quantityStatus,
           quantityNos: p0?.quantityNos ?? undefined,
           quantityUom: p0?.quantityUom ?? v.quantityUom,
-          docsGiven: p0?.docsGiven ?? v.docsGiven,
-          shapeDimensionCheck: p0?.shapeDimensionCheck ?? v.shapeDimensionCheck,
-          gradeCheck: p0?.gradeCheck ?? v.gradeCheck,
-          toleranceCheck: p0?.toleranceCheck ?? v.toleranceCheck,
-          conditionCheck: p0?.conditionCheck ?? v.conditionCheck,
-          sampleReceived: p0?.sampleReceived ?? v.sampleReceived,
+          docsGiven: v.docsGiven ?? p0?.docsGiven,
+          shapeDimensionCheck: v.shapeDimensionCheck ?? p0?.shapeDimensionCheck,
+          gradeCheck: v.gradeCheck ?? p0?.gradeCheck,
+          toleranceCheck: v.toleranceCheck ?? p0?.toleranceCheck,
+          conditionCheck: v.conditionCheck ?? p0?.conditionCheck,
+          sampleReceived: v.sampleReceived ?? p0?.sampleReceived,
           firstEnquiry: v.firstEnquiry,
-          assumedValues: p0
+          assumedValues: v.assumedValues ?? (p0
             ? {
                 quantity: p0.assumedQuantity ?? undefined,
                 shapeDimension: p0.assumedShapeDimension ?? undefined,
@@ -212,7 +213,7 @@ export async function createInquiry(
                 tolerance: p0.assumedTolerance ?? undefined,
                 condition: p0.assumedCondition ?? undefined,
               }
-            : v.assumedValues,
+            : undefined),
           shape: p0?.shape ?? undefined,
           outerDia: p0?.outerDia ?? undefined,
           innerDia: p0?.innerDia ?? undefined,

@@ -116,7 +116,7 @@ export function ChecklistSection({
 }: Props) {
   return (
     <SectionCard
-      title="Checklist"
+      title="Enquiry Checklist"
       inlineHint
       hint="Mark what the client actually gave (Given), didn't give (Not Given), or what we filled in ourselves (Assumed)."
     >

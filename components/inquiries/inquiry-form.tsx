@@ -378,15 +378,10 @@ export function InquiryForm({
             onAutofill={applyAutofill}
             error={errors.clientId?.message}
           />
-          <Field id="inq-company" label="Company Name" required float>
-            <input
-              id="inq-company"
-              type="text"
-              className="nt-input"
-              placeholder="e.g. Precision Tools Pvt Ltd"
-              {...register("companyName")}
-            />
-          </Field>
+          {/* Company Name field removed from the form per request — it is still
+              captured (auto-filled from the selected client) and saved, so it is
+              kept here as a hidden registered input. */}
+          <input type="hidden" {...register("companyName")} />
           <Field id="inq-export" label="Export" float>
             <Controller
               control={control}
@@ -437,7 +432,7 @@ export function InquiryForm({
               )}
             />
           </Field>
-          <Field id="inq-source" label="Source" float>
+          <Field id="inq-source" label="Source Of Enquiry" float>
             <Controller
               control={control}
               name="source"
@@ -749,17 +744,15 @@ export function InquiryForm({
         </div>
       </SectionCard>
 
-      {/* ── 2 · Checklist (edit mode only) ───────────────────────────── */}
-      {/* On new enquiries the checklist + product description live INSIDE each
-          product card (per-product). Edit mode keeps the header-level checklist
-          since products aren't re-synced from enquiry edits. */}
-      {isEdit && (
-        <ChecklistSection
-          control={control}
-          register={register}
-          productDescriptionError={errors.productDescription?.message}
-        />
-      )}
+      {/* ── 2 · Enquiry Checklist ────────────────────────────────────── */}
+      {/* One enquiry-level checklist section (its own card, like Products /
+          Assignment) in BOTH create and edit — the per-product checklist inside
+          the product card was moved out here per owner request. */}
+      <ChecklistSection
+        control={control}
+        register={register}
+        productDescriptionError={errors.productDescription?.message}
+      />
 
       {/* ── 3 · Products (with per-product checklist) ────────────────── */}
       {/* Products are hidden in edit mode - they link to costings/quotes and

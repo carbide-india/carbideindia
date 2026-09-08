@@ -37,7 +37,6 @@ import type { EmployeeOption } from "@/lib/queries/employees";
 import { COUNTRIES, INDIAN_STATES, pinToState, toAddressStateName } from "@/lib/data/geo";
 import { INDIA_CITIES } from "@/lib/data/india-states-cities";
 import { CURRENCY_CODES, currencyLabel } from "@/lib/data/currencies";
-import { BANKS, ACCOUNT_TYPES } from "@/lib/data/banks";
 import { ClientDocuments } from "@/components/clients/client-documents";
 import type { ClientDocument } from "@/lib/queries/client-documents";
 import { ViewPdfButton } from "@/components/forms/view-pdf-button";
@@ -247,8 +246,6 @@ export function KycForm({
   creditLimitOptions,
   qtyDeviationOptions,
   transporterOptions,
-  bankOptions,
-  accountTypeOptions,
   stateOptions,
   countryOptions,
   currencyOptions,
@@ -266,8 +263,7 @@ export function KycForm({
   const creditLimitList = creditLimitOptions?.length ? creditLimitOptions : CREDIT_LIMIT_PRESET;
   const qtyDeviationList = qtyDeviationOptions?.length ? qtyDeviationOptions : QTY_DEVIATION_PRESET;
   const transporterList = transporterOptions?.length ? transporterOptions : TRANSPORTER_OPTIONS;
-  const bankList = bankOptions?.length ? bankOptions : BANKS;
-  const accountTypeList = accountTypeOptions?.length ? accountTypeOptions : ACCOUNT_TYPES;
+  // Bank Details UI removed — bankOptions/accountTypeOptions no longer rendered.
   const stateList = stateOptions?.length ? stateOptions : INDIAN_STATES;
   const countryList = countryOptions?.length ? countryOptions : COUNTRIES;
   const currencyList: readonly string[] = currencyOptions?.length ? currencyOptions : CURRENCY_CODES;
@@ -411,32 +407,8 @@ export function KycForm({
   const { fields: addressFields, append: appendAddress, remove: removeAddress } =
     useFieldArray({ control, name: "addresses" });
 
-  const { fields: bankFields, append: appendBank, remove: removeBank } =
-    useFieldArray({ control, name: "bankAccounts" });
-
-  // Always show one primary bank account expanded (never just the "+ Add
-  // Account" button). Empty accounts are dropped on save, so this seeds no junk.
-  const bankSeeded = React.useRef(false);
-  React.useEffect(() => {
-    if (bankSeeded.current) return;
-    bankSeeded.current = true;
-    if (bankFields.length === 0) {
-      // shouldFocus:false — this seed runs on mount; focusing the new row would
-      // scroll the page down to Bank Details instead of opening at the top.
-      appendBank(
-        {
-          isPrimary: true,
-          bankName: "",
-          accountNo: "",
-          ifsc: "",
-          branch: "",
-          accountHolder: "",
-          accountType: "",
-        },
-        { shouldFocus: false },
-      );
-    }
-  }, [bankFields.length, appendBank]);
+  // Bank Details UI removed per owner request; `bankAccounts` stays in the form
+  // state (defaults to []) so the save payload shape is unchanged.
 
   // ── Draft auto-save (create mode only - silent, runs in background) ──
   const { discard } = useFormDraft({
@@ -1494,135 +1466,9 @@ export function KycForm({
         </div>
       </SectionCard>
 
-      {/* ── 6 · Bank Details ─────────────────────────────────────────── */}
-      <SectionCard
-        title="Bank Details"
-        inlineHint
-        hint="One or more bank accounts for payments - flag one as primary."
-      >
-        {bankFields.map((field, idx) => (
-          <div key={field.id} className="flex flex-col gap-3">
-            <GroupHeader
-              n={idx + 1}
-              label="Account"
-              action={
-                <button
-                  type="button"
-                  onClick={() => removeBank(idx)}
-                  aria-label={`Remove bank account ${idx + 1}`}
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-hairline px-2.5 py-1.5 text-[14px] font-semibold text-ink-subtle transition hover:border-[#f0b4b4] hover:bg-[#fdf3f3] hover:text-[#d32f2f]"
-                >
-                  <X className="h-[15px] w-[15px]" />
-                  Remove
-                </button>
-              }
-            />
+      {/* Bank Details section removed per owner request (2026-09-08). */}
 
-            <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
-              <Field id={`kyc-bank${idx}-holder`} label="Account Name" float>
-                <input
-                  id={`kyc-bank${idx}-holder`}
-                  type="text"
-                  className="nt-input"
-                  placeholder={watch("name") || "Name on the account"}
-                  {...register(`bankAccounts.${idx}.accountHolder`)}
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setValue(`bankAccounts.${idx}.accountHolder`, watch("name") ?? "")
-                  }
-                  className="self-start text-[14px] font-semibold text-ink-subtle hover:text-ink-strong transition-colors"
-                >
-                  &#8627; Same as company
-                </button>
-              </Field>
-              <Field label="Bank Name" labelOnly float>
-                <Controller
-                  control={control}
-                  name={`bankAccounts.${idx}.bankName`}
-                  render={({ field }) => (
-                    <Select
-                      ariaLabel="Bank Name"
-                      value={field.value ?? ""}
-                      onValueChange={(v) => field.onChange(v || undefined)}
-                      placeholder="Select a bank"
-                      searchable
-                      searchPlaceholder="Search banks"
-                      options={bankList.map((b) => ({ value: b, label: b }))}
-                    />
-                  )}
-                />
-              </Field>
-              <Field id={`kyc-bank${idx}-accno`} label="Account No" float>
-                <input id={`kyc-bank${idx}-accno`} type="text" className="nt-input" {...register(`bankAccounts.${idx}.accountNo`)} />
-              </Field>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
-              <Field id={`kyc-bank${idx}-ifsc`} label="IFSC / SWIFT Code" float>
-                <input id={`kyc-bank${idx}-ifsc`} type="text" className="nt-input" placeholder="IFSC (domestic) or SWIFT (international)" {...register(`bankAccounts.${idx}.ifsc`)} />
-              </Field>
-              <Field id={`kyc-bank${idx}-branch`} label="Branch" float>
-                <input id={`kyc-bank${idx}-branch`} type="text" className="nt-input" placeholder="e.g. Ambad, Nashik" {...register(`bankAccounts.${idx}.branch`)} />
-              </Field>
-              <Field label="Account Type" labelOnly float>
-                <Controller
-                  control={control}
-                  name={`bankAccounts.${idx}.accountType`}
-                  render={({ field }) => (
-                    <Select
-                      ariaLabel="Account Type"
-                      value={field.value ?? ""}
-                      onValueChange={(v) => field.onChange(v || undefined)}
-                      placeholder="Select account type"
-                      options={accountTypeList.map((t) => ({ value: t, label: t }))}
-                    />
-                  )}
-                />
-              </Field>
-            </div>
-
-            <Controller
-              control={control}
-              name={`bankAccounts.${idx}.isPrimary`}
-              render={({ field: f }) => (
-                <label className="inline-flex items-center gap-2 text-[15px] font-semibold text-ink-muted">
-                  <input
-                    type="checkbox"
-                    className="size-[16px] accent-brand"
-                    checked={Boolean(f.value)}
-                    onChange={(e) => f.onChange(e.target.checked)}
-                  />
-                  Primary Account
-                </label>
-              )}
-            />
-          </div>
-        ))}
-
-        <button
-          type="button"
-          onClick={() =>
-            appendBank({
-              bankName: "",
-              accountNo: "",
-              ifsc: "",
-              branch: "",
-              accountHolder: "",
-              accountType: "",
-              isPrimary: false,
-              notes: "",
-            })
-          }
-          className="inline-flex w-max items-center gap-1.5 rounded-lg border border-[#c9c9ea] bg-[#f4f4fd] px-4 py-2.5 text-[15px] font-bold text-[#3f3f94] transition hover:border-[#3f3f94] hover:bg-[#eeeefb]"
-        >
-          <Plus className="h-4 w-4" />
-          Add Account
-        </button>
-      </SectionCard>
-
-      {/* ── 7 · Documents & Business Card ────────────────────────────── */}
+      {/* ── Documents & Business Card ────────────────────────────────── */}
       <SectionCard
         title="Documents"
         inlineHint

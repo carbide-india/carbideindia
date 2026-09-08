@@ -1,5 +1,5 @@
 import "server-only";
-import { aliasedTable, and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { aliasedTable, and, desc, eq, ilike, ne, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { items, masterOptions } from "@/db/schema";
 
@@ -106,6 +106,9 @@ export async function searchMaterials(
 
   const conds = [];
   if (!opts.includeInactive) conds.push(eq(items.isActive, true));
+  // Only real Product-Master entries — never the DRAFT items minted from an
+  // enquiry line that hasn't been finalised (owner request 2026-09-08).
+  conds.push(ne(items.status, "draft"));
   if (opts.shapeId) conds.push(eq(items.shapeId, opts.shapeId));
   if (opts.gradeId) conds.push(eq(items.internalGradeId, opts.gradeId));
 

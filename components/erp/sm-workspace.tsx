@@ -17,6 +17,7 @@ import {
   Layers,
   Lock,
   PanelRightOpen,
+  Maximize2,
   Pencil,
   Ruler,
   TriangleAlert,
@@ -850,7 +851,7 @@ function ProductCard({
           aria-label="Open item drawer"
           className="shrink-0 rounded-lg border border-hairline bg-surface-card p-1.5 text-ink-subtle transition-colors hover:border-brand hover:text-brand"
         >
-          <PanelRightOpen size={15} strokeWidth={2.2} />
+          <Maximize2 size={15} strokeWidth={2.2} />
         </button>
       </div>
 
