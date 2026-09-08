@@ -194,7 +194,7 @@ export function EnquiryLaunchpad({ isAdmin = false }: { isAdmin?: boolean }) {
               </div>
 
               <span
-                className="mt-[10px] inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-md bg-[#eef1fb] px-2 text-[12px] font-bold tracking-[0.06em] text-[#3f3f94] transition-all duration-200 group-hover:text-white group-hover:[background:linear-gradient(135deg,#4a4ab5,#2f2f6f)] group-hover:shadow-[0_10px_22px_-8px_rgba(63,63,148,0.55)]"
+                className="mt-5 inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-md bg-[#eef1fb] px-2 text-[12px] font-bold tracking-[0.06em] text-[#3f3f94] transition-all duration-200 group-hover:text-white group-hover:[background:linear-gradient(135deg,#4a4ab5,#2f2f6f)] group-hover:shadow-[0_10px_22px_-8px_rgba(63,63,148,0.55)]"
                 style={{ fontFamily: MONO }}
               >
                 START
@@ -227,7 +227,7 @@ export function EnquiryLaunchpad({ isAdmin = false }: { isAdmin?: boolean }) {
                     </h3>
                   </div>
                   <span
-                    className="mt-[10px] inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-md bg-[#eef1fb] px-2 text-[12px] font-bold tracking-[0.06em] text-[#3f3f94] transition-all duration-200 group-hover:text-white group-hover:[background:linear-gradient(135deg,#4a4ab5,#2f2f6f)] group-hover:shadow-[0_10px_22px_-8px_rgba(63,63,148,0.55)]"
+                    className="mt-5 inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-md bg-[#eef1fb] px-2 text-[12px] font-bold tracking-[0.06em] text-[#3f3f94] transition-all duration-200 group-hover:text-white group-hover:[background:linear-gradient(135deg,#4a4ab5,#2f2f6f)] group-hover:shadow-[0_10px_22px_-8px_rgba(63,63,148,0.55)]"
                     style={{ fontFamily: MONO }}
                   >
                     OPEN
