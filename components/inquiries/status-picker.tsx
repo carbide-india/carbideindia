@@ -16,6 +16,8 @@ interface Props<T extends string> {
   /** Fired after the server confirms (e.g. "proceed_to_costing" toast). */
   onConfirmed?: (next: T) => void;
   ariaLabel: string;
+  /** Locks the picker (no open, no change) — e.g. an approved negotiation. */
+  disabled?: boolean;
 }
 
 /**
@@ -31,6 +33,7 @@ export function StatusPicker<T extends string>({
   onPick,
   onConfirmed,
   ariaLabel,
+  disabled = false,
 }: Props<T>) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
@@ -65,17 +68,22 @@ export function StatusPicker<T extends string>({
   }
 
   return (
-    <Popover.Root open={open} onOpenChange={(next) => !pending && setOpen(next)}>
+    <Popover.Root open={open} onOpenChange={(next) => !pending && !disabled && setOpen(next)}>
       <Popover.Trigger asChild>
         <button
           type="button"
-          disabled={pending}
-          aria-label={`${ariaLabel}: ${labels[shown] ?? shown}. Click to change.`}
+          disabled={pending || disabled}
+          aria-label={
+            disabled
+              ? `${ariaLabel}: ${labels[shown] ?? shown} (locked)`
+              : `${ariaLabel}: ${labels[shown] ?? shown}. Click to change.`
+          }
+          title={disabled ? "Locked — this status can't be changed." : undefined}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-pill text-[13px] font-bold transition-colors"
           style={{
             background: `color-mix(in srgb, var(--color-${tone}) 12%, transparent)`,
             color: `var(--color-${tone}-deep)`,
-            cursor: pending ? "wait" : "pointer",
+            cursor: disabled ? "not-allowed" : pending ? "wait" : "pointer",
             opacity: pending ? 0.7 : 1,
             border: `1px solid color-mix(in srgb, var(--color-${tone}) 30%, transparent)`,
           }}
@@ -87,7 +95,7 @@ export function StatusPicker<T extends string>({
               strokeWidth={2.4}
               style={{ animation: "spinFast 0.8s linear infinite" }}
             />
-          ) : (
+          ) : disabled ? null : (
             <ChevronDown size={12} strokeWidth={2.6} />
           )}
         </button>

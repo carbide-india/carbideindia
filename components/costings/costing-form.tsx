@@ -359,6 +359,18 @@ export function CostingForm({
         Boolean(q.vendorNameSnapshot && String(q.vendorNameSnapshot).trim()) ||
         Number(q.unitPrice) > 0,
     );
+    // Bought-Out MUST carry a vendor (name) and a cost per piece before it can be
+    // saved — every vendor row needs both (owner request 2026-09-08).
+    if (values.costingType === "bought_out") {
+      const hasName = (q: (typeof cleanedQuotes)[number]) =>
+        Boolean(q.vendorId) || Boolean(q.vendorNameSnapshot && String(q.vendorNameSnapshot).trim());
+      if (cleanedQuotes.length === 0 || cleanedQuotes.some((q) => !hasName(q) || !(Number(q.unitPrice) > 0))) {
+        const msg = "Select a vendor and enter its cost per piece before saving.";
+        setServerError(msg);
+        fireToast({ message: msg, type: "error" });
+        return;
+      }
+    }
     const payload: CreateCostingInput = {
       ...values,
       vendorQuotes:

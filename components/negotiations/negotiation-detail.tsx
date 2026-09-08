@@ -515,6 +515,9 @@ export function NegotiationDetail({
               tones={NEGOTIATION_STATUS_COLORS}
               onPick={(next) => setNegotiationStatus(negotiation.id, next)}
               ariaLabel="Negotiation status"
+              // Once approved, the status is locked here — nobody can change it
+              // from this dropdown.
+              disabled={isNegotiationApprovedForSo(negotiation.negotiationStatus)}
             />
           </div>
           <SidebarRow label="Sales Person" value={salesPerson ?? "-"} />

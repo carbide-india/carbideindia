@@ -151,7 +151,7 @@ export function CustomerPoCard({
 
   async function onSavePo(): Promise<void> {
     if (!poNo.trim() && !poPath) {
-      fireToast({ message: "Enter a PO number or attach the PO document." });
+      fireToast({ type: "error", message: "Enter a PO number or attach the PO document." });
       return;
     }
     setSavingPo(true);
