@@ -363,13 +363,16 @@ export async function listCostingRegister(
   const costedLineIds = [...byLine.keys()];
   // Union membership (A ∪ B). `inArray` with an empty list is invalid SQL, so a
   // fresh database — no costings at all — falls back to the confirmed-only arm.
+  // Costable = the line's ENQUIRY is Feasibility Approved (proceed_to_costing),
+  // matching the save gate (owner decision 2026-09-08). Lines that already carry
+  // a costing stay visible either way so existing cost sheets never disappear.
   const membership =
     costedLineIds.length > 0
       ? or(
-          eq(inquiryItems.feasibilityConfirmed, true),
+          eq(inquiries.feasibilityStatus, "proceed_to_costing"),
           inArray(inquiryItems.id, costedLineIds),
         )
-      : eq(inquiryItems.feasibilityConfirmed, true);
+      : eq(inquiries.feasibilityStatus, "proceed_to_costing");
 
   const lines = await db
     .select({

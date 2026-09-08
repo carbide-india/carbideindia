@@ -189,6 +189,22 @@ export async function isItemFeasibilityConfirmed(inquiryItemId: string): Promise
   return row?.confirmed === true;
 }
 
+/**
+ * True when the PARENT enquiry of this product line is Feasibility Approved
+ * (`proceed_to_costing`). The costing gate uses this: costing is allowed only
+ * once the OVERALL enquiry is approved, not merely when a line is done/confirmed
+ * (owner decision 2026-09-08).
+ */
+export async function isItemEnquiryFeasibilityApproved(inquiryItemId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ status: inquiries.feasibilityStatus })
+    .from(inquiryItems)
+    .innerJoin(inquiries, eq(inquiries.id, inquiryItems.inquiryId))
+    .where(eq(inquiryItems.id, inquiryItemId))
+    .limit(1);
+  return row?.status === "proceed_to_costing";
+}
+
 /* ── Dimensions & specifications lock gate (Form 04 → Form 05, migration 0062) ── */
 
 /**

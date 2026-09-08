@@ -187,18 +187,29 @@ export function applyPrimaryMirror(
     const primaryRegistered = addressRows.find(
       (r) => r.addressType === "registered" && r.isPrimary,
     );
-    patch.addressLine1 = primaryRegistered?.line1 ?? null;
-    patch.addressLine2 = primaryRegistered?.line2 ?? null;
-    patch.addressLine3 = primaryRegistered?.line3 ?? null;
-    patch.addressLine4 = primaryRegistered?.line4 ?? null;
-    patch.city = primaryRegistered?.city ?? null;
-    patch.state = primaryRegistered?.state ?? null;
-    patch.country = primaryRegistered?.country ?? null;
-    patch.pinCode = primaryRegistered?.pinCode ?? null;
-
     const primaryBillTo = addressRows.find(
       (r) => r.addressType === "bill_to" && r.isPrimary,
     );
+    // The KYC form captures Bill To / Ship To (there is no separate "registered"
+    // block), so the legacy `clients` address columns — which the enquiry
+    // auto-fill and every downstream reader use — mirror the registered primary
+    // when one exists, otherwise the Bill To primary (the client's main
+    // address), otherwise any primary. Without this fallback the columns were
+    // nulled and the address never carried forward (owner report 2026-09-08).
+    const mirror =
+      primaryRegistered ??
+      primaryBillTo ??
+      addressRows.find((r) => r.isPrimary) ??
+      addressRows[0];
+    patch.addressLine1 = mirror?.line1 ?? null;
+    patch.addressLine2 = mirror?.line2 ?? null;
+    patch.addressLine3 = mirror?.line3 ?? null;
+    patch.addressLine4 = mirror?.line4 ?? null;
+    patch.city = mirror?.city ?? null;
+    patch.state = mirror?.state ?? null;
+    patch.country = mirror?.country ?? null;
+    patch.pinCode = mirror?.pinCode ?? null;
+
     patch.billToAddress = primaryBillTo?.line1 ?? null;
 
     const primaryShipTo = addressRows.find(

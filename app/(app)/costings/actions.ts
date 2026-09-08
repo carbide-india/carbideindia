@@ -35,7 +35,7 @@ import {
 } from "@/lib/costing/inhouse-master";
 import { getCostingDecision } from "@/lib/queries/costings";
 import { syncQuotationForInquiry } from "@/lib/workflow/provision";
-import { isItemFeasibilityConfirmed } from "@/lib/queries/feasibility";
+import { isItemEnquiryFeasibilityApproved } from "@/lib/queries/feasibility";
 import type { CostingDoneStatus, CostingRoute } from "@/db/enums";
 
 type SaveCostingResult =
@@ -101,11 +101,11 @@ export async function saveCosting(
   // The strong per-item gate (feasibility_confirmed = true, set after Lock
   // Dimensions in Primary Feasibility). Enforces the professional pipeline; an
   // unconfirmed / not-feasible / pending line cannot be costed.
-  if (!(await isItemFeasibilityConfirmed(v.inquiryItemId))) {
+  if (!(await isItemEnquiryFeasibilityApproved(v.inquiryItemId))) {
     return {
       ok: false,
       error:
-        "This product line's feasibility is not confirmed yet - confirm it in Primary Feasibility before costing.",
+        "This enquiry isn't Feasibility Approved yet - approve it in Primary Feasibility before costing.",
     };
   }
 
@@ -434,11 +434,11 @@ export async function approveCostingDecision(
   }
 
   // ── Hard gate: this line's feasibility must be CONFIRMED before a decision locks ──
-  if (!(await isItemFeasibilityConfirmed(inquiryItemId))) {
+  if (!(await isItemEnquiryFeasibilityApproved(inquiryItemId))) {
     return {
       ok: false,
       error:
-        "This product line's feasibility is not confirmed yet - confirm it in Primary Feasibility before costing.",
+        "This enquiry isn't Feasibility Approved yet - approve it in Primary Feasibility before costing.",
     };
   }
 
@@ -954,11 +954,11 @@ export async function saveCostingMaster(
   }
 
   // ── Hard gate: this line's feasibility must be CONFIRMED (per-item) ──
-  if (!(await isItemFeasibilityConfirmed(v.inquiryItemId))) {
+  if (!(await isItemEnquiryFeasibilityApproved(v.inquiryItemId))) {
     return {
       ok: false,
       error:
-        "This product line's feasibility is not confirmed yet - confirm it in Primary Feasibility before costing.",
+        "This enquiry isn't Feasibility Approved yet - approve it in Primary Feasibility before costing.",
     };
   }
 
@@ -1713,11 +1713,11 @@ export async function reviseCosting(
     if (!src) return { ok: false, error: "Costing not found." };
 
     // Same gate as creating a costing: an unconfirmed line cannot be re-costed.
-    if (!(await isItemFeasibilityConfirmed(src.inquiryItemId))) {
+    if (!(await isItemEnquiryFeasibilityApproved(src.inquiryItemId))) {
       return {
         ok: false,
         error:
-          "This product line's feasibility is not confirmed yet - confirm it in Primary Feasibility before revising the costing.",
+          "This enquiry isn't Feasibility Approved yet - approve it in Primary Feasibility before revising the costing.",
       };
     }
 
