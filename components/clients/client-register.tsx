@@ -18,7 +18,11 @@ import {
   X,
   SlidersHorizontal,
   Check,
+  ArrowUp,
+  ArrowDown,
+  ChevronsUpDown,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { formatDate } from "@/lib/format";
 import {
   DropdownMenu,
@@ -53,11 +57,13 @@ interface Props {
 // ── Frozen-column geometry (px). Left offsets are derived from these widths so
 //    the three pinned columns (Actions · Company · Contact Person) tile without
 //    gaps or overlap while the rest of the table scrolls horizontally. ──
+const W_CHECK = 44;
 const W_ACTIONS = 46;
 const W_COMPANY = 200;
 const W_CONTACT = 168;
-const LEFT_COMPANY = W_ACTIONS;
-const LEFT_CONTACT = W_ACTIONS + W_COMPANY;
+const LEFT_ACTIONS = W_CHECK;
+const LEFT_COMPANY = W_CHECK + W_ACTIONS;
+const LEFT_CONTACT = W_CHECK + W_ACTIONS + W_COMPANY;
 
 // ── Optional (hideable) columns - everything past the three frozen ones. Driven
 //    by one config so header + body + the Columns menu stay in sync. ──
@@ -194,6 +200,33 @@ const OPT_COLUMNS: OptCol[] = [
 ];
 const COLS_STORAGE_KEY = "carbide.clients.hiddenCols";
 
+// Sort accessors keyed by column id (frozen + optional). A column with an entry
+// here gets a clickable, asc/desc-toggling header.
+const CLIENT_SORTERS: Record<string, (r: ClientRegisterRow) => string | number | Date> = {
+  company: (r) => r.name,
+  contactName: (r) => r.contactName ?? "",
+  grade: (r) => r.grade ?? "",
+  clientCode: (r) => r.clientCode ?? "",
+  customerType: (r) => r.customerTypeNames.join(", "),
+  industryType: (r) => r.industryTypeNames.join(", "),
+  tags: (r) => r.tags.join(", "),
+  salesPerson: (r) => r.salesPersonName ?? "",
+  location: (r) => [r.city, r.state].filter(Boolean).join(", "),
+  gstin: (r) => r.gstin ?? "",
+  trade: (r) => (r.isExport === true ? "Export" : "Domestic"),
+  credit: (r) => (r.creditDays ?? -1),
+  status: (r) => (r.isActive ? 0 : 1),
+  created: (r) => r.createdAt,
+};
+
+type SortDir = "asc" | "desc";
+/** Compare two sortable values (Date / number / string), numeric-aware. */
+function cmpValues(a: string | number | Date, b: string | number | Date): number {
+  if (a instanceof Date && b instanceof Date) return a.getTime() - b.getTime();
+  if (typeof a === "number" && typeof b === "number") return a - b;
+  return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: "base" });
+}
+
 /**
  * Client Master register - a bespoke dense table (not the shared
  * RegisterDataTable) so it can carry the three product-owner requirements the
@@ -263,7 +296,7 @@ export function ClientRegister({ rows, isAdmin, heading, actions }: Props) {
     [hiddenCols],
   );
   const tableMinWidth =
-    W_ACTIONS + W_COMPANY + W_CONTACT + visibleCols.reduce((s, c) => s + c.width, 0);
+    W_CHECK + W_ACTIONS + W_COMPANY + W_CONTACT + visibleCols.reduce((s, c) => s + c.width, 0);
 
   // ── Filter option lists derived from the loaded rows (only relevant values). ──
   const options = React.useMemo(() => {
@@ -361,6 +394,47 @@ export function ClientRegister({ rows, isAdmin, heading, actions }: Props) {
     setStateFilter("");
     setTag("");
   }
+
+  // ── Sort (clickable headers, asc → desc → off) ──
+  const [sortKey, setSortKey] = React.useState<string | null>(null);
+  const [sortDir, setSortDir] = React.useState<SortDir>("asc");
+  function toggleSort(key: string) {
+    if (sortKey !== key) {
+      setSortKey(key);
+      setSortDir("asc");
+    } else if (sortDir === "asc") {
+      setSortDir("desc");
+    } else {
+      setSortKey(null);
+    }
+  }
+  const sorted = React.useMemo(() => {
+    const getter = sortKey ? CLIENT_SORTERS[sortKey] : undefined;
+    if (!getter) return filtered;
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      const c = cmpValues(getter(a), getter(b));
+      return sortDir === "asc" ? c : -c;
+    });
+    return arr;
+  }, [filtered, sortKey, sortDir]);
+
+  // ── Row selection (checkboxes) ──
+  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const allSelected = sorted.length > 0 && sorted.every((r) => selected.has(r.id));
+  const someSelected = !allSelected && sorted.some((r) => selected.has(r.id));
+  function toggleAll(next: boolean) {
+    setSelected(next ? new Set(sorted.map((r) => r.id)) : new Set());
+  }
+  function toggleRow(id: string, next: boolean) {
+    setSelected((prev) => {
+      const s = new Set(prev);
+      if (next) s.add(id);
+      else s.delete(id);
+      return s;
+    });
+  }
+  const selectedCount = sorted.filter((r) => selected.has(r.id)).length;
 
   const selectClass =
     "h-8 max-w-[150px] shrink-0 rounded-lg border border-[#dcdce8] bg-white px-2.5 text-[12.5px] font-semibold text-[#3a4152] outline-none focus:border-[#3f3f94]";
@@ -557,6 +631,20 @@ export function ClientRegister({ rows, isAdmin, heading, actions }: Props) {
         {/* Columns - hide/show optional columns. */}
         <ColumnsMenu hidden={hiddenCols} setHidden={setHiddenCols} />
 
+        {selectedCount > 0 && (
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[#eef0ff] px-2.5 py-1.5 text-[12.5px] font-bold text-[#3f3f94]">
+            {selectedCount} selected
+            <button
+              type="button"
+              onClick={() => setSelected(new Set())}
+              className="text-[#8a90a0] hover:text-[#3f3f94]"
+              aria-label="Clear selection"
+            >
+              <X size={13} strokeWidth={2.6} />
+            </button>
+          </span>
+        )}
+
         {hasFilters && (
           <button
             type="button"
@@ -603,24 +691,29 @@ export function ClientRegister({ rows, isAdmin, heading, actions }: Props) {
           >
             <thead>
               <tr className="text-left text-[11.5px] font-black uppercase tracking-[0.05em] text-[#2b303b]">
-                <Th sticky left={0} width={W_ACTIONS} corner>
+                <Th sticky left={0} width={W_CHECK} corner>
+                  <span className="flex justify-center">
+                    <Checkbox checked={allSelected} indeterminate={someSelected} onChange={toggleAll} ariaLabel="Select all clients" />
+                  </span>
+                </Th>
+                <Th sticky left={LEFT_ACTIONS} width={W_ACTIONS} corner>
                   <span className="sr-only">Actions</span>
                 </Th>
-                <Th sticky left={LEFT_COMPANY} width={W_COMPANY} corner>
+                <Th sticky left={LEFT_COMPANY} width={W_COMPANY} corner colId="company" activeKey={sortKey} dir={sortDir} onSort={toggleSort}>
                   Company
                 </Th>
-                <Th sticky left={LEFT_CONTACT} width={W_CONTACT} corner lastFrozen>
+                <Th sticky left={LEFT_CONTACT} width={W_CONTACT} corner lastFrozen colId="contactName" activeKey={sortKey} dir={sortDir} onSort={toggleSort}>
                   Contact Person
                 </Th>
                 {visibleCols.map((c) => (
-                  <Th key={c.id} width={c.width} align={c.align}>
+                  <Th key={c.id} width={c.width} align={c.align} colId={c.id} activeKey={sortKey} dir={sortDir} onSort={toggleSort}>
                     {c.label}
                   </Th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {filtered.map((r) => (
+              {sorted.map((r) => (
                 <tr
                   key={r.id}
                   className="group/row cursor-pointer"
@@ -628,7 +721,12 @@ export function ClientRegister({ rows, isAdmin, heading, actions }: Props) {
                   onMouseEnter={(e) => onRowEnter(r, e)}
                   onMouseLeave={onRowLeave}
                 >
-                  <Td sticky left={0} width={W_ACTIONS} className="align-top">
+                  <Td sticky left={0} width={W_CHECK} className="align-top">
+                    <div className="flex justify-center" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox checked={selected.has(r.id)} onChange={(n) => toggleRow(r.id, n)} ariaLabel={`Select ${r.name}`} />
+                    </div>
+                  </Td>
+                  <Td sticky left={LEFT_ACTIONS} width={W_ACTIONS} className="align-top">
                     {/* Row-action menu manages its own clicks - keep them from
                         bubbling up to the row's quick-view handler. */}
                     <div onClick={(e) => e.stopPropagation()}>
@@ -800,6 +898,10 @@ function Th({
   left,
   corner,
   lastFrozen,
+  colId,
+  activeKey,
+  dir,
+  onSort,
 }: {
   children: React.ReactNode;
   width?: number;
@@ -808,6 +910,11 @@ function Th({
   left?: number;
   corner?: boolean;
   lastFrozen?: boolean;
+  /** When set (and a sorter exists for it), the header is a sort toggle. */
+  colId?: string;
+  activeKey?: string | null;
+  dir?: SortDir;
+  onSort?: (key: string) => void;
 }) {
   const style: React.CSSProperties = sticky
     ? {
@@ -817,6 +924,8 @@ function Th({
         zIndex: corner ? 4 : 3,
       }
     : { width, minWidth: width };
+  const sortable = Boolean(colId && onSort && CLIENT_SORTERS[colId]);
+  const active = sortable && activeKey === colId;
   return (
     <th
       className={`sticky top-0 z-[2] whitespace-nowrap px-4 py-3 ${
@@ -829,7 +938,24 @@ function Th({
         ...style,
       }}
     >
-      {children}
+      {sortable ? (
+        <button
+          type="button"
+          onClick={() => onSort!(colId!)}
+          className={`group/sort inline-flex select-none items-center gap-1 uppercase tracking-[0.05em] transition-colors hover:text-[#3f3f94] ${align === "right" ? "flex-row-reverse" : ""} ${active ? "text-[#3f3f94]" : ""}`}
+        >
+          {children}
+          {active && dir === "asc" ? (
+            <ArrowUp size={12} strokeWidth={2.6} />
+          ) : active && dir === "desc" ? (
+            <ArrowDown size={12} strokeWidth={2.6} />
+          ) : (
+            <ChevronsUpDown size={12} strokeWidth={2.4} className="opacity-45 transition-opacity group-hover/sort:opacity-100" />
+          )}
+        </button>
+      ) : (
+        children
+      )}
     </th>
   );
 }

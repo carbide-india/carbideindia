@@ -16,7 +16,11 @@ import {
   Paperclip,
   FileCheck2,
   Link2,
+  ArrowUp,
+  ArrowDown,
+  ChevronsUpDown,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { formatDate } from "@/lib/format";
 import {
   DropdownMenu,
@@ -58,12 +62,14 @@ const TONE: Record<string, string> = {
 };
 const tone = (c: string) => TONE[c] ?? "#64748b";
 
-// ── Frozen columns (Actions · Sample No · Company) ──
+// ── Frozen columns (Select · Actions · Sample No · Company) ──
+const W_CHECK = 44;
 const W_ACTIONS = 46;
 const W_SAMPLE = 120;
 const W_COMPANY = 190;
-const LEFT_SAMPLE = W_ACTIONS;
-const LEFT_COMPANY = W_ACTIONS + W_SAMPLE;
+const LEFT_ACTIONS = W_CHECK;
+const LEFT_SAMPLE = W_CHECK + W_ACTIONS;
+const LEFT_COMPANY = W_CHECK + W_ACTIONS + W_SAMPLE;
 
 const dash = <span className="text-[#b3b8c2]">-</span>;
 
@@ -169,6 +175,35 @@ const OPT_COLUMNS: OptCol[] = [
 ];
 const COLS_STORAGE_KEY = "carbide.samples.hiddenCols";
 
+// Sort accessors keyed by column id (frozen + optional). A column with an entry
+// here gets a clickable, asc/desc-toggling header; the two frozen columns
+// (Sample No, Company) are included too.
+const SAMPLE_SORTERS: Record<string, (r: SampleListItem) => string | number | Date> = {
+  sampleNo: (r) => r.sampleNo,
+  companyName: (r) => r.companyName ?? "",
+  date: (r) => r.sampleDate,
+  location: (r) => r.location ?? "",
+  responsible: (r) => r.responsibleName ?? "",
+  sampleStatus: (r) => SAMPLE_STATUS_LABELS[r.sampleStatus],
+  dimension: (r) => STAGE_STATUS_LABELS[r.dimensionStatus],
+  chemical: (r) => STAGE_STATUS_LABELS[r.chemicalStatus],
+  drawing: (r) => STAGE_STATUS_LABELS[r.drawingStatus],
+  costing: (r) => STAGE_STATUS_LABELS[r.costingStatus],
+  reports: (r) => r.reportCount,
+  photos: (r) => r.photoCount,
+  inSmFolder: (r) => (r.inSmFolder ? 1 : 0),
+  linked: (r) => (r.linkedToEnquiry ? 1 : 0),
+  created: (r) => r.createdAt,
+};
+
+type SortDir = "asc" | "desc";
+/** Compare two sortable values (Date / number / string), numeric-aware. */
+function cmpValues(a: string | number | Date, b: string | number | Date): number {
+  if (a instanceof Date && b instanceof Date) return a.getTime() - b.getTime();
+  if (typeof a === "number" && typeof b === "number") return a - b;
+  return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: "base" });
+}
+
 /**
  * Sample Register - a dense, Client-Master-grade table: KPI cards that double as
  * quick filters, a one-line filter bar (search / status / responsible / location
@@ -252,6 +287,47 @@ export function SampleRegister({ rows, employees, heading, actions }: Props) {
     setLinked("");
   }
 
+  // ── Sort (clickable headers, asc → desc → off) ──
+  const [sortKey, setSortKey] = React.useState<string | null>(null);
+  const [sortDir, setSortDir] = React.useState<SortDir>("asc");
+  function toggleSort(key: string) {
+    if (sortKey !== key) {
+      setSortKey(key);
+      setSortDir("asc");
+    } else if (sortDir === "asc") {
+      setSortDir("desc");
+    } else {
+      setSortKey(null); // third click clears the sort
+    }
+  }
+  const sorted = React.useMemo(() => {
+    const getter = sortKey ? SAMPLE_SORTERS[sortKey] : undefined;
+    if (!getter) return filtered;
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      const c = cmpValues(getter(a), getter(b));
+      return sortDir === "asc" ? c : -c;
+    });
+    return arr;
+  }, [filtered, sortKey, sortDir]);
+
+  // ── Row selection (checkboxes) ──
+  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const allSelected = sorted.length > 0 && sorted.every((r) => selected.has(r.id));
+  const someSelected = !allSelected && sorted.some((r) => selected.has(r.id));
+  function toggleAll(next: boolean) {
+    setSelected(next ? new Set(sorted.map((r) => r.id)) : new Set());
+  }
+  function toggleRow(id: string, next: boolean) {
+    setSelected((prev) => {
+      const s = new Set(prev);
+      if (next) s.add(id);
+      else s.delete(id);
+      return s;
+    });
+  }
+  const selectedCount = sorted.filter((r) => selected.has(r.id)).length;
+
   const selectClass =
     "h-8 max-w-[160px] shrink-0 rounded-lg border border-[#dcdce8] bg-white px-2.5 text-[12.5px] font-semibold text-[#3a4152] outline-none focus:border-[#3f3f94]";
 
@@ -259,7 +335,9 @@ export function SampleRegister({ rows, employees, heading, actions }: Props) {
     const cols = ["Sample No", "Company", "Date", "Location", "Responsible", "Sample Status", "Dimension", "Chemical", "Drawing", "Costing", "Reports", "Files", "In SM Folder", "Enquiry", "Created"];
     const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
     const lines = [cols.map(esc).join(",")];
-    for (const r of filtered) {
+    // Export the ticked rows when any are selected, else everything shown.
+    const target = selectedCount > 0 ? sorted.filter((r) => selected.has(r.id)) : sorted;
+    for (const r of target) {
       lines.push(
         [
           r.sampleNo,
@@ -400,26 +478,36 @@ export function SampleRegister({ rows, employees, heading, actions }: Props) {
           <table className="w-full border-separate text-[13.5px] font-medium" style={{ borderSpacing: 0, minWidth: tableMinWidth }}>
             <thead>
               <tr className="text-left text-[11.5px] font-black uppercase tracking-[0.05em] text-[#2b303b]">
-                <Th sticky left={0} width={W_ACTIONS} corner>
+                <Th sticky left={0} width={W_CHECK} corner>
+                  <span className="flex justify-center">
+                    <Checkbox checked={allSelected} indeterminate={someSelected} onChange={toggleAll} ariaLabel="Select all samples" />
+                  </span>
+                </Th>
+                <Th sticky left={LEFT_ACTIONS} width={W_ACTIONS} corner>
                   <span className="sr-only">Actions</span>
                 </Th>
-                <Th sticky left={LEFT_SAMPLE} width={W_SAMPLE} corner>
+                <Th sticky left={LEFT_SAMPLE} width={W_SAMPLE} corner colId="sampleNo" activeKey={sortKey} dir={sortDir} onSort={toggleSort}>
                   Sample No
                 </Th>
-                <Th sticky left={LEFT_COMPANY} width={W_COMPANY} corner lastFrozen>
+                <Th sticky left={LEFT_COMPANY} width={W_COMPANY} corner lastFrozen colId="companyName" activeKey={sortKey} dir={sortDir} onSort={toggleSort}>
                   Company
                 </Th>
                 {visibleCols.map((c) => (
-                  <Th key={c.id} width={c.width} align={c.align}>
+                  <Th key={c.id} width={c.width} align={c.align} colId={c.id} activeKey={sortKey} dir={sortDir} onSort={toggleSort}>
                     {c.label}
                   </Th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {filtered.map((r) => (
+              {sorted.map((r) => (
                 <tr key={r.id} className="group/row cursor-pointer" onClick={() => setQuickView(r)} onMouseEnter={(e) => onRowEnter(r, e)} onMouseLeave={onRowLeave}>
-                  <Td sticky left={0} width={W_ACTIONS} className="align-top">
+                  <Td sticky left={0} width={W_CHECK} className="align-top">
+                    <div className="flex justify-center" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox checked={selected.has(r.id)} onChange={(n) => toggleRow(r.id, n)} ariaLabel={`Select ${r.sampleNo}`} />
+                    </div>
+                  </Td>
+                  <Td sticky left={LEFT_ACTIONS} width={W_ACTIONS} className="align-top">
                     <div onClick={(e) => e.stopPropagation()}>
                       <RowMenu row={r} onQuickView={() => setQuickView(r)} />
                     </div>
@@ -515,14 +603,58 @@ function ColumnsMenu({ hidden, setHidden }: { hidden: Record<string, boolean>; s
 function frozenStyle(left: number, width: number, lastFrozen?: boolean): React.CSSProperties {
   return { position: "sticky", left, width, minWidth: width, maxWidth: width, zIndex: 2, boxShadow: lastFrozen ? "1px 0 0 rgba(15,23,42,0.10)" : undefined };
 }
-function Th({ children, width, align, sticky, left, corner, lastFrozen }: { children: React.ReactNode; width?: number; align?: "left" | "right"; sticky?: boolean; left?: number; corner?: boolean; lastFrozen?: boolean }) {
+function Th({
+  children,
+  width,
+  align,
+  sticky,
+  left,
+  corner,
+  lastFrozen,
+  colId,
+  activeKey,
+  dir,
+  onSort,
+}: {
+  children: React.ReactNode;
+  width?: number;
+  align?: "left" | "right";
+  sticky?: boolean;
+  left?: number;
+  corner?: boolean;
+  lastFrozen?: boolean;
+  /** When set (and a sorter exists for it), the header is a sort toggle. */
+  colId?: string;
+  activeKey?: string | null;
+  dir?: SortDir;
+  onSort?: (key: string) => void;
+}) {
   const style: React.CSSProperties = sticky ? { ...frozenStyle(left ?? 0, width ?? 0, lastFrozen), zIndex: corner ? 4 : 3 } : { width, minWidth: width };
+  const sortable = Boolean(colId && onSort && SAMPLE_SORTERS[colId]);
+  const active = sortable && activeKey === colId;
   return (
     <th
       className={`sticky top-0 z-[2] whitespace-nowrap px-4 py-3 ${align === "right" ? "text-right" : "text-left"}`}
       style={{ background: "#e6e8f2", borderBottom: "2px solid #2b303b", borderRight: "1px solid #c4c9d6", ...style }}
     >
-      {children}
+      {sortable ? (
+        <button
+          type="button"
+          onClick={() => onSort!(colId!)}
+          className={`group/sort inline-flex select-none items-center gap-1 uppercase tracking-[0.05em] transition-colors hover:text-[#3f3f94] ${align === "right" ? "flex-row-reverse" : ""} ${active ? "text-[#3f3f94]" : ""}`}
+        >
+          {children}
+          {active && dir === "asc" ? (
+            <ArrowUp size={12} strokeWidth={2.6} />
+          ) : active && dir === "desc" ? (
+            <ArrowDown size={12} strokeWidth={2.6} />
+          ) : (
+            <ChevronsUpDown size={12} strokeWidth={2.4} className="opacity-45 transition-opacity group-hover/sort:opacity-100" />
+          )}
+        </button>
+      ) : (
+        children
+      )}
     </th>
   );
 }
