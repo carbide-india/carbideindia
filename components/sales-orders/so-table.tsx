@@ -6,7 +6,7 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight, Factory, Trash2, UserRound } from "lucide-react";
 import { formatInr, formatDate } from "@/lib/format";
-import { Chip } from "@/components/inquiries/chip";
+import { Chip, longestLabel } from "@/components/inquiries/chip";
 import {
   RegisterDataTable,
   type RegisterColumn,
@@ -188,6 +188,7 @@ export function SoTable({ rows, heading, actions }: Props) {
           <Chip
             label={SALES_ORDER_STATUS_LABELS[r.salesOrderStatus]}
             tone={SALES_ORDER_STATUS_COLORS[r.salesOrderStatus]}
+            sizer={longestLabel(SALES_ORDER_STATUS_LABELS)}
           />
         ),
       },
@@ -200,11 +201,9 @@ export function SoTable({ rows, heading, actions }: Props) {
         exportValue: (r) => (r.customerSoSent ? "Sent" : "Pending"),
         cell: (r) =>
           r.customerSoSent ? (
-            <Chip label="Sent" tone="green" />
+            <Chip label="Sent" tone="green" sizer="Pending" />
           ) : (
-            <span className="text-[13px] font-semibold text-ink-subtle">
-              Pending
-            </span>
+            <Chip label="Pending" tone="slate" sizer="Pending" />
           ),
       },
       {
@@ -214,11 +213,9 @@ export function SoTable({ rows, heading, actions }: Props) {
         exportValue: (r) => (r.productionSoSent ? "Sent" : "Pending"),
         cell: (r) =>
           r.productionSoSent ? (
-            <Chip label="Sent" tone="green" />
+            <Chip label="Sent" tone="green" sizer="Pending" />
           ) : (
-            <span className="text-[13px] font-semibold text-ink-subtle">
-              Pending
-            </span>
+            <Chip label="Pending" tone="slate" sizer="Pending" />
           ),
       },
       {

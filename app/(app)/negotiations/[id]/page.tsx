@@ -19,9 +19,8 @@ import {
 import type { QuoteSendSummary } from "@/components/negotiations/quote-send-header";
 import { SyncProductsBanner } from "@/components/pipeline/sync-products-banner";
 import { syncProductsFromEnquiry } from "@/app/(app)/negotiations/actions";
-import { WorkflowStepper } from "@/components/workflow/workflow-stepper";
-import { stageIndex } from "@/lib/flow/derive-stage";
-import { isWorkflowFlagOn } from "@/lib/workflow/flags";
+import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
+import { UserMenuServer } from "@/components/header/user-menu-server";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +43,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function NegotiationDetailPage({ params }: PageProps) {
-  await requireUser();
+  const me = await requireUser();
   const { id } = await params;
   if (!UUID_RE.test(id)) notFound();
 
@@ -117,36 +116,27 @@ export default async function NegotiationDetailPage({ params }: PageProps) {
   );
   const missingCount = seeds.filter((s) => !presentIds.has(s.inquiryItemId)).length;
 
-  // Phase 8 - pipeline stepper + flag-gated "Mark Won" CTA. Won ⇒ show SO stage.
-  const negotiationFlagOn = await isWorkflowFlagOn("negotiation");
-  const isWon = negotiation.negotiationStatus === "order_won";
-  const negStageKey = isWon ? ("sales_order" as const) : ("negotiation" as const);
-  const resolvedStage = { stage: negStageKey, index: stageIndex(negStageKey) };
-
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6">
-      <WorkflowStepper
-        resolved={resolvedStage}
-        flagOn={negotiationFlagOn && !isWon}
-        advance={{ entity: "negotiation", id: negotiation.id, label: "Mark Won" }}
-      />
-      <SyncProductsBanner
-        missingCount={missingCount}
-        recordId={negotiation.id}
-        recordLabel="negotiation"
-        syncAction={syncProductsFromEnquiry}
-      />
-      <NegotiationDetail
-        negotiation={negotiation}
-        employees={employees}
-        inquiryLink={inquiryLink}
-        lines={lines}
-        quoteSend={quoteSend}
-        proformaInvoices={proformaInvoices}
-        latestPiTotal={latestPiTotal}
-        poDownloadUrl={poDownloadUrl}
-        revisableCostings={revisableCostings}
-      />
-    </main>
+    <EnquiryModuleShell title="Negotiation" userMenu={<UserMenuServer />} isAdmin={me.isAdmin}>
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+        <SyncProductsBanner
+          missingCount={missingCount}
+          recordId={negotiation.id}
+          recordLabel="negotiation"
+          syncAction={syncProductsFromEnquiry}
+        />
+        <NegotiationDetail
+          negotiation={negotiation}
+          employees={employees}
+          inquiryLink={inquiryLink}
+          lines={lines}
+          quoteSend={quoteSend}
+          proformaInvoices={proformaInvoices}
+          latestPiTotal={latestPiTotal}
+          poDownloadUrl={poDownloadUrl}
+          revisableCostings={revisableCostings}
+        />
+      </div>
+    </EnquiryModuleShell>
   );
 }

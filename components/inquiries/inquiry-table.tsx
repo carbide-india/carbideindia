@@ -17,7 +17,13 @@ import {
   SAMPLE_STATUS_COLORS,
 } from "@/db/enums";
 import { formatDate } from "@/lib/format";
-import { Chip, PRIORITY_TONES } from "./chip";
+import { Chip, PRIORITY_TONES, longestLabel } from "./chip";
+
+// Per-column capsule sizers — every status/priority pill in a column is padded
+// to its longest possible label so the column reads as one aligned width.
+const ENQUIRY_STATUS_SIZER = longestLabel(ENQUIRY_STATUS_LABELS);
+const FEASIBILITY_STATUS_SIZER = longestLabel(FEASIBILITY_STATUS_LABELS);
+const PRIORITY_SIZER = longestLabel(INQUIRY_PRIORITY_LABELS);
 
 /** Sample-status colour token → hex dot. */
 const SAMPLE_STATUS_TONE: Record<string, string> = {
@@ -41,9 +47,11 @@ import type { EmployeeOption } from "@/lib/queries/employees";
 
 export const NEW_INQUIRY_ROUTE: Route = "/enquiries/new";
 
-/** A compact Yes/No pill (green = yes, slate = no). Labels default to Yes/No. */
+/** A compact Yes/No pill (green = yes, slate = no). Labels default to Yes/No.
+ *  Both states are padded to the wider label so the column reads as one width. */
 function YesNo({ value, yes = "Yes", no = "No" }: { value: boolean | null; yes?: string; no?: string }) {
-  return <Chip label={value ? yes : no} tone={value ? "green" : "slate"} />;
+  const sizer = yes.length >= no.length ? yes : no;
+  return <Chip label={value ? yes : no} tone={value ? "green" : "slate"} sizer={sizer} />;
 }
 
 interface Props {
@@ -86,7 +94,7 @@ export function InquiryTable({ rows, employees, variant = "enquiry", heading, ac
     defaultHidden: variant === "feasibility",
     sortValue: (r) => ENQUIRY_STATUS_LABELS[r.enquiryStatus],
     cell: (r) => (
-      <Chip label={ENQUIRY_STATUS_LABELS[r.enquiryStatus]} tone={ENQUIRY_STATUS_COLORS[r.enquiryStatus]} />
+      <Chip label={ENQUIRY_STATUS_LABELS[r.enquiryStatus]} tone={ENQUIRY_STATUS_COLORS[r.enquiryStatus]} sizer={ENQUIRY_STATUS_SIZER} />
     ),
   };
   const feasibilityStatusCol: RegisterColumn<InquiryListItem> = {
@@ -96,7 +104,7 @@ export function InquiryTable({ rows, employees, variant = "enquiry", heading, ac
     defaultHidden: variant === "enquiry",
     sortValue: (r) => FEASIBILITY_STATUS_LABELS[r.feasibilityStatus],
     cell: (r) => (
-      <Chip label={FEASIBILITY_STATUS_LABELS[r.feasibilityStatus]} tone={FEASIBILITY_STATUS_COLORS[r.feasibilityStatus]} />
+      <Chip label={FEASIBILITY_STATUS_LABELS[r.feasibilityStatus]} tone={FEASIBILITY_STATUS_COLORS[r.feasibilityStatus]} sizer={FEASIBILITY_STATUS_SIZER} />
     ),
   };
 
@@ -145,6 +153,7 @@ export function InquiryTable({ rows, employees, variant = "enquiry", heading, ac
           <Chip
             label={INQUIRY_PRIORITY_LABELS[r.priority]}
             tone={PRIORITY_TONES[r.priority]}
+            sizer={PRIORITY_SIZER}
           />
         ),
       },

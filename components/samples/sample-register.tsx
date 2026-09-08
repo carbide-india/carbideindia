@@ -67,13 +67,23 @@ const LEFT_COMPANY = W_ACTIONS + W_SAMPLE;
 
 const dash = <span className="text-[#b3b8c2]">-</span>;
 
+// Widest sample-status label — every StatusChip is padded to it so the Sample
+// Status column reads as one aligned capsule width.
+const SAMPLE_STATUS_SIZER = Object.values(SAMPLE_STATUS_LABELS).reduce(
+  (a, b) => (b.length > a.length ? b : a),
+  "",
+);
+
 function StatusChip({ status }: { status: SampleStatus }) {
   return (
     <span
-      className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold text-white"
+      className="inline-grid place-items-center rounded-full px-2 py-0.5 text-[11px] font-bold text-white"
       style={{ background: tone(SAMPLE_STATUS_COLORS[status]) }}
     >
-      {SAMPLE_STATUS_LABELS[status]}
+      <span aria-hidden className="invisible col-start-1 row-start-1 whitespace-nowrap">
+        {SAMPLE_STATUS_SIZER}
+      </span>
+      <span className="col-start-1 row-start-1 whitespace-nowrap">{SAMPLE_STATUS_LABELS[status]}</span>
     </span>
   );
 }

@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, ChevronDown } from "lucide-react";
 import {
   DndContext,
   DragOverlay,
@@ -197,6 +197,31 @@ function Lane({
 }) {
   const { setNodeRef } = useDroppable({ id: LANE(status) });
   const tone = NEGOTIATION_STATUS_COLORS[status];
+  const hasCards = cards.length > 0;
+  // A lane WITH deals becomes an accordion so it can be folded away; an EMPTY
+  // lane stays flat (nothing to collapse, and it must stay a visible drop
+  // target). While a drag is live, force it open so a collapsed lane can still
+  // receive a drop.
+  const [open, setOpen] = React.useState(true);
+  const expanded = open || dragging;
+
+  const dot = (
+    <span
+      aria-hidden
+      className="h-[7px] w-[7px] shrink-0 rounded-full"
+      style={{ background: `var(--color-${tone}-deep)` }}
+    />
+  );
+  const label = (
+    <span className="min-w-0 flex-1 truncate text-left text-[11px] font-bold text-[#3a4152]">
+      {NEGOTIATION_STATUS_LABELS[status]}
+    </span>
+  );
+  const count = (
+    <span className="shrink-0 tabular-nums text-[11px] font-black text-[#9aa0ab]">
+      {cards.length}
+    </span>
+  );
 
   return (
     <div
@@ -212,28 +237,47 @@ function Lane({
             : "border-transparent",
       )}
     >
-      <div className="flex items-center gap-1.5 px-0.5 py-0.5">
-        <span
-          aria-hidden
-          className="h-[7px] w-[7px] shrink-0 rounded-full"
-          style={{ background: `var(--color-${tone}-deep)` }}
-        />
-        <span className="min-w-0 flex-1 truncate text-[11px] font-bold text-[#3a4152]">
-          {NEGOTIATION_STATUS_LABELS[status]}
-        </span>
-        <span className="shrink-0 tabular-nums text-[11px] font-black text-[#9aa0ab]">
-          {cards.length}
-        </span>
-      </div>
+      {hasCards ? (
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={expanded}
+          className="flex w-full items-center gap-1.5 px-0.5 py-0.5"
+        >
+          {dot}
+          {label}
+          {count}
+          <ChevronDown
+            size={13}
+            strokeWidth={2.6}
+            className={cn(
+              "shrink-0 text-[#9aa0ab] transition-transform duration-200",
+              expanded ? "" : "-rotate-90",
+            )}
+          />
+        </button>
+      ) : (
+        <div className="flex items-center gap-1.5 px-0.5 py-0.5">
+          {dot}
+          {label}
+          {count}
+        </div>
+      )}
 
-      <div className="flex flex-col gap-1 pt-0.5">
-        {cards.length === 0 ? (
-          // Keeps the lane a target with a real height when it is empty.
+      {hasCards ? (
+        expanded && (
+          <div className="flex flex-col gap-1 pt-0.5">
+            {cards.map((c) => (
+              <DraggableChip key={c.id} card={c} now={now} />
+            ))}
+          </div>
+        )
+      ) : (
+        // Keeps the empty lane a drop target with a real height.
+        <div className="flex flex-col gap-1 pt-0.5">
           <div className="h-[22px] rounded-md" />
-        ) : (
-          cards.map((c) => <DraggableChip key={c.id} card={c} now={now} />)
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -14,7 +14,12 @@ import {
 } from "@/db/enums";
 import { NEGOTIATION_OFF_BOARD_STATUSES } from "@/lib/negotiations/buckets";
 import { formatInr, formatDate } from "@/lib/format";
-import { Chip } from "@/components/inquiries/chip";
+import { Chip, longestLabel } from "@/components/inquiries/chip";
+
+// Per-column capsule sizers — pills padded to the widest label so each status /
+// stage column reads as one aligned width.
+const NEG_STATUS_SIZER = longestLabel(NEGOTIATION_STATUS_LABELS);
+const NEG_STAGE_SIZER = longestLabel(NEGOTIATION_STAGE_LABELS);
 import {
   RegisterDataTable,
   type RegisterColumn,
@@ -136,6 +141,7 @@ export function NegotiationTable({ rows, heading, actions }: Props) {
           <Chip
             label={NEGOTIATION_STATUS_LABELS[r.negotiationStatus]}
             tone={NEGOTIATION_STATUS_COLORS[r.negotiationStatus]}
+            sizer={NEG_STATUS_SIZER}
           />
         ),
       },
@@ -150,6 +156,7 @@ export function NegotiationTable({ rows, heading, actions }: Props) {
           <Chip
             label={NEGOTIATION_STAGE_LABELS[r.negotiationStage]}
             tone={NEGOTIATION_STAGE_COLORS[r.negotiationStage]}
+            sizer={NEG_STAGE_SIZER}
           />
         ),
       },

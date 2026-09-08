@@ -171,27 +171,27 @@ export function EnquiryLaunchpad({ isAdmin = false }: { isAdmin?: boolean }) {
                   vertical rule suits the squarer, rectangular card. */}
               <span className="pointer-events-none absolute inset-y-0 left-0 w-[3px] origin-top scale-y-0 bg-[linear-gradient(180deg,#4a4ab5,#7b6cf0)] transition-transform duration-300 group-hover:scale-y-100" />
 
-              {/* Top row — icon + stage number. */}
-              <div className="flex items-start justify-between">
+              {/* Stage number — pinned to the top-right corner. */}
+              <span
+                className="absolute right-4 top-4 text-[15px] font-black tabular-nums text-[#c7cae6] transition-colors group-hover:text-[#3f3f94]"
+                style={{ fontFamily: MONO }}
+              >
+                {n}
+              </span>
+
+              {/* Icon + title on one row, vertically centred. The title wraps to
+                  a second line when it's long (Primary/Secondary Feasibility). */}
+              <div className="flex items-center gap-3 pr-7">
                 <div
-                  className="grid size-12 place-items-center rounded-lg text-white ring-1 ring-inset ring-white/20 transition-transform duration-200 group-hover:scale-105"
+                  className="grid size-12 shrink-0 place-items-center rounded-lg text-white ring-1 ring-inset ring-white/20 transition-transform duration-200 group-hover:scale-105"
                   style={{ background: CARD_GRAD, boxShadow: "0 10px 22px -8px rgba(63,63,148,0.55)" }}
                 >
                   <f.Icon className="h-6 w-6" strokeWidth={1.9} />
                 </div>
-                <span
-                  className="text-[15px] font-black tabular-nums text-[#c7cae6] transition-colors group-hover:text-[#3f3f94]"
-                  style={{ fontFamily: MONO }}
-                >
-                  {n}
-                </span>
+                <h3 className="min-w-0 text-[17px] font-extrabold leading-snug tracking-tight text-[#1e2340] line-clamp-2">
+                  {f.title}
+                </h3>
               </div>
-
-              {/* Title carries the card now that the family tag is gone. mt-auto
-                  pushes START to the base so every button lines up across rows. */}
-              <h3 className="mt-4 flex items-start text-[17px] font-extrabold leading-snug tracking-tight text-[#1e2340]">
-                {f.title}
-              </h3>
 
               <span
                 className="mt-[10px] inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-md bg-[#eef1fb] px-2 text-[12px] font-bold tracking-[0.06em] text-[#3f3f94] transition-all duration-200 group-hover:text-white group-hover:[background:linear-gradient(135deg,#4a4ab5,#2f2f6f)] group-hover:shadow-[0_10px_22px_-8px_rgba(63,63,148,0.55)]"
@@ -215,17 +215,17 @@ export function EnquiryLaunchpad({ isAdmin = false }: { isAdmin?: boolean }) {
                   className="group relative flex h-full flex-col overflow-hidden rounded-md border border-[#e6e8f2] bg-white p-5 transition-all duration-200 hover:-translate-y-1 hover:border-[#c7cae6] hover:shadow-[0_15px_15px_-10px_#3f3f9480]"
                 >
                   <span className="pointer-events-none absolute inset-y-0 left-0 w-[3px] origin-top scale-y-0 bg-[linear-gradient(180deg,#4a4ab5,#7b6cf0)] transition-transform duration-300 group-hover:scale-y-100" />
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3 pr-7">
                     <div
-                      className="grid size-12 place-items-center rounded-lg text-white ring-1 ring-inset ring-white/20 transition-transform duration-200 group-hover:scale-105"
+                      className="grid size-12 shrink-0 place-items-center rounded-lg text-white ring-1 ring-inset ring-white/20 transition-transform duration-200 group-hover:scale-105"
                       style={{ background: CARD_GRAD, boxShadow: "0 10px 22px -8px rgba(63,63,148,0.55)" }}
                     >
                       <LayoutGrid className="h-6 w-6" strokeWidth={1.9} />
                     </div>
+                    <h3 className="min-w-0 text-[17px] font-extrabold leading-snug tracking-tight text-[#1e2340] line-clamp-2">
+                      Quick Status
+                    </h3>
                   </div>
-                  <h3 className="mt-4 flex items-start text-[17px] font-extrabold leading-snug tracking-tight text-[#1e2340]">
-                    Quick Status
-                  </h3>
                   <span
                     className="mt-[10px] inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-md bg-[#eef1fb] px-2 text-[12px] font-bold tracking-[0.06em] text-[#3f3f94] transition-all duration-200 group-hover:text-white group-hover:[background:linear-gradient(135deg,#4a4ab5,#2f2f6f)] group-hover:shadow-[0_10px_22px_-8px_rgba(63,63,148,0.55)]"
                     style={{ fontFamily: MONO }}

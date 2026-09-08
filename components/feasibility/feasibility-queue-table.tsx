@@ -14,7 +14,10 @@ import {
 } from "@/db/enums";
 import { formatDate } from "@/lib/format";
 import { fireToast } from "@/lib/toast";
-import { Chip, PRIORITY_TONES } from "@/components/inquiries/chip";
+import { Chip, PRIORITY_TONES, longestLabel } from "@/components/inquiries/chip";
+
+const FEAS_STATUS_SIZER = longestLabel(FEASIBILITY_STATUS_LABELS);
+const FEAS_PRIORITY_SIZER = longestLabel(INQUIRY_PRIORITY_LABELS);
 import {
   RegisterDataTable,
   type RegisterColumn,
@@ -108,7 +111,7 @@ export function FeasibilityQueueTable({
         width: "104px",
         sortValue: (r) => INQUIRY_PRIORITY_LABELS[r.priority],
         exportValue: (r) => INQUIRY_PRIORITY_LABELS[r.priority],
-        cell: (r) => <Chip label={INQUIRY_PRIORITY_LABELS[r.priority]} tone={PRIORITY_TONES[r.priority]} />,
+        cell: (r) => <Chip label={INQUIRY_PRIORITY_LABELS[r.priority]} tone={PRIORITY_TONES[r.priority]} sizer={FEAS_PRIORITY_SIZER} />,
       },
       {
         id: "export",
@@ -182,7 +185,7 @@ export function FeasibilityQueueTable({
         header: "Status",
         width: "170px",
         sortValue: (r) => FEASIBILITY_STATUS_LABELS[r.status],
-        cell: (r) => <Chip label={FEASIBILITY_STATUS_LABELS[r.status]} tone={FEASIBILITY_STATUS_COLORS[r.status]} />,
+        cell: (r) => <Chip label={FEASIBILITY_STATUS_LABELS[r.status]} tone={FEASIBILITY_STATUS_COLORS[r.status]} sizer={FEAS_STATUS_SIZER} />,
       },
       {
         id: "enquiryDate",

@@ -19,9 +19,8 @@ import { SoOutputsCard } from "@/components/sales-orders/so-outputs-card";
 import { SalesOrderDocuments } from "@/components/sales-orders/so-documents";
 import { SyncProductsBanner } from "@/components/pipeline/sync-products-banner";
 import { syncProductsFromEnquiry } from "@/app/(app)/sales-orders/actions";
-import { WorkflowStepper } from "@/components/workflow/workflow-stepper";
-import { stageIndex } from "@/lib/flow/derive-stage";
-import { isWorkflowFlagOn } from "@/lib/workflow/flags";
+import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
+import { UserMenuServer } from "@/components/header/user-menu-server";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +43,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function SalesOrderDetailPage({ params }: PageProps) {
-  await requireUser();
+  const me = await requireUser();
   const { id } = await params;
   if (!UUID_RE.test(id)) notFound();
 
@@ -86,20 +85,9 @@ export default async function SalesOrderDetailPage({ params }: PageProps) {
   );
   const missingCount = seeds.filter((s) => !presentIds.has(s.inquiryItemId)).length;
 
-  // Phase 8 - pipeline stepper + flag-gated "Confirm Order" CTA. Confirmed
-  // (customerSoSent) ⇒ show Job Card stage.
-  const salesOrderFlagOn = await isWorkflowFlagOn("sales_order");
-  const isConfirmed = salesOrder.customerSoSent === true;
-  const soStageKey = isConfirmed ? ("job_card" as const) : ("sales_order" as const);
-  const resolvedStage = { stage: soStageKey, index: stageIndex(soStageKey) };
-
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6">
-      <WorkflowStepper
-        resolved={resolvedStage}
-        flagOn={salesOrderFlagOn && !isConfirmed}
-        advance={{ entity: "sales_order", id: salesOrder.id, label: "Confirm Order" }}
-      />
+    <EnquiryModuleShell title="Sales Order" userMenu={<UserMenuServer />} isAdmin={me.isAdmin}>
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <SyncProductsBanner
         missingCount={missingCount}
         recordId={salesOrder.id}
@@ -143,6 +131,7 @@ export default async function SalesOrderDetailPage({ params }: PageProps) {
         productionNotes={salesOrder.productionNotes}
         lines={lineNotes}
       />
-    </main>
+      </div>
+    </EnquiryModuleShell>
   );
 }

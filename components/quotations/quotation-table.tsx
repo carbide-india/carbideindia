@@ -19,7 +19,10 @@ import {
   type CostingDoneStatus,
 } from "@/db/enums";
 import { formatInr, formatDate } from "@/lib/format";
-import { Chip } from "@/components/inquiries/chip";
+import { Chip, longestLabel } from "@/components/inquiries/chip";
+
+const QUOTATION_STATUS_SIZER = longestLabel(QUOTATION_STATUS_LABELS);
+const COSTING_DONE_STATUS_SIZER = longestLabel(COSTING_DONE_STATUS_LABELS);
 import {
   Popover,
   PopoverTrigger,
@@ -314,16 +317,23 @@ export function QuotationTable({ rows, filtered = false, heading, actions }: Pro
         exportValue: (r) => (r.isRevision ? `Rev ${Math.max(1, r.revisionNo - 1)}` : "Original"),
         cell: (r) => {
           const color = r.isRevision ? "#d03232" : "#16a34a";
+          const revLabel = r.isRevision ? `Rev ${Math.max(1, r.revisionNo - 1)}` : "Original";
+          // Ghost of the widest label so every revision badge in the column is
+          // the same width (ORIGINAL / REV 1 / REV 10 all align).
+          const revSizer = revLabel.length > "Original".length ? revLabel : "Original";
           return (
             <span
-              className="inline-flex rounded-[4px] px-1.5 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.04em]"
+              className="inline-grid place-items-center rounded-[4px] px-1.5 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.04em]"
               style={{
                 color,
                 background: `color-mix(in srgb, ${color} 12%, transparent)`,
                 border: `1px solid color-mix(in srgb, ${color} 30%, transparent)`,
               }}
             >
-              {r.isRevision ? `Rev ${Math.max(1, r.revisionNo - 1)}` : "Original"}
+              <span aria-hidden className="invisible col-start-1 row-start-1 whitespace-nowrap">
+                {revSizer}
+              </span>
+              <span className="col-start-1 row-start-1 whitespace-nowrap">{revLabel}</span>
             </span>
           );
         },
@@ -374,6 +384,7 @@ export function QuotationTable({ rows, filtered = false, heading, actions }: Pro
           <Chip
             label={QUOTATION_STATUS_LABELS[r.quotationStatus]}
             tone={QUOTATION_STATUS_COLORS[r.quotationStatus]}
+            sizer={QUOTATION_STATUS_SIZER}
           />
         ),
       },
@@ -385,6 +396,7 @@ export function QuotationTable({ rows, filtered = false, heading, actions }: Pro
           <Chip
             label={COSTING_DONE_STATUS_LABELS[r.costingDoneStatus]}
             tone={COSTING_DONE_STATUS_COLORS[r.costingDoneStatus]}
+            sizer={COSTING_DONE_STATUS_SIZER}
           />
         ),
       },
@@ -415,9 +427,9 @@ export function QuotationTable({ rows, filtered = false, heading, actions }: Pro
         exportValue: (r) => (r.quoteSent ? "Yes" : "No"),
         cell: (r) =>
           r.quoteSent ? (
-            <Chip label="Yes" tone="green" />
+            <Chip label="Yes" tone="green" sizer="Yes" />
           ) : (
-            <span className="text-[13px] font-semibold text-ink-subtle">No</span>
+            <Chip label="No" tone="slate" sizer="Yes" />
           ),
       },
       {

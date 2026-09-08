@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import { GitCompareArrows } from "lucide-react";
-import { Chip } from "@/components/inquiries/chip";
+import { Chip, longestLabel } from "@/components/inquiries/chip";
 import {
   RegisterDataTable,
   type RegisterColumn,
@@ -19,6 +19,8 @@ import { SECONDARY_SETTABLE_BUCKETS } from "@/lib/feasibility/stage-buckets";
 import { setSecondaryFeasibilityStatusBulk } from "@/app/(app)/secondary-feasibility/actions";
 import { VarianceReport } from "@/components/feasibility/variance-report";
 import type { SecondaryFeasibilityQueueRow } from "@/lib/queries/feasibility";
+
+const SEC_STATUS_SIZER = longestLabel(SECONDARY_FEASIBILITY_STATUS_LABELS);
 
 /**
  * Secondary / Technical Feasibility queue — every product LINE whose parent
@@ -95,6 +97,7 @@ export function SecondaryFeasibilityQueueTable({
           <Chip
             label={SECONDARY_FEASIBILITY_STATUS_LABELS[r.bucket]}
             tone={SECONDARY_FEASIBILITY_STATUS_COLORS[r.bucket]}
+            sizer={SEC_STATUS_SIZER}
           />
         ),
       },

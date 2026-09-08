@@ -10,7 +10,10 @@ import {
   type CostingDoneStatus,
 } from "@/db/enums";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Chip, longestLabel } from "@/components/inquiries/chip";
 import { fireToast } from "@/lib/toast";
+
+const COSTING_STATUS_SIZER = longestLabel(COSTING_DONE_STATUS_LABELS);
 import {
   approveCostingRecommended,
   setCostingStatus,
@@ -66,7 +69,11 @@ export function CostingStatusCell({
 
   const shown = status ?? bucket;
   const chip = (
-    <Chip label={COSTING_DONE_STATUS_LABELS[shown]} tone={COSTING_DONE_STATUS_COLORS[shown]} />
+    <Chip
+      label={COSTING_DONE_STATUS_LABELS[shown]}
+      tone={COSTING_DONE_STATUS_COLORS[shown]}
+      sizer={COSTING_STATUS_SIZER}
+    />
   );
 
   // A line with no cost sheet is "Not Done" by absence — there is no row to
@@ -277,18 +284,3 @@ export function CostingStatusCell({
   );
 }
 
-/** Local copy of the register's chip so the trigger can wrap it in a button. */
-function Chip({ label, tone }: { label: string; tone: string }) {
-  return (
-    <span
-      className="inline-flex items-center whitespace-nowrap rounded-pill px-2.5 py-1 text-[12px] font-bold"
-      style={{
-        background: `color-mix(in srgb, var(--color-${tone}) 12%, transparent)`,
-        color: `var(--color-${tone}-deep)`,
-        border: `1px solid color-mix(in srgb, var(--color-${tone}) 30%, transparent)`,
-      }}
-    >
-      {label}
-    </span>
-  );
-}
