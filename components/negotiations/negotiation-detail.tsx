@@ -164,18 +164,28 @@ export function NegotiationDetail({
   const createdBy =
     employees.find((e) => e.id === negotiation.createdById)?.name ?? null;
 
+  // Prefill from the negotiation's own columns, falling back to the FIRST line —
+  // its resolved product spec (name / part no, read-through from the Item) and
+  // its carried commercials (qty / prices / timeline). An auto-provisioned
+  // negotiation leaves the header columns blank, so without this fallback the
+  // Product & Pricing fields showed empty even though the line has the data.
+  const firstLine = lines[0];
   const defaults: NegotiationEditValues = {
-    custProductName: negotiation.custProductName ?? "",
-    qty: numDefault(negotiation.qty),
-    finalCost: numDefault(negotiation.finalCost),
-    negotiation: numDefault(negotiation.negotiation),
-    quotePrice: numDefault(negotiation.quotePrice),
-    developmentTime: negotiation.developmentTime ?? "",
-    deliveryTime: negotiation.deliveryTime ?? "",
-    validity: negotiation.validity ?? "",
+    custProductName:
+      negotiation.custProductName ??
+      firstLine?.ask.custProductName ??
+      firstLine?.spec.itemCode ??
+      "",
+    qty: numDefault(negotiation.qty ?? firstLine?.qty ?? null),
+    finalCost: numDefault(negotiation.finalCost ?? firstLine?.finalCost ?? null),
+    negotiation: numDefault(negotiation.negotiation ?? firstLine?.negotiation ?? null),
+    quotePrice: numDefault(negotiation.quotePrice ?? firstLine?.quotePrice ?? null),
+    developmentTime: negotiation.developmentTime ?? firstLine?.developmentTime ?? "",
+    deliveryTime: negotiation.deliveryTime ?? firstLine?.deliveryTime ?? "",
+    validity: negotiation.validity ?? firstLine?.validity ?? "",
     quotationLink: negotiation.quotationLink ?? "",
     negotiationNotes: negotiation.negotiationNotes ?? "",
-    partNo: negotiation.partNo ?? "",
+    partNo: negotiation.partNo ?? firstLine?.spec.partNo ?? "",
   };
 
   const {

@@ -3,7 +3,6 @@
 import { ArrowUpRight, CheckCircle2, CircleDashed } from "lucide-react";
 import type { NegotiationStage } from "@/db/enums";
 import { formatInr } from "@/lib/format";
-import { NegotiationStageStrip } from "@/components/negotiations/negotiation-stage-strip";
 
 /** Source-quote summary the negotiation was raised from. */
 export interface QuoteSendSummary {
@@ -32,17 +31,14 @@ function money(value: string | null): string {
  * Issue a Proforma Invoice (PI). Client-facing wording is always "Proforma
  * Invoice (PI)", never "Revised Quote".
  */
-export function QuoteSendHeader({ stage, quoteSend }: Props) {
+export function QuoteSendHeader({ quoteSend }: Props) {
   return (
     <section
       className="flex flex-col gap-5 rounded-section border border-hairline bg-surface-card p-6"
       style={{ boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)" }}
     >
-      {/* Stage strip */}
-      <NegotiationStageStrip stage={stage} />
-
-      {/* Quote send summary */}
-      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4 border-t border-hairline pt-5">
+      {/* Quote send summary (the 4-stage PI strip was removed per owner request) */}
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <h2 className="text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">

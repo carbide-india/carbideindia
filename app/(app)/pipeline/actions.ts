@@ -20,6 +20,7 @@ import type {
   FeasibilityStatus,
   NegotiationStatus,
   QuotationStatus,
+  RecheckState,
   SalesOrderStatus,
   SecondaryFeasibilityStatus,
 } from "@/db/enums";
@@ -85,12 +86,34 @@ async function setStage(
         .set({ enquiryStatus: value as EnquiryStatus })
         .where(eq(inquiries.id, inquiryId));
       return;
-    case "feasibility":
+    case "feasibility": {
+      // Option B — the Approver bar is authoritative: sync all five checks to
+      // match the decision so the checks board (which DERIVES the status from
+      // the checks) can never disagree with the register. Approve → every check
+      // Approved; Not Approved → every check Not Approved.
+      const checkVal: RecheckState | null =
+        value === "proceed_to_costing"
+          ? "approved"
+          : value === "not_approved"
+            ? "not_approved"
+            : null;
       await tx
         .update(inquiries)
-        .set({ feasibilityStatus: value as FeasibilityStatus })
+        .set({
+          feasibilityStatus: value as FeasibilityStatus,
+          ...(checkVal
+            ? {
+                feasSizeDrawingCheck: checkVal,
+                feasToleranceCheck: checkVal,
+                feasGradeAppCheck: checkVal,
+                feasQuantityCheck: checkVal,
+                feasConditionCheck: checkVal,
+              }
+            : {}),
+        })
         .where(eq(inquiries.id, inquiryId));
       return;
+    }
     case "secondary":
       await tx
         .update(inquiryItems)

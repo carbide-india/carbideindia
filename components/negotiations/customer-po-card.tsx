@@ -9,8 +9,6 @@ import {
   FileText,
   ArrowUpRight,
   CheckCircle2,
-  AlertTriangle,
-  CircleDashed,
   Loader2,
 } from "lucide-react";
 import { upload } from "@vercel/blob/client";
@@ -194,14 +192,8 @@ export function CustomerPoCard({
   }
 
   return (
-    <SectionCard
-      title="Customer PO"
-      hint="Capture the received purchase order, then accept it into a sales order. Once the negotiation is approved and the PO is saved, the sales order is created automatically."
-    >
+    <SectionCard title="Customer PO">
       <div className="flex flex-col gap-5">
-        {/* Match indicator */}
-        <MatchBadge status={po.poMatchStatus} latestPiTotal={latestPiTotal} />
-
         {/* PO fields */}
         <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
           <Field id="po-no" label="Customer PO No">
@@ -375,58 +367,3 @@ export function CustomerPoCard({
   );
 }
 
-function MatchBadge({
-  status,
-  latestPiTotal,
-}: {
-  status: string | null;
-  latestPiTotal: string | null;
-}) {
-  const has = latestPiTotal != null;
-  const config =
-    status === "matched"
-      ? {
-          tone: "green",
-          icon: <CheckCircle2 size={16} strokeWidth={2.4} />,
-          label: "PO matches the latest PI total",
-        }
-      : status === "mismatch"
-        ? {
-            tone: "red",
-            icon: <AlertTriangle size={16} strokeWidth={2.4} />,
-            label: "PO total does not match the latest PI",
-          }
-        : {
-            tone: "slate",
-            icon: <CircleDashed size={16} strokeWidth={2.4} />,
-            label: has
-              ? "PO total not yet reconciled against the PI"
-              : "No PI total to reconcile against yet",
-          };
-  const isGreen = config.tone === "green";
-  const isRed = config.tone === "red";
-  const bg = isGreen
-    ? "color-mix(in srgb, var(--color-green) 12%, transparent)"
-    : isRed
-      ? "color-mix(in srgb, #D32F2F 12%, transparent)"
-      : "var(--color-surface-soft)";
-  const fg = isGreen
-    ? "var(--color-green-deep)"
-    : isRed
-      ? "#D32F2F"
-      : "var(--color-ink-muted)";
-  const border = isGreen
-    ? "color-mix(in srgb, var(--color-green) 30%, transparent)"
-    : isRed
-      ? "color-mix(in srgb, #D32F2F 30%, transparent)"
-      : "var(--color-hairline)";
-  return (
-    <div
-      className="inline-flex items-center gap-2 self-start rounded-xl border px-4 py-2.5 text-[13.5px] font-bold"
-      style={{ background: bg, color: fg, borderColor: border }}
-    >
-      {config.icon}
-      {config.label}
-    </div>
-  );
-}

@@ -2,14 +2,12 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Check, CheckCircle2, HelpCircle, Loader2, Send } from "lucide-react";
+import { CheckCircle2, HelpCircle, Loader2, Send } from "lucide-react";
 import {
-  NEGOTIATION_STAGE_BUCKETS,
-  NEGOTIATION_STATUS_COLORS,
   NEGOTIATION_STATUS_LABELS,
   type NegotiationStatus,
 } from "@/db/enums";
-import { isNegotiationApprovedForSo, isNegotiationBucket } from "@/lib/negotiations/buckets";
+import { isNegotiationApprovedForSo } from "@/lib/negotiations/buckets";
 import { setNegotiationStatus } from "@/app/(app)/negotiations/actions";
 import { SectionCard } from "@/components/inquiries/form-field";
 import { fireToast } from "@/lib/toast";
@@ -37,10 +35,6 @@ export function NegotiationApprovalCard({ negotiationId, status }: Props) {
   const router = useRouter();
   const [pending, setPending] = React.useState<NegotiationStatus | null>(null);
 
-  const onRail = isNegotiationBucket(status);
-  const currentIdx = onRail
-    ? (NEGOTIATION_STAGE_BUCKETS as readonly NegotiationStatus[]).indexOf(status)
-    : -1;
   const soReady = isNegotiationApprovedForSo(status);
 
   async function move(next: NegotiationStatus): Promise<void> {
@@ -59,75 +53,8 @@ export function NegotiationApprovalCard({ negotiationId, status }: Props) {
   }
 
   return (
-    <SectionCard
-      title="Negotiation Approval"
-      hint="The same five buckets every stage uses - an approved negotiation is what enables Issue Sales Order."
-    >
-      {/* Always allowed to wrap — six min-width buckets would otherwise exceed a
-          narrow card and spill over the status panel beside it. */}
-      <ol className="flex w-full flex-wrap items-stretch gap-1.5" aria-label="Negotiation buckets">
-        {NEGOTIATION_STAGE_BUCKETS.map((b, i) => {
-          const tone = NEGOTIATION_STATUS_COLORS[b];
-          const done = onRail && i < currentIdx;
-          const current = onRail && i === currentIdx;
-          const active = done || current;
-          return (
-            <li key={b} className="min-w-[104px] flex-1 basis-[104px]">
-              <div
-                className="flex flex-col gap-1.5 rounded-xl border px-3 py-2.5"
-                aria-current={current ? "step" : undefined}
-                style={{
-                  background: active
-                    ? `color-mix(in srgb, var(--color-${tone}) ${current ? 16 : 10}%, transparent)`
-                    : "var(--color-surface-soft)",
-                  borderColor: active
-                    ? `color-mix(in srgb, var(--color-${tone}) ${current ? 55 : 34}%, transparent)`
-                    : "var(--color-hairline)",
-                }}
-              >
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full text-[10px] font-extrabold tabular-nums"
-                    style={{
-                      background: active ? `var(--color-${tone})` : "var(--color-hairline)",
-                      color: active ? "#fff" : "var(--color-ink-subtle)",
-                    }}
-                  >
-                    {done ? <Check size={11} strokeWidth={3} /> : i + 1}
-                  </span>
-                  <span
-                    className="text-[10.5px] font-bold uppercase tracking-[0.08em]"
-                    style={{
-                      color: active ? `var(--color-${tone}-deep)` : "var(--color-ink-subtle)",
-                    }}
-                  >
-                    {current ? "Now" : done ? "Done" : "Next"}
-                  </span>
-                </div>
-                <span
-                  className="text-[13px] font-bold leading-tight"
-                  style={{ color: active ? "var(--color-ink-strong)" : "var(--color-ink-muted)" }}
-                >
-                  {NEGOTIATION_STATUS_LABELS[b]}
-                </span>
-              </div>
-            </li>
-          );
-        })}
-      </ol>
-
-      {!onRail && (
-        <p className="text-[13px] text-ink-muted">
-          This negotiation is on the commercial-outcome axis (
-          <strong className="font-bold text-ink-strong">
-            {NEGOTIATION_STATUS_LABELS[status]}
-          </strong>
-          ), so it has no position on the approval rail. Moving it to a bucket below
-          replaces that outcome - they share one status field.
-        </p>
-      )}
-
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-hairline pt-4">
+    <SectionCard title="Negotiation Approval">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-[13px] font-semibold" style={{ color: soReady ? "var(--color-green-deep)" : "var(--color-ink-muted)" }}>
           {soReady
             ? "Approved - a sales order can be issued from this negotiation."
