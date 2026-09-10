@@ -91,6 +91,9 @@ export function SecondaryFeasibilityQueueTable({
         id: "itemCode",
         header: "IPC",
         width: "220px",
+        // Long production codes must clip inside the column (with a hover title),
+        // not spill over the Secondary Status chip beside them.
+        truncate: true,
         searchable: true,
         sortValue: (r) => r.itemCode ?? "",
         exportValue: (r) => r.itemCode ?? "",
