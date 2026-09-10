@@ -48,7 +48,7 @@ export const UpdateOrgSettingsSchema = z
     idleTimeoutMinutes: z
       .number()
       .int("Idle timeout must be a whole number")
-      .min(5, "Idle timeout must be at least 5 minutes")
+      .min(10, "Idle timeout must be at least 10 minutes")
       .max(60, "Idle timeout must be at most 60 minutes")
       .optional(),
     allowSelfRegister: z.boolean().optional(),
