@@ -6,7 +6,7 @@ import type { Route } from "next";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
-import { upload } from "@vercel/blob/client";
+import { uploadFileToServer } from "@/lib/storage/client-upload";
 import { Check, Paperclip, Loader2, X, Film, Music, FileText } from "lucide-react";
 import {
   SAMPLE_ATTACHMENT_TYPES,
@@ -117,15 +117,11 @@ function safeFileName(name: string): string {
   return name.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 120) || "file";
 }
 
-/** Public sample blob (photos/videos/audio/docs), token minted by
+/** Public sample blob (photos/videos/audio/docs), uploaded server-side via
  *  /api/samples/upload. */
 function uploadAttachmentToBlob(file: File) {
-  const contentType = file.type;
-  return upload(`samples/${safeFileName(file.name)}`, file, {
+  return uploadFileToServer("/api/samples/upload", `samples/${safeFileName(file.name)}`, file, {
     access: "public",
-    handleUploadUrl: "/api/samples/upload",
-    contentType,
-    clientPayload: JSON.stringify({ contentType }),
   });
 }
 

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Upload, FileText, Download, Pencil, Trash2, RefreshCw, X, Check } from "lucide-react";
-import { upload } from "@vercel/blob/client";
+import { uploadFileToServer } from "@/lib/storage/client-upload";
 import {
   createDocumentRecord,
   updateDocument,
@@ -38,21 +38,18 @@ function precheckFile(file: File): string | null {
 }
 
 /**
- * Uploads the file browser → Vercel Blob directly (the 25 MB files never
+ * Uploads the file browser → our route → Vercel Blob (the 25 MB files never
  * pass through a server action, which is body-capped at 1 MB by Next and
- * ~4.5 MB by Vercel). /api/documents/upload mints the scoped token;
- * contentType travels via clientPayload because handleUpload's token step
- * doesn't receive it otherwise.
+ * ~4.5 MB by Vercel). /api/documents/upload `put()`s it server-side and returns
+ * `{ url, pathname }`; documents are stored private.
  */
 function uploadToBlob(file: File, onProgress?: (percentage: number) => void) {
-  const contentType = file.type || "application/octet-stream";
-  return upload(`${DOCUMENTS_PATHNAME_PREFIX}${safeDocumentName(file.name)}`, file, {
-    access: "private",
-    handleUploadUrl: "/api/documents/upload",
-    contentType,
-    clientPayload: JSON.stringify({ contentType }),
-    onUploadProgress: onProgress ? (e) => onProgress(e.percentage) : undefined,
-  });
+  return uploadFileToServer(
+    "/api/documents/upload",
+    `${DOCUMENTS_PATHNAME_PREFIX}${safeDocumentName(file.name)}`,
+    file,
+    { access: "private", onProgress },
+  );
 }
 
 export function DocumentLibrary({ documents }: { documents: DocumentRow[] }) {

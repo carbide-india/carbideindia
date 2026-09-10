@@ -183,7 +183,9 @@ export function FeasibilityQueueTable({
       {
         id: "status",
         header: "Status",
-        width: "170px",
+        // Fits the longest label ("Primary Feasibility Done") — the Chip sizer
+        // makes every capsule that wide, so a narrower column overflowed.
+        width: "224px",
         sortValue: (r) => FEASIBILITY_STATUS_LABELS[r.status],
         cell: (r) => <Chip label={FEASIBILITY_STATUS_LABELS[r.status]} tone={FEASIBILITY_STATUS_COLORS[r.status]} sizer={FEAS_STATUS_SIZER} />,
       },

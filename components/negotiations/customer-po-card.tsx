@@ -11,7 +11,7 @@ import {
   CheckCircle2,
   Loader2,
 } from "lucide-react";
-import { upload } from "@vercel/blob/client";
+import { uploadFileToServer } from "@/lib/storage/client-upload";
 import {
   saveCustomerPo,
   acceptAndConvertToSalesOrder,
@@ -125,16 +125,11 @@ export function CustomerPoCard({
     }
     setUploading(true);
     try {
-      const contentType = file.type || "application/octet-stream";
-      const blob = await upload(
+      const blob = await uploadFileToServer(
+        "/api/documents/upload",
         `${CUSTOMER_PO_PREFIX}${negotiationId}/${safeDocumentName(file.name)}`,
         file,
-        {
-          access: "private",
-          handleUploadUrl: "/api/documents/upload",
-          contentType,
-          clientPayload: JSON.stringify({ contentType }),
-        },
+        { access: "private" },
       );
       setPoPath(blob.pathname);
       setPoFileName(file.name);

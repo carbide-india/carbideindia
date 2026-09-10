@@ -104,7 +104,10 @@ export function SecondaryFeasibilityQueueTable({
       {
         id: "secondaryStatus",
         header: "Secondary Status",
-        width: "196px",
+        // Wide enough for the longest label ("Secondary Feasibility Approved") —
+        // the Chip's sizer makes every capsule that width, so a narrower column
+        // made them all overflow into the Variance cell.
+        width: "260px",
         sortValue: (r) => SECONDARY_FEASIBILITY_STATUS_LABELS[r.bucket],
         exportValue: (r) => SECONDARY_FEASIBILITY_STATUS_LABELS[r.bucket],
         cell: (r) => (

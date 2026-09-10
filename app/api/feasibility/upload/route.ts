@@ -1,60 +1,58 @@
 import { NextResponse } from "next/server";
-import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
+import { put } from "@vercel/blob";
 import { requireUser } from "@/lib/auth/current";
 import { FEAS_ATTACHMENT_TYPES, FEAS_MAX_ATTACHMENT_BYTES } from "@/lib/feasibility/attachments";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 /** Every feasibility attachment blob lives under this prefix. */
 const FEAS_PATHNAME_PREFIX = "feasibility/";
 
 /**
- * Token endpoint for client-direct feasibility-attachment uploads
- * (browser → Vercel Blob), same shape as /api/samples/upload: pathname pinned
- * under `feasibility/`, an allowlist of drawing/spec/photo content types
- * (sent via clientPayload since upload() doesn't forward contentType), a 20 MB
- * cap, and a random suffix. Public blobs, downloaded via plain links.
+ * Feasibility-attachment upload — SERVER-SIDE. The browser POSTs the file as
+ * multipart form-data (see `uploadFileToServer`), and this route `put()`s it to
+ * Vercel Blob server-to-server. This replaced the client-direct `upload()` flow
+ * (browser → Blob PUT), which fails on this deployment — the direct PUT returned
+ * 404 and the file never landed. Same server-relayed pattern as the KYC
+ * business-card scan.
+ *
+ * Contract preserved from the old token route: pathname pinned under
+ * `feasibility/`, an allowlist of drawing/spec/photo content types, a 20 MB cap,
+ * a random suffix. Public blobs, downloaded via plain links.
  */
 export async function POST(request: Request): Promise<NextResponse> {
-  const body = (await request.json()) as HandleUploadBody;
+  await requireUser();
 
   try {
-    const result = await handleUpload({
-      request,
-      body,
-      onBeforeGenerateToken: async (pathname, clientPayload) => {
-        // Auth the token-mint here; the Blob completion callback (no session)
-        // skips this hook and is verified by the signed token. The route is
-        // public in middleware so that callback can reach it.
-        await requireUser();
-        if (!pathname.startsWith(FEAS_PATHNAME_PREFIX)) {
-          throw new Error("Feasibility attachments must be uploaded under feasibility/.");
-        }
-        let contentType = "";
-        if (clientPayload) {
-          try {
-            const parsed: unknown = JSON.parse(clientPayload);
-            const ct = (parsed as { contentType?: unknown } | null)?.contentType;
-            if (typeof ct === "string") contentType = ct;
-          } catch {
-            // Malformed payload → falls through to the allowlist rejection.
-          }
-        }
-        if (!FEAS_ATTACHMENT_TYPES.has(contentType)) {
-          throw new Error("This file type isn't supported.");
-        }
-        return {
-          allowedContentTypes: [contentType],
-          maximumSizeInBytes: FEAS_MAX_ATTACHMENT_BYTES,
-          addRandomSuffix: true,
-        };
-      },
-      onUploadCompleted: async ({ blob }) => {
-        console.log("[feasibility] blob upload completed", blob.pathname);
-      },
+    const form = await request.formData();
+    const file = form.get("file");
+    const pathname = form.get("pathname");
+    if (!(file instanceof Blob)) {
+      return NextResponse.json({ error: "No file provided." }, { status: 400 });
+    }
+    if (typeof pathname !== "string" || !pathname.startsWith(FEAS_PATHNAME_PREFIX)) {
+      return NextResponse.json(
+        { error: "Feasibility attachments must be uploaded under feasibility/." },
+        { status: 400 },
+      );
+    }
+    const contentType = file.type || "application/octet-stream";
+    if (!FEAS_ATTACHMENT_TYPES.has(contentType)) {
+      return NextResponse.json({ error: "This file type isn't supported." }, { status: 400 });
+    }
+    if (file.size > FEAS_MAX_ATTACHMENT_BYTES) {
+      return NextResponse.json({ error: "This file is too large." }, { status: 400 });
+    }
+
+    const blob = await put(pathname, file, {
+      access: "public",
+      addRandomSuffix: true,
+      contentType,
     });
-    return NextResponse.json(result);
+    return NextResponse.json({ url: blob.url, pathname: blob.pathname, downloadUrl: blob.url });
   } catch (err) {
+    console.error("[feasibility] server upload error:", err);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Upload failed" },
       { status: 400 },

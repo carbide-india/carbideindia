@@ -197,7 +197,9 @@ export function InquiryForm({
       smFolderLink: "",
       enquiryNotes: "",
       assignedSalesPersonId: defaultSalesPersonId,
-      products: [
+      // Edit mode starts with NO product cards — the section is add-only there
+      // (existing products keep their costing/quote lineage and aren't edited).
+      products: isEdit ? [] : [
         {
           custProductName: "",
           custDrawingNo: "",
@@ -350,10 +352,18 @@ export function InquiryForm({
 
     startTransition(async () => {
       if (isEdit) {
-        // Products are not edited here (they link to costings/quotes), and the
-        // update schema rejects the `products` key - drop it from the patch.
-        const { products: _products, ...rest } = values;
-        const res = await updateInquiry(editInquiryId, { ...rest, enquiryDate });
+        // The header patch drops `products` (the update schema rejects the key);
+        // any NEW product cards the user added are passed separately and APPENDED
+        // to the enquiry in the same transaction (existing products untouched).
+        const { products, ...rest } = values;
+        const newProducts = (products ?? []).filter(
+          (p) => (p?.custProductName ?? "").trim() !== "",
+        );
+        const res = await updateInquiry(
+          editInquiryId,
+          { ...rest, enquiryDate },
+          newProducts.length ? newProducts : undefined,
+        );
         if (!res.ok) {
           setServerError(res.error);
           fireToast({ message: res.error, type: "error" });
@@ -787,9 +797,10 @@ export function InquiryForm({
       <ChecklistSection control={control} register={register} />
 
       {/* ── 3 · Products (with per-product checklist) ────────────────── */}
-      {/* Products are hidden in edit mode - they link to costings/quotes and
-          are managed from the SM Repo, not re-synced on enquiry edits. */}
-      {!isEdit && pickerMasters && (
+      {/* In EDIT mode this is add-only: it starts empty and appends NEW products
+          to the enquiry (existing products keep their costing/quote lineage and
+          are managed from the SM Repo). In CREATE mode it seeds product #1. */}
+      {pickerMasters && (
         <ProductsSection
           control={control}
           register={register}

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
+import { put } from "@vercel/blob";
 import { requireUser } from "@/lib/auth/current";
 import {
   SAMPLE_ATTACHMENT_TYPES,
@@ -7,69 +7,54 @@ import {
 } from "@/lib/samples/attachments";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
-/** Every sample attachment blob lives under this pathname prefix. (Not exported
- *  - route files may only export Next.js route fields; the form hardcodes it.) */
+/** Every sample attachment blob lives under this pathname prefix. */
 const SAMPLES_PATHNAME_PREFIX = "samples/";
 
 /**
- * Token endpoint for client-direct sample-photo uploads (browser → Vercel
- * Blob) - same shape as /api/documents/upload, with a tighter contract:
+ * Sample-photo upload — SERVER-SIDE. The browser POSTs the file as multipart
+ * form-data (see `uploadFileToServer`) and this route `put()`s it to Vercel Blob
+ * server-to-server. Replaced the client-direct `upload()` flow, which fails on
+ * this deployment (browser → Blob PUT 404s). Same pattern as the business-card
+ * scan.
  *
- *  - pathname must live under `samples/` (documents/avatars unreachable),
- *  - images only (jpeg/png/webp), validated via clientPayload and pinned
- *    through allowedContentTypes (the Blob API enforces it on the PUT),
- *  - 10 MB cap, random suffix so pathnames are unguessable.
- *
- * Photos upload as PUBLIC blobs (unlike documents): the detail page renders
- * them with plain <img> tags, same access model as avatars.
+ * Contract preserved: pathname pinned under `samples/`, images only, 10 MB cap,
+ * random suffix. Photos are PUBLIC blobs (the detail page renders them via
+ * plain <img>, same as avatars).
  */
 export async function POST(request: Request): Promise<NextResponse> {
-  const body = (await request.json()) as HandleUploadBody;
+  await requireUser();
 
   try {
-    const result = await handleUpload({
-      request,
-      body,
-      onBeforeGenerateToken: async (pathname, clientPayload) => {
-        // Auth the token-mint here; the Blob completion callback (no session)
-        // skips this hook and is verified by the signed token. The route is
-        // public in middleware so that callback can reach it.
-        await requireUser();
-        if (!pathname.startsWith(SAMPLES_PATHNAME_PREFIX)) {
-          throw new Error("Sample photos must be uploaded under samples/.");
-        }
+    const form = await request.formData();
+    const file = form.get("file");
+    const pathname = form.get("pathname");
+    if (!(file instanceof Blob)) {
+      return NextResponse.json({ error: "No file provided." }, { status: 400 });
+    }
+    if (typeof pathname !== "string" || !pathname.startsWith(SAMPLES_PATHNAME_PREFIX)) {
+      return NextResponse.json(
+        { error: "Sample photos must be uploaded under samples/." },
+        { status: 400 },
+      );
+    }
+    const contentType = file.type || "application/octet-stream";
+    if (!SAMPLE_ATTACHMENT_TYPES.has(contentType)) {
+      return NextResponse.json({ error: "This file type isn't supported." }, { status: 400 });
+    }
+    if (file.size > SAMPLE_MAX_ATTACHMENT_BYTES) {
+      return NextResponse.json({ error: "This file is too large." }, { status: 400 });
+    }
 
-        // upload() does not forward the file's contentType to this endpoint,
-        // so the client sends it via clientPayload (same dance as documents).
-        let contentType = "";
-        if (clientPayload) {
-          try {
-            const parsed: unknown = JSON.parse(clientPayload);
-            const ct = (parsed as { contentType?: unknown } | null)?.contentType;
-            if (typeof ct === "string") contentType = ct;
-          } catch {
-            // Malformed payload - falls through to the allowlist rejection.
-          }
-        }
-        if (!SAMPLE_ATTACHMENT_TYPES.has(contentType)) {
-          throw new Error("This file type isn't supported.");
-        }
-
-        return {
-          allowedContentTypes: [contentType],
-          maximumSizeInBytes: SAMPLE_MAX_ATTACHMENT_BYTES,
-          addRandomSuffix: true,
-        };
-      },
-      onUploadCompleted: async ({ blob }) => {
-        // No-op by design: the photo URL is persisted by createSample /
-        // updateSample. Observability only - never fires on localhost.
-        console.log("[samples] blob upload completed", blob.pathname);
-      },
+    const blob = await put(pathname, file, {
+      access: "public",
+      addRandomSuffix: true,
+      contentType,
     });
-    return NextResponse.json(result);
+    return NextResponse.json({ url: blob.url, pathname: blob.pathname, downloadUrl: blob.url });
   } catch (err) {
+    console.error("[samples] server upload error:", err);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Upload failed" },
       { status: 400 },

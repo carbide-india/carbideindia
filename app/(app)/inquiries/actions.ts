@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { and, eq, inArray, sql } from "drizzle-orm";
-import type { z } from "zod";
+import { z } from "zod";
 import { db } from "@/lib/db";
 import { inquiries, inquiryItems, inquiryItemFeasibility, clients, clientContacts, masterOptions, samples, type NewInquiry } from "@/db/schema";
 import { productRowsForInquiry, type BuiltProductRow } from "@/lib/inquiries/product-rows";
@@ -23,8 +23,10 @@ import {
   SaveFeasibilitySchema,
   SaveFeasibilityFullSchema,
   SetFeasibilityStatusSchema,
+  ProductItemSchema,
   type CreateInquiryInput,
   type SaveFeasibilityInput,
+  type ProductItemInput,
 } from "@/lib/validators/inquiry";
 
 /**
@@ -279,6 +281,10 @@ export async function createInquiry(
 export async function updateInquiry(
   id: string,
   input: UpdateInquiryInput,
+  /** NEW products to APPEND to this enquiry (edit form's "Add Product"). Only
+   *  additive — existing inquiry_items and their costing/quote lineage are never
+   *  touched. Products with no name are dropped. */
+  newProductsInput?: unknown,
 ): Promise<ActionResult> {
   // Item-Sync boundary (§3.5): the enquiry edit form does NOT edit products
   // today, so this action only patches the header + legacy single-product
@@ -296,10 +302,25 @@ export async function updateInquiry(
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
   const v = stripUndefined(parsed.data);
-  if (Object.keys(v).length === 0) return { ok: true }; // everything folded away
   if (v.enquiryDate !== undefined && !isParseableDate(v.enquiryDate)) {
     return { ok: false, error: "Invalid enquiry date" };
   }
+
+  // NEW products to append (optional). Validated with the same product schema as
+  // create; only those carrying a name are kept.
+  let newProducts: ProductItemInput[] = [];
+  if (newProductsInput !== undefined && newProductsInput !== null) {
+    const npParsed = z.array(ProductItemSchema).safeParse(newProductsInput);
+    if (!npParsed.success) {
+      return { ok: false, error: "One of the new products is invalid." };
+    }
+    newProducts = npParsed.data.filter(
+      (p) => (p.custProductName ?? "").trim() !== "",
+    ) as ProductItemInput[];
+  }
+
+  // Nothing changed at all (no header patch and no products to add) → no-op.
+  if (Object.keys(v).length === 0 && newProducts.length === 0) return { ok: true };
 
   // `clientMode` is form-only (not a column); numeric columns take strings.
   const {
@@ -364,6 +385,34 @@ export async function updateInquiry(
         const res = await syncProductToItem(tx, spec, line.id, { id: me.id, name: me.name });
         if (res.itemId !== line.itemId) {
           await tx.update(inquiryItems).set({ itemId: res.itemId, updatedAt: new Date() }).where(eq(inquiryItems.id, line.id));
+        }
+      }
+
+      // Append NEW products (additive only — never edits or removes existing
+      // lines, so per-line costings/quotes are untouched). Each product gets an
+      // Item via the Item-Sync Contract, exactly like createInquiry, with a
+      // sortOrder that follows the last existing line.
+      if (newProducts.length) {
+        const [maxRow] = await tx
+          .select({ maxSort: sql<number>`coalesce(max(${inquiryItems.sortOrder}), -1)` })
+          .from(inquiryItems)
+          .where(eq(inquiryItems.inquiryId, id));
+        let sortOrder = Number(maxRow?.maxSort ?? -1) + 1;
+        for (const r of productRowsForInquiry({ products: newProducts })) {
+          const lineId = crypto.randomUUID();
+          const spec = await specFromLine(tx, r);
+          const res = await syncProductToItem(tx, spec, lineId, { id: me.id, name: me.name });
+          const { sampleId, ...itemCols } = r;
+          await tx
+            .insert(inquiryItems)
+            .values({ id: lineId, inquiryId: id, ...itemCols, sortOrder, itemId: res.itemId });
+          if (sampleId) {
+            await tx
+              .update(samples)
+              .set({ inquiryId: id, inquiryItemId: lineId, updatedAt: new Date() })
+              .where(eq(samples.id, sampleId));
+          }
+          sortOrder++;
         }
       }
     });

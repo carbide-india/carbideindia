@@ -23,6 +23,7 @@ import {
   type SalesOrderPoConfirmationEntry,
 } from "@/lib/queries/sales-orders";
 import { requireUser } from "@/lib/auth/current";
+import { canApprove, approvalRefusal } from "@/lib/approval/gate";
 import {
   getQuoteAutofill,
   getQuotationAutofill,
@@ -435,15 +436,51 @@ export async function setSalesOrderSent(
 // to show either one as still pending.
 // ---------------------------------------------------------------------------
 
+/**
+ * Approve a sales order (sets `sales_order_approved`). The two-step finish every
+ * stage carries: anyone can take an SO to Pending Approval, only an APPROVER may
+ * approve it. Server-enforced via `canApprove` — the button is approver-only in
+ * the UI, but that is convenience, not authority. This is the ONLY way the
+ * detail page moves an SO to Approved.
+ */
+export async function approveSalesOrder(id: string): Promise<ActionResult> {
+  const me = await requireUser();
+  if (!isUuid(id)) return { ok: false, error: "Invalid sales order id." };
+  if (!canApprove(me)) {
+    return { ok: false, error: "Only an approver can approve a sales order." };
+  }
+  try {
+    const updated = await db
+      .update(salesOrders)
+      .set({ salesOrderStatus: "sales_order_approved", updatedAt: new Date() })
+      .where(eq(salesOrders.id, id))
+      .returning({ id: salesOrders.id });
+    if (updated.length === 0) {
+      return { ok: false, error: "That sales order no longer exists." };
+    }
+  } catch (err) {
+    console.error("[approveSalesOrder] failed", err);
+    return { ok: false, error: "Could not approve the sales order. Please try again." };
+  }
+  revalidatePath("/sales-orders");
+  revalidatePath(`/sales-orders/${id}`);
+  return { ok: true };
+}
+
 /** Move the sales order between the house stage buckets. */
 export async function setSalesOrderStatus(
   id: string,
   status: string,
 ): Promise<ActionResult> {
-  await requireUser();
+  const me = await requireUser();
   if (!isUuid(id)) return { ok: false, error: "Invalid sales order id." };
   const parsed = SetSalesOrderStatusSchema.safeParse({ status });
   if (!parsed.success) return { ok: false, error: "Invalid status." };
+  // Only an approver may set an approver-only bucket (Approved / Not Approved /
+  // On Hold / Cancelled) — the same gate every stage uses. Working buckets
+  // (Draft / Need Info / Pending Approval) stay open to anyone.
+  const refusal = approvalRefusal({ status: parsed.data.status }, me);
+  if (refusal) return { ok: false, error: refusal };
   try {
     await db
       .update(salesOrders)
@@ -463,13 +500,18 @@ export async function setSalesOrderStatusBulk(
   ids: string[],
   value: string,
 ): Promise<ActionResult> {
-  await requireUser();
+  const me = await requireUser();
   if (!Array.isArray(ids) || ids.length === 0) {
     return { ok: false, error: "No rows selected." };
   }
   if (!ids.every(isUuid)) return { ok: false, error: "Invalid sales order id." };
   const parsed = SetSalesOrderStatusSchema.safeParse({ status: value });
   if (!parsed.success) return { ok: false, error: "Invalid status." };
+  // Same approver gate as the single-row setter — a bulk move can't be a way
+  // around it. Approver-only buckets (Approved / Not Approved / On Hold /
+  // Cancelled) are refused for non-approvers.
+  const refusal = approvalRefusal({ status: parsed.data.status }, me);
+  if (refusal) return { ok: false, error: refusal };
   try {
     const updated = await db
       .update(salesOrders)

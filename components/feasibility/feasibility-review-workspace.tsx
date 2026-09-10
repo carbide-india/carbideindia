@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Loader2, Paperclip, X, UploadCloud, CircleCheck } from "lucide-react";
-import { upload } from "@vercel/blob/client";
+import { uploadFileToServer } from "@/lib/storage/client-upload";
 import {
   FEAS_PRIORITIES,
   FEAS_PRIORITY_LABELS,
@@ -88,11 +88,12 @@ export function FeasibilityReviewWorkspace({
       }
       setUploading((n) => n + 1);
       try {
-        const blob = await upload(`feasibility/${safeFeasFileName(file.name)}`, file, {
-          access: "public",
-          handleUploadUrl: "/api/feasibility/upload",
-          clientPayload: JSON.stringify({ contentType: file.type }),
-        });
+        const blob = await uploadFileToServer(
+          "/api/feasibility/upload",
+          `feasibility/${safeFeasFileName(file.name)}`,
+          file,
+          { access: "public" },
+        );
         setAttachments((prev) => [...prev, { name: file.name, url: blob.url }]);
       } catch {
         fireToast({ type: "error", message: `${file.name}: upload failed.` });

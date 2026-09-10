@@ -1,24 +1,18 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { listCustomerPoRevisions } from "@/app/(app)/sales-orders/issue-actions";
 import { requireUser } from "@/lib/auth/current";
+import { canApprove } from "@/lib/approval/gate";
+import { getSalesOrderById } from "@/lib/queries/sales-orders";
 import {
-  getSalesOrderById,
-  getSalesOrderDocuments,
-  getSalesOrderItems,
-  getSalesOrderLineNotes,
-} from "@/lib/queries/sales-orders";
+  getQuotationPdfModel,
+  getLatestQuotationRevisionId,
+} from "@/lib/queries/quotations";
 import { getInquiryById } from "@/lib/queries/inquiries";
 import { listEmployeeOptions } from "@/lib/queries/employees";
-import { getInquiryItemSeeds } from "@/lib/queries/quotes";
 import {
   SoDetail,
   type SalesOrderInquiryLink,
 } from "@/components/sales-orders/so-detail";
-import { SoOutputsCard } from "@/components/sales-orders/so-outputs-card";
-import { SalesOrderDocuments } from "@/components/sales-orders/so-documents";
-import { SyncProductsBanner } from "@/components/pipeline/sync-products-banner";
-import { syncProductsFromEnquiry } from "@/app/(app)/sales-orders/actions";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
 import { UserMenuServer } from "@/components/header/user-menu-server";
 
@@ -51,26 +45,19 @@ export default async function SalesOrderDetailPage({ params }: PageProps) {
   if (!salesOrder) notFound();
 
   // The linked enquiry (SM repo) supplies the header SM chip + number, and the
-  // seed list lets us flag products added to the enquiry after this sales order.
-  const [employees, inquiry, lines, seeds, lineNotes, soDocuments, poHistory] = await Promise.all([
+  // linked quotation is shown read-only — resolved to the LATEST revision of its
+  // chain, so a re-quote made anywhere upstream shows through here too.
+  const [employees, inquiry, quotationPdf] = await Promise.all([
     listEmployeeOptions(),
     salesOrder.inquiryId
       ? getInquiryById(salesOrder.inquiryId)
       : Promise.resolve(null),
-    getSalesOrderItems(salesOrder.id),
-    salesOrder.inquiryId
-      ? getInquiryItemSeeds(salesOrder.inquiryId)
-      : Promise.resolve([]),
-    // Per-line factory notes for the dual-output panel (factory copy only).
-    getSalesOrderLineNotes(salesOrder.id),
-    getSalesOrderDocuments(salesOrder.id),
-    // Superseded customer POs — the Client PO card's history trail.
-    listCustomerPoRevisions(salesOrder.id),
+    salesOrder.quotationId
+      ? getLatestQuotationRevisionId(salesOrder.quotationId).then((latestId) =>
+          getQuotationPdfModel(latestId),
+        )
+      : Promise.resolve(null),
   ]);
-
-  // Names for the "issued by" / "replaced by" lines. Built here rather than
-  // joined per query: the employee list is already loaded and tiny.
-  const employeeNames = Object.fromEntries(employees.map((e) => [e.id, e.name]));
 
   const inquiryLink: SalesOrderInquiryLink | null = inquiry
     ? {
@@ -80,57 +67,16 @@ export default async function SalesOrderDetailPage({ params }: PageProps) {
       }
     : null;
 
-  const presentIds = new Set(
-    lines.map((l) => l.inquiryItemId).filter((v): v is string => v !== null),
-  );
-  const missingCount = seeds.filter((s) => !presentIds.has(s.inquiryItemId)).length;
-
   return (
     <EnquiryModuleShell title="Sales Order" userMenu={<UserMenuServer />} isAdmin={me.isAdmin}>
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-      <SyncProductsBanner
-        missingCount={missingCount}
-        recordId={salesOrder.id}
-        recordLabel="sales order"
-        syncAction={syncProductsFromEnquiry}
-      />
-      <SoDetail
-        salesOrder={salesOrder}
-        employees={employees}
-        inquiryLink={inquiryLink}
-        lines={lines}
-        poHistory={poHistory}
-        employeeNames={employeeNames}
-      />
-      {/* The customer PO itself. The order records its number, date and link;
-          this holds the document, filed against the order rather than left on
-          somebody's drive. */}
-      <section className="overflow-hidden rounded-section border-2 border-[#b7bcd2] bg-surface-card">
-        <div className="flex items-center gap-2.5 border-b-2 border-[#d6d9ea] bg-[#e7e9f6] px-4 py-2.5">
-          <span className="h-4 w-1.5 shrink-0 rounded-full bg-[#3f3f94]" />
-          <span className="text-[13.5px] font-black uppercase tracking-[0.1em] text-[#3f3f94]">
-            Customer PO &amp; Attachments
-          </span>
-        </div>
-        <SalesOrderDocuments
-          salesOrderId={salesOrder.id}
-          documents={soDocuments}
-          canEdit
+        <SoDetail
+          salesOrder={salesOrder}
+          employees={employees}
+          inquiryLink={inquiryLink}
+          quotationPdf={quotationPdf}
+          canApprove={canApprove(me)}
         />
-      </section>
-
-      {/* One SO, two outputs — stage bucket + customer/factory copies. */}
-      <SoOutputsCard
-        salesOrderId={salesOrder.id}
-        soNo={salesOrder.soNo}
-        status={salesOrder.salesOrderStatus}
-        customerSoSent={salesOrder.customerSoSent}
-        customerSoLink={salesOrder.customerSoLink}
-        productionSoSent={salesOrder.productionSoSent}
-        productionSoLink={salesOrder.productionSoLink}
-        productionNotes={salesOrder.productionNotes}
-        lines={lineNotes}
-      />
       </div>
     </EnquiryModuleShell>
   );

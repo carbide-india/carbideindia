@@ -10,7 +10,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { upload } from "@vercel/blob/client";
+import { uploadFileToServer } from "@/lib/storage/client-upload";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
   addNegotiationLogEntry,
@@ -244,16 +244,11 @@ export function NegotiationLog({ negotiationId }: { negotiationId: string }) {
           fireToast({ message: bad });
           return;
         }
-        const contentType = file.type || "application/octet-stream";
-        const blob = await upload(
+        const blob = await uploadFileToServer(
+          "/api/documents/upload",
           `${LOG_PREFIX}${negotiationId}/${safeDocumentName(file.name)}`,
           file,
-          {
-            access: "private",
-            handleUploadUrl: "/api/documents/upload",
-            contentType,
-            clientPayload: JSON.stringify({ contentType }),
-          },
+          { access: "private" },
         );
         attachmentPath = blob.pathname;
         attachmentName = file.name;

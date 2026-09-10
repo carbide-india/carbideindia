@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Upload, FileText, Download, Trash2 } from "lucide-react";
-import { upload } from "@vercel/blob/client";
+import { uploadFileToServer } from "@/lib/storage/client-upload";
 import {
   saveSalesOrderDocument,
   deleteSalesOrderDocument,
@@ -103,18 +103,11 @@ export function SalesOrderDocuments({
     }
     setBusy(true);
     try {
-      const contentType = file.type || "application/octet-stream";
-      const blob = await upload(
+      const blob = await uploadFileToServer(
+        "/api/documents/upload",
         `${SO_DOCS_PREFIX}${salesOrderId}/${safeDocumentName(file.name)}`,
         file,
-        {
-          access: "private",
-          handleUploadUrl: "/api/documents/upload",
-          contentType,
-          // handleUpload's token step never receives the file's contentType,
-          // so it rides along here and is pinned onto the PUT.
-          clientPayload: JSON.stringify({ contentType }),
-        },
+        { access: "private" },
       );
       const res = await saveSalesOrderDocument({
         salesOrderId,

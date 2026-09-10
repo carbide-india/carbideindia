@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { upload } from "@vercel/blob/client";
+import { uploadFileToServer } from "@/lib/storage/client-upload";
 import { Loader2, Mic, Square, Trash2 } from "lucide-react";
 import { fireToast } from "@/lib/toast";
 
@@ -30,14 +30,9 @@ function safeSlug(label: string): string {
 
 /** Upload a recorded audio blob under documents/ (route requires that prefix). */
 function uploadVoiceNote(blob: Blob, label: string) {
-  const contentType = blob.type || "audio/webm";
   const name = `documents/voice-note-${safeSlug(label)}-${Date.now()}.webm`;
-  return upload(name, blob, {
-    access: "public",
-    handleUploadUrl: "/api/documents/upload",
-    contentType,
-    clientPayload: JSON.stringify({ contentType }),
-  });
+  // Public so the note plays back via a plain <audio src> without presigning.
+  return uploadFileToServer("/api/documents/upload", name, blob, { access: "public" });
 }
 
 export function AudioNoteRecorder({ value, onChange, label = "Voice Note" }: Props) {

@@ -90,7 +90,9 @@ export function InquiryTable({ rows, employees, variant = "enquiry", heading, ac
   const enquiryStatusCol: RegisterColumn<InquiryListItem> = {
     id: "enquiryStatus",
     header: "Enquiry",
-    width: "132px",
+    // Fits the longest label ("Pending Approval" / "Enquiry Approved"); the Chip
+    // sizer makes every capsule that wide, so a narrower column overflowed.
+    width: "168px",
     defaultHidden: variant === "feasibility",
     sortValue: (r) => ENQUIRY_STATUS_LABELS[r.enquiryStatus],
     cell: (r) => (
@@ -100,7 +102,9 @@ export function InquiryTable({ rows, employees, variant = "enquiry", heading, ac
   const feasibilityStatusCol: RegisterColumn<InquiryListItem> = {
     id: "feasibilityStatus",
     header: "Feasibility",
-    width: "152px",
+    // Fits the longest label ("Primary Feasibility Done"); the Chip sizer makes
+    // every capsule that wide, so a narrower column overflowed.
+    width: "224px",
     defaultHidden: variant === "enquiry",
     sortValue: (r) => FEASIBILITY_STATUS_LABELS[r.feasibilityStatus],
     cell: (r) => (

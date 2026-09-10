@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Upload, FileText, Download, Trash2 } from "lucide-react";
-import { upload } from "@vercel/blob/client";
+import { uploadFileToServer } from "@/lib/storage/client-upload";
 import { saveItemDocument, deleteItemDocument } from "@/app/(app)/items/document-actions";
 import {
   MAX_DOCUMENT_BYTES,
@@ -77,20 +77,14 @@ export function ItemDocuments({
     }
     setBusy(true);
     try {
-      const contentType = file.type || "application/octet-stream";
-      // Browser → Vercel Blob directly (the file never passes through a server
-      // action, which Next caps at 1 MB). The reused /api/documents/upload
-      // route mints the private token; contentType travels via clientPayload
-      // because handleUpload's token step doesn't receive it otherwise.
-      const blob = await upload(
+      // Browser → our route → Vercel Blob (the file never passes through a
+      // server action, which Next caps at 1 MB). /api/documents/upload put()s it
+      // server-side, private, and returns { url, pathname }.
+      const blob = await uploadFileToServer(
+        "/api/documents/upload",
         `${ITEM_DOCS_PREFIX}${itemId}/${safeDocumentName(file.name)}`,
         file,
-        {
-          access: "private",
-          handleUploadUrl: "/api/documents/upload",
-          contentType,
-          clientPayload: JSON.stringify({ contentType }),
-        },
+        { access: "private" },
       );
       const res = await saveItemDocument({
         itemId,

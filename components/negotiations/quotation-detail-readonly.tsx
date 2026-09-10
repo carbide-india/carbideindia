@@ -48,7 +48,21 @@ function amountStr(n: number | null): string {
 /** Border helper for the grid cells. */
 const cellBorder = `1px solid ${BORDER}`;
 
-export function QuotationDetailReadonly({ model }: { model: QuotationPdfModel }) {
+export function QuotationDetailReadonly({
+  model,
+  heading = "Quotation Details",
+  documentTitle = "QUOTATION",
+}: {
+  model: QuotationPdfModel;
+  /** Section heading above the paper replica. The Sales Order detail page passes
+   *  "Sales Order Details" — the document itself is still the quotation the order
+   *  rests on (same terms, same bordered form). */
+  heading?: string;
+  /** The red masthead word inside the bordered document. Defaults to
+   *  "QUOTATION"; the Sales Order detail page passes "SALES ORDER" so the same
+   *  form reads as the sales order it represents. */
+  documentTitle?: string;
+}) {
   // Pad the item table to the form's shape (the PDF keeps blank rows). Cap the
   // filler so a many-line quote doesn't add pointless empty rows.
   const MIN_ROWS = 6;
@@ -102,7 +116,7 @@ export function QuotationDetailReadonly({ model }: { model: QuotationPdfModel })
       {/* Context strip (app-themed) */}
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1.5">
         <h2 className="text-[12.5px] font-extrabold uppercase tracking-[0.1em] text-brand">
-          Quotation Details
+          {heading}
         </h2>
         <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-pill border border-hairline bg-surface-soft px-2.5 py-1 text-[11.5px] font-bold text-ink-subtle">
@@ -180,7 +194,7 @@ export function QuotationDetailReadonly({ model }: { model: QuotationPdfModel })
               color: RED,
             }}
           >
-            QUOTATION
+            {documentTitle}
           </div>
 
           {/* To / Quotation-No block */}

@@ -30,8 +30,13 @@ export function Chip({
   if (sizer) {
     return (
       <span
-        className="inline-grid min-w-[76px] place-items-center px-2.5 py-1 rounded-pill text-[12px] font-bold"
+        // `max-w-full` + `overflow-hidden` keep the capsule inside its (fixed)
+        // column — without them a label longer than the column spills over the
+        // next cell's content. The visible label truncates with a hover title;
+        // size the column to the longest label to avoid the ellipsis in practice.
+        className="inline-grid max-w-full min-w-[76px] place-items-center overflow-hidden px-2.5 py-1 rounded-pill text-[12px] font-bold"
         style={style}
+        title={label}
       >
         {/* Invisible widest-label ghost, stacked in the same grid cell — it sets
             the width; the visible label centres over it. Both share one cell so
@@ -39,7 +44,7 @@ export function Chip({
         <span aria-hidden className="invisible col-start-1 row-start-1 whitespace-nowrap">
           {sizer}
         </span>
-        <span className="col-start-1 row-start-1 whitespace-nowrap">{label}</span>
+        <span className="col-start-1 row-start-1 min-w-0 max-w-full truncate">{label}</span>
       </span>
     );
   }
@@ -48,11 +53,13 @@ export function Chip({
     <span
       // A shared min-width + centred label keeps short status/trade chips
       // (Export / Domestic / Yes / No / priorities) a consistent size instead of
-      // each hugging its text; longer labels still grow past it.
-      className="inline-flex min-w-[76px] items-center justify-center px-2.5 py-1 rounded-pill text-[12px] font-bold whitespace-nowrap"
+      // each hugging its text; longer labels still grow past it. `max-w-full` +
+      // `overflow-hidden` stop an over-long label from spilling over the next cell.
+      className="inline-flex max-w-full min-w-[76px] items-center justify-center overflow-hidden px-2.5 py-1 rounded-pill text-[12px] font-bold"
       style={style}
+      title={label}
     >
-      {label}
+      <span className="min-w-0 truncate">{label}</span>
     </span>
   );
 }

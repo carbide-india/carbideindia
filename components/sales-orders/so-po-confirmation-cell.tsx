@@ -4,7 +4,7 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Clock, Loader2, Paperclip, Upload, X } from "lucide-react";
-import { upload } from "@vercel/blob/client";
+import { uploadFileToServer } from "@/lib/storage/client-upload";
 import {
   MAX_DOCUMENT_BYTES,
   safeDocumentName,
@@ -85,16 +85,11 @@ export function SoPoConfirmationCell({
       let attachmentPath: string | undefined;
       let attachmentName: string | undefined;
       if (file) {
-        const contentType = file.type || "application/octet-stream";
-        const blob = await upload(
+        const blob = await uploadFileToServer(
+          "/api/documents/upload",
           `${PREFIX}${salesOrderId}/${safeDocumentName(file.name)}`,
           file,
-          {
-            access: "private",
-            handleUploadUrl: "/api/documents/upload",
-            contentType,
-            clientPayload: JSON.stringify({ contentType }),
-          },
+          { access: "private" },
         );
         attachmentPath = blob.pathname;
         attachmentName = file.name;

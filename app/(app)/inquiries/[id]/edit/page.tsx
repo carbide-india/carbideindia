@@ -11,6 +11,7 @@ import { listClientOptions } from "@/lib/queries/clients";
 import { listEmployeeOptions } from "@/lib/queries/employees";
 import { listMasterOptions, getShapeProfiles } from "@/lib/queries/masters";
 import { listCustomOptionsMap } from "@/lib/queries/custom-lists";
+import { listSampleOptions } from "@/lib/queries/samples";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
 import { UserMenuServer } from "@/components/header/user-menu-server";
 
@@ -46,16 +47,43 @@ export default async function EditInquiryPage({ params }: PageProps) {
   const inquiry = await getInquiryById(id);
   if (!inquiry) notFound();
 
-  const [clients, employees, grades, tolerances, conditions, shapeProfiles, enquiryLists] =
-    await Promise.all([
-      listClientOptions(),
-      listEmployeeOptions(),
-      listMasterOptions("internal_grade"),
-      listMasterOptions("tolerance"),
-      listMasterOptions("condition"),
-      getShapeProfiles(),
-      listCustomOptionsMap("enquiry"),
-    ]);
+  const [
+    clients,
+    employees,
+    grades,
+    tolerances,
+    conditions,
+    externalGrades,
+    internalProductionCodes,
+    partNos,
+    shapes,
+    shapeProfiles,
+    enquiryLists,
+    sampleOptions,
+  ] = await Promise.all([
+    listClientOptions(),
+    listEmployeeOptions(),
+    listMasterOptions("internal_grade"),
+    listMasterOptions("tolerance"),
+    listMasterOptions("condition"),
+    listMasterOptions("external_grade"),
+    listMasterOptions("internal_production_code"),
+    listMasterOptions("part_no"),
+    listMasterOptions("shape"),
+    getShapeProfiles(),
+    listCustomOptionsMap("enquiry"),
+    listSampleOptions(),
+  ]);
+
+  // Same picker payload the New Enquiry form builds — lets the edit form render
+  // the (add-only) Products section so new products can be appended.
+  const pickerMasters = {
+    shapes,
+    grades,
+    tolerances,
+    conditions,
+    shapeProfilesById: shapeProfiles.byId,
+  };
 
   const initialValues = getInquiryEditValues(inquiry) as Partial<InquiryFormValues>;
 
@@ -79,8 +107,8 @@ export default async function EditInquiryPage({ params }: PageProps) {
             Edit Enquiry
           </h1>
           <p className="mt-1 text-[14px] text-ink-subtle">
-            Update the enquiry header, client snapshot, and checklist. Products and costings
-            are managed from the SM Repo.
+            Update the enquiry header, client snapshot, and checklist. You can also add new
+            products here — existing products and their costings are managed from the SM Repo.
           </p>
         </header>
         <InquiryForm
@@ -89,10 +117,18 @@ export default async function EditInquiryPage({ params }: PageProps) {
           grades={grades}
           tolerances={tolerances}
           conditions={conditions}
+          externalGrades={externalGrades}
+          internalProductionCodes={internalProductionCodes}
+          partNos={partNos}
           shapeProfiles={shapeProfiles.byName}
+          pickerMasters={pickerMasters}
           stateOptions={enquiryLists["state"]}
           cityOptions={enquiryLists["city"]}
           unitOptions={enquiryLists["unit"]}
+          currencyOptions={enquiryLists["currency"]}
+          countryOptions={enquiryLists["country"]}
+          uomOptions={enquiryLists["uom"]}
+          sampleOptions={sampleOptions}
           defaultSalesPersonId={inquiry.assignedSalesPersonId ?? me.id}
           editInquiryId={id}
           initialValues={initialValues}
