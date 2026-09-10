@@ -512,6 +512,51 @@ export async function approveCostingDecision(
         : Number(bo.finalCostPerPiece ?? 0);
     }
 
+    // ── Mandatory downstream fields (owner, 2026-09) ─────────────────────────
+    // A costing cannot be approved unless it carries what the quotation reads
+    // off it: a real final cost, and — for a bought-out win — the chosen
+    // vendor's cost, Payment Terms and Lead Time. Without these the quote would
+    // approve to a blank Payment Term / Delivery, which is what this prevents.
+    if (!Number.isFinite(finalUnitCost) || finalUnitCost <= 0) {
+      return {
+        ok: false,
+        error: "The final cost per piece is 0 — complete the costing before approving.",
+      };
+    }
+    if (approvedOption === "bought_out") {
+      if (!effectiveChosenVendorId) {
+        return {
+          ok: false,
+          error: "Pick the winning vendor before approving the bought-out costing.",
+        };
+      }
+      const [vq] = await db
+        .select({
+          unitPrice: costingVendorQuotes.unitPrice,
+          paymentTermsId: costingVendorQuotes.paymentTermsId,
+          leadTimeDays: costingVendorQuotes.leadTimeDays,
+        })
+        .from(costingVendorQuotes)
+        .where(eq(costingVendorQuotes.id, effectiveChosenVendorId))
+        .limit(1);
+      if (!vq) {
+        return {
+          ok: false,
+          error: "The chosen vendor quote no longer exists — reopen the costing.",
+        };
+      }
+      const missing: string[] = [];
+      if (vq.unitPrice == null || !(Number(vq.unitPrice) > 0)) missing.push("Vendor Cost / piece");
+      if (!vq.paymentTermsId) missing.push("Payment Terms");
+      if (vq.leadTimeDays == null) missing.push("Lead Time (days)");
+      if (missing.length > 0) {
+        return {
+          ok: false,
+          error: `Fill the winning vendor's ${missing.join(", ")} before approving — the quotation needs ${missing.length > 1 ? "these" : "this"}.`,
+        };
+      }
+    }
+
     const targetId = targetRow.id;
     await db.transaction(async (tx) => {
       // Exactly-one-chosen: clear every sibling on this item.

@@ -243,6 +243,19 @@ export async function applyPipelineDecision(input: {
   const { inquiryId, stage, decision } = input;
   const remark = input.remark?.trim() || `Approver marked ${decision.replace("_", " ")}.`;
 
+  // Costing approval is NOT a free status flip — it has to pick the route/vendor,
+  // snapshot the final cost and carry the fields the quotation reads (payment
+  // terms, lead time). So the pipeline can never approve a costing; that only
+  // happens in the Costing module via approveCostingDecision (which enforces
+  // those fields). Every other decision + stage is still fine here.
+  if (stage === "costing" && decision === "approve") {
+    return {
+      ok: false,
+      error:
+        "A costing can only be approved from the Costing module — it has to pick the vendor, fix the final cost and its payment terms + lead time. Open the costing and approve it there.",
+    };
+  }
+
   try {
     if (decision === "on_hold" || decision === "cancelled") {
       // Whole-inquiry freeze. Snapshot every stage's current status first (so
