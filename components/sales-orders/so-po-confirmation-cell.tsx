@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Clock, Loader2, Paperclip, Upload, X } from "lucide-react";
 import { upload } from "@vercel/blob/client";
@@ -57,6 +58,10 @@ export function SoPoConfirmationCell({
   const [historyOpen, setHistoryOpen] = React.useState(false);
   const [log, setLog] = React.useState<SalesOrderPoConfirmationEntry[] | null>(null);
   const fileRef = React.useRef<HTMLInputElement>(null);
+  // Portal the overlays to <body> so their clicks never bubble to the register
+  // row's onClick/onDoubleClick (which would navigate to the SO detail page).
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
 
   function closeModal() {
     if (busy) return;
@@ -161,8 +166,8 @@ export function SoPoConfirmationCell({
         <Clock size={14} strokeWidth={2.2} />
       </button>
 
-      {/* Add-confirmation popup */}
-      {selected && (
+      {/* Add-confirmation popup (portaled to body) */}
+      {selected && mounted && createPortal(
         <div
           className="fixed inset-0 z-[120] flex items-start justify-center bg-black/45 px-4 py-[8vh]"
           onClick={closeModal}
@@ -252,11 +257,12 @@ export function SoPoConfirmationCell({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
-      {/* History popup */}
-      {historyOpen && (
+      {/* History popup (portaled to body) */}
+      {historyOpen && mounted && createPortal(
         <div
           className="fixed inset-0 z-[120] flex items-start justify-center bg-black/45 px-4 py-[8vh]"
           onClick={() => setHistoryOpen(false)}
@@ -337,7 +343,8 @@ export function SoPoConfirmationCell({
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
