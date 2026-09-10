@@ -5,7 +5,7 @@ Work-management system for **Carbide India** (Yogeshwar Engineering Pvt Ltd, Nas
 ## Quickstart
 
 ```bash
-pnpm install
+pnpm install 
 cp .env.example .env.local          # fill in Neon / Clerk / Vercel Blob / Resend values
 pnpm verify:env                     # checks every required env var is present + well-formed
 pnpm db:migrate                     # apply schema migrations to your Neon database
