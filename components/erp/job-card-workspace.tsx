@@ -151,7 +151,7 @@ export function JobCardWorkspace({
   const productFields: DetailField[] = [
     { label: "Item Code", value: spec?.itemCode ?? "-", mono: true, href: spec?.itemId ? `/items/${spec.itemId}` : undefined },
     { label: "Shape", value: dash(spec?.shapeName) },
-    { label: "Grade (Internal)", value: dash(spec?.gradeName) },
+    { label: "Internal Grade for Production", value: dash(spec?.gradeName) },
     { label: "Grade Colour", value: dash(card.gradeColour) },
     { label: "Dimensions", value: dimensions ?? "-", mono: true },
     { label: "Tolerance", value: dash(spec?.toleranceName ?? data.toleranceName) },

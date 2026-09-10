@@ -88,7 +88,7 @@ export function ItemDetail({ item, auditEntries, documents, isAdmin }: Props) {
           <InfoGrid
             rows={[
               ["Shape", item.shapeName],
-              ["Grade (Internal)", item.gradeName],
+              ["Internal Grade for Production", item.gradeName],
               ["Tolerance", item.toleranceName],
               ["Condition", item.conditionName],
               ["Size Code", item.sizeCode],
@@ -136,8 +136,8 @@ export function ItemDetail({ item, auditEntries, documents, isAdmin }: Props) {
               ["Drawing No", item.custDrawingNo],
               ["Drawing Revision", item.drawingRevisionNo],
               ["Quantity", item.originQty],
-              ["Grade (Customer)", item.gradeCustomer],
-              ["Grade Name for Customer", item.gradeNameForCust],
+              ["Grade Name for Customer", item.gradeCustomer],
+              ["Grade Given to Customer", item.gradeNameForCust],
             ]}
           />
         </ReadCard>

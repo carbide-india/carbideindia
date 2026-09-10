@@ -50,8 +50,8 @@ type SortKey =
 const SORTS: { value: SortKey; label: string }[] = [
   { value: "recent", label: "Newest First" },
   { value: "oldest", label: "Oldest First" },
-  { value: "code", label: "Item Code (A→Z)" },
-  { value: "codeDesc", label: "Item Code (Z→A)" },
+  { value: "code", label: "IPC (A→Z)" },
+  { value: "codeDesc", label: "IPC (Z→A)" },
   { value: "customer", label: "Customer (A→Z)" },
   { value: "customerDesc", label: "Customer (Z→A)" },
   { value: "status", label: "Active First" },
@@ -330,7 +330,7 @@ export function ItemTable({ rows, isAdmin }: Props) {
           <table className="w-full min-w-[1240px] border-collapse text-left">
             <thead>
               <tr className="border-b-2 border-[#b9bce0] bg-[#e9ebfb]">
-                <Th sticky="left">Item Code</Th>
+                <Th sticky="left">IPC</Th>
                 <Th>Status</Th>
                 <Th>Shape</Th>
                 <Th>Grade</Th>

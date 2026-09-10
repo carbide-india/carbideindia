@@ -1426,9 +1426,9 @@ function ProductDrawer({
   const wu = data?.whereUsed;
 
   const specFields: DetailField[] = [
-    { label: "Item Code", value: product.itemCode, mono: true },
+    { label: "Internal Production Code (IPC)", value: product.itemCode, mono: true },
     { label: "Shape", value: product.shapeName },
-    { label: "Grade (Internal)", value: product.gradeName },
+    { label: "Internal Grade for Production", value: product.gradeName },
     { label: "Tolerance", value: product.toleranceName },
     { label: "Condition", value: product.conditionName },
     { label: "Dimensions", value: dims, mono: true, full: true },

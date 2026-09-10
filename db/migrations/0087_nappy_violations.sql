@@ -1,0 +1,1 @@
+ALTER TYPE "public"."costing_done_status" ADD VALUE 'auto_cancelled';

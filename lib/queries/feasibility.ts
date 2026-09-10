@@ -2,7 +2,7 @@ import "server-only";
 import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/lib/db";
-import { inquiries, inquiryItems, employees, masterOptions } from "@/db/schema";
+import { inquiries, inquiryItems, items, employees, masterOptions } from "@/db/schema";
 import type {
   FeasibilityStatus,
   FeasPriority,
@@ -446,6 +446,8 @@ export interface SecondaryFeasibilityQueueRow {
   smNumber: string;
   companyName: string;
   productName: string | null;
+  /** Internal Production Code (IPC) of the linked Product-Master item. */
+  itemCode: string | null;
   /** "Done" once the line's Secondary/Technical Feasibility is stamped. */
   secondaryDone: boolean;
   secVerdict: string | null;
@@ -494,24 +496,22 @@ function hasSecondaryData(r: {
 
 /**
  * The Secondary / Technical Feasibility queue: every product line whose parent
- * enquiry has CLEARED Primary Feasibility. "Cleared primary" = the inquiry's
- * `feasibilityStatus` is post-primary — `draft` (and its deprecated twin
- * `in_review`), `pending_approval`, or `proceed_to_costing` (Feasibility
- * Approved). Lines still `not_started`, `need_info`, or `not_feasible`, and
- * archived enquiries, are excluded — they have not reached this stage.
+ * enquiry has been APPROVED in Primary Feasibility. "Approved" = the inquiry's
+ * `feasibilityStatus` is `proceed_to_costing` (the "Feasibility Approved"
+ * state). Enquiries that have merely STARTED primary (`draft`/`in_review`),
+ * are awaiting sign-off (`pending_approval`), or sit in `not_started` /
+ * `need_info` / `not_feasible`, plus archived enquiries, are excluded — an
+ * enquiry may not move into Secondary Feasibility until it is approved.
  * Newest-enquiry first.
  *
  * Each row carries its house bucket and its Primary-baseline variance, so the
  * register can show what is LEFT and where the two feasibilities disagree.
  */
 export async function listSecondaryFeasibilityQueue(): Promise<SecondaryFeasibilityQueueRow[]> {
-  // `in_review` is the deprecated spelling of `draft` — both count as started.
-  const primaryCleared: FeasibilityStatus[] = [
-    "draft",
-    "in_review",
-    "pending_approval",
-    "proceed_to_costing",
-  ];
+  // Gate: only enquiries APPROVED in Primary Feasibility ("Feasibility Approved"
+  // = proceed_to_costing) reach Secondary. Started/awaiting-approval enquiries
+  // are held back — approval is the gate into this stage.
+  const primaryApproved: FeasibilityStatus[] = ["proceed_to_costing"];
   const rows = await db
     .select({
       inquiryItemId: inquiryItems.id,
@@ -520,6 +520,7 @@ export async function listSecondaryFeasibilityQueue(): Promise<SecondaryFeasibil
       companyName: inquiries.companyName,
       custProductName: inquiryItems.custProductName,
       description: inquiryItems.description,
+      itemCode: items.itemCode,
       secondaryDone: inquiryItems.secondaryFeasibilityDone,
       secondaryAt: inquiryItems.secondaryFeasibilityAt,
       storedBucket: inquiryItems.secondaryFeasibilityStatus,
@@ -545,10 +546,11 @@ export async function listSecondaryFeasibilityQueue(): Promise<SecondaryFeasibil
     })
     .from(inquiryItems)
     .innerJoin(inquiries, eq(inquiryItems.inquiryId, inquiries.id))
+    .innerJoin(items, eq(inquiryItems.itemId, items.id))
     .where(
       and(
         and(eq(inquiries.isArchived, false), isNull(inquiries.deletedAt)),
-        inArray(inquiries.feasibilityStatus, primaryCleared),
+        inArray(inquiries.feasibilityStatus, primaryApproved),
       ),
     )
     .orderBy(desc(inquiries.enquiryDate), desc(inquiries.createdAt), asc(inquiryItems.sortOrder));
@@ -579,6 +581,7 @@ export async function listSecondaryFeasibilityQueue(): Promise<SecondaryFeasibil
       smNumber: r.smNumber,
       companyName: r.companyName,
       productName: (r.custProductName ?? r.description ?? "").trim() || null,
+      itemCode: r.itemCode ?? null,
       secondaryDone: r.secondaryDone,
       secVerdict: r.secVerdict,
       feasibilityConfirmed: r.feasibilityConfirmed,

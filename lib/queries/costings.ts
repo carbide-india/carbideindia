@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, inArray, or } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   clients,
@@ -8,6 +8,7 @@ import {
   employees,
   inquiries,
   inquiryItems,
+  items,
   type CostingVendorQuote,
 } from "@/db/schema";
 import {
@@ -20,6 +21,7 @@ import {
   isCostingOverdue,
   type CostingBucket,
 } from "@/lib/costing/buckets";
+import { buildCostingCode } from "@/lib/costing/number";
 import type {
   CostingDoneStatus,
   CostingRoute,
@@ -229,6 +231,8 @@ export interface CostingRegisterCosting {
   isChosen: boolean;
   isLocked: boolean;
   isLatestRevision: boolean;
+  /** Series number of this costing on its line (C01, C02…). */
+  costingNo: number;
   revisionNo: number;
   revisionReason: string | null;
   /** Set when Quotation pressed "Revise Costing" — this revision exists because
@@ -250,10 +254,19 @@ export interface CostingRegisterRow {
   smNumber: string | null;
   companyName: string | null;
   custProductName: string | null;
+  /** Internal Production Code (IPC) of the linked Product-Master item. */
+  itemCode: string | null;
   quantityNos: string | null;
   quantityUom: string | null;
   /** The costing this row reports on — null when nothing has been costed yet. */
   costingId: string | null;
+  /** Human costing code of the representative — "SM9613-C01" / "…-C01-R1".
+   *  Null when the line has no costing yet. */
+  costingCode: string | null;
+  /** Stored revision number of the representative (1 = original, 2 = R1, …).
+   *  0 when the line has no costing. Drives the green/red code + REV badge,
+   *  mirroring the Quotation register. */
+  costingRevisionNo: number;
   costingType: CostingRoute | null;
   /** Raw stored status of the representative costing (null = no costing row). */
   status: CostingDoneStatus | null;
@@ -264,6 +277,10 @@ export interface CostingRegisterRow {
   targetDate: Date | null;
   needInfoNote: string | null;
   isLocked: boolean;
+  /** Set when the representative costing was opened by a "Revise Costing" from a
+   *  quotation (its `revisedFromQuotationId`) — the line was sent back to be
+   *  re-costed. Drives the "sent back from Quotation" flag on the register. */
+  revisedFromQuotationId: string | null;
   /** Position of the representative within its route's revision list (1-based). */
   revisionNo: number;
   /** How many revisions exist on the representative's route. */
@@ -325,6 +342,7 @@ export async function listCostingRegister(
       isChosen: costings.isChosen,
       isLocked: costings.isLocked,
       isLatestRevision: costings.isLatestRevision,
+      costingNo: costings.costingNo,
       revisionNo: costings.revisionNo,
       revisionReason: costings.revisionReason,
       revisedFromQuotationId: costings.revisedFromQuotationId,
@@ -347,6 +365,7 @@ export async function listCostingRegister(
       isChosen: c.isChosen,
       isLocked: c.isLocked,
       isLatestRevision: c.isLatestRevision,
+      costingNo: c.costingNo,
       revisionNo: c.revisionNo,
       revisionReason: c.revisionReason,
       revisedFromQuotationId: c.revisedFromQuotationId,
@@ -379,6 +398,7 @@ export async function listCostingRegister(
       inquiryItemId: inquiryItems.id,
       inquiryId: inquiryItems.inquiryId,
       custProductName: inquiryItems.custProductName,
+      itemCode: items.itemCode,
       quantityNos: inquiryItems.quantityNos,
       quantityUom: inquiryItems.quantityUom,
       feasibilityConfirmed: inquiryItems.feasibilityConfirmed,
@@ -390,6 +410,7 @@ export async function listCostingRegister(
     })
     .from(inquiryItems)
     .innerJoin(inquiries, eq(inquiryItems.inquiryId, inquiries.id))
+    .innerJoin(items, eq(inquiryItems.itemId, items.id))
     // Archived enquiries are out — same rule the feasibility queue applies. An
     // archived SM is not outstanding work, and counting it would inflate every
     // bucket. This is the register's ONE exclusion and it is stated on the page.
@@ -415,9 +436,12 @@ export async function listCostingRegister(
       smNumber: l.smNumber,
       companyName: l.companyName,
       custProductName: l.custProductName,
+      itemCode: l.itemCode ?? null,
       quantityNos: l.quantityNos,
       quantityUom: l.quantityUom,
       costingId: rep?.id ?? null,
+      costingCode: rep ? buildCostingCode(l.smNumber, rep.costingNo, rep.revisionNo) : null,
+      costingRevisionNo: rep?.revisionNo ?? 0,
       costingType: rep?.costingType ?? null,
       status: rep?.status ?? null,
       bucket,
@@ -426,6 +450,7 @@ export async function listCostingRegister(
       targetDate: rep?.targetDate ?? null,
       needInfoNote: rep?.needInfoNote ?? null,
       isLocked: rep?.isLocked ?? false,
+      revisedFromQuotationId: rep?.revisedFromQuotationId ?? null,
       revisionNo: repIndex >= 0 ? repIndex + 1 : 0,
       revisionCount: sameRoute.length,
       costingCount: all.length,
@@ -437,6 +462,89 @@ export async function listCostingRegister(
       createdAt: rep?.createdAt ?? l.enquiryCreatedAt,
     } satisfies CostingRegisterRow;
   });
+}
+
+/**
+ * The AUTO-CANCELLED cost sheets — one row PER SHEET (not per line). The main
+ * register is per-line and shows only each line's current costing, so a
+ * superseded auto-cancelled sheet never surfaces there. This lists those sheets
+ * directly so the "Auto-Cancelled" bucket can show (and count) the real thing.
+ * Newest first. Each row is shaped like a register row so the same table renders
+ * it — `costings` is left empty (no expand panel for a single retired sheet).
+ */
+export async function listAutoCancelledCostings(): Promise<CostingRegisterRow[]> {
+  const rows = await db
+    .select({
+      id: costings.id,
+      inquiryItemId: costings.inquiryItemId,
+      inquiryId: costings.inquiryId,
+      costingType: costings.costingType,
+      costingNo: costings.costingNo,
+      revisionNo: costings.revisionNo,
+      finalCostPerPiece: costings.finalCostPerPiece,
+      quoteValue: costings.quoteValue,
+      targetDate: costings.targetDate,
+      needInfoNote: costings.needInfoNote,
+      isLocked: costings.isLocked,
+      revisedFromQuotationId: costings.revisedFromQuotationId,
+      createdAt: costings.createdAt,
+      smNumber: inquiries.smNumber,
+      companyName: inquiries.companyName,
+      custProductName: inquiryItems.custProductName,
+      itemCode: items.itemCode,
+      quantityNos: inquiryItems.quantityNos,
+      quantityUom: inquiryItems.quantityUom,
+      secondaryFeasibilityStatus: inquiryItems.secondaryFeasibilityStatus,
+      feasibilityConfirmed: inquiryItems.feasibilityConfirmed,
+    })
+    .from(costings)
+    .innerJoin(inquiryItems, eq(costings.inquiryItemId, inquiryItems.id))
+    .innerJoin(inquiries, eq(costings.inquiryId, inquiries.id))
+    .innerJoin(items, eq(inquiryItems.itemId, items.id))
+    .where(
+      and(
+        eq(inquiries.isArchived, false),
+        isNull(inquiries.deletedAt),
+        eq(costings.costingDoneStatus, "auto_cancelled"),
+      ),
+    )
+    .orderBy(desc(costings.createdAt));
+
+  return rows.map(
+    (r) =>
+      ({
+        id: r.id,
+        inquiryItemId: r.inquiryItemId,
+        inquiryId: r.inquiryId,
+        smNumber: r.smNumber,
+        companyName: r.companyName,
+        custProductName: r.custProductName,
+        itemCode: r.itemCode ?? null,
+        quantityNos: r.quantityNos,
+        quantityUom: r.quantityUom,
+        costingId: r.id,
+        costingCode: buildCostingCode(r.smNumber, r.costingNo, r.revisionNo),
+        costingRevisionNo: r.revisionNo,
+        costingType: r.costingType,
+        status: "auto_cancelled",
+        bucket: "auto_cancelled",
+        finalCostPerPiece: r.finalCostPerPiece,
+        quoteValue: r.quoteValue,
+        targetDate: r.targetDate,
+        needInfoNote: r.needInfoNote,
+        isLocked: r.isLocked,
+        revisedFromQuotationId: r.revisedFromQuotationId,
+        revisionNo: 0,
+        revisionCount: 0,
+        costingCount: 0,
+        overdue: false,
+        daysToTarget: null,
+        secondaryFeasibilityStatus: r.secondaryFeasibilityStatus,
+        feasibilityConfirmed: r.feasibilityConfirmed,
+        costings: [],
+        createdAt: r.createdAt,
+      }) satisfies CostingRegisterRow,
+  );
 }
 
 /**
@@ -453,6 +561,113 @@ export async function getCostingRevisionsForItem(
     .from(costings)
     .where(eq(costings.inquiryItemId, inquiryItemId))
     .orderBy(asc(costings.revisionNo), asc(costings.createdAt));
+}
+
+/* ── Costing Variance Log ─────────────────────────────────────────────────── */
+
+/** One costing version in a line's variance chain (a single `costings` row). */
+export interface CostingVarianceEntry {
+  id: string;
+  /** Human code — "SM9613-C01" / "…-C01-R1". */
+  code: string;
+  costingNo: number;
+  revisionNo: number;
+  costingType: CostingRoute;
+  status: CostingDoneStatus;
+  isChosen: boolean;
+  isLatestRevision: boolean;
+  revisionReason: string | null;
+  /** Set when a quotation "Revise Costing" opened this version. */
+  revisedFromQuotationId: string | null;
+  /** Set when a negotiation asked for this re-costing. */
+  revisedFromNegotiationId: string | null;
+  finalCostPerPiece: string | null;
+  createdAt: Date;
+}
+
+/** Every costing version on one product line, oldest first, with line identity. */
+export interface CostingVarianceChain {
+  inquiryItemId: string;
+  inquiryId: string;
+  smNumber: string | null;
+  companyName: string | null;
+  custProductName: string | null;
+  entries: CostingVarianceEntry[];
+}
+
+/**
+ * The Costing Variance Log: for every product line that has MORE THAN ONE
+ * costing version (a revision `-R1`/`-R2`, and/or a second series `C02`), the
+ * full chain oldest → newest with each version's code, status, cost and the
+ * reason it was opened. Lines with a single costing are omitted — there is no
+ * variance to show. Newest activity first. Mirrors the Quotation Revision Log.
+ */
+export async function listCostingVarianceChains(): Promise<CostingVarianceChain[]> {
+  const rows = await db
+    .select({
+      id: costings.id,
+      inquiryItemId: costings.inquiryItemId,
+      inquiryId: costings.inquiryId,
+      costingNo: costings.costingNo,
+      revisionNo: costings.revisionNo,
+      costingType: costings.costingType,
+      status: costings.costingDoneStatus,
+      isChosen: costings.isChosen,
+      isLatestRevision: costings.isLatestRevision,
+      revisionReason: costings.revisionReason,
+      revisedFromQuotationId: costings.revisedFromQuotationId,
+      revisedFromNegotiationId: costings.revisedFromNegotiationId,
+      finalCostPerPiece: costings.finalCostPerPiece,
+      createdAt: costings.createdAt,
+      smNumber: inquiries.smNumber,
+      companyName: inquiries.companyName,
+      custProductName: inquiryItems.custProductName,
+    })
+    .from(costings)
+    .innerJoin(inquiryItems, eq(costings.inquiryItemId, inquiryItems.id))
+    .innerJoin(inquiries, eq(costings.inquiryId, inquiries.id))
+    .where(and(eq(inquiries.isArchived, false), isNull(inquiries.deletedAt)))
+    .orderBy(asc(costings.costingNo), asc(costings.revisionNo), asc(costings.createdAt));
+
+  const byLine = new Map<string, CostingVarianceChain>();
+  for (const r of rows) {
+    let chain = byLine.get(r.inquiryItemId);
+    if (!chain) {
+      chain = {
+        inquiryItemId: r.inquiryItemId,
+        inquiryId: r.inquiryId,
+        smNumber: r.smNumber,
+        companyName: r.companyName,
+        custProductName: r.custProductName,
+        entries: [],
+      };
+      byLine.set(r.inquiryItemId, chain);
+    }
+    chain.entries.push({
+      id: r.id,
+      code: buildCostingCode(r.smNumber, r.costingNo, r.revisionNo),
+      costingNo: r.costingNo,
+      revisionNo: r.revisionNo,
+      costingType: r.costingType,
+      status: r.status,
+      isChosen: r.isChosen,
+      isLatestRevision: r.isLatestRevision,
+      revisionReason: r.revisionReason,
+      revisedFromQuotationId: r.revisedFromQuotationId,
+      revisedFromNegotiationId: r.revisedFromNegotiationId,
+      finalCostPerPiece: r.finalCostPerPiece,
+      createdAt: r.createdAt,
+    });
+  }
+
+  // Only lines with real variance (more than one version). Newest activity first.
+  return [...byLine.values()]
+    .filter((c) => c.entries.length > 1)
+    .sort((a, b) => {
+      const at = a.entries[a.entries.length - 1]?.createdAt.getTime() ?? 0;
+      const bt = b.entries[b.entries.length - 1]?.createdAt.getTime() ?? 0;
+      return bt - at;
+    });
 }
 
 /** Line identity shown above a costing (SM / company / product / gate state). */

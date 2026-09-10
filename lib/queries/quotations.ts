@@ -16,14 +16,18 @@ import {
 import { db } from "@/lib/db";
 import {
   costings,
+  employees,
+  inquiries,
   quotations,
   quotationItems,
   type Quotation,
 } from "@/db/schema";
 import {
   COSTING_ROUTE_LABELS,
+  INQUIRY_SOURCE_LABELS,
   type CostingDoneStatus,
   type CostingRoute,
+  type InquirySource,
   type QuotationStatus,
 } from "@/db/enums";
 import {
@@ -45,6 +49,8 @@ export interface QuotationLineProduct {
   /** Customer-facing product name (read-through), or a part-no / item-code
    *  fallback; null only for a line with no resolvable descriptor. */
   name: string | null;
+  /** Internal Production Code (IPC) of the linked Product-Master item. */
+  itemCode: string | null;
   qty: string | null;
   /** Read-through spec (master NAMES, resolved from the line's `item_id`). */
   grade: string | null;
@@ -286,6 +292,7 @@ async function listQuotationLineProducts(
     const product: QuotationLineProduct = {
       id: r.id,
       name,
+      itemCode: spec?.itemCode ?? null,
       qty: r.qty,
       grade: spec?.gradeName ?? null,
       tolerance: spec?.toleranceName ?? null,
@@ -545,6 +552,371 @@ export async function getQuotationById(id: string): Promise<Quotation | null> {
     .where(eq(quotations.id, id))
     .limit(1);
   return row ?? null;
+}
+
+/** One priced product line of the customer-facing quotation PDF (SM9540 format).
+ *  Description = customer product name + "As per drg no. …"; grade / condition
+ *  resolve read-through from the line's item; amount = qty × rate. */
+export interface QuotationPdfLine {
+  sr: number;
+  productName: string | null;
+  drawingNo: string | null;
+  /** Customer-facing grade code (e.g. CID25), read-through from the item. */
+  grade: string | null;
+  /** MOQ (Nos.). */
+  qty: string | null;
+  condition: string | null;
+  /** Rate per unit (₹), numeric string or null when unpriced. */
+  ratePerUnit: string | null;
+  /** qty × rate, precise; null when either side is unknown. */
+  amount: number | null;
+}
+
+/**
+ * Everything the customer-facing quotation PDF needs, in the shape of the
+ * official Carbide India (Yogeshwar Engg.) quotation form: the To/company block,
+ * the Quotation-No / Enquiry-Ref / ENQ-No header, and the multi-line item table
+ * with a precise total. Line specs (grade / condition / drawing) resolve
+ * read-through from each line's item / provenance inquiry-item — never from a
+ * copied mirror. Legacy quotes with no `quotation_items` rows fall back to the
+ * header's line-1 snapshot so a single-line quote still renders.
+ */
+export interface QuotationPdfModel {
+  quoteNo: string;
+  quotationDate: Date;
+  /** ENQ.No — the enquiry's SM number. */
+  smNumber: string | null;
+  /** Enquiry Ref — how the enquiry came in (Email / Whatsapp / …). */
+  enquiryRef: string | null;
+  enquiryDate: Date | null;
+  companyName: string | null;
+  city: string | null;
+  /** Kind Attn. — the enquiry contact person. */
+  contactName: string | null;
+  /** Free-text commercial terms carried on the quotation (dynamic — blank when
+   *  the quote doesn't set them; NEVER defaulted to boilerplate). */
+  deliveryTime: string | null;
+  tolerance: string | null;
+  validity: string | null;
+  lines: QuotationPdfLine[];
+  total: number;
+}
+
+export async function getQuotationPdfModel(
+  id: string,
+): Promise<QuotationPdfModel | null> {
+  const [q] = await db
+    .select({
+      quoteNo: quotations.quoteNo,
+      createdAt: quotations.createdAt,
+      enquiryDate: quotations.enquiryDate,
+      companyName: quotations.companyName,
+      deliveryTime: quotations.deliveryTime,
+      tolerance: quotations.tolerance,
+      validity: quotations.validity,
+      // Header line-1 mirrors — the legacy fallback when a quote predates
+      // `quotation_items`.
+      custProductName: quotations.custProductName,
+      custDrawingNo: quotations.custDrawingNo,
+      gradeNameForCust: quotations.gradeNameForCust,
+      gradeCustomer: quotations.gradeCustomer,
+      qty: quotations.qty,
+      condition: quotations.condition,
+      quotePrice: quotations.quotePrice,
+      // Enquiry-side fields (SM number, source, city, contact).
+      smNumber: inquiries.smNumber,
+      source: inquiries.source,
+      city: inquiries.city,
+      contactFirstName: inquiries.contactFirstName,
+      contactLastName: inquiries.contactLastName,
+      inqEnquiryDate: inquiries.enquiryDate,
+    })
+    .from(quotations)
+    .leftJoin(inquiries, eq(quotations.inquiryId, inquiries.id))
+    .where(eq(quotations.id, id))
+    .limit(1);
+  if (!q) return null;
+
+  const rawLines = await db
+    .select({
+      inquiryItemId: quotationItems.inquiryItemId,
+      itemId: quotationItems.itemId,
+      qty: quotationItems.qty,
+      quotePrice: quotationItems.quotePrice,
+      unitPrice: quotationItems.unitPrice,
+    })
+    .from(quotationItems)
+    .where(eq(quotationItems.quotationId, id))
+    .orderBy(asc(quotationItems.sortOrder));
+
+  const [specs, asks] = await Promise.all([
+    resolveSpecsByItemId(rawLines.map((r) => r.itemId)),
+    resolveCustomerAskByInquiryItemId(rawLines.map((r) => r.inquiryItemId)),
+  ]);
+
+  const num = (v: string | null): number | null => {
+    const n = Number(v ?? NaN);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  let lines: QuotationPdfLine[] = rawLines.map((r, i) => {
+    const spec = r.itemId ? specs.get(r.itemId) : undefined;
+    const ask = r.inquiryItemId ? asks.get(r.inquiryItemId) : undefined;
+    const rate = num(r.quotePrice ?? r.unitPrice);
+    const qtyN = num(r.qty);
+    return {
+      sr: i + 1,
+      productName: ask?.custProductName ?? spec?.partNo ?? spec?.itemCode ?? null,
+      drawingNo: ask?.custDrawingNo ?? null,
+      // Customer-facing grade ONLY — never fall back to the internal grade name
+      // (that is Carbide's proprietary designation and must not reach the
+      // customer PDF). Matches getQuotationFullDetail + the SO document.
+      grade: spec?.gradeNameForCust ?? spec?.gradeCustomer ?? null,
+      qty: r.qty,
+      condition: spec?.conditionName ?? null,
+      ratePerUnit: r.quotePrice ?? r.unitPrice ?? null,
+      amount: rate != null && qtyN != null ? rate * qtyN : null,
+    };
+  });
+
+  // Legacy fallback — no line rows, so synthesise line 1 from the header mirror.
+  if (lines.length === 0) {
+    const rate = num(q.quotePrice);
+    const qtyN = num(q.qty);
+    lines = [
+      {
+        sr: 1,
+        productName: q.custProductName,
+        drawingNo: q.custDrawingNo,
+        grade: q.gradeNameForCust ?? q.gradeCustomer,
+        qty: q.qty,
+        condition: q.condition,
+        ratePerUnit: q.quotePrice,
+        amount: rate != null && qtyN != null ? rate * qtyN : null,
+      },
+    ];
+  }
+
+  const total = lines.reduce((s, l) => s + (l.amount ?? 0), 0);
+  const contactName =
+    [q.contactFirstName, q.contactLastName].filter(Boolean).join(" ").trim() ||
+    null;
+
+  return {
+    quoteNo: q.quoteNo,
+    quotationDate: q.createdAt,
+    smNumber: q.smNumber ?? null,
+    enquiryRef: q.source
+      ? INQUIRY_SOURCE_LABELS[q.source as InquirySource] ?? null
+      : null,
+    enquiryDate: q.enquiryDate ?? q.inqEnquiryDate ?? null,
+    companyName: q.companyName,
+    city: q.city ?? null,
+    contactName,
+    deliveryTime: q.deliveryTime,
+    tolerance: q.tolerance,
+    validity: q.validity,
+    lines,
+    total,
+  };
+}
+
+/** One product line of the complete, read-only quotation detail. */
+export interface QuotationDetailLine {
+  sortOrder: number;
+  productName: string | null;
+  itemCode: string | null;
+  qty: string | null;
+  drawingNo: string | null;
+  drawingRev: string | null;
+  partNo: string | null;
+  /** Internal grade name. */
+  gradeName: string | null;
+  /** Customer-facing grade code. */
+  gradeCustomer: string | null;
+  tolerance: string | null;
+  condition: string | null;
+  finalCost: string | null;
+  negotiation: string | null;
+  quotePrice: string | null;
+  developmentTime: string | null;
+  deliveryTime: string | null;
+  validity: string | null;
+}
+
+/** The complete quotation, resolved for a READ-ONLY reference view (e.g. under
+ *  a negotiation). Header + every line + roll-up totals. */
+export interface QuotationFullDetail {
+  header: {
+    id: string;
+    quoteNo: string;
+    revisionNo: number;
+    isRevision: boolean;
+    companyName: string | null;
+    enquiryDate: Date | null;
+    quotationStatus: QuotationStatus;
+    quoteSent: boolean;
+    quoteSentAt: Date | null;
+    quoteSentTo: { to: string[]; cc: string[] } | null;
+    quotationLink: string | null;
+    createdByName: string | null;
+    currency: string | null;
+  };
+  lines: QuotationDetailLine[];
+  totals: { lineCount: number; totalQty: number; totalQuotedValue: number };
+}
+
+/**
+ * Everything needed to render one quotation READ-ONLY: header (identity, send
+ * status, who/when), every product line with its spec resolved read-through
+ * (grade / tolerance / condition / drawing / part / IPC) and its carried
+ * commercials, and the roll-up totals. Legacy quotes with no `quotation_items`
+ * rows fall back to the header's line-1 snapshot so a single-line quote still
+ * renders in full.
+ */
+export async function getQuotationFullDetail(
+  id: string,
+): Promise<QuotationFullDetail | null> {
+  const [q] = await db
+    .select({
+      id: quotations.id,
+      quoteNo: quotations.quoteNo,
+      revisionNo: quotations.revisionNo,
+      supersedesQuotationId: quotations.supersedesQuotationId,
+      companyName: quotations.companyName,
+      enquiryDate: quotations.enquiryDate,
+      quotationStatus: quotations.quotationStatus,
+      quoteSent: quotations.quoteSent,
+      quoteSentAt: quotations.quoteSentAt,
+      quoteSentTo: quotations.quoteSentTo,
+      quotationLink: quotations.quotationLink,
+      createdByName: employees.name,
+      currency: inquiries.currency,
+      inqEnquiryDate: inquiries.enquiryDate,
+      // Header line-1 mirrors — the legacy fallback.
+      custProductName: quotations.custProductName,
+      custDrawingNo: quotations.custDrawingNo,
+      drawingRevisionNo: quotations.drawingRevisionNo,
+      partNo: quotations.partNo,
+      gradeNameForCust: quotations.gradeNameForCust,
+      gradeCustomer: quotations.gradeCustomer,
+      tolerance: quotations.tolerance,
+      condition: quotations.condition,
+      qty: quotations.qty,
+      finalCost: quotations.finalCost,
+      negotiation: quotations.negotiation,
+      quotePrice: quotations.quotePrice,
+      developmentTime: quotations.developmentTime,
+      deliveryTime: quotations.deliveryTime,
+      validity: quotations.validity,
+    })
+    .from(quotations)
+    .leftJoin(inquiries, eq(quotations.inquiryId, inquiries.id))
+    .leftJoin(employees, eq(quotations.createdById, employees.id))
+    .where(eq(quotations.id, id))
+    .limit(1);
+  if (!q) return null;
+
+  const rawLines = await db
+    .select({
+      inquiryItemId: quotationItems.inquiryItemId,
+      itemId: quotationItems.itemId,
+      sortOrder: quotationItems.sortOrder,
+      qty: quotationItems.qty,
+      finalCost: quotationItems.finalCost,
+      negotiation: quotationItems.negotiation,
+      quotePrice: quotationItems.quotePrice,
+      unitPrice: quotationItems.unitPrice,
+      developmentTime: quotationItems.developmentTime,
+      deliveryTime: quotationItems.deliveryTime,
+      validity: quotationItems.validity,
+    })
+    .from(quotationItems)
+    .where(eq(quotationItems.quotationId, id))
+    .orderBy(asc(quotationItems.sortOrder));
+
+  const [specs, asks] = await Promise.all([
+    resolveSpecsByItemId(rawLines.map((r) => r.itemId)),
+    resolveCustomerAskByInquiryItemId(rawLines.map((r) => r.inquiryItemId)),
+  ]);
+
+  let lines: QuotationDetailLine[] = rawLines.map((r) => {
+    const spec = r.itemId ? specs.get(r.itemId) : undefined;
+    const ask = r.inquiryItemId ? asks.get(r.inquiryItemId) : undefined;
+    return {
+      sortOrder: r.sortOrder,
+      productName: ask?.custProductName ?? spec?.partNo ?? spec?.itemCode ?? null,
+      itemCode: spec?.itemCode ?? null,
+      qty: r.qty,
+      drawingNo: ask?.custDrawingNo ?? null,
+      drawingRev: ask?.drawingRevisionNo ?? null,
+      partNo: spec?.partNo ?? null,
+      gradeName: spec?.gradeName ?? null,
+      gradeCustomer: spec?.gradeNameForCust ?? spec?.gradeCustomer ?? null,
+      tolerance: spec?.toleranceName ?? null,
+      condition: spec?.conditionName ?? null,
+      finalCost: r.finalCost,
+      negotiation: r.negotiation,
+      quotePrice: r.quotePrice ?? r.unitPrice,
+      developmentTime: r.developmentTime,
+      deliveryTime: r.deliveryTime,
+      validity: r.validity,
+    };
+  });
+
+  if (lines.length === 0) {
+    lines = [
+      {
+        sortOrder: 0,
+        productName: q.custProductName,
+        itemCode: null,
+        qty: q.qty,
+        drawingNo: q.custDrawingNo,
+        drawingRev: q.drawingRevisionNo,
+        partNo: q.partNo,
+        gradeName: null,
+        gradeCustomer: q.gradeNameForCust ?? q.gradeCustomer,
+        tolerance: q.tolerance,
+        condition: q.condition,
+        finalCost: q.finalCost,
+        negotiation: q.negotiation,
+        quotePrice: q.quotePrice,
+        developmentTime: q.developmentTime,
+        deliveryTime: q.deliveryTime,
+        validity: q.validity,
+      },
+    ];
+  }
+
+  const numOr0 = (v: string | null): number => {
+    const n = Number(v ?? NaN);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const totalQty = lines.reduce((s, l) => s + numOr0(l.qty), 0);
+  const totalQuotedValue = lines.reduce(
+    (s, l) => s + numOr0(l.qty) * numOr0(l.quotePrice),
+    0,
+  );
+
+  return {
+    header: {
+      id: q.id,
+      quoteNo: q.quoteNo,
+      revisionNo: q.revisionNo,
+      isRevision: q.supersedesQuotationId != null,
+      companyName: q.companyName,
+      enquiryDate: q.enquiryDate ?? q.inqEnquiryDate ?? null,
+      quotationStatus: q.quotationStatus,
+      quoteSent: q.quoteSent,
+      quoteSentAt: q.quoteSentAt,
+      quoteSentTo: q.quoteSentTo ?? null,
+      quotationLink: q.quotationLink,
+      createdByName: q.createdByName,
+      currency: q.currency ?? null,
+    },
+    lines,
+    totals: { lineCount: lines.length, totalQty, totalQuotedValue },
+  };
 }
 
 /** The diff-relevant fields carried on every quotation revision. */

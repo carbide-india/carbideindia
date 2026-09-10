@@ -100,19 +100,17 @@ export { toOptionalNumber } from "@/lib/form-utils";
 interface Props {
   control: Control<InquiryFormValues>;
   register: UseFormRegister<InquiryFormValues>;
-  productDescriptionError?: string;
 }
 
 /**
  * Section 4 of the New Inquiry form - Checklist. The paper enquiry checklist's
  * V / x / # marks become Given / Not Given / Assumed segmented controls;
- * everything is optional except the product description. Per-product details
- * (shape, dimensions, masters, quantity) live in the Products section.
+ * everything is optional. The product description now lives per-product in the
+ * Products section (removed from here per owner request 2026-09-08).
  */
 export function ChecklistSection({
   control,
   register,
-  productDescriptionError,
 }: Props) {
   return (
     <SectionCard
@@ -120,21 +118,6 @@ export function ChecklistSection({
       inlineHint
       hint="Mark what the client actually gave (Given), didn't give (Not Given), or what we filled in ourselves (Assumed)."
     >
-      <Field id="inq-product" label="Product Description" required float>
-        <textarea
-          id="inq-product"
-          rows={3}
-          className="nt-input resize-y"
-          style={{ fontWeight: 400 }}
-          placeholder="What the client is asking for, in their words"
-          {...register("productDescription")}
-        />
-        {productDescriptionError && (
-          <p className="text-[13px] font-semibold" style={{ color: "#D32F2F" }}>
-            {productDescriptionError}
-          </p>
-        )}
-      </Field>
 
       {/* Docs given - checkbox chip group */}
       <Field label="Docs Given" float>

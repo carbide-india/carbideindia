@@ -13,6 +13,7 @@ import {
   COSTING_DONE_STATUS_LABELS,
   COSTING_DONE_STATUS_COLORS,
   DEPRECATED_COSTING_DONE_STATUSES,
+  SYSTEM_COSTING_DONE_STATUSES,
   QUOTATION_STAGE_BUCKETS,
   QUOTATION_STATUS_LABELS,
   QUOTATION_STATUS_COLORS,
@@ -59,9 +60,12 @@ interface Props {
 }
 
 /** Live pickers hide the deprecated costing values (kept in the enum only so
- *  legacy rows still render). */
+ *  legacy rows still render) and the system-set ones (e.g. auto_cancelled,
+ *  which the app sets on revision — never a manual choice). */
 const COSTING_PICKER_STATUSES = COSTING_DONE_STATUSES.filter(
-  (s) => !(DEPRECATED_COSTING_DONE_STATUSES as readonly string[]).includes(s),
+  (s) =>
+    !(DEPRECATED_COSTING_DONE_STATUSES as readonly string[]).includes(s) &&
+    !(SYSTEM_COSTING_DONE_STATUSES as readonly string[]).includes(s),
 ) as CostingDoneStatus[];
 
 /** Parse a numeric-string money column to a number for right-aligned ₹ display
@@ -192,7 +196,8 @@ function ProductsTablePopover({ row }: { row: QuotationListItem }) {
             <thead>
               <tr className="border-b border-hairline text-[10.5px] font-bold uppercase tracking-wider text-ink-subtle">
                 <th className="px-2.5 py-2 text-right font-bold">#</th>
-                <th className="px-2.5 py-2 text-left font-bold">Product</th>
+                <th className="px-2.5 py-2 text-left font-bold">Product Name</th>
+                <th className="px-2.5 py-2 text-left font-bold">IPC</th>
                 <th className="px-2.5 py-2 text-right font-bold">Qty</th>
                 <th className="px-2.5 py-2 text-left font-bold">Grade</th>
                 <th className="px-2.5 py-2 text-left font-bold">Tolerance</th>
@@ -213,6 +218,12 @@ function ProductsTablePopover({ row }: { row: QuotationListItem }) {
                   </td>
                   <td className="px-2.5 py-2 font-medium text-ink-strong">
                     {productLabel(p, i)}
+                  </td>
+                  <td
+                    className="px-2.5 py-2 text-ink-soft"
+                    style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}
+                  >
+                    {cellText(p.itemCode)}
                   </td>
                   <td className="px-2.5 py-2 text-right tabular-nums text-ink-soft">
                     {qtyText(p.qty)}
@@ -263,14 +274,25 @@ function ProductCell({ row }: { row: QuotationListItem }) {
   const hasMore = row.lineProducts.length > 1;
 
   return (
-    // Product codes can be very long (e.g. S-10029-FSp-…-250x50x24), so this ONE
-    // cell is capped + ellipsised to stop it dominating the row; the full spec is
-    // on "View more products" and the quote detail. Everything else stays
-    // full-width with horizontal scroll.
+    // Product codes can be very long, so this ONE cell is capped + ellipsised;
+    // the full per-line list is on "View more products".
     <div className="flex items-center gap-1.5">
-      <span className="block max-w-[170px] truncate text-ink-soft">{primary}</span>
+      <span className="block max-w-[190px] truncate text-ink-soft">{primary}</span>
       {hasMore && <ProductsTablePopover row={row} />}
     </div>
+  );
+}
+
+/** IPC cell — line-1's item code, with "+N" when the quote has more lines. */
+function IpcCell({ row }: { row: QuotationListItem }) {
+  const ipc = row.lineProducts[0]?.itemCode ?? null;
+  const extra = row.lineProducts.length > 1 ? row.lineProducts.length - 1 : 0;
+  if (!ipc) return <span className="text-ink-subtle">—</span>;
+  return (
+    <span className="inline-flex max-w-[240px] items-baseline gap-1">
+      <span className="truncate font-mono text-[12px] font-semibold text-[#3f3f94]">{ipc}</span>
+      {extra > 0 && <span className="shrink-0 text-[11px] text-ink-subtle">+{extra}</span>}
+    </span>
   );
 }
 
@@ -353,13 +375,22 @@ export function QuotationTable({ rows, filtered = false, heading, actions }: Pro
       },
       {
         id: "custProductName",
-        header: "Product",
+        header: "Product Name",
         searchable: true,
         // Search/sort over EVERY quoted line-product, not just the line-1
         // mirror, so a quote is findable by any of its products.
         sortValue: (r) => productSortText(r),
         exportValue: (r) => productExportText(r),
         cell: (r) => <ProductCell row={r} />,
+      },
+      {
+        id: "itemCode",
+        header: "IPC",
+        searchable: true,
+        sortValue: (r) => r.lineProducts[0]?.itemCode ?? "",
+        exportValue: (r) =>
+          r.lineProducts.map((p) => p.itemCode).filter(Boolean).join(", ") || "",
+        cell: (r) => <IpcCell row={r} />,
       },
       {
         id: "quotePrice",

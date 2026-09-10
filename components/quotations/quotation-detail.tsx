@@ -11,10 +11,17 @@ import {
   COSTING_DONE_STATUSES,
   COSTING_DONE_STATUS_LABELS,
   COSTING_DONE_STATUS_COLORS,
+  SYSTEM_COSTING_DONE_STATUSES,
   QUOTATION_STAGE_BUCKETS,
   QUOTATION_STATUS_LABELS,
   QUOTATION_STATUS_COLORS,
 } from "@/db/enums";
+
+/** Manual costing-status picker options — the system-set `auto_cancelled`
+ *  (set only on revision) is never a manual choice. */
+const COSTING_STATUS_PICKER_OPTIONS = COSTING_DONE_STATUSES.filter(
+  (s) => !(SYSTEM_COSTING_DONE_STATUSES as readonly string[]).includes(s),
+);
 import type { Quotation } from "@/db/schema";
 import type { QuotationLineWithSpec } from "@/lib/queries/quotes";
 import type { LatestCostingRevision } from "@/lib/queries/quotations";
@@ -222,7 +229,7 @@ export function QuotationDetail({
             </span>
             <StatusPicker
               value={quotation.costingDoneStatus}
-              options={COSTING_DONE_STATUSES}
+              options={COSTING_STATUS_PICKER_OPTIONS}
               labels={COSTING_DONE_STATUS_LABELS}
               tones={COSTING_DONE_STATUS_COLORS}
               onPick={(next) => setQuotationStatus(quotation.id, next)}

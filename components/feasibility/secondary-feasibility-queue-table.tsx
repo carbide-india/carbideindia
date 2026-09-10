@@ -79,13 +79,27 @@ export function SecondaryFeasibilityQueueTable({
       },
       {
         id: "productName",
-        header: "Product",
-        width: "260px",
+        header: "Product Name",
+        width: "220px",
         truncate: true,
         searchable: true,
         sortValue: (r) => r.productName ?? "",
         exportValue: (r) => r.productName ?? "",
         cell: (r) => <span className="text-ink-soft">{r.productName ?? "—"}</span>,
+      },
+      {
+        id: "itemCode",
+        header: "IPC",
+        width: "220px",
+        searchable: true,
+        sortValue: (r) => r.itemCode ?? "",
+        exportValue: (r) => r.itemCode ?? "",
+        cell: (r) =>
+          r.itemCode ? (
+            <span className="font-mono text-[12px] font-semibold text-[#3f3f94]">{r.itemCode}</span>
+          ) : (
+            <span className="text-ink-subtle">—</span>
+          ),
       },
       {
         id: "secondaryStatus",
@@ -171,7 +185,7 @@ export function SecondaryFeasibilityQueueTable({
   const filters = React.useMemo<FilterConfig<SecondaryFeasibilityQueueRow>[]>(
     () => [
       { id: "companyName", label: "Company", type: "select" },
-      { id: "productName", label: "Product", type: "select" },
+      { id: "productName", label: "Product Name", type: "select" },
       { id: "secVerdict", label: "Verdict", type: "select" },
       {
         id: "secondaryStatus",
@@ -222,7 +236,7 @@ export function SecondaryFeasibilityQueueTable({
           },
         ]}
         emptyTitle="No lines awaiting Secondary Feasibility."
-        emptyHint="Product lines appear here once their enquiry starts or clears Primary Feasibility."
+        emptyHint="Product lines appear here once their enquiry is approved in Primary Feasibility."
       />
 
       {varianceRow?.varianceRows && (

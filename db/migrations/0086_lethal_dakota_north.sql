@@ -1,0 +1,1 @@
+ALTER TABLE "inquiry_items" ADD COLUMN "cust_product_description" text;

@@ -71,7 +71,7 @@ export function ItemQuickView({ item, isAdmin, onClose }: Props) {
       title: "Classification",
       rows: [
         ["Shape", item.shapeName],
-        ["Grade (Internal)", item.gradeName],
+        ["Internal Grade for Production", item.gradeName],
         ["Tolerance", item.toleranceName],
         ["Condition", item.conditionName],
         ["Size Code", item.sizeCode],
@@ -97,8 +97,8 @@ export function ItemQuickView({ item, isAdmin, onClose }: Props) {
         ["Drawing No", item.custDrawingNo],
         ["Drawing Rev", item.drawingRevisionNo],
         ["Quantity", item.qty],
-        ["Grade (Customer)", item.gradeCustomer],
-        ["Grade Name for Customer", item.gradeNameForCust],
+        ["Grade Name for Customer", item.gradeCustomer],
+        ["Grade Given to Customer", item.gradeNameForCust],
       ],
     },
     {

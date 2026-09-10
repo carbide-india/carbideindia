@@ -1,0 +1,1 @@
+ALTER TABLE "costings" ADD COLUMN "calculator_snapshot" jsonb;

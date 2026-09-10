@@ -29,6 +29,10 @@ export interface SalesOrderListItem {
   id: string;
   soNo: string;
   companyName: string | null;
+  /** Line-1 product name (header mirror) — shown in the register. */
+  productName: string | null;
+  /** Internal Production Code (IPC) of line-1's Product-Master item. */
+  itemCode: string | null;
   quotePrice: string | null;
   customerPoNo: string | null;
   /** House stage bucket (NOT NULL DEFAULT 'not_started' - always set). */
@@ -61,11 +65,12 @@ export async function listSalesOrders(
       or(ilike(salesOrders.soNo, like), ilike(salesOrders.companyName, like)),
     );
   }
-  return db
+  const rows = await db
     .select({
       id: salesOrders.id,
       soNo: salesOrders.soNo,
       companyName: salesOrders.companyName,
+      productName: salesOrders.custProductName,
       quotePrice: salesOrders.quotePrice,
       customerPoNo: salesOrders.customerPoNo,
       salesOrderStatus: salesOrders.salesOrderStatus,
@@ -77,6 +82,31 @@ export async function listSalesOrders(
     .from(salesOrders)
     .where(conds.length ? and(...conds) : undefined)
     .orderBy(desc(salesOrders.createdAt));
+
+  // Resolve line-1's IPC (item code) per SO — one batched line read + one spec
+  // read-through, no N+1. The product NAME is already the header mirror.
+  const soIds = rows.map((r) => r.id);
+  const itemCodeBySo = new Map<string, string | null>();
+  if (soIds.length > 0) {
+    const lineRows = await db
+      .select({ salesOrderId: salesOrderItems.salesOrderId, itemId: salesOrderItems.itemId })
+      .from(salesOrderItems)
+      .where(inArray(salesOrderItems.salesOrderId, soIds))
+      .orderBy(asc(salesOrderItems.sortOrder));
+    const firstItemBySo = new Map<string, string | null>();
+    for (const l of lineRows) {
+      if (!firstItemBySo.has(l.salesOrderId)) firstItemBySo.set(l.salesOrderId, l.itemId ?? null);
+    }
+    const itemIds = [
+      ...new Set([...firstItemBySo.values()].filter((v): v is string => !!v)),
+    ];
+    const specs = await resolveSpecsByItemId(itemIds);
+    for (const [sid, itemId] of firstItemBySo) {
+      itemCodeBySo.set(sid, itemId ? specs.get(itemId)?.itemCode ?? null : null);
+    }
+  }
+
+  return rows.map((r) => ({ ...r, itemCode: itemCodeBySo.get(r.id) ?? null }));
 }
 
 /** Full sales-order row for the detail page. */

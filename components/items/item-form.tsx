@@ -11,10 +11,9 @@ import { CreateItemSchema } from "@/lib/validators/item";
 import { createItem, updateItem } from "@/app/(app)/items/actions";
 import { fireToast } from "@/lib/toast";
 import { Select } from "@/components/ui/select";
-import { Field } from "@/components/inquiries/form-field";
+import { Field, SectionCard } from "@/components/inquiries/form-field";
 import { NotesField } from "@/components/ui/notes-field";
 import { BackLink } from "@/components/ui/back-link";
-import { FoldingSection, useFoldingForm } from "@/components/forms/folding-section";
 import { buildItemCode, deriveSizeCode } from "@/lib/item-master/item-code";
 import type { MasterOptionWithCode } from "@/lib/queries/masters";
 import {
@@ -122,7 +121,6 @@ export function ItemForm({
     handleSubmit,
     setValue,
     watch,
-    trigger,
     formState: { errors },
   } = useForm<ItemFormValues, unknown, ItemFormOutput>({
     resolver: zodResolver(CreateItemSchema),
@@ -176,16 +174,6 @@ export function ItemForm({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedShapeId]);
-
-  // Folding "Google-Forms" sections - fields per section drive per-step
-  // validation on Continue. All item fields are optional client-side (the
-  // server enforces shape-required dims), so Continue mostly just advances.
-  const SECTION_FIELDS: string[][] = [
-    ["shapeId", "internalGradeId", "toleranceId", "conditionId", "sizeCode", "costingType", "gradeCustomer", "gradeNameForCust", "outerDia", "innerDia", "length", "width", "thickness", "dimensionUnit", "dimensionNotes"],
-    ["hsnCode", "uom", "altUom", "altUomConversion"],
-    ["partNo", "partDescription1", "partDescription2", "partDescription3", "partDescription4", "partTag"],
-  ];
-  const fold = useFoldingForm(SECTION_FIELDS.length, (f) => trigger(f as never));
 
   /** Live item-code preview derived from current form values. */
   const previewCode = React.useMemo(() => {
@@ -278,7 +266,7 @@ export function ItemForm({
       style={{ background: "color-mix(in srgb, var(--color-brand) 6%, white)" }}
     >
       <span className="text-[11px] uppercase tracking-[0.16em] font-bold text-ink-subtle">
-        Preview
+        Internal Production Code (IPC)
       </span>
       <span
         className="font-bold tracking-tight text-ink-strong"
@@ -315,18 +303,15 @@ export function ItemForm({
         <div className="self-start">{previewChip}</div>
       )}
 
-      {/* ── 1 · Classification ───────────────────────────────────── */}
-      <FoldingSection
-        ctl={fold}
-        index={0}
-        title="Classification"
-        fields={SECTION_FIELDS[0]!}
-        hint="These fields drive the internal item code - required for the code to be meaningful."
-        summary={displayCode}
+      {/* ── 1 · Dimensions & Shape ───────────────────────────────── */}
+      <SectionCard
+        title="Dimensions & Shape"
+        inlineHint
+        hint="The item's shape and its measured dimensions."
       >
         {/* Shape + dimensions + unit on one line - Shape spans two columns so
             it stays wide enough; the visible dims + Unit fill the rest. */}
-        <div className="grid grid-cols-6 gap-3 max-lg:grid-cols-3 max-sm:grid-cols-2">
+        <div className="grid grid-cols-6 gap-x-5 gap-y-5 max-lg:grid-cols-3 max-sm:grid-cols-2">
           <div className="col-span-2 max-lg:col-span-3 max-sm:col-span-2">
             <Field id="item-shape" label="Shape" labelOnly float>
               <Controller
@@ -401,12 +386,19 @@ export function ItemForm({
             )}
           />
         </Field>
+      </SectionCard>
 
-        {/* Grade · Condition · Tolerance · Size · Costing · customer grades -
-            all on one line (wraps to 3 / 2 columns on smaller screens).
-            items-end keeps the controls bottom-aligned even if a label wraps. */}
-        <div className="grid grid-cols-7 items-end gap-3 max-lg:grid-cols-3 max-sm:grid-cols-2">
-          <Field id="item-grade" label="Internal Grade" labelOnly float>
+      {/* ── 2 · Grade & Classification ───────────────────────────── */}
+      <SectionCard
+        title="Grade & Classification"
+        inlineHint
+        hint="Grade, condition, tolerance and costing route — these drive the Internal Production Code (IPC)."
+      >
+        {/* Grade · Condition · Tolerance · Size · Costing · customer grades —
+            a clean responsive grid (4 per row on desktop, 2 on tablet, 1 on
+            phone) so the row is never crammed. Matches the Client KYC density. */}
+        <div className="grid grid-cols-4 gap-x-5 gap-y-5 max-lg:grid-cols-2 max-sm:grid-cols-1">
+          <Field id="item-grade" label="Internal Grade for Production" labelOnly float>
             <Controller
               control={control}
               name="internalGradeId"
@@ -503,7 +495,7 @@ export function ItemForm({
             />
           </Field>
 
-          <Field id="item-grade-cust" label="Cust. Grade" labelOnly float>
+          <Field id="item-grade-cust" label="Grade Name for Customer" labelOnly float>
             <Controller
               control={control}
               name="gradeCustomer"
@@ -519,7 +511,7 @@ export function ItemForm({
               )}
             />
           </Field>
-          <Field id="item-grade-name-cust" label="Cust. Grade Name" labelOnly float>
+          <Field id="item-grade-name-cust" label="Grade Given to Customer" labelOnly float>
             <Controller
               control={control}
               name="gradeNameForCust"
@@ -536,18 +528,15 @@ export function ItemForm({
             />
           </Field>
         </div>
-      </FoldingSection>
+      </SectionCard>
 
-      {/* ── 2 · Tax & Units ──────────────────────────────────────── */}
-      <FoldingSection
-        ctl={fold}
-        index={1}
+      {/* ── 3 · Tax & Units ──────────────────────────────────────── */}
+      <SectionCard
         title="Tax & Units"
-        fields={SECTION_FIELDS[1]!}
+        inlineHint
         hint="HSN code (GST) and the unit of measure. Alt UoM lets you record a secondary unit and its conversion to the base UoM."
-        summary={watch("hsnCode") ? `HSN ${watch("hsnCode")} · ${watch("uom") ?? "Nos"}` : (watch("uom") ?? "Nos")}
       >
-        <div className="grid grid-cols-4 gap-4 max-lg:grid-cols-2 max-sm:grid-cols-1">
+        <div className="grid grid-cols-4 gap-x-5 gap-y-5 max-lg:grid-cols-2 max-sm:grid-cols-1">
           <Field id="item-hsn" label="HSN Code" float>
             <input
               id="item-hsn"
@@ -586,18 +575,15 @@ export function ItemForm({
             />
           </Field>
         </div>
-      </FoldingSection>
+      </SectionCard>
 
-      {/* ── 3 · Part Details ──────────────────────────────────────── */}
-      <FoldingSection
-        ctl={fold}
-        index={2}
+      {/* ── 4 · Part Details ──────────────────────────────────────── */}
+      <SectionCard
         title="Part Details"
-        fields={SECTION_FIELDS[2]!}
+        inlineHint
         hint="Part number, tag, and up to four description lines for quotation inserts."
-        hideContinue
       >
-        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+        <div className="grid grid-cols-2 gap-x-5 gap-y-5 max-md:grid-cols-1">
           <Field id="item-part-no" label="Part No" float>
             <input
               id="item-part-no"
@@ -637,7 +623,7 @@ export function ItemForm({
             </Field>
           );
         })}
-      </FoldingSection>
+      </SectionCard>
 
       {(serverError ?? firstFieldError) && (
         <p

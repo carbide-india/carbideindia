@@ -584,6 +584,9 @@ export const COSTING_LOGIC_FORMULAS = [
 export const COSTING_DONE_STATUSES = [
   "not_done", "in_process", "done",
   "draft", "need_info", "pending_approval", "costing_approved", "not_approved", "on_hold", "cancelled",
+  // Appended 2026-09: system-set when a costing is superseded by a revision
+  // (the previous version is auto-cancelled). Append-only — new pgEnum value.
+  "auto_cancelled",
 ] as const;
 export type CostingDoneStatus = (typeof COSTING_DONE_STATUSES)[number];
 export const COSTING_DONE_STATUS_LABELS: Record<CostingDoneStatus, string> = {
@@ -593,18 +596,25 @@ export const COSTING_DONE_STATUS_LABELS: Record<CostingDoneStatus, string> = {
   not_done: "Not Done", in_process: "In Process", done: "Done",
   draft: "Draft", need_info: "Need Info", pending_approval: "Pending Approval",
   costing_approved: "Costing Approved", not_approved: "Not Approved",
-  on_hold: "On Hold", cancelled: "Cancelled",
+  // "Cancelled" was renamed to "Abandoned" (owner request 2026-09); the stored
+  // value stays `cancelled` (label-only change). `auto_cancelled` is the
+  // system-set "previous costing, superseded by a revision" bucket.
+  on_hold: "On Hold", cancelled: "Abandoned", auto_cancelled: "Auto-Cancelled",
 };
 export const COSTING_DONE_STATUS_COLORS: Record<CostingDoneStatus, string> = {
   not_done: "slate", in_process: "amber", done: "green",
   draft: "blue", need_info: "amber", pending_approval: "purple", costing_approved: "green",
-  not_approved: "rose", on_hold: "stone", cancelled: "slate",
+  not_approved: "rose", on_hold: "stone", cancelled: "slate", auto_cancelled: "stone",
 };
 /** Legacy values kept in the pgEnum so already-costed rows still render. */
 export const DEPRECATED_COSTING_DONE_STATUSES = ["in_process", "done"] as const;
-/** The five house buckets of the Costing stage, in display order. */
+/** System-set statuses that are never offered in a manual status picker
+ *  (set only by the app — e.g. auto-cancel on revision). */
+export const SYSTEM_COSTING_DONE_STATUSES = ["auto_cancelled"] as const;
+/** The house buckets of the Costing stage, in display order (Auto-Cancelled
+ *  sits just below Abandoned). */
 export const COSTING_STAGE_BUCKETS = [
-  "not_done", "draft", "need_info", "pending_approval", "not_approved", "on_hold", "cancelled", "costing_approved",
+  "not_done", "draft", "need_info", "pending_approval", "not_approved", "on_hold", "cancelled", "auto_cancelled", "costing_approved",
 ] as const satisfies readonly CostingDoneStatus[];
 
 // Quotation stage status (2026-08). The stage previously had only the
@@ -723,6 +733,29 @@ export const LOST_REASON_LABELS: Record<LostReason, string> = {
   technical_issue: "Technical Issue",
   others: "Others",
 };
+
+/**
+ * Negotiation LOG entry types (2026-09). The detail page's timestamped chat log
+ * distinguishes a plain note from a logged customer confirmation by channel.
+ * Stored as TEXT on `negotiation_remarks.entry_type` (NULL on legacy / board-move
+ * remarks). A VERBAL confirmation can carry no attachment — see
+ * `negotiationLogTypeAllowsAttachment`.
+ */
+export const NEGOTIATION_LOG_TYPES = [
+  "note", "email_confirmation", "whatsapp_confirmation", "verbal_confirmation",
+] as const;
+export type NegotiationLogType = (typeof NEGOTIATION_LOG_TYPES)[number];
+export const NEGOTIATION_LOG_TYPE_LABELS: Record<NegotiationLogType, string> = {
+  note: "Note",
+  email_confirmation: "Email Confirmation",
+  whatsapp_confirmation: "WhatsApp Confirmation",
+  verbal_confirmation: "Verbal Confirmation",
+};
+/** Which log types may carry an evidence attachment. Verbal deliberately cannot —
+ *  there is nothing to attach to a phone call. */
+export function negotiationLogTypeAllowsAttachment(type: NegotiationLogType): boolean {
+  return type !== "verbal_confirmation";
+}
 
 // Negotiation STAGE (Proforma Invoice lifecycle) — the linear pipeline a
 // negotiation walks through: Quote Send → PI Issued → Negotiation Awarded →

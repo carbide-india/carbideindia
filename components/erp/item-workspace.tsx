@@ -114,7 +114,7 @@ export function ItemWorkspace({
 
   const specFields: DetailField[] = [
     { label: "Shape", value: item.shapeName },
-    { label: "Grade (Internal)", value: item.gradeName },
+    { label: "Internal Grade for Production", value: item.gradeName },
     { label: "Tolerance", value: item.toleranceName },
     { label: "Condition", value: item.conditionName },
     { label: "Size Code", value: item.sizeCode },
@@ -126,10 +126,10 @@ export function ItemWorkspace({
   ];
 
   const overviewFields: DetailField[] = [
-    { label: "Item Code", value: item.itemCode, mono: true },
+    { label: "Internal Production Code (IPC)", value: item.itemCode, mono: true },
     { label: "Sequence", value: item.seq ? `#${item.seq}` : null, mono: true },
     { label: "Shape", value: item.shapeName },
-    { label: "Grade (Internal)", value: item.gradeName },
+    { label: "Internal Grade for Production", value: item.gradeName },
     { label: "Dimensions", value: dimensions, mono: true },
     { label: "Costing Type", value: item.costingType ? COSTING_TYPE_LABELS[item.costingType] : null },
   ];

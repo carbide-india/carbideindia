@@ -65,9 +65,12 @@ function moneyNumber(value: string | null): number {
   return Number.isFinite(n) ? n : -Infinity;
 }
 
-/** The Costing Master link for a line — where an un-costed line gets started. */
+/** The Costing Master link for a line. An un-costed line starts fresh; a line
+ *  that already has a costing opens that costing PRE-FILLED to edit / re-cost
+ *  (edit mode) instead of minting a new one. */
 function costingMasterHref(r: CostingRegisterRow): Route {
-  return `/costings/new?inquiryItemId=${r.inquiryItemId}&inquiryId=${r.inquiryId}` as Route;
+  const base = `/costings/new?inquiryItemId=${r.inquiryItemId}&inquiryId=${r.inquiryId}`;
+  return (r.costingId ? `${base}&editCostingId=${r.costingId}` : base) as Route;
 }
 
 function targetBand(r: CostingRegisterRow): string {
@@ -280,31 +283,99 @@ export function CostingTable({ rows, heading, actions }: Props) {
         pinnedLeft: true,
         sortValue: (r) => r.smNumber ?? "",
         exportValue: (r) => r.smNumber ?? "",
-        cell: (r) => (
-          <Link
-            href={r.costingId ? (`/costings/${r.costingId}` as Route) : costingMasterHref(r)}
-            className="font-semibold text-ink-strong hover:underline"
-            style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}
-          >
-            {r.smNumber ?? "-"}
-          </Link>
-        ),
+        cell: (r) => {
+          // Show the full costing code (SM9613-C01 / …-C01-R1) as the number,
+          // green for an original and red for a revision — mirroring the
+          // Quotation register's Quote-No cell. Falls back to the plain SM when
+          // the line has no costing yet.
+          const isRevised = r.costingRevisionNo > 1;
+          return (
+            <Link
+              href={r.costingId ? (`/costings/${r.costingId}` as Route) : costingMasterHref(r)}
+              className="font-bold hover:underline"
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: 13,
+                color: r.costingCode ? (isRevised ? "#d03232" : "#16a34a") : undefined,
+              }}
+            >
+              {r.costingCode ?? r.smNumber ?? "-"}
+            </Link>
+          );
+        },
+      },
+      {
+        // Original vs revision at a glance — the same green ORIGINAL / red REV n
+        // badge the Quotation register uses.
+        id: "revision",
+        header: "Revision",
+        sortValue: (r) => (r.costingRevisionNo > 1 ? r.costingRevisionNo : 0),
+        exportValue: (r) =>
+          r.costingCode
+            ? r.costingRevisionNo > 1
+              ? `Rev ${r.costingRevisionNo - 1}`
+              : "Original"
+            : "-",
+        cell: (r) => {
+          if (!r.costingCode) return <span className="text-ink-subtle">-</span>;
+          const isRevised = r.costingRevisionNo > 1;
+          const color = isRevised ? "#d03232" : "#16a34a";
+          const revLabel = isRevised ? `Rev ${r.costingRevisionNo - 1}` : "Original";
+          const revSizer = revLabel.length > "Original".length ? revLabel : "Original";
+          return (
+            <span
+              className="inline-grid place-items-center rounded-[4px] px-1.5 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.04em]"
+              style={{
+                color,
+                background: `color-mix(in srgb, ${color} 12%, transparent)`,
+                border: `1px solid color-mix(in srgb, ${color} 30%, transparent)`,
+              }}
+            >
+              <span aria-hidden className="invisible col-start-1 row-start-1 whitespace-nowrap">
+                {revSizer}
+              </span>
+              <span className="col-start-1 row-start-1 whitespace-nowrap">{revLabel}</span>
+            </span>
+          );
+        },
       },
       {
         id: "custProductName",
-        header: "Product",
+        header: "Product Name",
         searchable: true,
-        truncate: true,
         sortValue: (r) => r.custProductName ?? "",
         exportValue: (r) => r.custProductName ?? "",
         cell: (r) => (
-          <span
-            className="block max-w-[240px] truncate text-ink-soft"
-            title={r.custProductName ?? undefined}
-          >
-            {r.custProductName ?? "-"}
+          <span className="flex min-w-0 flex-col gap-1">
+            <span
+              className="block max-w-[240px] truncate text-ink-soft"
+              title={r.custProductName ?? undefined}
+            >
+              {r.custProductName ?? "-"}
+            </span>
+            {/* A costing sent back from a quotation opens a fresh revision here —
+                flag it so it's unmistakable that this line needs re-costing. */}
+            {r.revisedFromQuotationId && r.bucket !== "costing_approved" && (
+              <span className="inline-flex w-fit items-center gap-1 rounded-chip bg-amber-bg px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.06em] text-amber-deep">
+                <Undo2 size={11} strokeWidth={2.6} />
+                Sent back from Quotation
+              </span>
+            )}
           </span>
         ),
+      },
+      {
+        id: "itemCode",
+        header: "IPC",
+        searchable: true,
+        sortValue: (r) => r.itemCode ?? "",
+        exportValue: (r) => r.itemCode ?? "",
+        cell: (r) =>
+          r.itemCode ? (
+            <span className="font-mono text-[12px] font-semibold text-[#3f3f94]">{r.itemCode}</span>
+          ) : (
+            <span className="text-ink-subtle">—</span>
+          ),
       },
       {
         id: "companyName",
@@ -370,26 +441,6 @@ export function CostingTable({ rows, heading, actions }: Props) {
             {r.costingType ? COSTING_ROUTE_LABELS[r.costingType] : "-"}
           </span>
         ),
-      },
-      {
-        id: "revision",
-        header: "Rev",
-        sortValue: (r) => r.revisionCount,
-        exportValue: (r) => (r.revisionNo > 0 ? r.revisionNo : null),
-        cell: (r) =>
-          r.revisionNo > 0 ? (
-            <span
-              className="tabular-nums text-[12.5px] font-semibold text-ink-soft"
-              title={`${costingRevisionLabel(r.revisionNo - 1)} of ${r.revisionCount} on this route`}
-            >
-              {r.revisionNo}
-              {r.revisionCount > 1 && (
-                <span className="text-ink-subtle"> / {r.revisionCount}</span>
-              )}
-            </span>
-          ) : (
-            <span className="text-ink-subtle">-</span>
-          ),
       },
       {
         id: "finalCostPerPiece",
@@ -459,7 +510,7 @@ export function CostingTable({ rows, heading, actions }: Props) {
   const filters = React.useMemo<FilterConfig<CostingRegisterRow>[]>(
     () => [
       { id: "companyName", label: "Company", type: "select" },
-      { id: "custProductName", label: "Product", type: "select" },
+      { id: "custProductName", label: "Product Name", type: "select" },
       {
         id: "bucket",
         label: "Status",

@@ -4,7 +4,7 @@ import { Plus } from "lucide-react";
 import { CostingTable } from "@/components/costings/costing-table";
 import { RegisterHeading } from "@/components/registers/register-heading";
 import { requireUser } from "@/lib/auth/current";
-import { listCostingRegister } from "@/lib/queries/costings";
+import { listCostingRegister, listAutoCancelledCostings } from "@/lib/queries/costings";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
 import { UserMenuServer } from "@/components/header/user-menu-server";
 import type { BucketTile } from "@/components/feasibility/bucket-strip";
@@ -45,21 +45,31 @@ export default async function CostingsPage({
   searchParams: Promise<{ bucket?: string; overdue?: string }>;
 }) {
   await requireUser();
-  const all = await listCostingRegister();
+  const [all, autoCancelled] = await Promise.all([
+    listCostingRegister(),
+    // Auto-cancelled cost sheets are superseded revisions — they never appear as
+    // a per-line row, so they're fetched separately to power the Auto-Cancelled
+    // bucket (its own count + list).
+    listAutoCancelledCostings(),
+  ]);
 
   const sp = await searchParams;
   const overdueOnly = sp.overdue === OVERDUE_PARAM;
   const activeBucket = overdueOnly ? null : parseCostingBucket(sp.bucket);
 
   const countIn = (bucket: string) =>
-    all.reduce((n, r) => (r.bucket === bucket ? n + 1 : n), 0);
+    bucket === "auto_cancelled"
+      ? autoCancelled.length
+      : all.reduce((n, r) => (r.bucket === bucket ? n + 1 : n), 0);
 
   const overdueRows = all.filter((r) => r.overdue);
   const rows = overdueOnly
     ? overdueRows
-    : activeBucket
-      ? all.filter((r) => r.bucket === activeBucket)
-      : all;
+    : activeBucket === "auto_cancelled"
+      ? autoCancelled
+      : activeBucket
+        ? all.filter((r) => r.bucket === activeBucket)
+        : all;
 
   // Not Started splits two ways and the difference matters to him: lines with no
   // cost sheet at ALL (the 17) versus sheets explicitly parked back at not-done.

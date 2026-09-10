@@ -934,7 +934,12 @@ export async function saveCostingMaster(
     return { ok: false, error: "Product line does not belong to this enquiry." };
   }
 
-  // ── Lock guard: a locked/approved chosen costing cannot be re-costed ──
+  // ── Done-costing guard ──
+  // A costing that is DONE (approved & locked) can never be re-costed from the
+  // Costing Master. The ONLY way to change a done costing is "Revise Costing"
+  // on its Quotation, which opens a fresh draft revision (owner rule 2026-09).
+  const DONE_COSTING_MESSAGE =
+    "This costing is done (approved). To change it, use “Revise Costing” on its Quotation.";
   const [lockedRow] = await db
     .select({ id: costings.id })
     .from(costings)
@@ -947,10 +952,7 @@ export async function saveCostingMaster(
     )
     .limit(1);
   if (lockedRow) {
-    return {
-      ok: false,
-      error: "This costing is approved and locked - unlock it to re-cost.",
-    };
+    return { ok: false, error: DONE_COSTING_MESSAGE };
   }
 
   // ── Hard gate: this line's feasibility must be CONFIRMED (per-item) ──
@@ -962,6 +964,49 @@ export async function saveCostingMaster(
     };
   }
 
+  // ── Target costing ──
+  // The calculator NEVER mints a new revision — new revisions come ONLY from
+  // "Revise Costing" on the quotation. So a save EDITS the line's current DRAFT
+  // in place; if no costing exists yet it creates the first one. `editCostingId`
+  // (from the revise/edit link) names the target explicitly; otherwise we resolve
+  // the line's latest costing. A locked (done) target is refused.
+  let editRow:
+    | { id: string; costingNo: number; costingType: CostingRoute }
+    | null = null;
+  const cols = {
+    id: costings.id,
+    inquiryItemId: costings.inquiryItemId,
+    costingNo: costings.costingNo,
+    costingType: costings.costingType,
+    isLocked: costings.isLocked,
+  };
+  if (v.editCostingId) {
+    const [er] = await db
+      .select(cols)
+      .from(costings)
+      .where(eq(costings.id, v.editCostingId))
+      .limit(1);
+    if (!er || er.inquiryItemId !== v.inquiryItemId) {
+      return { ok: false, error: "The costing to edit was not found on this product line." };
+    }
+    if (er.isLocked) return { ok: false, error: DONE_COSTING_MESSAGE };
+    editRow = { id: er.id, costingNo: er.costingNo, costingType: er.costingType };
+  } else {
+    // Auto-resolve the line's latest costing so the calculator edits it in place
+    // rather than piling up a new draft each save.
+    const [er] = await db
+      .select(cols)
+      .from(costings)
+      .where(eq(costings.inquiryItemId, v.inquiryItemId))
+      .orderBy(desc(costings.costingNo), desc(costings.revisionNo), desc(costings.createdAt))
+      .limit(1);
+    if (er) {
+      if (er.isLocked) return { ok: false, error: DONE_COSTING_MESSAGE };
+      editRow = { id: er.id, costingNo: er.costingNo, costingType: er.costingType };
+    }
+    // else: no costing yet → the "new" path below creates the first one.
+  }
+
   const qty = totalNum(v.qty) ?? 0;
   const terminal: TerminalFields = {
     quantityToleranceId: uuidOrNull(v.quantityToleranceId ?? null),
@@ -970,6 +1015,22 @@ export async function saveCostingMaster(
     paymentTerms: (v.paymentTerms ?? "").trim() || null,
     technicalNotes: (v.technicalNotes ?? "").trim() || null,
     developmentNotes: (v.commercialNotes ?? "").trim() || null,
+  };
+
+  // Full calculator-input snapshot, persisted on every saved row so the sheet can
+  // re-open pre-filled with perfect fidelity (see lib/costing/from-snapshot.ts).
+  const calculatorSnapshot = {
+    costingMode: v.costingMode,
+    soldBefore: v.soldBefore ?? null,
+    qty: v.qty ?? null,
+    quantityToleranceId: v.quantityToleranceId ?? null,
+    deliveryTime: v.deliveryTime ?? null,
+    validity: v.validity ?? null,
+    paymentTerms: v.paymentTerms ?? null,
+    technicalNotes: v.technicalNotes ?? null,
+    commercialNotes: v.commercialNotes ?? null,
+    inhouse: v.inhouse ?? null,
+    buyout: v.buyout ?? null,
   };
 
   const wantInhouse = v.costingMode === "inhouse" || v.costingMode === "both";
@@ -1077,7 +1138,146 @@ export async function saveCostingMaster(
         .set({ isChosen: false })
         .where(and(eq(costings.inquiryItemId, v.inquiryItemId), eq(costings.isChosen, true)));
 
-      // ── Revision bookkeeping (per route) ──
+      let inhouseId: string | null = null;
+      let boughtOutId: string | null = null;
+
+      // The bought-out row's typed columns (shared by insert + edit-update).
+      const boPrimary = boRows[0] ?? null;
+      const boBaseValues = {
+        inquiryItemId: v.inquiryItemId,
+        inquiryId: v.inquiryId,
+        costingType: "bought_out" as const,
+        isChosen: boIsChosen,
+        recommendedOption,
+        // A saved cost sheet is a Draft (see saveCosting).
+        costingDoneStatus: "draft" as const,
+        qty: numStr(qty),
+        outsourcedVendorCost: boPrimary ? boPrimary.unitPrice : null,
+        vendorOhPct: boPrimary ? boPrimary.vendorOhPct : null,
+        developmentCost: boPrimary ? boPrimary.developmentCost : null,
+        vendorId: boPrimary ? boPrimary.vendorId : null,
+        finalCostPerPiece: numStr(boFinal),
+        quoteValue: numStr(boFinal * qty),
+        quantityToleranceId: terminal.quantityToleranceId,
+        paymentTerms: terminal.paymentTerms,
+        deliveryTime: terminal.deliveryTime,
+        validity: terminal.validity,
+        technicalNotes: terminal.technicalNotes,
+        developmentNotes: terminal.developmentNotes,
+        calculatorSnapshot,
+        createdById: me.id,
+      };
+
+      // Insert + rank the BO vendor-quote matrix onto a costing row.
+      const writeVendorQuotes = async (costingId: string) => {
+        if (boRows.length === 0) return;
+        const insertedQuotes = await tx
+          .insert(costingVendorQuotes)
+          .values(boRows.map((r) => ({ ...r, costingId })))
+          .returning();
+        const cmp = compareVendors(insertedQuotes, qty);
+        const cheapestId = cmp.cheapestId;
+        const cheapestLanded = cheapestId != null ? cmp.byId[cheapestId] ?? 0 : 0;
+        await tx
+          .update(costings)
+          .set({
+            recommendedVendorQuoteId: cheapestId,
+            finalCostPerPiece: numStr(cheapestLanded),
+            quoteValue: numStr(cheapestLanded * qty),
+          })
+          .where(eq(costings.id, costingId));
+      };
+
+      if (editRow) {
+        // ── EDIT in place: re-cost the DRAFT without minting a new revision. ──
+        // Update the latest-revision row of each route in the edited row's
+        // costing_no group (or insert that route if the mode gained it), so a
+        // re-save does NOT pile up Costing 2 / Costing 3.
+        const groupNo = editRow.costingNo;
+        // Retire any older non-latest DRAFTs left in this group by the previous
+        // pile-up behaviour — they move to Auto-Cancelled so only the live one
+        // shows. (Never touches approved history.)
+        await tx
+          .update(costings)
+          .set({ costingDoneStatus: "auto_cancelled", isChosen: false })
+          .where(
+            and(
+              eq(costings.inquiryItemId, v.inquiryItemId),
+              eq(costings.costingNo, groupNo),
+              eq(costings.isLatestRevision, false),
+              eq(costings.costingDoneStatus, "draft"),
+            ),
+          );
+        const latestOfRoute = (route: CostingRoute) =>
+          tx
+            .select({ id: costings.id })
+            .from(costings)
+            .where(
+              and(
+                eq(costings.inquiryItemId, v.inquiryItemId),
+                eq(costings.costingType, route),
+                eq(costings.costingNo, groupNo),
+                eq(costings.isLatestRevision, true),
+              ),
+            )
+            .orderBy(desc(costings.revisionNo))
+            .limit(1);
+
+        if (inhouseBuild) {
+          const ihValues = {
+            ...inhouseBuild.row,
+            isChosen: inhouseIsChosen,
+            recommendedOption,
+            costingDoneStatus: "draft" as const,
+            calculatorSnapshot,
+          };
+          const [existing] = await latestOfRoute("inhouse");
+          if (existing) {
+            await tx
+              .update(costings)
+              .set({ ...ihValues, updatedAt: new Date() })
+              .where(eq(costings.id, existing.id));
+            inhouseId = existing.id;
+          } else {
+            const [row] = await tx
+              .insert(costings)
+              .values({ ...ihValues, costingNo: groupNo, revisionNo: 1, isLatestRevision: true })
+              .returning({ id: costings.id });
+            if (!row) throw new Error("inhouse-edit-failed");
+            inhouseId = row.id;
+          }
+        }
+
+        if (wantBuyout && v.buyout) {
+          const [existing] = await latestOfRoute("bought_out");
+          if (existing) {
+            // Null the vendor-quote refs first so the old quotes can be replaced.
+            await tx
+              .update(costings)
+              .set({
+                ...boBaseValues,
+                chosenVendorQuoteId: null,
+                recommendedVendorQuoteId: null,
+                updatedAt: new Date(),
+              })
+              .where(eq(costings.id, existing.id));
+            await tx.delete(costingVendorQuotes).where(eq(costingVendorQuotes.costingId, existing.id));
+            boughtOutId = existing.id;
+          } else {
+            const [row] = await tx
+              .insert(costings)
+              .values({ ...boBaseValues, costingNo: groupNo, revisionNo: 1, isLatestRevision: true })
+              .returning({ id: costings.id });
+            if (!row) throw new Error("bo-edit-failed");
+            boughtOutId = row.id;
+          }
+          await writeVendorQuotes(boughtOutId);
+        }
+
+        return { inhouseId, boughtOutId };
+      }
+
+      // ── NEW: revision bookkeeping (per route) ──
       // The Costing Master always INSERTS, so saving over an existing sheet is
       // Costing 2 / Costing 3 for that route. Number the new rows within their
       // own group and demote that group's previous rows — a bought-out-only
@@ -1100,9 +1300,14 @@ export async function saveCostingMaster(
       ] as const) {
         const inserting = route === "inhouse" ? Boolean(inhouseBuild) : wantBuyout;
         if (!inserting || prior.length === 0) continue;
+        // Superseding a prior costing AUTO-CANCELS it: the new revision below
+        // carries the work forward, so the previous versions move into the
+        // Auto-Cancelled bucket (owner request: "the previous one goes to
+        // auto-cancelled"). They are kept, never deleted. A locked/approved
+        // chosen costing can't reach here — that path is blocked above.
         await tx
           .update(costings)
-          .set({ isLatestRevision: false })
+          .set({ isLatestRevision: false, isChosen: false, costingDoneStatus: "auto_cancelled" })
           .where(
             and(
               eq(costings.inquiryItemId, v.inquiryItemId),
@@ -1110,9 +1315,6 @@ export async function saveCostingMaster(
             ),
           );
       }
-
-      let inhouseId: string | null = null;
-      let boughtOutId: string | null = null;
 
       // ── In-House row ──
       if (inhouseBuild) {
@@ -1127,6 +1329,7 @@ export async function saveCostingMaster(
             revisionNo: nextRevisionNo(priorInhouse),
             supersedesCostingId: priorInhouse[0]?.id ?? null,
             isLatestRevision: true,
+            calculatorSnapshot,
           })
           .returning({ id: costings.id });
         if (!row) throw new Error("inhouse-insert-failed");
@@ -1135,58 +1338,18 @@ export async function saveCostingMaster(
 
       // ── Bought-Out row (+ vendor quote matrix, server-ranked) ──
       if (wantBuyout && v.buyout) {
-        const primary = boRows[0] ?? null;
         const [row] = await tx
           .insert(costings)
           .values({
-            inquiryItemId: v.inquiryItemId,
-            inquiryId: v.inquiryId,
-            costingType: "bought_out",
-            isChosen: boIsChosen,
-            recommendedOption,
-            // A saved cost sheet is a Draft (see saveCosting).
-            costingDoneStatus: "draft",
+            ...boBaseValues,
             revisionNo: nextRevisionNo(priorBuyout),
             supersedesCostingId: priorBuyout[0]?.id ?? null,
             isLatestRevision: true,
-            qty: numStr(qty),
-            outsourcedVendorCost: primary ? primary.unitPrice : null,
-            vendorOhPct: primary ? primary.vendorOhPct : null,
-            developmentCost: primary ? primary.developmentCost : null,
-            vendorId: primary ? primary.vendorId : null,
-            finalCostPerPiece: numStr(boFinal),
-            quoteValue: numStr(boFinal * qty),
-            // terminal
-            quantityToleranceId: terminal.quantityToleranceId,
-            paymentTerms: terminal.paymentTerms,
-            deliveryTime: terminal.deliveryTime,
-            validity: terminal.validity,
-            technicalNotes: terminal.technicalNotes,
-            developmentNotes: terminal.developmentNotes,
-            createdById: me.id,
           })
           .returning({ id: costings.id });
         if (!row) throw new Error("bo-insert-failed");
         boughtOutId = row.id;
-
-        if (boRows.length > 0) {
-          const insertedQuotes = await tx
-            .insert(costingVendorQuotes)
-            .values(boRows.map((r) => ({ ...r, costingId: row.id })))
-            .returning();
-          // Server-rank; the cheapest landed cost is authoritative.
-          const cmp = compareVendors(insertedQuotes, qty);
-          const cheapestId = cmp.cheapestId;
-          const cheapestLanded = cheapestId != null ? cmp.byId[cheapestId] ?? 0 : 0;
-          await tx
-            .update(costings)
-            .set({
-              recommendedVendorQuoteId: cheapestId,
-              finalCostPerPiece: numStr(cheapestLanded),
-              quoteValue: numStr(cheapestLanded * qty),
-            })
-            .where(eq(costings.id, row.id));
-        }
+        await writeVendorQuotes(row.id);
       }
 
       return { inhouseId, boughtOutId };
@@ -1761,6 +1924,15 @@ export async function reviseCosting(
             ),
           );
       }
+
+      // The costing we just revised is now the PREVIOUS version — auto-cancel it
+      // so it moves into the "Auto-Cancelled" bucket. The fresh revision below
+      // carries the work forward. (Owner request 2026-09: revising a costing
+      // auto-cancels the one it replaces.)
+      await tx
+        .update(costings)
+        .set({ costingDoneStatus: "auto_cancelled", isChosen: false, updatedAt: new Date() })
+        .where(eq(costings.id, src.id));
 
       const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...carried } = src;
       const values: NewCosting = {

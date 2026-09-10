@@ -37,7 +37,10 @@ export interface BuiltProductRow {
   toleranceCheck: CheckState | null; conditionCheck: CheckState | null;
   assumedQuantity: string | null; assumedShapeDimension: string | null; assumedGrade: string | null;
   assumedTolerance: string | null; assumedCondition: string | null;
-  docsGiven: string[] | null; sampleReceived: boolean | null; description: string | null;
+  docsGiven: string[] | null; sampleReceived: boolean | null;
+  // description = our "Internal Product Description"; custProductDescription =
+  // the customer's own "Customer Product Description".
+  description: string | null; custProductDescription: string | null;
   /** NOT an inquiry_items column - carried through so the create action can
    *  back-link the chosen sample (samples.inquiry_item_id / inquiry_id). */
   sampleId: string | null;
@@ -63,7 +66,12 @@ export function productRowsForInquiry(v: Src): BuiltProductRow[] {
     dimensionUnit: txt(p.dimensionUnit) ?? "mm",
     dimensionNotes: txt(p.dimensionNotes),
     gradeId: txt(p.gradeId), gradeCustomer: txt(p.gradeCustomer), toleranceId: txt(p.toleranceId), conditionId: txt(p.conditionId),
-    gradeCustomerFacingId: txt(p.gradeCustomerFacingId), gradeInternalProductionId: txt(p.gradeInternalProductionId),
+    // Single internal-grade field: the enquiry captures ONE "Internal Grade for
+    // Production" (stored as gradeId, drives the Product Master / IPC). Mirror it
+    // into gradeInternalProductionId so Feasibility / Costing / Sales Orders —
+    // which read that column — reflect the same grade with no duplicate input.
+    gradeCustomerFacingId: txt(p.gradeCustomerFacingId),
+    gradeInternalProductionId: txt(p.gradeId) ?? txt(p.gradeInternalProductionId),
     internalProductionCodeId: txt(p.internalProductionCodeId), partNoId: txt(p.partNoId),
     quantityNos: numStr(p.quantityNos), quantityUom: txt(p.quantityUom) ?? "Nos",
     quantityStatus: p.quantityStatus ?? null, shapeDimensionCheck: p.shapeDimensionCheck ?? null,
@@ -73,6 +81,7 @@ export function productRowsForInquiry(v: Src): BuiltProductRow[] {
     docsGiven: p.docsGiven && p.docsGiven.length ? p.docsGiven : null,
     sampleReceived: typeof p.sampleReceived === "boolean" ? p.sampleReceived : null,
     description: txt(p.description),
+    custProductDescription: txt(p.custProductDescription),
     sampleId: txt(p.sampleId),
   }));
 }

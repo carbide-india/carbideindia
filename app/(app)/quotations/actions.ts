@@ -21,6 +21,7 @@ import {
   loadLogo,
   renderQuotationPdf,
 } from "@/app/(app)/quotations/[id]/quotation.pdf/route";
+import { getQuotationPdfModel } from "@/lib/queries/quotations";
 import { requireUser } from "@/lib/auth/current";
 import { approvalRefusal } from "@/lib/approval/gate";
 import {
@@ -713,7 +714,9 @@ export async function sendQuotation(input: {
     };
   }
 
-  const pdf = await renderQuotationPdf(quotation, { logo: await loadLogo(siteUrl()) });
+  const pdfModel = await getQuotationPdfModel(quotation.id);
+  if (!pdfModel) return { ok: false, error: "Quotation not found." };
+  const pdf = await renderQuotationPdf(pdfModel, { logo: await loadLogo(siteUrl()) });
 
   const sent = await sendQuotationEmail({
     quotation,

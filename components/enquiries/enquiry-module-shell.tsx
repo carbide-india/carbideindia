@@ -251,6 +251,21 @@ function navFor(pathname: string): NavDef[] {
           },
         ] as NavDef[])
       : []),
+    // Costing Variance — only in the Costing family. Every costing with more
+    // than one version on a line (C01 → C01-R1 → C02…), what changed and why —
+    // the costing analogue of the Quotation Revision Log.
+    ...(familySeg(pathname) === "costings"
+      ? ([
+          {
+            label: "Costing Variance",
+            href: "/costings/variance" as Route,
+            Icon: GitCompareArrows,
+            ready: true,
+            active: (p: string) => p.startsWith("/costings/variance"),
+            group: "records" as const,
+          },
+        ] as NavDef[])
+      : []),
     // Pipeline Tracker - the cross-stage view (start→current stage per enquiry,
     // plus the On Hold / Cancelled buckets). Feasibility already links it; the
     // downstream pipeline modules (Costing → Sales Order) + Meetings get parity.

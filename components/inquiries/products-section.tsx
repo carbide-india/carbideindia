@@ -4,6 +4,7 @@ import * as React from "react";
 import {
   Controller,
   useFieldArray,
+  useFormState,
   type Control,
   type UseFormRegister,
   type UseFormWatch,
@@ -29,6 +30,8 @@ import {
 } from "@/lib/masters/shape-config";
 import { ProductPicker, type PickerMasters } from "@/components/erp/product-picker";
 import type { MaterialPrefill } from "@/app/(app)/_actions/product-picker";
+import { saveIpcForSpecAction } from "@/app/(app)/_actions/product-picker";
+import { fireToast } from "@/lib/toast";
 import { SampleSummaryPanel } from "./sample-summary-panel";
 import type { SampleOption } from "@/lib/queries/samples";
 
@@ -61,6 +64,21 @@ interface Props {
 const DIMENSION_UNITS = ["mm", "cm", "m", "inch"] as const;
 
 /** Shape of one fresh, empty product card. */
+/** Size-class options — same list as the Product Master's Size field; "" = the
+ *  code is auto-derived from the dimensions on save. */
+const SIZE_CODE_OPTIONS = [
+  { value: "", label: "- Auto -" },
+  { value: "S", label: "S - Small" },
+  { value: "M", label: "M - Medium" },
+  { value: "L", label: "L - Large" },
+  { value: "SA", label: "SA - Small Assembly" },
+  { value: "MA", label: "MA - Medium Assembly" },
+  { value: "LA", label: "LA - Large Assembly" },
+  { value: "Sp", label: "Sp - Special" },
+  { value: "A", label: "A - Assembly" },
+  { value: "P", label: "P - Powder" },
+];
+
 const EMPTY_PRODUCT = {
   custProductName: "",
   custDrawingNo: "",
@@ -73,6 +91,7 @@ const EMPTY_PRODUCT = {
   thickness: undefined,
   dimensionUnit: "mm",
   dimensionNotes: "",
+  sizeCode: "",
   gradeId: undefined,
   gradeCustomer: "",
   gradeCustomerFacingId: undefined,
@@ -97,6 +116,7 @@ const EMPTY_PRODUCT = {
   docsGiven: [],
   sampleReceived: undefined,
   description: "",
+  custProductDescription: "",
 };
 
 /**
@@ -115,7 +135,6 @@ export function ProductsSection({
   tolerances,
   conditions,
   externalGrades = [],
-  internalProductionCodes = [],
   partNos = [],
   shapeProfiles,
   pickerMasters,
@@ -126,6 +145,9 @@ export function ProductsSection({
   const unitList = unitOptions?.length ? unitOptions : DIMENSION_UNITS;
   const uomList = uomOptions?.length ? uomOptions : [...QUANTITY_UOMS];
   const { fields, append, remove } = useFieldArray({ control, name: "products" });
+  // Per-shape required-dimension errors are set on submit (see inquiry-form);
+  // read them here so the offending dimension input turns red with a message.
+  const { errors } = useFormState({ control });
 
   // Keyboard-first array-row ergonomics: focus the first field of a freshly-
   // added product card, and recover focus to the Add button on removal so a
@@ -236,13 +258,6 @@ export function ProductsSection({
                       masters={pickerMasters}
                       selected={attached[field.id] ?? null}
                       onSelect={(p) => applyPrefill(index, field.id, p)}
-                      onClear={() =>
-                        setAttached((prev) => {
-                          const cp = { ...prev };
-                          delete cp[field.id];
-                          return cp;
-                        })
-                      }
                     />
                   </div>
                   {sampleReceived && (
@@ -280,39 +295,8 @@ export function ProductsSection({
             );
           })()}
 
-          <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
-            <Field
-              id={`products.${index}.custProductName`}
-              label="Customer Product Name" float
-            >
-              <input
-                id={`products.${index}.custProductName`}
-                type="text"
-                className="nt-input"
-                placeholder="What the client calls it"
-                {...register(`products.${index}.custProductName`)}
-              />
-            </Field>
-            <Field id={`products.${index}.custDrawingNo`} label="Customer Drawing No" float>
-              <input
-                id={`products.${index}.custDrawingNo`}
-                type="text"
-                className="nt-input"
-                {...register(`products.${index}.custDrawingNo`)}
-              />
-            </Field>
-            <Field
-              id={`products.${index}.drawingRevisionNo`}
-              label="Customer Drawing Rev No" float
-            >
-              <input
-                id={`products.${index}.drawingRevisionNo`}
-                type="text"
-                className="nt-input"
-                {...register(`products.${index}.drawingRevisionNo`)}
-              />
-            </Field>
-          </div>
+          {/* Customer identity fields (product name, drawing no. + revision)
+              now live in the Customer Grade References section below. */}
 
           {/* Shape + Unit + dimensions on one line - auto-fit so the visible
               boxes stretch to fill the row (no wasted space, no truncation)
@@ -362,6 +346,9 @@ export function ProductsSection({
             {DIM_FIELDS.map((dim) => {
               const rule = cfg.dims[dim];
               if (rule === "hidden") return null;
+              const dimErr = (
+                errors.products?.[index] as Record<string, { message?: string } | undefined> | undefined
+              )?.[dim]?.message;
               return (
                 <Field
                   key={dim}
@@ -375,7 +362,8 @@ export function ProductsSection({
                       min={0}
                       step="any"
                       placeholder="e.g. 12"
-                      className="nt-input pr-12"
+                      aria-invalid={dimErr ? true : undefined}
+                      className={cn("nt-input pr-12", dimErr && "!border-[#d32f2f]")}
                       {...register(`products.${index}.${dim}`, {
                         setValueAs: toOptionalNumber,
                       })}
@@ -384,6 +372,9 @@ export function ProductsSection({
                       {dimUnit}
                     </span>
                   </div>
+                  {dimErr && (
+                    <p className="mt-1.5 text-[13px] font-semibold text-[#d32f2f]">{dimErr}</p>
+                  )}
                 </Field>
               );
             })}
@@ -409,56 +400,15 @@ export function ProductsSection({
             />
           </Field>
 
-          {/* 3-tier grades + production codes (migration 0062). The customer's
-              raw grade text, the grade WE quote them, the internal production
-              grade, and the production/part codes each live on their own. */}
-          <div className="flex flex-col gap-3 rounded-lg border border-[#dcdce8] bg-white p-4">
-            <span className="text-[14px] font-bold uppercase tracking-[0.08em] text-[#3f3f94]">
-              Grades &amp; Codes
-            </span>
-            <div className="grid grid-cols-5 gap-4 max-lg:grid-cols-3 max-md:grid-cols-1">
-              <Field id={`products.${index}.gradeCustomer`} label="Grade Name (Customer)" float>
-                <input
-                  id={`products.${index}.gradeCustomer`}
-                  type="text"
-                  className="nt-input"
-                  placeholder="As the client stated it"
-                  {...register(`products.${index}.gradeCustomer`)}
-                />
-              </Field>
-              <ProductMasterSelect
-                control={control}
-                name={`products.${index}.gradeCustomerFacingId`}
-                label="Grade Given to Customer"
-                options={externalGrades}
-              />
-              <ProductMasterSelect
-                control={control}
-                name={`products.${index}.gradeInternalProductionId`}
-                label="Internal Grade for Production"
-                options={grades}
-              />
-              <ProductMasterSelect
-                control={control}
-                name={`products.${index}.internalProductionCodeId`}
-                label="Internal Production Code"
-                options={internalProductionCodes}
-              />
-              <ProductMasterSelect
-                control={control}
-                name={`products.${index}.partNoId`}
-                label="Part No"
-                options={partNos}
-              />
-            </div>
-          </div>
-
-          {/* Masters + quantity - one row: grade, tolerance, condition, qty, uom */}
-          <div className="grid grid-cols-5 gap-4 max-lg:grid-cols-3 max-md:grid-cols-1">
+          {/* The single internal-grade field stays in its original slot here —
+              "Internal Grade for Production" (stored as gradeId). It drives the
+              Product Master / IPC and is mirrored to Feasibility / Costing / SO.
+              Then tolerance, condition, size + quantity. */}
+          <div className="grid grid-cols-6 gap-x-5 gap-y-5 max-lg:grid-cols-3 max-md:grid-cols-1">
             <ProductMasterSelect
               control={control}
               name={`products.${index}.gradeId`}
-              label="Grade (Internal)"
+              label="Internal Grade for Production"
               options={grades}
             />
             <ProductMasterSelect
@@ -473,6 +423,23 @@ export function ProductsSection({
               label="Condition"
               options={conditions}
             />
+            {/* Size — same list as the Product Master; "- Auto -" derives it from
+                the dimensions when the item is saved. */}
+            <Field id={`products.${index}.sizeCode`} label="Size" labelOnly float>
+              <Controller
+                control={control}
+                name={`products.${index}.sizeCode`}
+                render={({ field: f }) => (
+                  <Select
+                    id={`products.${index}.sizeCode`}
+                    ariaLabel="Size"
+                    value={f.value ?? ""}
+                    onValueChange={(v) => f.onChange(v || "")}
+                    options={SIZE_CODE_OPTIONS}
+                  />
+                )}
+              />
+            </Field>
             <Field id={`products.${index}.quantityNos`} label="Quantity (Nos)" float>
               <input
                 id={`products.${index}.quantityNos`}
@@ -503,23 +470,112 @@ export function ProductsSection({
             </Field>
           </div>
 
-          {/* Product Description - at the bottom of each product. */}
-          <Field id={`products.${index}.description`} label="Product Description" float>
+          {/* Internal Product Description — our own description / notes for this
+              product. The customer's own wording lives in the Customer Product
+              Description field inside Customer Grade References below. */}
+          <Field id={`products.${index}.description`} label="Internal Product Description" float>
             <Controller
               control={control}
               name={`products.${index}.description`}
               render={({ field: df }) => (
                 <NotesField
                   id={`products.${index}.description`}
-                  ariaLabel="Product Description"
+                  ariaLabel="Internal Product Description"
                   rows={2}
-                  placeholder="What the client is asking for, in their words"
+                  placeholder="Our internal description / notes for this product"
                   value={df.value ?? ""}
                   onChange={df.onChange}
                 />
               )}
             />
           </Field>
+
+          {/* Customer Grade References — everything the customer gives us about
+              this product: their product name, drawing no. + revision, the grade
+              they stated, the grade WE quote them, the part code, and their own
+              product description. (The internal production grade lives in the
+              masters row above; Internal Production Code is produced by Save.) */}
+          <div className="flex flex-col gap-3 rounded-lg border border-[#dcdce8] bg-white p-4">
+            <span className="text-[14px] font-bold uppercase tracking-[0.08em] text-[#3f3f94]">
+              Customer Grade References
+            </span>
+            <div className="grid grid-cols-3 gap-x-5 gap-y-5 max-lg:grid-cols-2 max-md:grid-cols-1">
+              <Field id={`products.${index}.custProductName`} label="Customer Product Name" float>
+                <input
+                  id={`products.${index}.custProductName`}
+                  type="text"
+                  className="nt-input"
+                  placeholder="What the client calls it"
+                  {...register(`products.${index}.custProductName`)}
+                />
+              </Field>
+              <Field id={`products.${index}.custDrawingNo`} label="Customer Drawing No" float>
+                <input
+                  id={`products.${index}.custDrawingNo`}
+                  type="text"
+                  className="nt-input"
+                  {...register(`products.${index}.custDrawingNo`)}
+                />
+              </Field>
+              <Field id={`products.${index}.drawingRevisionNo`} label="Customer Drawing Revision Number" float>
+                <input
+                  id={`products.${index}.drawingRevisionNo`}
+                  type="text"
+                  className="nt-input"
+                  {...register(`products.${index}.drawingRevisionNo`)}
+                />
+              </Field>
+              <Field id={`products.${index}.gradeCustomer`} label="Grade Name for Customer" float>
+                <input
+                  id={`products.${index}.gradeCustomer`}
+                  type="text"
+                  className="nt-input"
+                  placeholder="As the client stated it"
+                  {...register(`products.${index}.gradeCustomer`)}
+                />
+              </Field>
+              <ProductMasterSelect
+                control={control}
+                name={`products.${index}.gradeCustomerFacingId`}
+                label="Grade Given to Customer"
+                options={externalGrades}
+              />
+              <ProductMasterSelect
+                control={control}
+                name={`products.${index}.partNoId`}
+                label="Part No"
+                options={partNos}
+              />
+            </div>
+            {/* Customer Product Description — the client's own wording, full width. */}
+            <Field id={`products.${index}.custProductDescription`} label="Customer Product Description" float>
+              <Controller
+                control={control}
+                name={`products.${index}.custProductDescription`}
+                render={({ field: cf }) => (
+                  <NotesField
+                    id={`products.${index}.custProductDescription`}
+                    ariaLabel="Customer Product Description"
+                    rows={2}
+                    placeholder="What the client is asking for, in their words"
+                    value={cf.value ?? ""}
+                    onChange={cf.onChange}
+                  />
+                )}
+              />
+            </Field>
+          </div>
+
+          {/* Save this line to the Product Master and show its Internal
+              Production Code (IPC) — create-or-reuse via the shared item dedup.
+              On success it auto-selects the resolved item in the picker above. */}
+          <IpcFetch
+            index={index}
+            watch={watch}
+            onSaved={(item) =>
+              setAttached((prev) => ({ ...prev, [field.id]: item }))
+            }
+          />
         </div>
         );
       })}
@@ -538,6 +594,85 @@ export function ProductsSection({
         </button>
       </div>
     </SectionCard>
+  );
+}
+
+/**
+ * "Save" — saves this product line to the Product Master and shows its Internal
+ * Production Code (IPC). Create-or-reuse: if an identical item already exists
+ * (same shape · Internal Grade for Production · Tolerance · Condition · all
+ * dimensions) its IPC is shown; otherwise a NEW master item is created and its
+ * fresh IPC shown. Either way the resolved item is auto-selected in the "Select
+ * Product" picker above (via `onSaved`) so the line shows it as attached.
+ */
+function IpcFetch({
+  index,
+  watch,
+  onSaved,
+}: {
+  index: number;
+  watch: UseFormWatch<InquiryFormValues>;
+  /** Auto-select the resolved item in the picker (existing match OR new). */
+  onSaved: (item: { itemId: string; itemCode: string }) => void;
+}) {
+  const [pending, startTransition] = React.useTransition();
+  const [result, setResult] = React.useState<{ code: string; reused: boolean } | null>(null);
+
+  function save() {
+    const num = (v: unknown): number | null =>
+      typeof v === "number" && Number.isFinite(v) ? v : null;
+    startTransition(async () => {
+      const res = await saveIpcForSpecAction({
+        shapeName: (watch(`products.${index}.shape`) as string | undefined) ?? null,
+        // The line's single internal grade ("Internal Grade for Production",
+        // stored as `gradeId`) — the field the Product Master dedup / IPC is
+        // built from.
+        internalGradeId: (watch(`products.${index}.gradeId`) as string | undefined) ?? null,
+        toleranceId: (watch(`products.${index}.toleranceId`) as string | undefined) ?? null,
+        conditionId: (watch(`products.${index}.conditionId`) as string | undefined) ?? null,
+        gradeCustomer: (watch(`products.${index}.gradeCustomer`) as string | undefined) ?? null,
+        // Size class chosen on the line ("- Auto -"/"" → derived from the dims).
+        sizeCode: (watch(`products.${index}.sizeCode`) as string | undefined) ?? null,
+        dimensionUnit: (watch(`products.${index}.dimensionUnit`) as string | undefined) ?? null,
+        dimensionNotes: (watch(`products.${index}.dimensionNotes`) as string | undefined) ?? null,
+        outerDia: num(watch(`products.${index}.outerDia`)),
+        innerDia: num(watch(`products.${index}.innerDia`)),
+        length: num(watch(`products.${index}.length`)),
+        width: num(watch(`products.${index}.width`)),
+        thickness: num(watch(`products.${index}.thickness`)),
+      });
+      if (!res.ok) {
+        fireToast({ type: "error", message: res.error });
+        return;
+      }
+      setResult({ code: res.itemCode, reused: res.reused });
+      // Auto-select the resolved product in the picker — existing match or new.
+      onSaved({ itemId: res.itemId, itemCode: res.itemCode });
+      fireToast({
+        message: res.reused
+          ? `Existing product · ${res.itemCode}`
+          : `Saved to Product Master · ${res.itemCode}`,
+      });
+    });
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <button
+        type="button"
+        onClick={save}
+        disabled={pending}
+        className="inline-flex w-fit items-center gap-2 rounded-chip border border-brand bg-brand/8 px-4 py-2.5 text-[15px] font-semibold text-brand transition-colors hover:bg-brand/12 disabled:opacity-50"
+      >
+        {pending ? "Saving…" : "Save"}
+      </button>
+      {result && (
+        <p className="text-[15px] font-semibold text-ink-strong">
+          Internal Production Code (IPC):{" "}
+          <span className="font-mono font-bold text-brand">{result.code}</span>
+        </p>
+      )}
+    </div>
   );
 }
 

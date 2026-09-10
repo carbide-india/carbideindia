@@ -24,6 +24,9 @@ export const ProductItemSchema = z.object({
   outerDia: ItemNum, innerDia: ItemNum, length: ItemNum, width: ItemNum, thickness: ItemNum,
   dimensionUnit: z.string().trim().max(20).optional(),
   dimensionNotes: OptionalText(2000),
+  /** Size class (S / M / L …), same list as the Product Master. Empty = the
+   *  code is auto-derived from the dimensions when the item is created. */
+  sizeCode:    z.string().trim().max(4).optional(),
   gradeId:     z.string().uuid().optional(),
   gradeCustomer: OptionalText(120),
   // ── 3-tier grades + production masters (migration 0062) ──
@@ -54,8 +57,10 @@ export const ProductItemSchema = z.object({
   assumedCondition:      OptionalText(200),
   docsGiven:      z.array(z.enum(DOC_GIVEN_OPTIONS)).optional(),
   sampleReceived: z.boolean().optional(),
-  /** Per-product "Product Description" (shown at the bottom of each product). */
+  /** Per-product "Internal Product Description" (our own notes for the product). */
   description:    OptionalText(2000),
+  /** Per-product "Customer Product Description" (the client's own wording). */
+  custProductDescription: OptionalText(2000),
 });
 export type ProductItemInput = z.input<typeof ProductItemSchema>;
 

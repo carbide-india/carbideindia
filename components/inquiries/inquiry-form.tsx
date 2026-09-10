@@ -30,7 +30,8 @@ import type { ClientAutofill, ClientOption } from "@/lib/queries/clients";
 import type { EmployeeOption } from "@/lib/queries/employees";
 import type { MasterOptionItem } from "@/lib/queries/masters";
 import type { SampleOption } from "@/lib/queries/samples";
-import type { ShapeConfig } from "@/lib/masters/shape-config";
+import { requiredDims, defaultShapeConfig, DIM_LABELS } from "@/lib/masters/shape-config";
+import type { ShapeConfig, DimField } from "@/lib/masters/shape-config";
 import type { PickerMasters } from "@/components/erp/product-picker";
 import { firstErrorMessage } from "@/lib/forms/first-error";
 import { useUnsavedGuard } from "@/lib/forms/use-unsaved-guard";
@@ -160,6 +161,9 @@ export function InquiryForm({
     control,
     handleSubmit,
     setValue,
+    setError,
+    clearErrors,
+    setFocus,
     watch,
     getValues,
     formState: { errors, isDirty },
@@ -306,6 +310,38 @@ export function InquiryForm({
 
   const submit = handleSubmit((values) => {
     setServerError(null);
+
+    // Enforce per-shape REQUIRED dimensions (the red "*"). zod treats every
+    // dimension as optional, so we validate them here against each product's
+    // shape config and block the save with a field-level error when a required
+    // dimension is left blank. Edit mode does not submit products, so skip it.
+    if (!isEdit) {
+      let firstBad: `products.${number}.${DimField}` | null = null;
+      (values.products ?? []).forEach((p, i) => {
+        const cfg = (p.shape && shapeProfiles[p.shape]) || defaultShapeConfig();
+        for (const dim of requiredDims(cfg)) {
+          const raw = p[dim];
+          const missing =
+            raw == null || (typeof raw === "number" && Number.isNaN(raw)) || `${raw}` === "";
+          const path = `products.${i}.${dim}` as const;
+          if (missing) {
+            setError(path, {
+              type: "required",
+              message: `${DIM_LABELS[dim]} is required for ${p.shape}.`,
+            });
+            if (!firstBad) firstBad = path;
+          } else {
+            clearErrors(path);
+          }
+        }
+      });
+      if (firstBad) {
+        setServerError("Fill the required dimensions marked with * before saving.");
+        setFocus(firstBad);
+        return;
+      }
+    }
+
     // <input type="date"> gives YYYY-MM-DD; pin to noon UTC so timezone
     // wrap-arounds can't land the enquiry on the wrong day.
     const enquiryDate = values.enquiryDate
@@ -748,11 +784,7 @@ export function InquiryForm({
       {/* One enquiry-level checklist section (its own card, like Products /
           Assignment) in BOTH create and edit — the per-product checklist inside
           the product card was moved out here per owner request. */}
-      <ChecklistSection
-        control={control}
-        register={register}
-        productDescriptionError={errors.productDescription?.message}
-      />
+      <ChecklistSection control={control} register={register} />
 
       {/* ── 3 · Products (with per-product checklist) ────────────────── */}
       {/* Products are hidden in edit mode - they link to costings/quotes and

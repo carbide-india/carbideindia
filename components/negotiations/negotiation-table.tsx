@@ -110,6 +110,29 @@ export function NegotiationTable({ rows, heading, actions }: Props) {
         ),
       },
       {
+        id: "productName",
+        header: "Product Name",
+        searchable: true,
+        sortValue: (r) => r.productName ?? "",
+        exportValue: (r) => r.productName ?? "",
+        cell: (r) => (
+          <span className="block max-w-[220px] truncate text-ink-soft">{r.productName ?? "—"}</span>
+        ),
+      },
+      {
+        id: "itemCode",
+        header: "IPC",
+        searchable: true,
+        sortValue: (r) => r.itemCode ?? "",
+        exportValue: (r) => r.itemCode ?? "",
+        cell: (r) =>
+          r.itemCode ? (
+            <span className="font-mono text-[12px] font-semibold text-[#3f3f94]">{r.itemCode}</span>
+          ) : (
+            <span className="text-ink-subtle">—</span>
+          ),
+      },
+      {
         id: "salesPersonName",
         header: "Sales Person",
         searchable: true,

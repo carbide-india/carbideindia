@@ -166,6 +166,64 @@ export async function checkMaterialDedupAction(input: {
     : { status: "new" };
 }
 
+/**
+ * Save the enquiry product line to the Product Master and return its Internal
+ * Production Code (IPC). Create-or-reuse via the SHARED `createItem`: if an
+ * identical item already exists (same shape + internal grade + condition +
+ * tolerance + dimensions) its code is returned (`reused: true`); otherwise a
+ * new master item is minted and its fresh code returned. The enquiry form holds
+ * the shape as its master NAME, so it is resolved to an id before saving.
+ */
+export async function saveIpcForSpecAction(input: {
+  shapeName?: string | null;
+  internalGradeId?: string | null;
+  conditionId?: string | null;
+  toleranceId?: string | null;
+  gradeCustomer?: string | null;
+  sizeCode?: string | null;
+  dimensionUnit?: string | null;
+  dimensionNotes?: string | null;
+  outerDia?: number | null;
+  innerDia?: number | null;
+  length?: number | null;
+  width?: number | null;
+  thickness?: number | null;
+}): Promise<{ ok: true; itemId: string; itemCode: string; reused: boolean } | { ok: false; error: string }> {
+  await requireUser();
+  const num = (v: number | null | undefined): number | undefined =>
+    typeof v === "number" && Number.isFinite(v) ? v : undefined;
+  const str = (v: string | null | undefined): string | undefined =>
+    v && v.trim() ? v.trim() : undefined;
+
+  let shapeId: string | undefined;
+  if (input.shapeName) {
+    const [shapeRow] = await db
+      .select({ id: masterOptions.id })
+      .from(masterOptions)
+      .where(and(eq(masterOptions.kind, "shape"), eq(masterOptions.name, input.shapeName)))
+      .limit(1);
+    shapeId = shapeRow?.id ?? undefined;
+  }
+
+  const res = await createItem({
+    shapeId,
+    internalGradeId: str(input.internalGradeId),
+    toleranceId: str(input.toleranceId),
+    conditionId: str(input.conditionId),
+    gradeCustomer: str(input.gradeCustomer),
+    sizeCode: str(input.sizeCode),
+    dimensionUnit: str(input.dimensionUnit),
+    dimensionNotes: str(input.dimensionNotes),
+    outerDia: num(input.outerDia),
+    innerDia: num(input.innerDia),
+    length: num(input.length),
+    width: num(input.width),
+    thickness: num(input.thickness),
+  });
+  if (!res.ok) return { ok: false, error: res.error };
+  return { ok: true, itemId: res.id, itemCode: res.itemCode, reused: res.reused };
+}
+
 /** Active shape masters (id + name) for the create mini-form's shape select. */
 export async function listShapeMastersAction(): Promise<
   Array<{ id: string; name: string }>

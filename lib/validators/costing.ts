@@ -228,6 +228,9 @@ export const SaveCostingMasterSchema = z
   .object({
     inquiryItemId: z.string().uuid(),
     inquiryId: z.string().uuid(),
+    /** When set, EDIT this existing (draft) costing in place instead of minting
+     *  a new revision — the "revise / re-cost" flow that opens pre-filled. */
+    editCostingId: z.string().uuid().optional(),
     costingMode: z.enum(COSTING_MODES),
     /** "Product Sold/Made Before?" entry answer — informational. */
     soldBefore: z.boolean().optional(),

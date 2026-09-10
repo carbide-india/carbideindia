@@ -24,6 +24,7 @@ import {
   emptyBuyoutValue,
   type BuyoutValue,
 } from "@/components/costings/buyout-calculator";
+import type { CostingCalculatorInitial } from "@/lib/costing/calculator-initial";
 import { formatInr } from "@/lib/format";
 import { fireToast } from "@/lib/toast";
 import { useKeyboardForm } from "@/components/forms/use-keyboard-form";
@@ -78,6 +79,10 @@ export interface CostingMasters {
 interface Props {
   inquiryItemId: string;
   inquiryId: string;
+  /** When set, this Save EDITS the given costing in place (revise), not a new one. */
+  editCostingId?: string;
+  /** Pre-fill the calculator from an existing costing's snapshot (edit/revise). */
+  initial?: CostingCalculatorInitial | null;
   productCaption: string;
   /** Quantity pulled from the inquiry line (may be null / editable). */
   lineQty: number | null;
@@ -101,6 +106,17 @@ const toCalcVendors = (items: VendorOption[]): CalcVendorOption[] =>
   items.map((o) => ({ id: o.id, name: o.name, vendorCode: o.vendorCode }));
 
 /** Cheapest landed BO cost / pc across the panel's rows (matches the server rank). */
+/** "30 days" / "4 weeks" → { amt, unit }; blank / malformed → empty amt, days.
+ *  Inverse of buildDuration, used to seed the duration inputs when editing. */
+function parseDuration(label: string | null | undefined): { amt: number | ""; unit: string } {
+  if (!label) return { amt: "", unit: "days" };
+  const m = label.trim().match(/^(\d+(?:\.\d+)?)\s*(days?|weeks?)?/i);
+  if (!m) return { amt: "", unit: "days" };
+  const amt = Number(m[1]);
+  const unit = m[2]?.toLowerCase().startsWith("week") ? "weeks" : "days";
+  return { amt: Number.isFinite(amt) ? amt : "", unit };
+}
+
 function buyoutCheapestPerPiece(value: BuyoutValue, qty: number): number {
   const quotes = value.vendors.map((r) => {
     const unit = r.unitPrice.trim() === "" ? null : Number(r.unitPrice);
@@ -121,6 +137,8 @@ function buyoutCheapestPerPiece(value: BuyoutValue, qty: number): number {
 export function CostingCalculatorShell({
   inquiryItemId,
   inquiryId,
+  editCostingId,
+  initial,
   productCaption,
   lineQty,
   smNumber,
@@ -135,21 +153,33 @@ export function CostingCalculatorShell({
   const [pending, startTransition] = React.useTransition();
   const [serverError, setServerError] = React.useState<string | null>(null);
 
-  // ── Entry routing ──
-  const [soldBefore, setSoldBefore] = React.useState<"yes" | "no" | undefined>(undefined);
-  const [mode, setMode] = React.useState<CostingMode | undefined>(undefined);
+  // Pre-parsed duration labels from an edit snapshot ("30 days" → 30 + "days").
+  const initDelivery = parseDuration(initial?.deliveryTime);
+  const initValidity = parseDuration(initial?.validity);
 
-  // ── Quantity (from the inquiry line) ──
+  // ── Entry routing ── (seeded when re-opening an existing costing to edit)
+  const [soldBefore, setSoldBefore] = React.useState<"yes" | "no" | undefined>(
+    initial ? (initial.soldBefore === true ? "yes" : initial.soldBefore === false ? "no" : undefined) : undefined,
+  );
+  const [mode, setMode] = React.useState<CostingMode | undefined>(initial?.mode);
+
+  // ── Quantity (from the inquiry line, or the edited costing) ──
   const [qty, setQty] = React.useState<number | "">(
-    typeof lineQty === "number" && Number.isFinite(lineQty) ? lineQty : "",
+    initial
+      ? initial.qty
+      : typeof lineQty === "number" && Number.isFinite(lineQty)
+        ? lineQty
+        : "",
   );
   const qtyNum = typeof qty === "number" && Number.isFinite(qty) ? qty : 0;
 
   // ── Panel values ──
   const [inhouse, setInhouse] = React.useState<InhouseCalculatorValue>(() =>
-    emptyInhouseCalculatorValue({ qty }),
+    initial ? initial.inhouse : emptyInhouseCalculatorValue({ qty }),
   );
-  const [buyout, setBuyout] = React.useState<BuyoutValue>(() => emptyBuyoutValue());
+  const [buyout, setBuyout] = React.useState<BuyoutValue>(() =>
+    initial ? initial.buyout : emptyBuyoutValue(),
+  );
 
   // ── Product & Specifications transfer panel (editable, variance-tracked) ──
   const [specValue, setSpecValue] = React.useState<CostingSpecValue>(() =>
@@ -162,21 +192,24 @@ export function CostingCalculatorShell({
   }, [qty]);
 
   // ── Terminal fields ──
-  const [quantityToleranceId, setQuantityToleranceId] = React.useState("");
-  const [deliveryAmt, setDeliveryAmt] = React.useState<number | "">("");
-  const [deliveryUnit, setDeliveryUnit] = React.useState("days");
-  const [validityAmt, setValidityAmt] = React.useState<number | "">("");
-  const [validityUnit, setValidityUnit] = React.useState("days");
-  const [technicalNotes, setTechnicalNotes] = React.useState("");
-  const [commercialNotes, setCommercialNotes] = React.useState("");
+  const [quantityToleranceId, setQuantityToleranceId] = React.useState(
+    initial?.quantityToleranceId ?? "",
+  );
+  const [deliveryAmt, setDeliveryAmt] = React.useState<number | "">(initDelivery.amt);
+  const [deliveryUnit, setDeliveryUnit] = React.useState(initDelivery.unit);
+  const [validityAmt, setValidityAmt] = React.useState<number | "">(initValidity.amt);
+  const [validityUnit, setValidityUnit] = React.useState(initValidity.unit);
+  const [technicalNotes, setTechnicalNotes] = React.useState(initial?.technicalNotes ?? "");
+  const [commercialNotes, setCommercialNotes] = React.useState(initial?.commercialNotes ?? "");
 
-  // Payment terms default from the customer: pre-select the master option whose
-  // label matches the client's default (once, on mount).
+  // Payment terms: when editing, reverse-map the saved label; otherwise pre-select
+  // the customer's default. Once, on mount.
   const [paymentTermId, setPaymentTermId] = React.useState("");
   React.useEffect(() => {
-    if (!defaultPaymentTerms) return;
+    const label = initial?.paymentTerms ?? defaultPaymentTerms;
+    if (!label) return;
     const hit = masters.paymentTerm.find(
-      (o) => o.name.trim().toLowerCase() === defaultPaymentTerms.trim().toLowerCase(),
+      (o) => o.name.trim().toLowerCase() === label.trim().toLowerCase(),
     );
     if (hit) setPaymentTermId(hit.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -313,6 +346,7 @@ export function CostingCalculatorShell({
       const res = await saveCostingMaster({
         inquiryItemId,
         inquiryId,
+        editCostingId,
         costingMode: mode,
         soldBefore: soldBefore ? soldBefore === "yes" : undefined,
         qty,

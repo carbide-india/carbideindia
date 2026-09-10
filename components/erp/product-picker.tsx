@@ -69,19 +69,20 @@ interface ProductPickerProps {
   selected?: { itemId: string; itemCode: string } | null;
   /** Fired when a material is chosen (existing or freshly created). */
   onSelect: (prefill: MaterialPrefill) => void;
-  /** Clear the current selection (re-open a fresh search). */
-  onClear?: () => void;
 }
 
 export function ProductPicker({
   masters,
   selected,
   onSelect,
-  onClear,
 }: ProductPickerProps) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const [creating, setCreating] = React.useState(false);
+  // "Reselect" keeps the current selection visible in the list (highlighted in
+  // blue) while the dropdown is open, so the user can see what's picked and
+  // swap it — instead of the selection vanishing the moment they re-open.
+  const [reselecting, setReselecting] = React.useState(false);
   const deferred = React.useDeferredValue(query);
   const q = deferred.trim();
   const boxRef = React.useRef<HTMLDivElement>(null);
@@ -111,6 +112,9 @@ export function ProductPicker({
     function onDown(e: MouseEvent) {
       if (boxRef.current && !boxRef.current.contains(e.target as Node)) {
         setOpen(false);
+        // Clicking away from a reselect keeps the existing selection (returns
+        // to the pinned chip) — closing is never destructive.
+        setReselecting(false);
       }
     }
     document.addEventListener("mousedown", onDown);
@@ -121,6 +125,7 @@ export function ProductPicker({
     onSelect(prefill);
     setOpen(false);
     setCreating(false);
+    setReselecting(false);
     setQuery("");
     setExpanded(false);
     fireToast({
@@ -129,7 +134,7 @@ export function ProductPicker({
     });
   }
 
-  if (selected) {
+  if (selected && !reselecting) {
     return (
       <div className="flex items-center justify-between gap-3 rounded-chip border border-brand/40 bg-brand/6 px-3.5 py-2.5">
         <span className="flex min-w-0 items-center gap-2">
@@ -139,16 +144,20 @@ export function ProductPicker({
           </span>
           <span className="text-[12px] text-ink-subtle">attached</span>
         </span>
-        {onClear && (
-          <button
-            type="button"
-            onClick={onClear}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-chip border border-hairline px-2.5 py-1 text-[12px] font-semibold text-ink-muted transition-colors hover:border-brand hover:text-brand"
-          >
-            <RefreshCcw size={12} strokeWidth={2.4} />
-            Replace
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => {
+            // Keep the current selection and open the list with it highlighted.
+            // Seed the search with its code so the highlighted row is on top.
+            setQuery(selected.itemCode);
+            setReselecting(true);
+            setOpen(true);
+          }}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-chip border border-hairline px-2.5 py-1 text-[12px] font-semibold text-ink-muted transition-colors hover:border-brand hover:text-brand"
+        >
+          <RefreshCcw size={12} strokeWidth={2.4} />
+          Replace
+        </button>
       </div>
     );
   }
@@ -196,7 +205,14 @@ export function ProductPicker({
                       : `${visible.length} of ${hits.length}`}
                   </span>
                 </p>
-                {visible.map((h) => <HitRow key={h.id} hit={h} onPick={pick} />)}
+                {visible.map((h) => (
+                  <HitRow
+                    key={h.id}
+                    hit={h}
+                    onPick={pick}
+                    isSelected={h.id === selected?.itemId}
+                  />
+                ))}
 
                 {hiddenCount > 0 && (
                   <button
@@ -248,9 +264,12 @@ export function ProductPicker({
 function HitRow({
   hit,
   onPick,
+  isSelected = false,
 }: {
   hit: MaterialHit;
   onPick: (prefill: MaterialPrefill, reused: boolean) => void;
+  /** The line's currently-attached material — pinned blue so it reads at a glance. */
+  isSelected?: boolean;
 }) {
   const [busy, setBusy] = React.useState(false);
   const pill = ITEM_STATUS_PILL[hit.status] ?? ITEM_STATUS_PILL.active;
@@ -276,19 +295,29 @@ function HitRow({
       type="button"
       onClick={choose}
       disabled={busy}
+      aria-current={isSelected || undefined}
       className={cn(
-        "flex w-full flex-col gap-1 rounded-chip px-3 py-2.5 text-left transition-colors hover:bg-surface-soft",
+        "flex w-full flex-col gap-1 rounded-chip px-3 py-2.5 text-left transition-colors",
+        isSelected
+          ? "bg-brand/10 ring-1 ring-inset ring-brand/45 hover:bg-brand/12"
+          : "hover:bg-surface-soft",
         !hit.isActive && "opacity-60",
       )}
     >
       <span className="flex items-center gap-2">
-        <Boxes size={15} strokeWidth={2.1} className="shrink-0 text-ink-subtle" />
+        <Boxes size={15} strokeWidth={2.1} className={cn("shrink-0", isSelected ? "text-brand" : "text-ink-subtle")} />
         <span className="font-mono text-[13px] font-bold text-ink-strong">
           {hit.itemCode}
         </span>
         <StatusPill tone={pill.tone} size="sm">
           {pill.label}
         </StatusPill>
+        {isSelected && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-brand/12 px-2 py-0.5 text-[11px] font-bold text-brand">
+            <Check size={11} strokeWidth={3} />
+            Selected
+          </span>
+        )}
         {hit.reusedCount > 0 && (
           <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-green-bg px-2 py-0.5 text-[11px] font-bold text-green-deep">
             reused {hit.reusedCount}×
@@ -504,7 +533,7 @@ function CreateMaterialSheet({
             )}
 
             <div className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
-              <Labeled label="Grade (Internal)">
+              <Labeled label="Internal Grade for Production">
                 <Select
                   value={gradeId}
                   onValueChange={setGradeId}

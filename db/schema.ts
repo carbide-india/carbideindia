@@ -778,7 +778,12 @@ export const inquiryItems = pgTable(
     assumedCondition: text("assumed_condition"),
     docsGiven: text("docs_given").array(),
     sampleReceived: boolean("sample_received"),
+    // Our own internal description of the product (labelled "Internal Product
+    // Description" on the enquiry form).
     description: text("description"),
+    // The customer's own product description, in their words (labelled
+    // "Customer Product Description", grouped under Customer Grade References).
+    custProductDescription: text("cust_product_description"),
     // FK to the Item / Product Master. SSOT invariant I1 (ERP Phase 4, migration
     // 0034): every product line ALWAYS carries an item_id (a reused/created Item,
     // possibly a draft), written in the same tx as the line. onDelete: restrict —
@@ -1281,13 +1286,18 @@ export const costings = pgTable(
     // costing_done_status = 'need_info'; kept (not cleared) when it moves on so
     // the history of what was asked survives.
     needInfoNote: text("need_info_note"),
-    // Costing 1 / Costing 2 / Costing 3 per product. When a negotiation is not
-    // approved the costing is REVISED — a NEW row is inserted with
-    // revisionNo + 1 and supersedesCostingId pointing at the row it replaces;
-    // the earlier rows are KEPT (never updated in place) so revisions can be
-    // listed and diffed. The revision group is naturally
-    // (inquiry_item_id, costing_type); `isLatestRevision` is the cheap filter
-    // and is what Quotation consumes (it must always take the LATEST).
+    // Costing SERIES number per product line — the "C01 / C02" the owner asked
+    // for (2026-09). A brand-new costing (the "New Costing" action) mints the
+    // NEXT costing_no for the line; a REVISION keeps the same costing_no and
+    // bumps revision_no. So the human code is
+    // SM<n>-C<costing_no>[-R<revision_no-1>], and the revision group is
+    // (inquiry_item_id, costing_no, costing_type). Existing rows backfill to 1.
+    costingNo: integer("costing_no").notNull().default(1),
+    // When a negotiation/quotation is not approved the costing is REVISED — a
+    // NEW row is inserted with revisionNo + 1 and supersedesCostingId pointing
+    // at the row it replaces; the earlier rows are KEPT (never updated in place)
+    // so revisions can be listed and diffed. `isLatestRevision` is the cheap
+    // filter and is what Quotation consumes (it must always take the LATEST).
     // `revisedFromNegotiationId` records the negotiation that triggered the
     // revision when there was one — nullable, no rule attached.
     revisionNo: integer("revision_no").notNull().default(1),
@@ -1304,6 +1314,12 @@ export const costings = pgTable(
      * each ("sent back by Quotation" vs "customer negotiated").
      */
     revisedFromQuotationId: uuid("revised_from_quotation_id").references((): AnyPgColumn => quotations.id, { onDelete: "set null" }),
+    // Full snapshot of the Costing Master calculator INPUT (the SaveCostingMaster
+    // payload) as it was last saved. Lets the calculator re-open PRE-FILLED for
+    // editing/revising with perfect fidelity — every field and vendor, including
+    // UI-only inputs the individual columns don't store. Read-back only; the
+    // authoritative numbers still live in the typed columns above.
+    calculatorSnapshot: jsonb("calculator_snapshot"),
     createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -1611,6 +1627,21 @@ export const negotiationRemarks = pgTable(
     /** The previous status, so the thread reads as "Follow Up → Revise Quote". */
     fromStatus: negotiationStatusEnum("from_status"),
     body: text("body").notNull(),
+    /**
+     * Negotiation LOG typing (2026-09). The detail page turned this thread into a
+     * timestamped chat log where a note can be a plain note OR a logged customer
+     * confirmation. NULL = a legacy / board-move remark (renders as a status
+     * note). Non-null values: "note" | "email_confirmation" |
+     * "whatsapp_confirmation" | "verbal_confirmation". Stored as TEXT (not a pg
+     * enum) so the log's vocabulary can grow without a migration per word.
+     */
+    entryType: text("entry_type"),
+    /** Private-Blob PATHNAME of an evidence attachment (email/WhatsApp screenshot,
+     *  PO scan…). NULL for plain notes and ALWAYS null for verbal confirmations
+     *  (a verbal has nothing to attach — enforced in the action). */
+    attachmentPath: text("attachment_path"),
+    /** Original filename of the attachment, for display (the pathname is munged). */
+    attachmentName: text("attachment_name"),
     authorId: uuid("author_id").references(() => employees.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

@@ -66,6 +66,10 @@ export interface NegotiationListItem {
   id: string;
   negotiationNo: string;
   companyName: string | null;
+  /** Line-1 product name (header mirror) — shown in the register. */
+  productName: string | null;
+  /** Internal Production Code (IPC) of line-1's Product-Master item. */
+  itemCode: string | null;
   salesPersonName: string | null;
   quotePrice: string | null;
   negotiationStatus: NegotiationStatus;
@@ -160,6 +164,8 @@ export async function listNegotiations(
       id: negotiations.id,
       negotiationNo: negotiations.negotiationNo,
       companyName: negotiations.companyName,
+      // Line-1 product name mirror kept on the header.
+      productName: negotiations.custProductName,
       salesPersonName: employees.name,
       quotePrice: negotiations.quotePrice,
       negotiationStatus: negotiations.negotiationStatus,
@@ -176,7 +182,34 @@ export async function listNegotiations(
     .where(conds.length ? and(...conds) : undefined)
     .orderBy(desc(negotiations.createdAt));
 
-  return rows.map((r) => ({ ...r, quotedValue: numOrZero(r.quotedValue) }));
+  // Resolve line-1's IPC (item code) per negotiation — one batched line read +
+  // one spec read-through, no N+1. The product NAME is already the header mirror.
+  const negIds = rows.map((r) => r.id);
+  const itemCodeByNeg = new Map<string, string | null>();
+  if (negIds.length > 0) {
+    const lineRows = await db
+      .select({ negotiationId: negotiationItems.negotiationId, itemId: negotiationItems.itemId })
+      .from(negotiationItems)
+      .where(inArray(negotiationItems.negotiationId, negIds))
+      .orderBy(asc(negotiationItems.sortOrder));
+    const firstItemByNeg = new Map<string, string | null>();
+    for (const l of lineRows) {
+      if (!firstItemByNeg.has(l.negotiationId)) firstItemByNeg.set(l.negotiationId, l.itemId ?? null);
+    }
+    const itemIds = [
+      ...new Set([...firstItemByNeg.values()].filter((v): v is string => !!v)),
+    ];
+    const specs = await resolveSpecsByItemId(itemIds);
+    for (const [nid, itemId] of firstItemByNeg) {
+      itemCodeByNeg.set(nid, itemId ? specs.get(itemId)?.itemCode ?? null : null);
+    }
+  }
+
+  return rows.map((r) => ({
+    ...r,
+    quotedValue: numOrZero(r.quotedValue),
+    itemCode: itemCodeByNeg.get(r.id) ?? null,
+  }));
 }
 
 /**

@@ -11,6 +11,7 @@ import {
   COSTING_DONE_STATUSES,
   COSTING_DONE_STATUS_LABELS,
   DEPRECATED_COSTING_DONE_STATUSES,
+  SYSTEM_COSTING_DONE_STATUSES,
   QUOTATION_STATUS_LABELS,
 } from "@/db/enums";
 import { CreateQuotationSchema } from "@/lib/validators/quotation";
@@ -55,10 +56,13 @@ interface Props {
   initialValues?: Partial<QuotationFormValues>;
 }
 
-/** Deprecated costing values stay in the enum for data-compat only - they are
- *  never offered on a new record. */
+/** Deprecated costing values stay in the enum for data-compat only, and
+ *  system-set ones (auto_cancelled) are never a manual choice - neither is
+ *  offered on a new record. */
 const COSTING_DONE_OPTIONS = COSTING_DONE_STATUSES.filter(
-  (s) => !(DEPRECATED_COSTING_DONE_STATUSES as readonly string[]).includes(s),
+  (s) =>
+    !(DEPRECATED_COSTING_DONE_STATUSES as readonly string[]).includes(s) &&
+    !(SYSTEM_COSTING_DONE_STATUSES as readonly string[]).includes(s),
 ).map((s) => ({
   value: s,
   label: COSTING_DONE_STATUS_LABELS[s],

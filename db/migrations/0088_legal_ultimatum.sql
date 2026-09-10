@@ -1,0 +1,1 @@
+ALTER TABLE "costings" ADD COLUMN "costing_no" integer DEFAULT 1 NOT NULL;

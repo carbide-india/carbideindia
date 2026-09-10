@@ -9,14 +9,13 @@ import {
 import { getInquiryById } from "@/lib/queries/inquiries";
 import { listEmployeeOptions } from "@/lib/queries/employees";
 import { getInquiryItemSeeds } from "@/lib/queries/quotes";
-import { getQuotationById } from "@/lib/queries/quotations";
+import { getQuotationFullDetail } from "@/lib/queries/quotations";
 import { listProformaInvoicesForNegotiation } from "@/lib/queries/proforma-invoices";
 import { getDocumentDownloadUrls } from "@/lib/storage/blob";
 import {
   NegotiationDetail,
   type NegotiationInquiryLink,
 } from "@/components/negotiations/negotiation-detail";
-import type { QuoteSendSummary } from "@/components/negotiations/quote-send-header";
 import { SyncProductsBanner } from "@/components/pipeline/sync-products-banner";
 import { syncProductsFromEnquiry } from "@/app/(app)/negotiations/actions";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
@@ -59,7 +58,7 @@ export default async function NegotiationDetailPage({ params }: PageProps) {
     inquiry,
     lines,
     seeds,
-    quotation,
+    quotationDetail,
     proformaInvoices,
     revisableCostings,
   ] = await Promise.all([
@@ -71,23 +70,16 @@ export default async function NegotiationDetailPage({ params }: PageProps) {
     negotiation.inquiryId
       ? getInquiryItemSeeds(negotiation.inquiryId)
       : Promise.resolve([]),
+    // The COMPLETE quotation behind this negotiation, resolved read-only for the
+    // reference block (header + every line + totals).
     negotiation.quotationId
-      ? getQuotationById(negotiation.quotationId)
+      ? getQuotationFullDetail(negotiation.quotationId)
       : Promise.resolve(null),
     listProformaInvoicesForNegotiation(negotiation.id),
     // Current-revision cost sheets behind this negotiation's product lines —
     // the pick list for "not approved → new costing revision".
     listRevisableCostingsForNegotiation(negotiation.id),
   ]);
-
-  // Quote Send summary — the source quote's identity, falling back to the
-  // negotiation's own snapshotted price/link when there is no linked quote.
-  const quoteSend: QuoteSendSummary = {
-    quoteNo: quotation?.quoteNo ?? null,
-    quotePrice: quotation?.quotePrice ?? negotiation.quotePrice ?? null,
-    quotationLink: quotation?.quotationLink ?? negotiation.quotationLink ?? null,
-    quoteSent: quotation?.quoteSent ?? false,
-  };
 
   // Latest PI total (list is newest-iteration first) for PI↔PO reconciliation.
   const latestPiTotal = proformaInvoices[0]?.revisedTotal ?? null;
@@ -130,11 +122,10 @@ export default async function NegotiationDetailPage({ params }: PageProps) {
           employees={employees}
           inquiryLink={inquiryLink}
           lines={lines}
-          quoteSend={quoteSend}
-          proformaInvoices={proformaInvoices}
           latestPiTotal={latestPiTotal}
           poDownloadUrl={poDownloadUrl}
           revisableCostings={revisableCostings}
+          quotationDetail={quotationDetail}
         />
       </div>
     </EnquiryModuleShell>
