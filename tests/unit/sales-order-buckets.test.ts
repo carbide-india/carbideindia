@@ -3,10 +3,14 @@ import {
   applySalesOrderFilters,
   isOutputFilter,
   outputCounts,
+  poConfirmationCount,
   stageBucketCounts,
   type BucketableSalesOrder,
 } from "@/lib/sales-orders/buckets";
-import { SALES_ORDER_STAGE_BUCKETS } from "@/db/enums";
+import {
+  SALES_ORDER_STAGE_BUCKETS,
+  type SalesOrderPoConfirmationStatus,
+} from "@/db/enums";
 
 /**
  * The register's "what is left" counts. The point of these tests is that no
@@ -18,10 +22,12 @@ const row = (
   status: BucketableSalesOrder["salesOrderStatus"],
   customerSoSent = false,
   productionSoSent = false,
+  customerPoConfirmation: SalesOrderPoConfirmationStatus = "not_read",
 ): BucketableSalesOrder => ({
   salesOrderStatus: status,
   customerSoSent,
   productionSoSent,
+  customerPoConfirmation,
 });
 
 const SET: BucketableSalesOrder[] = [
@@ -128,6 +134,37 @@ describe("applySalesOrderFilters", () => {
     const copy = [...SET];
     applySalesOrderFilters(SET, { status: "draft" });
     expect(SET).toEqual(copy);
+  });
+});
+
+describe("Customer PO Confirmation", () => {
+  const POSET = [
+    row("draft", false, false, "revised_so"),
+    row("draft", false, false, "revised_so"),
+    row("need_info", true, false, "revised_po"),
+    row("not_started", false, false, "not_read"),
+    row("not_started", false, false, "po_read"),
+  ];
+
+  it("counts each confirmation value", () => {
+    expect(poConfirmationCount(POSET, "revised_so")).toBe(2);
+    expect(poConfirmationCount(POSET, "revised_po")).toBe(1);
+    expect(poConfirmationCount(POSET, "po_read")).toBe(1);
+    expect(poConfirmationCount(POSET, "email_confirmation")).toBe(0);
+  });
+
+  it("filters by confirmation, matching the count", () => {
+    expect(applySalesOrderFilters(POSET, { poConfirm: "revised_so" }).length).toBe(2);
+    expect(applySalesOrderFilters(POSET, { poConfirm: "revised_po" }).length).toBe(1);
+  });
+
+  it("AND-s confirmation with the stage bucket", () => {
+    expect(
+      applySalesOrderFilters(POSET, { status: "draft", poConfirm: "revised_so" }).length,
+    ).toBe(2);
+    expect(
+      applySalesOrderFilters(POSET, { status: "need_info", poConfirm: "revised_so" }).length,
+    ).toBe(0);
   });
 });
 

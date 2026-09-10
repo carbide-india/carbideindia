@@ -120,8 +120,12 @@ describe("negotiation is the stated exception", () => {
     expect(buckets.slice(0, -3)).toEqual([
       "to_start",
       "need_info",
-      "follow_up",
+      "follow_up_15d",
+      "follow_up_1m",
+      "follow_up_45d",
+      "follow_up_2m",
       "revision",
+      "on_hold",
     ]);
   });
 

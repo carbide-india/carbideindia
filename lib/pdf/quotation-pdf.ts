@@ -315,24 +315,25 @@ export async function renderQuotationPdf(
   y += H_TOT;
 
   // ── 6 · Commercial terms ──────────────────────────────────────
-  // Every value is dynamic — pulled from the quotation's own fields, blank when
-  // the quote doesn't carry it. Rows the WMS has no field for (Payment Term,
-  // GST, Packing & Forwarding, Note) keep the label but stay blank; they are
-  // NEVER filled with invented wording.
+  // Every value is DYNAMIC, resolved from its real source (Manan, 2026-09):
+  // Payment Term + Delivery Lead Time from the line's chosen costing vendor, GST
+  // from the client KYC, Validity from the quotation, Tolerance read-through, and
+  // Note from the costing's Commercial Notes. Blank when the source is empty —
+  // never invented wording. Packing & Forwarding has no source, so it stays blank.
   const termLabelW = 155;
   const termValX = left + termLabelW;
   const termValW = right - termValX;
   const val = (s: string | null): string => (s && s.trim() ? s.trim() : "");
-  const paymentTerm = "";
+  const paymentTerm = val(model.paymentTerm);
 
   const terms: { label: string; value: string; h: number; fill?: string; valueBold?: boolean }[] = [
     { label: "Payment Term", value: paymentTerm, h: 18, fill: paymentTerm ? C.yellow : undefined, valueBold: true },
-    { label: "GST", value: "", h: 18 },
-    { label: "Delivery Lead Time", value: val(model.deliveryTime), h: 18 },
+    { label: "GST", value: val(model.gst), h: 18 },
+    { label: "Delivery Lead Time", value: val(model.deliveryLeadTime), h: 18 },
     { label: "Tolerance", value: val(model.tolerance), h: 18 },
     { label: "Packing & Forwarding Charges", value: "", h: 18 },
     { label: "Validity of Quotation", value: val(model.validity), h: 30 },
-    { label: "Note", value: "", h: 18 },
+    { label: "Note", value: val(model.note), h: 30 },
   ];
   for (const t of terms) {
     box(left, y, termLabelW, t.h);

@@ -19,6 +19,10 @@ import { approvalRefusal } from "@/lib/approval/gate";
 import { isNegotiationApprovedForSo } from "@/lib/negotiations/buckets";
 // The revision MODEL is the costing stage's — call into it, never fork it.
 import { reviseCosting } from "@/app/(app)/costings/actions";
+// "Revise Quote" from the negotiation reuses the Quotation stage's revision
+// action; the negotiation side only picks the target + records the reason.
+import { reviseQuotation } from "@/app/(app)/quotations/revise-actions";
+import { getLatestQuotationRevisionId } from "@/lib/queries/quotations";
 import { negotiationLineRows, negotiationLineInsert } from "@/lib/negotiations/line-rows";
 import {
   getQuoteAutofill,
@@ -383,6 +387,76 @@ export async function setNegotiationStatusBulk(
   }
   revalidatePath("/negotiations");
   return { ok: true };
+}
+
+/**
+ * "Revise Quote" from the negotiation status dropdown (2026-09).
+ *
+ * Selecting Revise Quote opens a fresh REVISION of the negotiation's linked
+ * quotation — the same revision the Quotation stage's "Revise" button makes
+ * (freeze the current one, open a copy at the next revision number with its
+ * lines carried), so the price the customer saw stays readable. The negotiation
+ * then points at the new revision and drops to "Revise Quote" until the revised
+ * quote comes back. A written reason is required (it shows in the quote's
+ * revision history). If the linked quote has already been revised elsewhere, the
+ * LATEST revision of its chain is the one revised, never a superseded row.
+ */
+export async function reviseQuoteFromNegotiation(input: {
+  negotiationId: string;
+  reason: string;
+}): Promise<
+  | { ok: true; quotationId: string; revisionNo: number }
+  | { ok: false; error: string }
+> {
+  await requireUser();
+  if (!isUuid(input.negotiationId)) {
+    return { ok: false, error: "Invalid negotiation id." };
+  }
+  const reason = (input.reason ?? "").trim();
+  if (reason.length < 3) {
+    return { ok: false, error: "Say why the quote is being revised." };
+  }
+
+  const [neg] = await db
+    .select({ quotationId: negotiations.quotationId })
+    .from(negotiations)
+    .where(eq(negotiations.id, input.negotiationId))
+    .limit(1);
+  if (!neg) return { ok: false, error: "Negotiation not found." };
+  if (!neg.quotationId) {
+    return {
+      ok: false,
+      error: "No quotation is linked to this negotiation to revise.",
+    };
+  }
+
+  // Revise the HEAD of the chain, never a superseded row.
+  const latestId = (await getLatestQuotationRevisionId(neg.quotationId)) ?? neg.quotationId;
+  const revised = await reviseQuotation({ quotationId: latestId, reason });
+  if (!revised.ok) return { ok: false, error: revised.error };
+
+  const now = new Date();
+  try {
+    await db
+      .update(negotiations)
+      .set({
+        negotiationStatus: "revision",
+        // Track the new revision so the read-only quotation view follows it.
+        quotationId: revised.id,
+        lastActivityAt: now,
+        updatedAt: now,
+      })
+      .where(eq(negotiations.id, input.negotiationId));
+  } catch (err) {
+    console.error("[reviseQuoteFromNegotiation] status update failed", err);
+    // The revision itself succeeded — surface success, the status will catch up
+    // on the next board move rather than losing the new quote.
+  }
+
+  revalidatePath("/negotiations");
+  revalidatePath(`/negotiations/${input.negotiationId}`);
+  revalidatePath("/quotations");
+  return { ok: true, quotationId: revised.id, revisionNo: revised.revisionNo };
 }
 
 // ── Revise-costing loop (2026-08 pipeline review) ───────────────────────────
@@ -902,20 +976,13 @@ export async function acceptAndConvertToSalesOrder(
     .limit(1);
   if (!neg) return { ok: false, error: "Negotiation not found." };
 
-  // GATE: a customer PO must be present and the stage must be at PO received.
-  if (!neg.customerPoLink && !neg.customerPoNo) {
-    return { ok: false, error: "Record the customer PO before converting to a sales order." };
-  }
-  if (neg.stage !== "customer_po_received") {
-    return { ok: false, error: "The negotiation must be at Customer PO Received to convert." };
-  }
-  // GATE: an APPROVED negotiation is what enables Issue Sales Order (Manan).
-  // `order_won` is accepted as the legacy synonym of `negotiation_approved` —
-  // see NEGOTIATION_SO_READY_STATUSES — so already-won rows stay convertible.
+  // GATE: the deal must be Won. The customer PO is NO LONGER required here
+  // (2026-09) — PO capture + verification moved to the Sales Order stage, so a
+  // Won negotiation provisions its SO straight away and the PO is recorded there.
   if (!isNegotiationApprovedForSo(neg.status)) {
     return {
       ok: false,
-      error: "Approve the negotiation before issuing the sales order.",
+      error: "Mark the negotiation Won before issuing the sales order.",
     };
   }
 
@@ -942,10 +1009,16 @@ export async function acceptAndConvertToSalesOrder(
           updatedAt: now,
         })
         .where(eq(salesOrders.id, prov.id));
-      // Mark the negotiation won.
+      // Mark the negotiation won + awarded (the PO is captured later in the
+      // Sales Order stage, so the stage stops at "awarded" here rather than
+      // "customer PO received").
       await tx
         .update(negotiations)
-        .set({ negotiationStatus: "order_won", updatedAt: now })
+        .set({
+          negotiationStatus: "order_won",
+          negotiationStage: "negotiation_awarded",
+          updatedAt: now,
+        })
         .where(eq(negotiations.id, negotiationId));
       return prov.id;
     });

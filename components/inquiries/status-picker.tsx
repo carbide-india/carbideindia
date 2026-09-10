@@ -15,6 +15,14 @@ interface Props<T extends string> {
   onPick: (next: T) => Promise<{ ok: boolean } | { ok: false; error: string }>;
   /** Fired after the server confirms (e.g. "proceed_to_costing" toast). */
   onConfirmed?: (next: T) => void;
+  /**
+   * Optional escape hatch: return true to CLAIM this pick — the picker closes
+   * and does nothing else (no optimistic flip, no onPick, no toast), leaving the
+   * caller to drive its own flow (e.g. a "Revise Quote" reason popup that then
+   * sets the status itself). Return false / omit to let the picker handle it
+   * normally. Existing callers pass nothing and are unaffected.
+   */
+  interceptPick?: (next: T) => boolean;
   ariaLabel: string;
   /** Locks the picker (no open, no change) — e.g. an approved negotiation. */
   disabled?: boolean;
@@ -32,6 +40,7 @@ export function StatusPicker<T extends string>({
   tones,
   onPick,
   onConfirmed,
+  interceptPick,
   ariaLabel,
   disabled = false,
 }: Props<T>) {
@@ -45,6 +54,9 @@ export function StatusPicker<T extends string>({
 
   async function pick(next: T) {
     setOpen(false);
+    // A claimed pick is driven entirely by the caller — checked before the
+    // no-op guard so it can re-trigger even when it equals the current status.
+    if (interceptPick?.(next)) return;
     if (next === shown) return;
     const prev = shown;
     setShown(next);

@@ -338,24 +338,46 @@ export function QuotationTable({ rows, filtered = false, heading, actions }: Pro
         sortValue: (r) => (r.isRevision ? r.revisionNo : 0),
         exportValue: (r) => (r.isRevision ? `Rev ${Math.max(1, r.revisionNo - 1)}` : "Original"),
         cell: (r) => {
-          const color = r.isRevision ? "#d03232" : "#16a34a";
+          // Superseded rows go muted grey — a green ORIGINAL / red REV badge reads
+          // as the live quote, which a superseded one is not.
+          const color = !r.isLatestRevision
+            ? "#8a8fa6"
+            : r.isRevision
+              ? "#d03232"
+              : "#16a34a";
           const revLabel = r.isRevision ? `Rev ${Math.max(1, r.revisionNo - 1)}` : "Original";
           // Ghost of the widest label so every revision badge in the column is
           // the same width (ORIGINAL / REV 1 / REV 10 all align).
           const revSizer = revLabel.length > "Original".length ? revLabel : "Original";
           return (
-            <span
-              className="inline-grid place-items-center rounded-[4px] px-1.5 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.04em]"
-              style={{
-                color,
-                background: `color-mix(in srgb, ${color} 12%, transparent)`,
-                border: `1px solid color-mix(in srgb, ${color} 30%, transparent)`,
-              }}
-            >
-              <span aria-hidden className="invisible col-start-1 row-start-1 whitespace-nowrap">
-                {revSizer}
+            <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+              <span
+                className="inline-grid place-items-center rounded-[4px] px-1.5 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.04em]"
+                style={{
+                  color,
+                  background: `color-mix(in srgb, ${color} 12%, transparent)`,
+                  border: `1px solid color-mix(in srgb, ${color} 30%, transparent)`,
+                }}
+              >
+                <span aria-hidden className="invisible col-start-1 row-start-1 whitespace-nowrap">
+                  {revSizer}
+                </span>
+                <span className="col-start-1 row-start-1 whitespace-nowrap">{revLabel}</span>
               </span>
-              <span className="col-start-1 row-start-1 whitespace-nowrap">{revLabel}</span>
+              {/* Superseded by a later revision — shown so an old approved quote
+                  no longer reads as the live one after a re-quote. */}
+              {!r.isLatestRevision && (
+                <span
+                  title="A newer revision has superseded this quote"
+                  className="inline-grid place-items-center rounded-[4px] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.04em] text-ink-subtle"
+                  style={{
+                    background: "color-mix(in srgb, var(--color-ink-subtle) 10%, transparent)",
+                    border: "1px solid color-mix(in srgb, var(--color-ink-subtle) 24%, transparent)",
+                  }}
+                >
+                  Superseded
+                </span>
+              )}
             </span>
           );
         },

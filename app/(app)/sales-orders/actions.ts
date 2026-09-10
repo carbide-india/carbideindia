@@ -1,11 +1,13 @@
 "use server";
 
+import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { and, count, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   salesOrders,
   salesOrderItems,
+  salesOrderPoConfirmations,
   jobCards,
   productionOrders,
   dispatches,
@@ -14,6 +16,12 @@ import {
   invoiceLines,
   type NewSalesOrder,
 } from "@/db/schema";
+import { SALES_ORDER_PO_CONFIRMATIONS } from "@/db/enums";
+import { DOCUMENTS_PATHNAME_PREFIX } from "@/lib/documents/upload-validation";
+import {
+  listSalesOrderPoConfirmations,
+  type SalesOrderPoConfirmationEntry,
+} from "@/lib/queries/sales-orders";
 import { requireUser } from "@/lib/auth/current";
 import {
   getQuoteAutofill,
@@ -43,6 +51,82 @@ import {
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// ── Customer PO Confirmation (2026-09) ──────────────────────────────────────
+const SetPoConfirmationSchema = z
+  .object({
+    salesOrderId: z.string().uuid("Invalid sales order."),
+    status: z.enum(SALES_ORDER_PO_CONFIRMATIONS),
+    notes: z.string().trim().max(4000, "Note is too long.").optional(),
+    attachmentPath: z.string().trim().min(1).max(1024).optional(),
+    attachmentName: z.string().trim().min(1).max(255).optional(),
+  })
+  .refine(
+    (v) => !v.attachmentPath || v.attachmentPath.startsWith(DOCUMENTS_PATHNAME_PREFIX),
+    { message: "Invalid attachment.", path: ["attachmentPath"] },
+  );
+
+export type SetPoConfirmationInput = z.infer<typeof SetPoConfirmationSchema>;
+
+/**
+ * Set the Customer PO Confirmation on a sales order. Append-only: each call logs
+ * one `sales_order_po_confirmations` row (status + note + optional attachment)
+ * and mirrors the latest status onto `sales_orders.customer_po_confirmation`
+ * (which drives the register column + the Revised SO / Revised PO tabs).
+ */
+export async function setSalesOrderPoConfirmation(
+  input: SetPoConfirmationInput,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const me = await requireUser();
+  const parsed = SetPoConfirmationSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+  const v = parsed.data;
+
+  const [so] = await db
+    .select({ id: salesOrders.id })
+    .from(salesOrders)
+    .where(eq(salesOrders.id, v.salesOrderId))
+    .limit(1);
+  if (!so) return { ok: false, error: "Sales order not found." };
+
+  const now = new Date();
+  try {
+    await db.transaction(async (tx) => {
+      await tx.insert(salesOrderPoConfirmations).values({
+        salesOrderId: v.salesOrderId,
+        status: v.status,
+        notes: v.notes?.trim() || null,
+        attachmentPath: v.attachmentPath ?? null,
+        attachmentName: v.attachmentPath ? v.attachmentName ?? null : null,
+        authorId: me.id,
+        createdAt: now,
+      });
+      await tx
+        .update(salesOrders)
+        .set({ customerPoConfirmation: v.status, updatedAt: now })
+        .where(eq(salesOrders.id, v.salesOrderId));
+    });
+  } catch (err) {
+    console.error("[setSalesOrderPoConfirmation]", err);
+    return { ok: false, error: "Could not save the confirmation. Please try again." };
+  }
+
+  revalidatePath("/sales-orders");
+  revalidatePath(`/sales-orders/${v.salesOrderId}`);
+  return { ok: true };
+}
+
+/** The Customer PO Confirmation trail for one sales order (for the register's
+ *  history popover) — thin client-callable wrapper over the server-only query. */
+export async function getSalesOrderPoConfirmationLog(
+  salesOrderId: string,
+): Promise<SalesOrderPoConfirmationEntry[]> {
+  await requireUser();
+  if (!UUID_RE.test(salesOrderId)) return [];
+  return listSalesOrderPoConfirmations(salesOrderId);
+}
 const isUuid = (v: string): boolean => UUID_RE.test(v);
 
 /**

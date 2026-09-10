@@ -6,7 +6,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
-import { AlertTriangle, ArrowLeft, ArrowUpRight, Loader2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowUpRight, Loader2, Lock } from "lucide-react";
 import {
   COSTING_DONE_STATUSES,
   COSTING_DONE_STATUS_LABELS,
@@ -313,16 +313,33 @@ export function QuotationDetail({
             </section>
           )}
 
-          {/* Editable form note */}
-          {lines.length > 0 && (
+          {/* Editable form note (hidden once locked — nothing below is editable then) */}
+          {lines.length > 0 && quotation.quotationStatus !== "quotation_approved" && (
             <p className="text-[13px] text-ink-muted -mt-1">
               Editing below updates <strong className="font-bold text-ink-soft">Product 1</strong> only. Products 2 and up are shown read-only - full per-product editing is coming soon.
             </p>
           )}
 
           {/* One form for the editable area, laid out as a cohesive
-              feasibility-style banded card (all fields stay editable). */}
+              feasibility-style banded card. An APPROVED quote is LOCKED — it is
+              committed, so you revise it (top-right) rather than editing it in
+              place; the <fieldset disabled> makes every control read-only and the
+              server refuses an edit to an approved quote as the real guard. */}
           <form onSubmit={onSubmit} noValidate>
+            {quotation.quotationStatus === "quotation_approved" && (
+              <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-hairline bg-surface-soft px-4 py-3 text-[13px] text-ink-soft">
+                <Lock size={15} strokeWidth={2.4} className="mt-0.5 shrink-0 text-ink-subtle" />
+                <span>
+                  This quotation is <strong className="font-bold text-ink-strong">approved</strong> and locked. To
+                  change it, use <strong className="font-bold text-ink-strong">Revise Quotation</strong> (top
+                  right) — it opens a new revision you can edit, and this approved quote stays frozen.
+                </span>
+              </div>
+            )}
+            <fieldset
+              disabled={quotation.quotationStatus === "quotation_approved"}
+              className="m-0 min-w-0 border-0 p-0 disabled:opacity-60"
+            >
             <div className="overflow-hidden rounded-section border-2 border-[#b7bcd2] bg-surface-card">
               <LineBand title="Product" />
               <div className="flex flex-col gap-4 p-4">
@@ -444,6 +461,7 @@ export function QuotationDetail({
                 </div>
               </div>
             </div>
+            </fieldset>
           </form>
         </div>
 

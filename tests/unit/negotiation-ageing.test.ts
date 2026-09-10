@@ -43,6 +43,7 @@ describe("ageingKeysFor", () => {
     expect(ageingKeysFor("to_start", daysAgo(70), NOW)).toEqual([
       "after_15_days",
       "after_1_month",
+      "after_45_days",
       "after_2_months",
     ]);
   });
@@ -74,6 +75,7 @@ describe("countAgeing", () => {
     expect(countAgeing([], NOW)).toEqual({
       after_15_days: 0,
       after_1_month: 0,
+      after_45_days: 0,
       after_2_months: 0,
     });
   });
@@ -91,6 +93,7 @@ describe("countAgeing", () => {
     expect(counts).toEqual({
       after_15_days: 2, // the 70-day and the 20-day
       after_1_month: 1, // only the 70-day
+      after_45_days: 1, // only the 70-day
       after_2_months: 1,
     });
   });
@@ -116,11 +119,12 @@ describe("the buckets themselves", () => {
     expect([...days].sort((a, b) => a - b)).toEqual(days);
   });
 
-  it("are the three Manan named", () => {
+  it("are the four follow-up intervals", () => {
     expect(NEGOTIATION_AGEING_BUCKETS.map((b) => b.label)).toEqual([
-      "After 15 Days",
-      "After 1 Month",
-      "After 2 Months",
+      "Follow up after 15 days",
+      "Follow up after 1 month",
+      "Follow up after 45 days",
+      "Follow up after 2 months",
     ]);
   });
 });

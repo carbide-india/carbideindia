@@ -665,6 +665,40 @@ export const SALES_ORDER_STAGE_BUCKETS = [
   "not_approved", "on_hold", "cancelled", "sales_order_approved",
 ] as const satisfies readonly SalesOrderStatus[];
 
+/**
+ * Customer PO Confirmation (2026-09) — how the customer's PO has been confirmed
+ * against the sales order. Set from the register with a note + optional
+ * attachment (each change kept in an append-only log). Stored as TEXT on
+ * `sales_orders.customer_po_confirmation` (default "not_read"). "revised_so" /
+ * "revised_po" also drive the register's Revised SO / Revised PO sidebar tabs.
+ */
+export const SALES_ORDER_PO_CONFIRMATIONS = [
+  "not_read", "email_confirmation", "whatsapp_confirmation", "verbal_confirmation",
+  "follow_up", "po_read", "revised_so", "revised_po",
+] as const;
+export type SalesOrderPoConfirmationStatus =
+  (typeof SALES_ORDER_PO_CONFIRMATIONS)[number];
+export const SALES_ORDER_PO_CONFIRMATION_LABELS: Record<SalesOrderPoConfirmationStatus, string> = {
+  not_read: "Not Read",
+  email_confirmation: "Email Confirmation",
+  whatsapp_confirmation: "WhatsApp Confirmation",
+  verbal_confirmation: "Verbal Confirmation",
+  follow_up: "Follow Up",
+  po_read: "PO Read",
+  revised_so: "Revised SO",
+  revised_po: "Revised PO",
+};
+export const SALES_ORDER_PO_CONFIRMATION_COLORS: Record<SalesOrderPoConfirmationStatus, string> = {
+  not_read: "slate",
+  email_confirmation: "blue",
+  whatsapp_confirmation: "green",
+  verbal_confirmation: "amber",
+  follow_up: "purple",
+  po_read: "green",
+  revised_so: "amber",
+  revised_po: "amber",
+};
+
 // Negotiation status. Append-only: the four house-vocabulary values were added at
 // the END in 2026-08. `to_start` IS the Not Started bucket. The pre-existing
 // commercial OUTCOMES (order_won / order_lost / order_abandoned / verbal_yes /
@@ -675,6 +709,10 @@ export const NEGOTIATION_STATUSES = [
   "to_start", "follow_up", "revision", "verbal_yes",
   "order_won", "order_lost", "order_abandoned", "need_help", "on_hold",
   "draft", "need_info", "pending_approval", "negotiation_approved", "not_approved", "cancelled",
+  // Follow-up-interval working states (2026-09) — you SET one and the deal lands
+  // in the matching sidebar tab. They replace the single generic "follow_up" as
+  // pickable states; "follow_up" stays for data compat.
+  "follow_up_15d", "follow_up_1m", "follow_up_45d", "follow_up_2m",
 ] as const;
 export type NegotiationStatus = (typeof NEGOTIATION_STATUSES)[number];
 export const NEGOTIATION_STATUS_LABELS: Record<NegotiationStatus, string> = {
@@ -683,6 +721,8 @@ export const NEGOTIATION_STATUS_LABELS: Record<NegotiationStatus, string> = {
   need_help: "Need Help", on_hold: "On Hold",
   draft: "Draft", need_info: "Need Info", pending_approval: "Pending Approval",
   negotiation_approved: "Negotiation Approved", not_approved: "Not Approved", cancelled: "Cancelled",
+  follow_up_15d: "Follow up after 15 days", follow_up_1m: "Follow up after 1 month",
+  follow_up_45d: "Follow up after 45 days", follow_up_2m: "Follow up after 2 months",
 };
 export const NEGOTIATION_STATUS_COLORS: Record<NegotiationStatus, string> = {
   to_start: "slate", follow_up: "blue", revision: "amber", verbal_yes: "purple",
@@ -690,6 +730,7 @@ export const NEGOTIATION_STATUS_COLORS: Record<NegotiationStatus, string> = {
   need_help: "red", on_hold: "stone",
   draft: "blue", need_info: "amber", pending_approval: "purple", negotiation_approved: "green",
   not_approved: "rose", cancelled: "slate",
+  follow_up_15d: "blue", follow_up_1m: "blue", follow_up_45d: "blue", follow_up_2m: "blue",
 };
 /**
  * The Negotiation board's columns (Hetesh, 2026-08-13).
@@ -701,9 +742,18 @@ export const NEGOTIATION_STATUS_COLORS: Record<NegotiationStatus, string> = {
  * compatibility and the approver gate still refuses them from anyone else, but
  * they are not columns on this board.
  */
+// Cancelled was folded into Abandoned (Manan, 2026-09): a negotiation that goes
+// nowhere is Abandoned, full stop — there is no separate Cancelled column. The
+// enum value stays for data compat, but it is no longer a board column / sidebar
+// bucket / pickable status.
 export const NEGOTIATION_STAGE_BUCKETS = [
-  "to_start", "need_info", "follow_up", "revision",
-  "order_won", "order_lost", "order_abandoned", "on_hold", "cancelled",
+  "to_start", "need_info",
+  // The follow-up intervals are the pickable follow-up states now (they replace
+  // the single generic "follow_up", which is off-board / legacy).
+  "follow_up_15d", "follow_up_1m", "follow_up_45d", "follow_up_2m",
+  "revision", "on_hold",
+  // Outcomes read LAST — the working states sit above them.
+  "order_won", "order_lost", "order_abandoned",
 ] as const satisfies readonly NegotiationStatus[];
 
 /**
@@ -713,9 +763,10 @@ export const NEGOTIATION_STAGE_BUCKETS = [
  * that sum to a total.
  */
 export const NEGOTIATION_AGEING_BUCKETS = [
-  { key: "after_15_days", label: "After 15 Days", days: 15 },
-  { key: "after_1_month", label: "After 1 Month", days: 30 },
-  { key: "after_2_months", label: "After 2 Months", days: 60 },
+  { key: "after_15_days", label: "Follow up after 15 days", days: 15 },
+  { key: "after_1_month", label: "Follow up after 1 month", days: 30 },
+  { key: "after_45_days", label: "Follow up after 45 days", days: 45 },
+  { key: "after_2_months", label: "Follow up after 2 months", days: 60 },
 ] as const;
 export type NegotiationAgeingKey = (typeof NEGOTIATION_AGEING_BUCKETS)[number]["key"];
 

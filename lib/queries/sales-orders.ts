@@ -5,6 +5,7 @@ import { getDocumentDownloadUrls } from "@/lib/storage/blob";
 import {
   salesOrders,
   salesOrderItems,
+  salesOrderPoConfirmations,
   inquiries,
   inquiryItems,
   employees,
@@ -13,7 +14,10 @@ import {
   type SalesOrder,
   type SalesOrderItem,
 } from "@/db/schema";
-import type { SalesOrderStatus } from "@/db/enums";
+import type {
+  SalesOrderStatus,
+  SalesOrderPoConfirmationStatus,
+} from "@/db/enums";
 import {
   resolveSpecsByItemId,
   resolveCustomerAskByInquiryItemId,
@@ -41,6 +45,9 @@ export interface SalesOrderListItem {
   customerSoSent: boolean;
   /** Factory / production copy send-state - its OWN flag, not a mirror. */
   productionSoSent: boolean;
+  /** Current Customer PO Confirmation — drives the register column + the Revised
+   *  SO / Revised PO sidebar tabs. */
+  customerPoConfirmation: SalesOrderPoConfirmationStatus;
   /** SM snapshot of the enquiry date; null on legacy rows - date filters fall
    *  back to createdAt. */
   enquiryDate: Date | null;
@@ -76,6 +83,7 @@ export async function listSalesOrders(
       salesOrderStatus: salesOrders.salesOrderStatus,
       customerSoSent: salesOrders.customerSoSent,
       productionSoSent: salesOrders.productionSoSent,
+      customerPoConfirmation: salesOrders.customerPoConfirmation,
       enquiryDate: salesOrders.enquiryDate,
       createdAt: salesOrders.createdAt,
     })
@@ -106,7 +114,68 @@ export async function listSalesOrders(
     }
   }
 
-  return rows.map((r) => ({ ...r, itemCode: itemCodeBySo.get(r.id) ?? null }));
+  return rows.map((r) => ({
+    ...r,
+    customerPoConfirmation: r.customerPoConfirmation as SalesOrderPoConfirmationStatus,
+    itemCode: itemCodeBySo.get(r.id) ?? null,
+  }));
+}
+
+/** One entry of a sales order's Customer PO Confirmation log, as the register's
+ *  history popover renders it (oldest first, attachments presigned). */
+export interface SalesOrderPoConfirmationEntry {
+  id: string;
+  status: SalesOrderPoConfirmationStatus;
+  notes: string | null;
+  authorName: string | null;
+  createdAt: Date;
+  attachmentName: string | null;
+  /** Short-lived presigned URL; null when there is no attachment or it could not
+   *  be signed. */
+  attachmentUrl: string | null;
+}
+
+/** The append-only Customer PO Confirmation trail for one sales order, oldest
+ *  first, with any attachment presigned in one batched call. */
+export async function listSalesOrderPoConfirmations(
+  salesOrderId: string,
+): Promise<SalesOrderPoConfirmationEntry[]> {
+  const rows = await db
+    .select({
+      id: salesOrderPoConfirmations.id,
+      status: salesOrderPoConfirmations.status,
+      notes: salesOrderPoConfirmations.notes,
+      attachmentPath: salesOrderPoConfirmations.attachmentPath,
+      attachmentName: salesOrderPoConfirmations.attachmentName,
+      authorName: employees.name,
+      createdAt: salesOrderPoConfirmations.createdAt,
+    })
+    .from(salesOrderPoConfirmations)
+    .leftJoin(employees, eq(salesOrderPoConfirmations.authorId, employees.id))
+    .where(eq(salesOrderPoConfirmations.salesOrderId, salesOrderId))
+    .orderBy(asc(salesOrderPoConfirmations.createdAt));
+
+  const paths = rows
+    .map((r) => r.attachmentPath)
+    .filter((v): v is string => typeof v === "string" && v.length > 0);
+  let urls = new Map<string, string>();
+  if (paths.length > 0) {
+    try {
+      urls = await getDocumentDownloadUrls(paths);
+    } catch {
+      urls = new Map();
+    }
+  }
+
+  return rows.map((r) => ({
+    id: r.id,
+    status: r.status as SalesOrderPoConfirmationStatus,
+    notes: r.notes,
+    authorName: r.authorName,
+    createdAt: r.createdAt,
+    attachmentName: r.attachmentName,
+    attachmentUrl: r.attachmentPath ? urls.get(r.attachmentPath) ?? null : null,
+  }));
 }
 
 /** Full sales-order row for the detail page. */

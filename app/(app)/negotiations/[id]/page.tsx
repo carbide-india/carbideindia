@@ -4,14 +4,14 @@ import { requireUser } from "@/lib/auth/current";
 import {
   getNegotiationById,
   getNegotiationItems,
-  listRevisableCostingsForNegotiation,
 } from "@/lib/queries/negotiations";
 import { getInquiryById } from "@/lib/queries/inquiries";
 import { listEmployeeOptions } from "@/lib/queries/employees";
 import { getInquiryItemSeeds } from "@/lib/queries/quotes";
-import { getQuotationFullDetail } from "@/lib/queries/quotations";
-import { listProformaInvoicesForNegotiation } from "@/lib/queries/proforma-invoices";
-import { getDocumentDownloadUrls } from "@/lib/storage/blob";
+import {
+  getQuotationPdfModel,
+  getLatestQuotationRevisionId,
+} from "@/lib/queries/quotations";
 import {
   NegotiationDetail,
   type NegotiationInquiryLink,
@@ -50,18 +50,10 @@ export default async function NegotiationDetailPage({ params }: PageProps) {
   if (!negotiation) notFound();
 
   // The linked enquiry (SM repo) supplies the header SM chip + number, and the
-  // seed list lets us flag products added to the enquiry after this negotiation.
-  // The linked quotation drives the Quote Send anchor; the PI list feeds the
-  // iteration history + the customer-PO reconciliation.
-  const [
-    employees,
-    inquiry,
-    lines,
-    seeds,
-    quotationDetail,
-    proformaInvoices,
-    revisableCostings,
-  ] = await Promise.all([
+  // seed list flags products added to the enquiry after this negotiation. The
+  // linked quotation is shown read-only — always resolved to the LATEST revision
+  // of its chain, so a re-quote (from here or the Quotation stage) shows through.
+  const [employees, inquiry, lines, seeds, quotationPdf] = await Promise.all([
     listEmployeeOptions(),
     negotiation.inquiryId
       ? getInquiryById(negotiation.inquiryId)
@@ -70,30 +62,12 @@ export default async function NegotiationDetailPage({ params }: PageProps) {
     negotiation.inquiryId
       ? getInquiryItemSeeds(negotiation.inquiryId)
       : Promise.resolve([]),
-    // The COMPLETE quotation behind this negotiation, resolved read-only for the
-    // reference block (header + every line + totals).
     negotiation.quotationId
-      ? getQuotationFullDetail(negotiation.quotationId)
+      ? getLatestQuotationRevisionId(negotiation.quotationId).then((latestId) =>
+          getQuotationPdfModel(latestId),
+        )
       : Promise.resolve(null),
-    listProformaInvoicesForNegotiation(negotiation.id),
-    // Current-revision cost sheets behind this negotiation's product lines —
-    // the pick list for "not approved → new costing revision".
-    listRevisableCostingsForNegotiation(negotiation.id),
   ]);
-
-  // Latest PI total (list is newest-iteration first) for PI↔PO reconciliation.
-  const latestPiTotal = proformaInvoices[0]?.revisedTotal ?? null;
-
-  // Presign the stored customer-PO document pathname for a working "view" link.
-  let poDownloadUrl: string | null = null;
-  if (negotiation.customerPoLink) {
-    try {
-      const urls = await getDocumentDownloadUrls([negotiation.customerPoLink]);
-      poDownloadUrl = urls.get(negotiation.customerPoLink) ?? null;
-    } catch {
-      poDownloadUrl = null;
-    }
-  }
 
   const inquiryLink: NegotiationInquiryLink | null = inquiry
     ? {
@@ -121,11 +95,7 @@ export default async function NegotiationDetailPage({ params }: PageProps) {
           negotiation={negotiation}
           employees={employees}
           inquiryLink={inquiryLink}
-          lines={lines}
-          latestPiTotal={latestPiTotal}
-          poDownloadUrl={poDownloadUrl}
-          revisableCostings={revisableCostings}
-          quotationDetail={quotationDetail}
+          quotationPdf={quotationPdf}
         />
       </div>
     </EnquiryModuleShell>

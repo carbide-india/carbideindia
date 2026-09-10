@@ -3,6 +3,7 @@ import {
   SALES_ORDER_STATUS_LABELS,
   SALES_ORDER_STATUS_COLORS,
   type SalesOrderStatus,
+  type SalesOrderPoConfirmationStatus,
 } from "@/db/enums";
 
 /**
@@ -26,6 +27,16 @@ export interface BucketableSalesOrder {
   salesOrderStatus: SalesOrderStatus;
   customerSoSent: boolean;
   productionSoSent: boolean;
+  customerPoConfirmation: SalesOrderPoConfirmationStatus;
+}
+
+/** How many rows carry each Customer PO Confirmation value (used for the Revised
+ *  SO / Revised PO sidebar tabs). */
+export function poConfirmationCount(
+  rows: ReadonlyArray<BucketableSalesOrder>,
+  status: SalesOrderPoConfirmationStatus,
+): number {
+  return rows.reduce((n, r) => (r.customerPoConfirmation === status ? n + 1 : n), 0);
 }
 
 export interface StageBucketCount {
@@ -116,11 +127,16 @@ export function applySalesOrderFilters<T extends BucketableSalesOrder>(
   filters: {
     status?: SalesOrderStatus | null;
     output?: SalesOrderOutputFilter | null;
+    /** Customer PO Confirmation — drives the Revised SO / Revised PO tabs. */
+    poConfirm?: SalesOrderPoConfirmationStatus | null;
   },
 ): T[] {
   let out = rows.slice();
   if (filters.status) {
     out = out.filter((r) => r.salesOrderStatus === filters.status);
+  }
+  if (filters.poConfirm) {
+    out = out.filter((r) => r.customerPoConfirmation === filters.poConfirm);
   }
   switch (filters.output) {
     case "customer_pending":

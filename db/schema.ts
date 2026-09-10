@@ -1862,6 +1862,13 @@ export const salesOrders = pgTable("sales_orders", {
   /** Revision count of the CUSTOMER's PO — bumped by Revise Cust PO. The
    *  superseded versions live in `customer_po_revisions`. */
   customerPoRevisionNo: integer("customer_po_revision_no").notNull().default(1),
+  /**
+   * Current Customer PO Confirmation (2026-09) — one of
+   * SALES_ORDER_PO_CONFIRMATIONS. Set from the register; every change is logged
+   * in `sales_order_po_confirmations` with a note + optional attachment. TEXT
+   * (not a pg enum) so the vocabulary can grow without a migration per word.
+   */
+  customerPoConfirmation: text("customer_po_confirmation").notNull().default("not_read"),
   createdById: uuid("created_by_id").references(() => employees.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -1910,6 +1917,38 @@ export const customerPoRevisions = pgTable(
 export type CustomerPoRevision = typeof customerPoRevisions.$inferSelect;
 export type SalesOrder = typeof salesOrders.$inferSelect;
 export type NewSalesOrder = typeof salesOrders.$inferInsert;
+
+/**
+ * Customer PO Confirmation log (2026-09) — the append-only trail of how the
+ * customer's PO was confirmed against the sales order. Each register selection
+ * (Email / WhatsApp / Verbal confirmation, Follow Up, PO Read, Revised SO/PO…)
+ * writes one row with the note + an optional private-Blob attachment; the SO's
+ * `customer_po_confirmation` column mirrors the latest one for the register
+ * column + the Revised SO / Revised PO tabs.
+ */
+export const salesOrderPoConfirmations = pgTable(
+  "sales_order_po_confirmations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    salesOrderId: uuid("sales_order_id")
+      .notNull()
+      .references(() => salesOrders.id, { onDelete: "cascade" }),
+    /** One of SALES_ORDER_PO_CONFIRMATIONS. */
+    status: text("status").notNull(),
+    notes: text("notes"),
+    /** Private-Blob pathname of an evidence file (email/WhatsApp screenshot, the
+     *  revised PO/SO…); null when none was attached. */
+    attachmentPath: text("attachment_path"),
+    attachmentName: text("attachment_name"),
+    authorId: uuid("author_id").references(() => employees.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("so_po_confirmations_so_idx").on(t.salesOrderId, t.createdAt),
+  ],
+);
+export type SalesOrderPoConfirmation = typeof salesOrderPoConfirmations.$inferSelect;
+export type NewSalesOrderPoConfirmation = typeof salesOrderPoConfirmations.$inferInsert;
 
 export const salesOrderItems = pgTable(
   "sales_order_items",

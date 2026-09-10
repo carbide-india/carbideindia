@@ -22,11 +22,14 @@ import {
   deleteSalesOrdersBulk,
 } from "@/app/(app)/sales-orders/actions";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { SoPoConfirmationCell } from "@/components/sales-orders/so-po-confirmation-cell";
 import type { SalesOrderListItem } from "@/lib/queries/sales-orders";
 import {
   SALES_ORDER_STAGE_BUCKETS,
   SALES_ORDER_STATUS_LABELS,
   SALES_ORDER_STATUS_COLORS,
+  SALES_ORDER_PO_CONFIRMATIONS,
+  SALES_ORDER_PO_CONFIRMATION_LABELS,
 } from "@/db/enums";
 
 export const NEW_SALES_ORDER_ROUTE: Route = "/sales-orders/new";
@@ -200,6 +203,16 @@ export function SoTable({ rows, heading, actions }: Props) {
           >
             {r.customerPoNo ?? "-"}
           </span>
+        ),
+      },
+      {
+        id: "customerPoConfirmation",
+        header: "Customer PO Confirmation",
+        sortValue: (r) =>
+          (SALES_ORDER_PO_CONFIRMATIONS as readonly string[]).indexOf(r.customerPoConfirmation),
+        exportValue: (r) => SALES_ORDER_PO_CONFIRMATION_LABELS[r.customerPoConfirmation],
+        cell: (r) => (
+          <SoPoConfirmationCell salesOrderId={r.id} value={r.customerPoConfirmation} />
         ),
       },
       {

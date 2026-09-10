@@ -624,6 +624,20 @@
       "when": 1788961897459,
       "tag": "0090_right_menace",
       "breakpoints": true
+    },
+    {
+      "idx": 91,
+      "version": "7",
+      "when": 1789031435922,
+      "tag": "0091_gray_silver_sable",
+      "breakpoints": true
+    },
+    {
+      "idx": 92,
+      "version": "7",
+      "when": 1789033889109,
+      "tag": "0092_heavy_marauders",
+      "breakpoints": true
     }
   ]
 }

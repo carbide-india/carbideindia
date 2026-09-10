@@ -11,12 +11,16 @@ import { listSalesOrders } from "@/lib/queries/sales-orders";
 import {
   SALES_ORDER_STATUSES,
   SALES_ORDER_STATUS_LABELS,
+  SALES_ORDER_PO_CONFIRMATIONS,
+  SALES_ORDER_PO_CONFIRMATION_LABELS,
   type SalesOrderStatus,
+  type SalesOrderPoConfirmationStatus,
 } from "@/db/enums";
 import {
   applySalesOrderFilters,
   isOutputFilter,
   outputCounts,
+  poConfirmationCount,
   stageBucketCounts,
 } from "@/lib/sales-orders/buckets";
 import { EnquiryModuleShell } from "@/components/enquiries/enquiry-module-shell";
@@ -40,7 +44,7 @@ const OUTPUT_LABELS: Record<string, string> = {
 };
 
 interface PageProps {
-  searchParams: Promise<{ status?: string; output?: string }>;
+  searchParams: Promise<{ status?: string; output?: string; poConfirm?: string }>;
 }
 
 /**
@@ -68,6 +72,11 @@ export default async function SalesOrdersPage({ searchParams }: PageProps) {
     ? (sp.status as SalesOrderStatus)
     : null;
   const activeOutput = isOutputFilter(sp.output) ? sp.output : null;
+  const activePoConfirm = (SALES_ORDER_PO_CONFIRMATIONS as readonly string[]).includes(
+    sp.poConfirm as string,
+  )
+    ? (sp.poConfirm as SalesOrderPoConfirmationStatus)
+    : null;
 
   // Counts are always over `all` - never over the filtered set, or clicking a
   // tile would rewrite the very numbers you were reading.
@@ -76,11 +85,13 @@ export default async function SalesOrdersPage({ searchParams }: PageProps) {
   const rows = applySalesOrderFilters(all, {
     status: activeStatus,
     output: activeOutput,
+    poConfirm: activePoConfirm,
   });
 
   const filterLabels = [
     activeStatus ? SALES_ORDER_STATUS_LABELS[activeStatus] : null,
     activeOutput ? OUTPUT_LABELS[activeOutput] ?? null : null,
+    activePoConfirm ? SALES_ORDER_PO_CONFIRMATION_LABELS[activePoConfirm] : null,
   ].filter((v): v is string => v !== null);
 
   // Admins get a Bulk Upload entry in the sidebar (opens the import modal — same
@@ -103,10 +114,15 @@ export default async function SalesOrdersPage({ searchParams }: PageProps) {
   // views are FLAGS, not buckets: an order can be issued to production and to
   // the customer at once, so they cross-cut the stage buckets rather than
   // partitioning them, and must never look like a sixth and seventh bucket.
-  const hrefWith = (status: string | null, output: string | null) => {
+  const hrefWith = (
+    status: string | null,
+    output: string | null,
+    poConfirm: string | null,
+  ) => {
     const p = new URLSearchParams();
     if (status) p.set("status", status);
     if (output) p.set("output", output);
+    if (poConfirm) p.set("poConfirm", poConfirm);
     const qs = p.toString();
     return qs ? `/sales-orders?${qs}` : "/sales-orders";
   };
@@ -116,28 +132,30 @@ export default async function SalesOrdersPage({ searchParams }: PageProps) {
       label: b.label,
       tone: b.tone,
       count: b.count,
-      href: hrefWith(activeStatus === b.status ? null : b.status, activeOutput),
+      href: hrefWith(activeStatus === b.status ? null : b.status, activeOutput, activePoConfirm),
       active: activeStatus === b.status,
     })),
+    // Revised SO / Revised PO — driven by the Customer PO Confirmation (not the
+    // copy-sent flags, which keep their own tiles in the header strip).
     {
-      key: "factory_sent",
+      key: "revised_so",
       group: "flag" as const,
-      label: OUTPUT_LABELS.factory_sent!,
+      label: SALES_ORDER_PO_CONFIRMATION_LABELS.revised_so,
       tone: "amber",
-      count: outputs.factorySent,
-      hint: "Orders whose factory copy has been issued",
-      href: hrefWith(activeStatus, activeOutput === "factory_sent" ? null : "factory_sent"),
-      active: activeOutput === "factory_sent",
+      count: poConfirmationCount(all, "revised_so"),
+      hint: "Orders whose Customer PO Confirmation is Revised SO",
+      href: hrefWith(activeStatus, activeOutput, activePoConfirm === "revised_so" ? null : "revised_so"),
+      active: activePoConfirm === "revised_so",
     },
     {
-      key: "customer_sent",
+      key: "revised_po",
       group: "flag" as const,
-      label: OUTPUT_LABELS.customer_sent!,
+      label: SALES_ORDER_PO_CONFIRMATION_LABELS.revised_po,
       tone: "amber",
-      count: outputs.customerSent,
-      hint: "Orders whose customer copy has been issued",
-      href: hrefWith(activeStatus, activeOutput === "customer_sent" ? null : "customer_sent"),
-      active: activeOutput === "customer_sent",
+      count: poConfirmationCount(all, "revised_po"),
+      hint: "Orders whose Customer PO Confirmation is Revised PO",
+      href: hrefWith(activeStatus, activeOutput, activePoConfirm === "revised_po" ? null : "revised_po"),
+      active: activePoConfirm === "revised_po",
     },
   ];
 

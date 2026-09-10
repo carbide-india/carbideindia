@@ -108,14 +108,16 @@ describe("buildNegotiationDashboard", () => {
       g("pending_approval", 4),
       g("negotiation_approved", 1),
       g("order_won", 7),
-      g("follow_up", 6),
+      g("follow_up_1m", 6),
       g("on_hold", 2),
     ]);
     expect(d.total).toBe(30);
-    // On the board: to_start 5 + need_info 2 + order_won 7 + follow_up 6.
-    expect(d.bucketTotal).toBe(20);
-    // Off it: draft 3 + pending_approval 4 + negotiation_approved 1 + on_hold 2.
-    expect(d.offBoardTotal.count).toBe(10);
+    // On the board: to_start 5 + need_info 2 + order_won 7 + follow_up_1m 6 + on_hold 2.
+    // (The follow-up intervals and on_hold are board columns; the generic
+    // "follow_up" is the one that went off-board.)
+    expect(d.bucketTotal).toBe(22);
+    // Off it: draft 3 + pending_approval 4 + negotiation_approved 1.
+    expect(d.offBoardTotal.count).toBe(8);
     expect(d.bucketTotal + d.offBoardTotal.count).toBe(d.total);
   });
 

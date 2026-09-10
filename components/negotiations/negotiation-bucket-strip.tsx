@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import {
-  NEGOTIATION_AGEING_BUCKETS,
   NEGOTIATION_STAGES,
   NEGOTIATION_STAGE_BUCKETS,
   NEGOTIATION_STAGE_COLORS,
@@ -90,8 +89,6 @@ function hrefFor(f: Partial<NegotiationStripFilters>): Route {
 export function buildNegotiationSidebarTiles(
   dashboard: NegotiationDashboard,
   active: NegotiationStripFilters,
-  /** Open deals per ageing view — see getNegotiationAgeingCounts(). */
-  ageing: Record<NegotiationAgeingKey, number>,
 ): {
   key: string;
   label: string;
@@ -129,20 +126,9 @@ export function buildNegotiationSidebarTiles(
       // below the divider, apart from the states you still work in.
       ...(NEGOTIATION_CLOSED_SET.has(s) ? { group: "exit" as const } : {}),
     })),
-    // Ageing narrows whatever else is set, so these keep the current status.
-    ...NEGOTIATION_AGEING_BUCKETS.map((b) => ({
-      key: b.key as string,
-      group: "flag" as const,
-      label: b.label,
-      tone: "amber",
-      count: ageing[b.key],
-      hint: `Open deals untouched for ${b.days} days or more`,
-      href:
-        active.ageing === b.key
-          ? hrefFor({ ...active, ageing: null })
-          : hrefFor({ ...active, ageing: b.key }),
-      active: active.ageing === b.key,
-    })),
+    // (Follow-up intervals are now real statuses in NEGOTIATION_STAGE_BUCKETS
+    // above — you SET one and the deal shows in that tab — so the old computed
+    // "untouched for N days" ageing tiles are gone; they'd duplicate the labels.)
     {
       key: "outcome",
       // A second AXIS, not a bucket — legacy rows on a retired status sit here

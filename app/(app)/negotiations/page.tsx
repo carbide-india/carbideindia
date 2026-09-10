@@ -12,7 +12,6 @@ import {
 } from "@/components/negotiations/negotiation-bucket-strip";
 import { requireUser } from "@/lib/auth/current";
 import {
-  getNegotiationAgeingCounts,
   getNegotiationDashboard,
   listNegotiations,
 } from "@/lib/queries/negotiations";
@@ -93,9 +92,8 @@ export default async function NegotiationsPage({ searchParams }: PageProps) {
 
   const active: NegotiationStripFilters = { status, stage, axis, sent, ageing };
 
-  const [dashboard, ageingCounts, boardCards, rows] = await Promise.all([
+  const [dashboard, boardCards, rows] = await Promise.all([
     getNegotiationDashboard(),
-    getNegotiationAgeingCounts(),
     listNegotiationBoard(),
     listNegotiations({
       ageing: ageing ?? undefined,
@@ -120,7 +118,7 @@ export default async function NegotiationsPage({ searchParams }: PageProps) {
     .join(" · ");
 
   // Same derivation as the header strip — the sidebar just renders it densely.
-  const sidebarTiles = buildNegotiationSidebarTiles(dashboard, active, ageingCounts);
+  const sidebarTiles = buildNegotiationSidebarTiles(dashboard, active);
 
   return (
     <EnquiryModuleShell

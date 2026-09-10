@@ -15,18 +15,23 @@ import {
 } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
+  clients,
   costings,
+  costingVendorQuotes,
   employees,
   inquiries,
+  masterOptions,
   quotations,
   quotationItems,
   type Quotation,
 } from "@/db/schema";
 import {
   COSTING_ROUTE_LABELS,
+  GST_REGISTRATION_TYPE_LABELS,
   INQUIRY_SOURCE_LABELS,
   type CostingDoneStatus,
   type CostingRoute,
+  type GstRegistrationType,
   type InquirySource,
   type QuotationStatus,
 } from "@/db/enums";
@@ -215,6 +220,11 @@ export async function listQuotations(
   const byId = new Map(heads.map((h) => [h.id, h]));
   const visible = heads.filter((h) => {
     if (!h.supersedesQuotationId || h.quoteSent) return true;
+    // The CURRENT head of a chain must always show — a revision opened from the
+    // negotiation ("Revise Quote") is an exact copy until it's edited, and
+    // hiding it as a "no-op" left the superseded original reading as the live
+    // quote. Only an INTERMEDIATE identical unsent revision is hidden as churn.
+    if (h.isLatestRevision) return true;
     const prev = byId.get(h.supersedesQuotationId);
     if (!prev) return true; // predecessor not in this slice — keep it
     return sig(prev) !== sig(h);
@@ -582,6 +592,7 @@ export interface QuotationPdfLine {
  * header's line-1 snapshot so a single-line quote still renders.
  */
 export interface QuotationPdfModel {
+  id: string;
   quoteNo: string;
   quotationDate: Date;
   /** ENQ.No — the enquiry's SM number. */
@@ -593,11 +604,22 @@ export interface QuotationPdfModel {
   city: string | null;
   /** Kind Attn. — the enquiry contact person. */
   contactName: string | null;
-  /** Free-text commercial terms carried on the quotation (dynamic — blank when
-   *  the quote doesn't set them; NEVER defaulted to boilerplate). */
-  deliveryTime: string | null;
+  /** Commercial terms, resolved DYNAMICALLY from the real sources (never
+   *  boilerplate); each is blank when its source is empty:
+   *  - paymentTerm / deliveryLeadTime: the primary line's chosen bought-out
+   *    vendor on its costing (Payment Terms master name / Lead Time in days).
+   *  - gst: the client's GST Registration Type (KYC).
+   *  - note: the costing's Commercial Notes.
+   *  - validity: carried on the quotation. tolerance: read-through spec. */
+  paymentTerm: string | null;
+  gst: string | null;
+  deliveryLeadTime: string | null;
   tolerance: string | null;
   validity: string | null;
+  note: string | null;
+  /** Kept for reference; the terms block uses `deliveryLeadTime` (costing) for
+   *  the Delivery Lead Time row, per the SM9540 form. */
+  deliveryTime: string | null;
   lines: QuotationPdfLine[];
   total: number;
 }
@@ -607,6 +629,7 @@ export async function getQuotationPdfModel(
 ): Promise<QuotationPdfModel | null> {
   const [q] = await db
     .select({
+      id: quotations.id,
       quoteNo: quotations.quoteNo,
       createdAt: quotations.createdAt,
       enquiryDate: quotations.enquiryDate,
@@ -630,9 +653,12 @@ export async function getQuotationPdfModel(
       contactFirstName: inquiries.contactFirstName,
       contactLastName: inquiries.contactLastName,
       inqEnquiryDate: inquiries.enquiryDate,
+      // GST comes from the client's KYC (GST Registration Type).
+      gstRegistrationType: clients.gstRegistrationType,
     })
     .from(quotations)
     .leftJoin(inquiries, eq(quotations.inquiryId, inquiries.id))
+    .leftJoin(clients, eq(inquiries.clientId, clients.id))
     .where(eq(quotations.id, id))
     .limit(1);
   if (!q) return null;
@@ -702,7 +728,46 @@ export async function getQuotationPdfModel(
     [q.contactFirstName, q.contactLastName].filter(Boolean).join(" ").trim() ||
     null;
 
+  // Commercial terms sourced from the primary line's chosen costing (Manan,
+  // 2026-09): Payment Term + Delivery Lead Time come from the WINNING bought-out
+  // vendor on that costing; Note is the costing's Commercial Notes. All blank
+  // for an in-house costing (no vendor) or when unset — never boilerplate.
+  const primaryInquiryItemId = rawLines[0]?.inquiryItemId ?? null;
+  let paymentTerm: string | null = null;
+  let deliveryLeadTime: string | null = null;
+  let note: string | null = null;
+  if (primaryInquiryItemId) {
+    const [ct] = await db
+      .select({
+        commercialNotes: costings.developmentNotes,
+        paymentTermName: masterOptions.name,
+        leadTimeDays: costingVendorQuotes.leadTimeDays,
+      })
+      .from(costings)
+      .leftJoin(
+        costingVendorQuotes,
+        eq(costings.chosenVendorQuoteId, costingVendorQuotes.id),
+      )
+      .leftJoin(masterOptions, eq(costingVendorQuotes.paymentTermsId, masterOptions.id))
+      .where(
+        and(
+          eq(costings.inquiryItemId, primaryInquiryItemId),
+          eq(costings.isChosen, true),
+          eq(costings.isLatestRevision, true),
+        ),
+      )
+      .orderBy(desc(costings.createdAt))
+      .limit(1);
+    paymentTerm = ct?.paymentTermName ?? null;
+    deliveryLeadTime = ct?.leadTimeDays != null ? `${ct.leadTimeDays} days` : null;
+    note = ct?.commercialNotes?.trim() || null;
+  }
+  const gst = q.gstRegistrationType
+    ? GST_REGISTRATION_TYPE_LABELS[q.gstRegistrationType as GstRegistrationType] ?? null
+    : null;
+
   return {
+    id: q.id,
     quoteNo: q.quoteNo,
     quotationDate: q.createdAt,
     smNumber: q.smNumber ?? null,
@@ -713,9 +778,13 @@ export async function getQuotationPdfModel(
     companyName: q.companyName,
     city: q.city ?? null,
     contactName,
-    deliveryTime: q.deliveryTime,
+    paymentTerm,
+    gst,
+    deliveryLeadTime,
     tolerance: q.tolerance,
     validity: q.validity,
+    note,
+    deliveryTime: q.deliveryTime,
     lines,
     total,
   };
@@ -917,6 +986,56 @@ export async function getQuotationFullDetail(
     lines,
     totals: { lineCount: lines.length, totalQty, totalQuotedValue },
   };
+}
+
+/**
+ * The id of the LATEST revision in the chain that contains `id`.
+ *
+ * A quotation can be revised (original → R1 → R2 …), each revision a new row
+ * linked by `supersedes_quotation_id`. Downstream stages that snapshot a
+ * quotation id (e.g. a negotiation) can end up pointing at a superseded row
+ * after a later revision; this walks that row's chain to its head so the view
+ * always shows the current quote. Returns `id` unchanged when it has no chain.
+ */
+export async function getLatestQuotationRevisionId(
+  id: string,
+): Promise<string> {
+  const [cur] = await db
+    .select({ inquiryId: quotations.inquiryId })
+    .from(quotations)
+    .where(eq(quotations.id, id))
+    .limit(1);
+  if (!cur?.inquiryId) return id;
+
+  const rows = await db
+    .select({
+      id: quotations.id,
+      supersedes: quotations.supersedesQuotationId,
+    })
+    .from(quotations)
+    .where(eq(quotations.inquiryId, cur.inquiryId));
+
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const supersededBy = new Map<string, (typeof rows)[number]>();
+  for (const r of rows) if (r.supersedes) supersededBy.set(r.supersedes, r);
+
+  // Walk up to the chain root, then down to its tail (the newest revision).
+  let root = byId.get(id);
+  if (!root) return id;
+  const up = new Set<string>();
+  while (root.supersedes && byId.has(root.supersedes) && !up.has(root.id)) {
+    up.add(root.id);
+    root = byId.get(root.supersedes)!;
+  }
+  let node = root;
+  const down = new Set<string>();
+  while (!down.has(node.id)) {
+    down.add(node.id);
+    const next = supersededBy.get(node.id);
+    if (!next) break;
+    node = next;
+  }
+  return node.id;
 }
 
 /** The diff-relevant fields carried on every quotation revision. */

@@ -323,6 +323,23 @@ export async function updateQuotation(
   const v = stripUndefined(parsed.data);
   if (Object.keys(v).length === 0) return { ok: true };
 
+  // An APPROVED quotation is committed — it can't be edited in place; you open a
+  // revision (Revise Quotation) instead, which freezes this one and gives you a
+  // fresh draft to change. (The UI also locks the form, but the rule lives here.)
+  const [cur] = await db
+    .select({ status: quotations.quotationStatus })
+    .from(quotations)
+    .where(eq(quotations.id, id))
+    .limit(1);
+  if (!cur) return { ok: false, error: "Quotation not found." };
+  if (cur.status === "quotation_approved") {
+    return {
+      ok: false,
+      error:
+        "This quotation is approved and can't be edited directly — use Revise Quotation to open a new revision.",
+    };
+  }
+
   const { finalCost, negotiation, quotePrice, qty, ...rest } = v;
   const patch: Partial<NewQuotation> = { ...rest };
   if (finalCost !== undefined) patch.finalCost = String(finalCost);

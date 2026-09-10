@@ -3,33 +3,24 @@
 import * as React from "react";
 import Link from "next/link";
 import type { Route } from "next";
-import { ArrowLeft, ArrowUpRight, ChevronDown, Plus, Settings2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, ArrowUpRight, Loader2, Plus } from "lucide-react";
 import {
-  NEGOTIATION_STAGE_BUCKETS,
   NEGOTIATION_STATUS_LABELS,
   NEGOTIATION_STATUS_COLORS,
   type NegotiationStatus,
 } from "@/db/enums";
 import type { Negotiation } from "@/db/schema";
-import type {
-  NegotiationLineWithSpec,
-  RevisableCosting,
-} from "@/lib/queries/negotiations";
-import type { QuotationFullDetail } from "@/lib/queries/quotations";
-import { setNegotiationStatus } from "@/app/(app)/negotiations/actions";
+import type { QuotationPdfModel } from "@/lib/queries/quotations";
 import {
-  isNegotiationApprovedForSo,
-  NEGOTIATION_OFF_BOARD_STATUSES,
-} from "@/lib/negotiations/buckets";
+  setNegotiationStatus,
+  reviseQuoteFromNegotiation,
+} from "@/app/(app)/negotiations/actions";
+import { isNegotiationApprovedForSo } from "@/lib/negotiations/buckets";
 import type { EmployeeOption } from "@/lib/queries/employees";
 import { formatDate } from "@/lib/format";
+import { fireToast } from "@/lib/toast";
 import { StatusPicker } from "@/components/inquiries/status-picker";
-import { CustomerPoCard } from "@/components/negotiations/customer-po-card";
-import { NegotiationApprovalCard } from "@/components/negotiations/negotiation-approval-card";
-import {
-  ReviseCostingCard,
-  type RevisableProductLabels,
-} from "@/components/negotiations/revise-costing-card";
 import { NegotiationLog } from "@/components/negotiations/negotiation-log";
 import { QuotationDetailReadonly } from "@/components/negotiations/quotation-detail-readonly";
 
@@ -44,76 +35,90 @@ interface Props {
   negotiation: Negotiation;
   employees: EmployeeOption[];
   inquiryLink: NegotiationInquiryLink | null;
-  /** Negotiation product lines — drives the revise-costing picker labels. */
-  lines: NegotiationLineWithSpec[];
-  /** Revised total of the latest PI (for the customer-PO reconciliation). */
-  latestPiTotal: string | null;
-  /** Presigned download URL for an already-uploaded customer-PO document. */
-  poDownloadUrl: string | null;
-  /** Current-revision cost sheets behind this negotiation's product lines —
-   *  the pick list for the "not approved → new costing" loop. */
-  revisableCostings: RevisableCosting[];
-  /** The COMPLETE quotation behind this negotiation, resolved read-only; null
-   *  when the negotiation has no linked quotation. */
-  quotationDetail: QuotationFullDetail | null;
+  /** The quotation behind this negotiation (latest revision) as the PDF model,
+   *  rendered read-only as an on-screen replica of the official quotation PDF;
+   *  null when the negotiation has no linked quotation. */
+  quotationPdf: QuotationPdfModel | null;
 }
 
 /**
- * Sidebar picker order: the five HOUSE buckets first (Not Started → Draft →
- * Need Info → Pending Approval → Negotiation Approved), then the commercial
- * outcomes. Both axes share one status column, so both must stay pickable —
- * `order_won` in particular is load-bearing for SO provisioning.
+ * The statuses a negotiation can be set to from the dropdown. Working states
+ * first, then the three outcomes. Deliberately EXCLUDES the retired approval
+ * ladder (Draft / Pending Approval / Negotiation Approved / Not Approved) and
+ * Cancelled: a negotiation tracks a conversation and ends Won / Lost /
+ * Abandoned, never "approved", and Cancelled was folded into Abandoned.
  */
 const STATUS_PICKER_ORDER: readonly NegotiationStatus[] = [
-  ...NEGOTIATION_STAGE_BUCKETS,
-  ...NEGOTIATION_OFF_BOARD_STATUSES,
+  "to_start",
+  "need_info",
+  "follow_up_15d",
+  "follow_up_1m",
+  "follow_up_45d",
+  "follow_up_2m",
+  "revision",
+  "on_hold",
+  "verbal_yes",
+  "need_help",
+  "order_won",
+  "order_lost",
+  "order_abandoned",
 ];
 
 /**
- * Negotiation detail (v2, 2026-09). Breadcrumb + header (negotiationNo,
- * company · enquiry date · linked SM chip · status chip), the workflow action
- * cards that actually drive the pipeline (Approve gate, Customer PO → Sales
- * Order, Revise Costing), a timestamped chat-style Negotiation Log, and the
- * complete read-only Quotation Details this negotiation rests on. The old
- * read-only Pricing / Timeline / Lines cards, the single Notes box, the separate
- * remarks panel, the Quote Send strip and the edit form are all gone — folded
- * into the log + the quotation block.
+ * Negotiation detail (v3, 2026-09). Breadcrumb + header (negotiationNo, company ·
+ * enquiry date · linked SM chip), a horizontal META BAR at the top (status
+ * picker + sales person / created / by / last updated + Open Register), then the
+ * full-width Negotiation Log and the read-only Quotation Details (latest
+ * revision). The status now lives only in the bar's picker — no duplicate chip.
+ * "Revise Quote" (from the picker) opens a fresh quotation revision; marking a
+ * deal Won provisions its Sales Order automatically.
  */
 export function NegotiationDetail({
   negotiation,
   employees,
   inquiryLink,
-  lines,
-  latestPiTotal,
-  poDownloadUrl,
-  revisableCostings,
-  quotationDetail,
+  quotationPdf,
 }: Props) {
-  // Product name per enquiry line, for the revise-costing picker. Read-through
-  // from the provenance inquiry line, falling back to the Item spec (§2.4).
-  const productLabels = React.useMemo<RevisableProductLabels>(() => {
-    const map: RevisableProductLabels = {};
-    for (const l of lines) {
-      if (!l.inquiryItemId) continue;
-      map[l.inquiryItemId] =
-        l.ask.custProductName ?? l.spec.gradeNameForCust ?? l.spec.itemCode ?? undefined;
-    }
-    return map;
-  }, [lines]);
-  const hasEnquiryLines = lines.some((l) => l.inquiryItemId !== null);
+  const router = useRouter();
 
-  // Workflow actions (Approve / Customer PO / Revise Costing) are HIDDEN by
-  // default — the page is the Log + Quotation Details — and revealed on demand
-  // from this toggle when someone actually needs to act on the deal.
-  const [actionsOpen, setActionsOpen] = React.useState(false);
+  // "Revise Quote" is not a plain status set — it opens a quotation revision, so
+  // it asks for a reason first (which lands in the quote's revision history).
+  const [reviseOpen, setReviseOpen] = React.useState(false);
+  const [reviseReason, setReviseReason] = React.useState("");
+  const [revising, setRevising] = React.useState(false);
 
   const salesPerson =
     employees.find((e) => e.id === negotiation.salesPersonId)?.name ?? null;
   const createdBy =
     employees.find((e) => e.id === negotiation.createdById)?.name ?? null;
 
-  const statusTone =
-    NEGOTIATION_STATUS_COLORS[negotiation.negotiationStatus] ?? "slate";
+  async function submitRevise() {
+    const reason = reviseReason.trim();
+    if (reason.length < 3) {
+      fireToast({ message: "Say why the quote is being revised." });
+      return;
+    }
+    setRevising(true);
+    try {
+      const res = await reviseQuoteFromNegotiation({
+        negotiationId: negotiation.id,
+        reason,
+      });
+      if (!res.ok) {
+        fireToast({ type: "error", message: res.error });
+        return;
+      }
+      fireToast({
+        type: "success",
+        message: `Quotation revised — R${res.revisionNo - 1} created.`,
+      });
+      setReviseOpen(false);
+      setReviseReason("");
+      router.refresh();
+    } finally {
+      setRevising(false);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -166,19 +171,6 @@ export function NegotiationDetail({
                 </Link>
               </>
             )}
-            <span aria-hidden className="text-ink-subtle">
-              ·
-            </span>
-            <span
-              className="inline-flex items-center px-2.5 py-1 rounded-pill text-[12px] font-bold"
-              style={{
-                background: `color-mix(in srgb, var(--color-${statusTone}) 12%, transparent)`,
-                color: `var(--color-${statusTone}-deep)`,
-                border: `1px solid color-mix(in srgb, var(--color-${statusTone}) 30%, transparent)`,
-              }}
-            >
-              {NEGOTIATION_STATUS_LABELS[negotiation.negotiationStatus]}
-            </span>
           </p>
         </div>
         <Link
@@ -190,133 +182,141 @@ export function NegotiationDetail({
         </Link>
       </header>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr] items-start">
-        {/* ── Main column ───────────────────────────────────────────── */}
-        <div className="flex flex-col gap-6 min-w-0">
-          {/* Workflow actions — HIDDEN by default, revealed only when asked for.
-              They drive the pipeline (approve gate → Issue Sales Order, Customer
-              PO → Sales Order, not-approved → revise costing), so they stay
-              available, but they no longer clutter the page until needed. */}
-          <div className="flex flex-col gap-6">
-            <button
-              type="button"
-              onClick={() => setActionsOpen((o) => !o)}
-              aria-expanded={actionsOpen}
-              aria-controls="negotiation-workflow-actions"
-              className="flex w-full items-center gap-3 rounded-section border border-hairline bg-surface-card px-5 py-3.5 text-left transition-colors hover:border-hairline-strong hover:bg-surface-soft"
-              style={{ boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)" }}
-            >
-              <Settings2 size={16} strokeWidth={2.2} className="shrink-0 text-brand" />
-              <span className="text-[13.5px] font-extrabold text-ink-strong">
-                Workflow Actions
-              </span>
-              <span className="hidden text-[12px] font-semibold text-ink-subtle sm:inline">
-                Approve · Customer PO · Revise Costing
-              </span>
-              <ChevronDown
-                size={17}
-                strokeWidth={2.4}
-                className="ml-auto shrink-0 text-ink-subtle transition-transform"
-                style={{ transform: actionsOpen ? "rotate(180deg)" : "none" }}
-              />
-            </button>
+      {/* ── Meta bar (was the right sidebar) — status + facts, on top ─── */}
+      <section
+        className="flex flex-wrap items-center gap-x-8 gap-y-4 rounded-section border border-hairline bg-surface-card px-5 py-4"
+        style={{ boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)" }}
+      >
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[11px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
+            Negotiation Status
+          </span>
+          <StatusPicker
+            value={negotiation.negotiationStatus}
+            options={STATUS_PICKER_ORDER}
+            labels={NEGOTIATION_STATUS_LABELS}
+            tones={NEGOTIATION_STATUS_COLORS}
+            onPick={(next) => setNegotiationStatus(negotiation.id, next)}
+            // "Revise Quote" opens a quotation revision (with a reason) rather
+            // than being a plain status flip — claim it and drive the popup.
+            interceptPick={(next) => {
+              if (next === "revision") {
+                setReviseOpen(true);
+                return true;
+              }
+              return false;
+            }}
+            ariaLabel="Negotiation status"
+            // Once Won (the Sales Order is provisioned), the status is locked —
+            // nobody can un-win a deal that already made an SO.
+            disabled={isNegotiationApprovedForSo(negotiation.negotiationStatus)}
+          />
+        </div>
+        <MetaField label="Sales Person" value={salesPerson ?? "-"} />
+        <MetaField label="Created" value={formatDate(negotiation.createdAt)} />
+        {createdBy && <MetaField label="Created By" value={createdBy} />}
+        <MetaField label="Last Updated" value={formatDate(negotiation.updatedAt)} />
+        <Link
+          href={"/negotiations" as Route}
+          className="ml-auto inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink-muted hover:text-ink-strong transition-colors"
+        >
+          <ArrowLeft size={13} strokeWidth={2.4} />
+          Open Register
+        </Link>
+      </section>
 
-            {/* Always mounted so aria-controls resolves; visibility toggles via
-                the `hidden` class (Tailwind display:none) rather than the HTML
-                attribute, which the `flex` class would otherwise override. */}
-            <div
-              id="negotiation-workflow-actions"
-              className={actionsOpen ? "flex flex-col gap-6" : "hidden"}
-            >
-              <NegotiationApprovalCard
-                negotiationId={negotiation.id}
-                status={negotiation.negotiationStatus}
-              />
+      {/* ── Content (full width) ───────────────────────────────────── */}
+      <div className="flex flex-col gap-6 min-w-0">
+        {/* The timestamped chat log — replaces the old Notes box + remarks panel. */}
+        <NegotiationLog negotiationId={negotiation.id} />
 
-              <CustomerPoCard
-                negotiationId={negotiation.id}
-                stage={negotiation.negotiationStage}
-                po={{
-                  customerPoNo: negotiation.customerPoNo,
-                  customerPoDate: negotiation.customerPoDate,
-                  customerPoLink: negotiation.customerPoLink,
-                  customerPoRemarks: negotiation.customerPoRemarks,
-                  poMatchStatus: negotiation.poMatchStatus,
-                }}
-                latestPiTotal={latestPiTotal}
-                poDownloadUrl={poDownloadUrl}
-                approvedForSo={isNegotiationApprovedForSo(negotiation.negotiationStatus)}
-              />
+        {/* Read-only quotation (latest revision) — an on-screen replica of the PDF. */}
+        {quotationPdf ? (
+          <QuotationDetailReadonly model={quotationPdf} />
+        ) : (
+          <section
+            className="bg-surface-card rounded-section border border-hairline p-6"
+            style={{ boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)" }}
+          >
+            <h2 className="text-[12.5px] font-extrabold uppercase tracking-[0.1em] text-brand">
+              Quotation Details
+            </h2>
+            <p className="mt-2 text-[13px] text-ink-soft">
+              No quotation is linked to this negotiation yet.
+            </p>
+          </section>
+        )}
+      </div>
 
-              <ReviseCostingCard
-                negotiationId={negotiation.id}
-                costings={revisableCostings}
-                productLabels={productLabels}
-                hasLines={hasEnquiryLines}
+      {/* ── Revise Quote reason popup ──────────────────────────────────── */}
+      {reviseOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/35 p-4 sm:p-10"
+          onClick={() => !revising && setReviseOpen(false)}
+        >
+          <div
+            className="w-[min(94vw,520px)] overflow-hidden rounded-2xl bg-surface-card shadow-[0_24px_60px_rgba(15,23,42,0.28)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="border-b border-hairline px-5 py-4">
+              <h2 className="text-[16px] font-black tracking-tight text-ink-strong">
+                Revise the quotation
+              </h2>
+              <p className="mt-1.5 text-[12.5px] font-semibold leading-relaxed text-ink-soft">
+                Freezes the current quotation and opens a copy at the next
+                revision number, with its lines carried over. The frozen one keeps
+                its price and — if it was sent — the record of who received it.
+                This negotiation then tracks the new revision.
+              </p>
+            </div>
+            <div className="p-5">
+              <label className="mb-1.5 block text-[10.5px] font-black uppercase tracking-[0.12em] text-ink-subtle">
+                Reason (required)
+              </label>
+              <textarea
+                autoFocus
+                rows={4}
+                value={reviseReason}
+                onChange={(e) => setReviseReason(e.target.value)}
+                placeholder="Why is the quote being revised? e.g. customer negotiated the price down, qty changed…"
+                className="nt-input w-full resize-y"
+                style={{ fontWeight: 400 }}
               />
             </div>
+            <div className="flex items-center justify-end gap-2 border-t border-hairline bg-surface-soft px-5 py-3.5">
+              <button
+                type="button"
+                onClick={() => setReviseOpen(false)}
+                disabled={revising}
+                className="h-9 rounded-pill px-4 text-[13px] font-bold text-ink-soft hover:text-ink-strong disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void submitRevise()}
+                disabled={revising || reviseReason.trim().length < 3}
+                title={reviseReason.trim().length < 3 ? "Write a reason first" : undefined}
+                className="inline-flex h-9 items-center gap-2 rounded-pill px-5 text-[13px] font-extrabold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-45"
+                style={{ background: "#454595" }}
+              >
+                {revising && (
+                  <Loader2 size={14} style={{ animation: "spinFast 0.8s linear infinite" }} />
+                )}
+                {revising ? "Working…" : "Create revision"}
+              </button>
+            </div>
           </div>
-
-          {/* The timestamped chat log — replaces the old Notes box + remarks panel. */}
-          <NegotiationLog negotiationId={negotiation.id} />
-
-          {/* Complete read-only quotation this negotiation rests on. */}
-          {quotationDetail ? (
-            <QuotationDetailReadonly detail={quotationDetail} />
-          ) : (
-            <section
-              className="bg-surface-card rounded-section border border-hairline p-6"
-              style={{ boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)" }}
-            >
-              <h2 className="text-[12.5px] font-extrabold uppercase tracking-[0.1em] text-brand">
-                Quotation Details
-              </h2>
-              <p className="mt-2 text-[13px] text-ink-soft">
-                No quotation is linked to this negotiation yet.
-              </p>
-            </section>
-          )}
         </div>
-
-        {/* ── Sticky sidebar ─────────────────────────────────────────── */}
-        <aside className="lg:sticky lg:top-24 flex flex-col gap-4 rounded-section border border-hairline bg-surface-card p-5">
-          <div className="flex flex-col gap-2">
-            <span className="text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
-              Negotiation Status
-            </span>
-            <StatusPicker
-              value={negotiation.negotiationStatus}
-              options={STATUS_PICKER_ORDER}
-              labels={NEGOTIATION_STATUS_LABELS}
-              tones={NEGOTIATION_STATUS_COLORS}
-              onPick={(next) => setNegotiationStatus(negotiation.id, next)}
-              ariaLabel="Negotiation status"
-              // Once approved, the status is locked here — nobody can change it
-              // from this dropdown.
-              disabled={isNegotiationApprovedForSo(negotiation.negotiationStatus)}
-            />
-          </div>
-          <SidebarRow label="Sales Person" value={salesPerson ?? "-"} />
-          <SidebarRow label="Created" value={formatDate(negotiation.createdAt)} />
-          {createdBy && <SidebarRow label="Created By" value={createdBy} />}
-          <SidebarRow label="Last Updated" value={formatDate(negotiation.updatedAt)} />
-          <Link
-            href={"/negotiations" as Route}
-            className="mt-1 inline-flex items-center gap-1.5 border-t border-hairline pt-4 text-[13px] font-semibold text-ink-muted hover:text-ink-strong transition-colors"
-          >
-            <ArrowLeft size={13} strokeWidth={2.4} />
-            Open Register
-          </Link>
-        </aside>
-      </div>
+      )}
     </div>
   );
 }
 
-function SidebarRow({ label, value }: { label: string; value: string }) {
+function MetaField({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-[12px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
+      <span className="text-[11px] uppercase tracking-[0.14em] font-bold text-ink-subtle">
         {label}
       </span>
       <span className="text-[14px] font-semibold text-ink-strong">{value}</span>
