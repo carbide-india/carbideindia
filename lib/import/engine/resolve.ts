@@ -1,5 +1,6 @@
 import type { ImportField, Lookups, RefKind } from "./spec";
 import type { RawRow } from "./parse";
+import { parseImportDate } from "@/lib/import/parse-date";
 
 export type CellStatus = "ok" | "empty" | "error";
 
@@ -36,7 +37,9 @@ export function resolveCell(field: ImportField, raw: string, lookups: Lookups): 
 
   switch (field.type) {
     case "number": {
-      const n = Number(text);
+      // Accept grouped numbers ("1,00,000" / "1,000") — strip thousands commas
+      // before parsing so a valid amount isn't rejected as "not a number".
+      const n = Number(text.replace(/,/g, ""));
       if (!Number.isFinite(n)) {
         return { ...base, value: null, status: "error" as const, error: `"${text}" is not a number` };
       }
@@ -52,7 +55,8 @@ export function resolveCell(field: ImportField, raw: string, lookups: Lookups): 
       return { ...base, value: null, status: "error" as const, error: `"${text}" is not Yes/No` };
     }
     case "date": {
-      const d = new Date(text);
+      // IST-safe, day-first (DD/MM/YYYY) parsing — see parseImportDate.
+      const d = parseImportDate(text);
       return Number.isNaN(d.getTime())
         ? { ...base, value: null, status: "error" as const, error: `"${text}" is not a date` }
         : { ...base, value: d.toISOString(), status: "ok" as const };
