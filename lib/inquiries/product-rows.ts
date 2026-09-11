@@ -46,6 +46,35 @@ export interface BuiltProductRow {
   sampleId: string | null;
 }
 
+/**
+ * The frozen PRIMARY spec snapshot for a new line, stored in
+ * `inquiry_items.primary_baseline`. Captured at creation because Primary
+ * Feasibility reviews the spec but never edits it — so the spec as created IS
+ * the Primary spec. The Secondary register diffs this against the live columns
+ * to show what Secondary changed. Keys match `SpecSnapshot` (spec-variance.ts).
+ */
+export function primaryBaselineFromRow(r: BuiltProductRow): Record<string, string | null> {
+  return {
+    shape: r.shape,
+    outerDia: r.outerDia,
+    innerDia: r.innerDia,
+    length: r.length,
+    width: r.width,
+    thickness: r.thickness,
+    dimensionUnit: r.dimensionUnit,
+    dimensionNotes: r.dimensionNotes,
+    gradeCustomer: r.gradeCustomer,
+    gradeCustomerFacingId: r.gradeCustomerFacingId,
+    gradeInternalProductionId: r.gradeInternalProductionId,
+    toleranceId: r.toleranceId,
+    conditionId: r.conditionId,
+    internalProductionCodeId: r.internalProductionCodeId,
+    partNoId: r.partNoId,
+    quantityNos: r.quantityNos,
+    quantityUom: r.quantityUom,
+  };
+}
+
 /** Build the inquiry_items rows for an inquiry. Prefers products[]; otherwise
  *  synthesises one row from the legacy flat product fields (back-compat with
  *  the bulk importer + any caller that still sends a single product). */

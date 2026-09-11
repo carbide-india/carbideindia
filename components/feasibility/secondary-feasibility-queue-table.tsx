@@ -249,8 +249,8 @@ export function SecondaryFeasibilityQueueTable({
         <VarianceReport
           rows={varianceRow.varianceRows}
           heading="Variance · Primary vs Secondary"
-          baselineLabel="Primary (frozen)"
-          currentLabel="Current"
+          baselineLabel="Primary"
+          currentLabel="Secondary"
           title={varianceRow.productName ?? varianceRow.smNumber}
           subtitle={`${varianceRow.smNumber} · ${varianceRow.companyName}`}
           onClose={() => setVarianceRow(null)}

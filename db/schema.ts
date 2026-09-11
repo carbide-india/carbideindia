@@ -797,6 +797,12 @@ export const inquiryItems = pgTable(
     lockedById: uuid("locked_by_id").references(() => employees.id, { onDelete: "set null" }),
     lockedAt: timestamp("locked_at", { withTimezone: true }),
     feasibilityBaseline: jsonb("feasibility_baseline"),
+    // Frozen snapshot of the core spec as it stood at PRIMARY Feasibility (taken
+    // at line creation — Primary reviews but never edits the spec). Secondary
+    // Feasibility may edit the live spec; the Secondary register diffs THIS
+    // against the live values to show what changed Primary → Secondary. Distinct
+    // from `feasibility_baseline` (frozen at Secondary confirm, for Costing).
+    primaryBaseline: jsonb("primary_baseline"),
     // ── Feasibility Confirmed gate (per-item, AFTER Lock Dimensions) ──
     // Confirming REQUIRES the line to be locked first (Lock = the Secondary/
     // Technical stage). Only confirmed lines can be costed — this is the strong

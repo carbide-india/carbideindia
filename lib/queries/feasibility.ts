@@ -538,7 +538,10 @@ export async function listSecondaryFeasibilityQueue(): Promise<SecondaryFeasibil
       secToolingAvailability: inquiryItems.secToolingAvailability,
       secMaterialAvailability: inquiryItems.secMaterialAvailability,
       feasibilityConfirmed: inquiryItems.feasibilityConfirmed,
-      baseline: inquiryItems.feasibilityBaseline,
+      // Primary→Secondary variance: diff the frozen PRIMARY spec snapshot against
+      // the live columns (which Secondary edits). NOT feasibility_baseline (that
+      // is frozen at Secondary confirm, for the Costing variance).
+      baseline: inquiryItems.primaryBaseline,
       enquiryDate: inquiries.enquiryDate,
       createdAt: inquiryItems.createdAt,
       sortOrder: inquiryItems.sortOrder,

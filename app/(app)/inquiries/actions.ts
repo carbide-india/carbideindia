@@ -5,7 +5,11 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { inquiries, inquiryItems, inquiryItemFeasibility, clients, clientContacts, masterOptions, samples, type NewInquiry } from "@/db/schema";
-import { productRowsForInquiry, type BuiltProductRow } from "@/lib/inquiries/product-rows";
+import {
+  productRowsForInquiry,
+  primaryBaselineFromRow,
+  type BuiltProductRow,
+} from "@/lib/inquiries/product-rows";
 import { syncProductToItem, type ItemSpec, type DbOrTx } from "@/lib/item-master/sync";
 import { requireUser, requireAdmin } from "@/lib/auth/current";
 import {
@@ -255,7 +259,13 @@ export async function createInquiry(
           const { sampleId, ...itemCols } = r;
           await tx
             .insert(inquiryItems)
-            .values({ id: lineId, inquiryId: row.id, ...itemCols, itemId: res.itemId });
+            .values({
+              id: lineId,
+              inquiryId: row.id,
+              ...itemCols,
+              itemId: res.itemId,
+              primaryBaseline: primaryBaselineFromRow(r),
+            });
           if (sampleId) {
             await tx
               .update(samples)
@@ -405,7 +415,14 @@ export async function updateInquiry(
           const { sampleId, ...itemCols } = r;
           await tx
             .insert(inquiryItems)
-            .values({ id: lineId, inquiryId: id, ...itemCols, sortOrder, itemId: res.itemId });
+            .values({
+              id: lineId,
+              inquiryId: id,
+              ...itemCols,
+              sortOrder,
+              itemId: res.itemId,
+              primaryBaseline: primaryBaselineFromRow(r),
+            });
           if (sampleId) {
             await tx
               .update(samples)
