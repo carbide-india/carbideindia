@@ -582,6 +582,8 @@ export interface CostingVarianceEntry {
   /** Set when a negotiation asked for this re-costing. */
   revisedFromNegotiationId: string | null;
   finalCostPerPiece: string | null;
+  /** Snapshot payment-terms label on the costing row (a compared parameter). */
+  paymentTerms: string | null;
   createdAt: Date;
 }
 
@@ -618,6 +620,7 @@ export async function listCostingVarianceChains(): Promise<CostingVarianceChain[
       revisedFromQuotationId: costings.revisedFromQuotationId,
       revisedFromNegotiationId: costings.revisedFromNegotiationId,
       finalCostPerPiece: costings.finalCostPerPiece,
+      paymentTerms: costings.paymentTerms,
       createdAt: costings.createdAt,
       smNumber: inquiries.smNumber,
       companyName: inquiries.companyName,
@@ -656,6 +659,7 @@ export async function listCostingVarianceChains(): Promise<CostingVarianceChain[
       revisedFromQuotationId: r.revisedFromQuotationId,
       revisedFromNegotiationId: r.revisedFromNegotiationId,
       finalCostPerPiece: r.finalCostPerPiece,
+      paymentTerms: r.paymentTerms,
       createdAt: r.createdAt,
     });
   }
