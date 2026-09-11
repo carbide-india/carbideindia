@@ -265,7 +265,7 @@ export function buildSalesOrderDocument(
         ["Dimensions", dimensionText(l.spec)],
         // Customer-facing grade ONLY - the internal production grade is added
         // below and never reaches the customer copy.
-        ["Grade", l.spec.gradeNameForCust ?? l.spec.gradeCustomer],
+        ["Grade", l.spec.gradeCustomer ?? l.spec.gradeNameForCust],
         ["Tolerance", l.spec.toleranceName],
         ["Condition", l.spec.conditionName],
         ["HSN Code", l.spec.hsnCode],

@@ -694,10 +694,11 @@ export async function getQuotationPdfModel(
       sr: i + 1,
       productName: ask?.custProductName ?? spec?.partNo ?? spec?.itemCode ?? null,
       drawingNo: ask?.custDrawingNo ?? null,
-      // Customer-facing grade ONLY — never fall back to the internal grade name
-      // (that is Carbide's proprietary designation and must not reach the
-      // customer PDF). Matches getQuotationFullDetail + the SO document.
-      grade: spec?.gradeNameForCust ?? spec?.gradeCustomer ?? null,
+      // The customer-facing grade = the enquiry's "Grade Name for Customer"
+      // (stored as gradeCustomer, "as the client stated it"); fall back to the
+      // legacy grade_name_for_cust. NEVER the internal production grade (that is
+      // Carbide's proprietary designation and must not reach the customer PDF).
+      grade: spec?.gradeCustomer ?? spec?.gradeNameForCust ?? null,
       qty: r.qty,
       condition: spec?.conditionName ?? null,
       ratePerUnit: r.quotePrice ?? r.unitPrice ?? null,
@@ -714,7 +715,7 @@ export async function getQuotationPdfModel(
         sr: 1,
         productName: q.custProductName,
         drawingNo: q.custDrawingNo,
-        grade: q.gradeNameForCust ?? q.gradeCustomer,
+        grade: q.gradeCustomer ?? q.gradeNameForCust,
         qty: q.qty,
         condition: q.condition,
         ratePerUnit: q.quotePrice,
@@ -921,7 +922,7 @@ export async function getQuotationFullDetail(
       drawingRev: ask?.drawingRevisionNo ?? null,
       partNo: spec?.partNo ?? null,
       gradeName: spec?.gradeName ?? null,
-      gradeCustomer: spec?.gradeNameForCust ?? spec?.gradeCustomer ?? null,
+      gradeCustomer: spec?.gradeCustomer ?? spec?.gradeNameForCust ?? null,
       tolerance: spec?.toleranceName ?? null,
       condition: spec?.conditionName ?? null,
       finalCost: r.finalCost,
@@ -944,7 +945,7 @@ export async function getQuotationFullDetail(
         drawingRev: q.drawingRevisionNo,
         partNo: q.partNo,
         gradeName: null,
-        gradeCustomer: q.gradeNameForCust ?? q.gradeCustomer,
+        gradeCustomer: q.gradeCustomer ?? q.gradeNameForCust,
         tolerance: q.tolerance,
         condition: q.condition,
         finalCost: q.finalCost,
