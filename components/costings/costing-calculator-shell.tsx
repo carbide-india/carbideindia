@@ -247,6 +247,63 @@ export function CostingCalculatorShell({
     [vendorOptions],
   );
 
+  // ── Required-field gate (client) ──────────────────────────────────────────
+  // Every field on the costing card is required before Save is allowed — an
+  // incomplete costing must not be savable (these fields feed the quotation and
+  // the downstream steps). The Save button is disabled and the missing fields
+  // are listed until they are all filled. The server also re-checks on approve.
+  const selectedVendorRow =
+    buyout.vendors.find((r) => r.key === buyout.selectedKey) ?? null;
+
+  const missing = React.useMemo<string[]>(() => {
+    const m: string[] = [];
+    if (!mode) return m;
+    const present = (v: string) => v.trim() !== "" && Number.isFinite(Number(v));
+    const positive = (v: string) => present(v) && Number(v) > 0;
+
+    if (!(qtyNum > 0)) m.push("Quantity");
+
+    if (showBuyout) {
+      if (!selectedVendorRow) {
+        m.push("Select a vendor");
+      } else {
+        const r = selectedVendorRow;
+        if (!r.vendorId) m.push("Vendor");
+        if (!positive(r.unitPrice)) m.push("Vendor Cost / piece");
+        if (!present(r.vendorOhPct)) m.push("Vendor Overhead %");
+        if (!present(r.developmentCost)) m.push("Development Cost / piece");
+        if (!present(r.leadTimeDays)) m.push("Lead Time (days)");
+        if (!present(r.creditPeriodDays)) m.push("Credit Period (days)");
+        if (!r.quantityToleranceId) m.push("Quantity Tolerance");
+        if (!r.paymentTermsId) m.push("Payment Terms");
+        if (!positive(r.deliveryTime)) m.push("Delivery Time");
+        if (!positive(r.validity)) m.push("Price Validity");
+      }
+    }
+
+    if (showInhouse) {
+      if (!quantityToleranceId) m.push("Quantity Tolerance");
+      if (!paymentTermId) m.push("Payment Terms");
+      if (!(typeof deliveryAmt === "number" && deliveryAmt > 0)) m.push("Delivery Time");
+      if (!(typeof validityAmt === "number" && validityAmt > 0)) m.push("Price Validity");
+      if (!(inhousePerPiece > 0)) m.push("In-house cost");
+    }
+
+    // De-dup ("Both" can list a term twice) while keeping order.
+    return [...new Set(m)];
+  }, [
+    mode,
+    qtyNum,
+    showBuyout,
+    showInhouse,
+    selectedVendorRow,
+    quantityToleranceId,
+    paymentTermId,
+    deliveryAmt,
+    validityAmt,
+    inhousePerPiece,
+  ]);
+
   const { formProps } = useKeyboardForm();
 
   const buildDuration = (amt: number | "", unit: string): string | undefined => {
@@ -258,6 +315,12 @@ export function CostingCalculatorShell({
     setServerError(null);
     if (!mode) {
       setServerError("Choose a costing type to continue.");
+      return;
+    }
+    // Belt-and-braces: the button is disabled while anything is missing, but a
+    // keyboard submit could still fire — refuse it here too.
+    if (missing.length > 0) {
+      setServerError(`Fill all required fields before saving: ${missing.join(", ")}.`);
       return;
     }
 
@@ -581,28 +644,48 @@ export function CostingCalculatorShell({
       {/* Submit */}
       {mode && (
         <div
-          className="flex items-center justify-end gap-3 pt-2"
+          className="flex flex-col gap-3 pt-2"
           style={{ borderTop: "1px solid var(--color-hairline)" }}
         >
-          <span className="text-[14px] text-ink-subtle">Ctrl / ⌘ + Enter to save</span>
-          <button
-            type="submit"
-            disabled={pending}
-            className="text-cta text-white px-8 py-4 rounded-chip transition-transform disabled:opacity-50"
-            style={{
-              background: "#454595",
-              boxShadow: "0 6px 16px rgba(63, 63, 148, 0.34)",
-              fontWeight: 800,
-              fontSize: 18,
-              letterSpacing: "0.005em",
-            }}
-          >
-            {pending
-              ? "Saving..."
-              : mode === "both"
-                ? "Save both & decide"
-                : "Save Costing"}
-          </button>
+          {missing.length > 0 && (
+            <div
+              className="rounded-chip border-2 px-3.5 py-2.5 text-[13px] font-semibold"
+              style={{
+                borderColor: "color-mix(in srgb, var(--color-red) 35%, transparent)",
+                background: "color-mix(in srgb, var(--color-red) 8%, transparent)",
+                color: "var(--color-red-deep)",
+              }}
+            >
+              Fill all costing fields before saving —{" "}
+              <span className="font-bold">{missing.join(", ")}</span>.
+            </div>
+          )}
+          <div className="flex items-center justify-end gap-3">
+            <span className="text-[14px] text-ink-subtle">Ctrl / ⌘ + Enter to save</span>
+            <button
+              type="submit"
+              disabled={pending || missing.length > 0}
+              title={
+                missing.length > 0
+                  ? `Fill all required fields first: ${missing.join(", ")}`
+                  : undefined
+              }
+              className="text-cta text-white px-8 py-4 rounded-chip transition-transform disabled:cursor-not-allowed disabled:opacity-50"
+              style={{
+                background: "#454595",
+                boxShadow: "0 6px 16px rgba(63, 63, 148, 0.34)",
+                fontWeight: 800,
+                fontSize: 18,
+                letterSpacing: "0.005em",
+              }}
+            >
+              {pending
+                ? "Saving..."
+                : mode === "both"
+                  ? "Save both & decide"
+                  : "Save Costing"}
+            </button>
+          </div>
         </div>
       )}
     </form>
